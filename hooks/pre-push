@@ -10,6 +10,15 @@
 
 set -e
 ROOT=$(git rev-parse --show-toplevel)
+
+echo "pre-push: running the validator's own regression suite"
+if ! node "$ROOT/test/kernel-validate.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the validator regression suite failed."
+  echo "pre-push: a rule of kernel-validate.mjs no longer fires as claimed."
+  exit 1
+fi
+
 echo "pre-push: running kernel-validate against test/instance-fixture"
 if ! MERIDIAN_INSTANCE="$ROOT/test/instance-fixture" node "$ROOT/scripts/kernel-validate.mjs"; then
   echo ""

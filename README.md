@@ -59,21 +59,30 @@ meridian/
 ├── standards/          методология, lifecycle, статусная модель, writers, шаблоны
 │   └── workspace/kernel-boundary.md    ← нормативная граница
 ├── workflows/          жизненный цикл задачи
-├── verification/       verification router и regression-правила
+├── verification/       verification router, regression-правила, smoke-protocol
 ├── skills/             завендоренные skill-пакеты с SHA-пинами
 ├── registries/         правила и JSON Schema реестров (не данные)
-├── scripts/            kernel-validate.mjs
-├── test/instance-fixture/   синтетический Instance для CI и приёмочного прогона
+├── instance-template/  bootstrap-каркас нового Instance (первый день на продукте)
+├── scripts/            kernel-validate.mjs, preflight.mjs
+├── test/               instance-fixture/ и регрессионный набор валидатора
+├── hooks/              pre-push: тесты валидатора + прогон против fixture
 └── .github/workflows/gate.yml
 ```
 
 ## 4. Запуск валидатора
 
 ```bash
+node scripts/preflight.mjs                            # сессия подключена к правильным корням?
 MERIDIAN_INSTANCE=/path/to/meridian-instance-<product> node scripts/kernel-validate.mjs
-node scripts/kernel-validate.mjs                      # без Instance: часть проверок UNVERIFIED
+node scripts/kernel-validate.mjs                      # без Instance: явный FAIL, не молчание
 MERIDIAN_INSTANCE=$PWD/test/instance-fixture node scripts/kernel-validate.mjs   # как в CI
+node test/kernel-validate.test.mjs                    # правила валидатора действительно срабатывают
 ```
+
+Preflight — первый шаг любой агентной сессии: он громко падает, если сессия
+открыта против устаревших корней или без `MERIDIAN_INSTANCE`, вместо того
+чтобы молча читать не те правила. Bootstrap нового Instance начинается с
+[`instance-template/BOOTSTRAP.md`](instance-template/BOOTSTRAP.md).
 
 Валидатор устроен по правилу «проверка, которую нельзя выполнить, сообщает
 UNVERIFIED, а не OK». Зелёный прогон означает «проверено», а не «не смотрели».
@@ -112,6 +121,6 @@ draft-релиза, не более.
 | D-3 | Остаётся ли привязка к конкретному wiki/агентному инструменту first-class или нужен слой абстракции | объём сценариев 2/3 |
 | D-4 | Нужен ли bootstrap CLI/installer | коммерческую передачу |
 | D-5 | Критерии перехода `0.x` → `1.0.0` | первый стабильный релиз |
-| D-6 | Переносимый шаблон smoke-пакета в Kernel (сейчас пакет целиком Instance) | portability сценария smoke-верификации |
+| D-6 | ~~Переносимый шаблон smoke-пакета в Kernel~~ — закрыто: `verification/smoke-protocol/` (протокол + шаблон acceptance gate); приёмка на реальном втором продукте остаётся будущим фактом | — |
 
 Пока D-1 не решён, репозиторий остаётся приватным.

@@ -1,0 +1,9 @@
+$schema: ./access.schema.json
+# Access references and action profiles. External references only — never
+# credentials, tokens or copied secret values. Action profiles default to
+# unresolved: listing an action authorizes nothing.
+schema_version: 1
+secret_storage_rule: external-reference-only
+applications: []
+access_references: []
+action_profiles: []

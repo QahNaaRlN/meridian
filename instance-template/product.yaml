@@ -1,0 +1,58 @@
+# Instance-level product identity. Kernel documents reference this file
+# instead of hardcoding any product fact. Every REPLACE_ME is a deliberate
+# blocker: resolve it from an authoritative source, never by guessing.
+schema_version: 1
+
+product:
+  name: REPLACE_ME
+  description: >
+    REPLACE_ME — one paragraph naming what the product is, written for the
+    agent that has never seen it.
+
+canonical_wiki:
+  tool: REPLACE_ME
+  base_url: REPLACE_ME
+  space_key: REPLACE_ME
+  documentation_standard_url: REPLACE_ME
+  documentation_standard_version: REPLACE_ME
+
+naming_conventions:
+  - rule: REPLACE_ME
+    source: REPLACE_ME
+
+# Three tool-integration axes; see the Kernel's
+# standards/workspace/tooling-axes.md for how an agent must read them
+# (never assume hosting, access protocol or integration channel).
+tooling:
+  documentation:
+    tool: REPLACE_ME
+    access_method: REPLACE_ME
+    constraint: REPLACE_ME
+  task_tracker:
+    tool: REPLACE_ME
+    hosting: REPLACE_ME
+    base_url: REPLACE_ME
+    access_method: REPLACE_ME
+    constraint: REPLACE_ME
+  repository:
+    tool: REPLACE_ME
+    hosting: REPLACE_ME
+    base_url: REPLACE_ME
+    namespace: REPLACE_ME
+    default_branch: REPLACE_ME
+    git_transport: REPLACE_ME
+    api_access: unresolved
+    constraint: REPLACE_ME
+
+# Literals that must never appear in the Kernel and are not derivable from the
+# fields above: internal service names, codenames, client names, domains.
+# Over-inclusion costs nothing; omission is how leaks survive.
+forbidden_literals:
+  - REPLACE_ME
+
+# Case-sensitive regex patterns for terms too common for the case-insensitive
+# literal search (e.g. a component named after an everyday word).
+forbidden_patterns: []
+
+owner: REPLACE_ME
+last_verified: REPLACE_ME

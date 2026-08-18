@@ -1,0 +1,6 @@
+$schema: ./test-data.schema.json
+# Test-data references. External references only; sensitive data always
+# forbidden. Until a baseline task and target environment are chosen, pilot
+# test data remains an explicit blocker, not an assumption.
+schema_version: 1
+references: []

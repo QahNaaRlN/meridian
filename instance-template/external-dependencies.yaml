@@ -1,0 +1,6 @@
+# External dependency records. After the Kernel vendored its two methodology
+# dependencies this starts empty; an entry appearing here means the workspace
+# gained a dependency on something outside the two repositories, and it must
+# be either vendored with a SHA pin or explicitly marked unresolvable.
+schema_version: 1
+dependencies: []

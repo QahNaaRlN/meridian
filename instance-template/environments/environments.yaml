@@ -1,0 +1,7 @@
+$schema: ./environments.schema.json
+# Source-backed environment topology. Declared endpoints prove that a source
+# declares them, not that they are reachable; reachability and capabilities
+# are execution-context facts.
+schema_version: 1
+applications: []
+environments: []

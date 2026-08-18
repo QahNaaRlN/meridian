@@ -720,7 +720,12 @@ if (invRaw) {
       const recorded = r.vcs || {};
       const actual = gitFacts(r.path);
       if (!actual) {
-        warn(`inventory-git: ${r.id} — repository at ${r.path} is not reachable from here; recorded revision is UNVERIFIED, not confirmed`);
+        // Unreachable-from-this-environment is the expected state for product
+        // repositories when the validator runs outside the product workspace.
+        // A warning that fires on every green run trains the operator to
+        // ignore warnings, so the per-repository lines are informational and
+        // the aggregate "0/N confirmed" below stays the single warning.
+        info(`inventory-git: ${r.id} — repository at ${r.path} is not reachable from here; recorded revision is UNVERIFIED, not confirmed`);
         continue;
       }
       const problems = [];

@@ -1,0 +1,6 @@
+$schema: ./repositories.schema.json
+# Source-cited commands per repository. Every populated command cites its
+# manifest source and pointer; absence from this registry means the Workspace
+# cannot recommend the command without returning to the repository source.
+schema_version: 1
+repositories: []

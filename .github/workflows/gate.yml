@@ -19,6 +19,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Regression-test the validator itself
+        run: node test/kernel-validate.test.mjs
+
       - name: Validate against the synthetic instance
         env:
           MERIDIAN_INSTANCE: ${{ github.workspace }}/test/instance-fixture

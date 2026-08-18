@@ -6,7 +6,31 @@
 
 ## [Unreleased]
 
-Правки по результатам внешнего ревью 0.1.0 (verdict: changes_requested).
+Правки по результатам внешнего ревью 0.1.0 (verdict: changes_requested), затем
+закрытие структурных пробелов, которые ревью зафиксировало как открытые.
+
+### Added
+
+- **`test/kernel-validate.test.mjs`** — регрессионный набор валидатора:
+  синтетические Kernel/Instance во временных каталогах, adversarial-кейс на
+  каждое правило (утечка литерала и паттерна, personal path, побег ссылки,
+  symlink-побег, format-нарушение, unsupported keyword в необращённой ветке,
+  sha-mismatch, отсутствующий instance-context, duplicate Front Matter,
+  прогон без Instance, fixture-исключение). Подключён шагом в CI gate и в
+  `hooks/pre-push`; невозможный кейс печатается как SKIP, не пропускается.
+- **`verification/smoke-protocol/`** — переносимое ядро smoke-методологии
+  (Test Contract, Execution Context, §11 Single Verdict Authority,
+  side-effect tiers, test-data правила, шаблон acceptance gate AE-1…AE-5).
+  Производный текст: провенанс и SHA исходных файлов продуктового unit 0.3.0
+  записаны в README пакета; сам продуктовый unit не разрезан и не изменён.
+  Закрывает D-6.
+- **`instance-template/`** — bootstrap-каркас нового Instance: `product.yaml`
+  и реестры с `REPLACE_ME`-блокерами, скелет `.agent`, `BOOTSTRAP.md` с
+  чеклистом первого дня. Шаблонные реестры валидируются в gate теми же
+  схемами, что и боевые данные.
+- **`scripts/preflight.mjs`** — громкая проверка подключения сессии к
+  правильным Kernel/Instance до начала работы; закрывает сценарий «сессия
+  молча работает со старыми корнями».
 
 ### Fixed
 
@@ -48,6 +72,14 @@
   Confluence названа явно (D-3); «Kernel не выучил имя продукта» заменено на
   проверяемое утверждение gate с его известными пределами; «проходящий
   валидатор» ограничено объёмом проверок валидатора на момент снимка.
+- **Шум предсказуемых warning'ов убран**: недостижимость продуктового
+  репозитория из среды запуска — per-repo INFO, единственным WARN остаётся
+  агрегат «0/N confirmed». Warning, срабатывающий на каждом зелёном прогоне,
+  обучает игнорировать warning'и и разъедает правило «зелёное значит
+  проверено».
+- `verification/README.md`: маршрут smoke-строки указывает на Kernel-протокол
+  (`verification/smoke-protocol/PROTOCOL.md`), конфигурируемый продуктовым
+  smoke-unit из Instance.
 
 ## [0.1.0] — 2026-08-18 (`draft`)
 

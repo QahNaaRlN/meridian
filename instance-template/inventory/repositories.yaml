@@ -1,0 +1,6 @@
+$schema: ./repositories.schema.json
+# Repository facts with Git evidence. Populate only from verified state
+# (revision + working tree observed, not recalled). The schema lives in the
+# Kernel and is resolved by registry directory name.
+schema_version: 1
+repositories: []

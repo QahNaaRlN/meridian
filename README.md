@@ -7,6 +7,9 @@
 
 **Status:** `draft` · **Version:** [`VERSION`](VERSION) · **Visibility:** private
 
+Новичку — [`MANUAL.md`](MANUAL.md): руководство по эксплуатации для человека,
+который видит систему впервые.
+
 ---
 
 ## 1. Что это

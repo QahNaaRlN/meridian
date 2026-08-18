@@ -1,0 +1,21 @@
+#!/bin/sh
+# Meridian Kernel — refuse to push a kernel that does not pass its own validator.
+#
+# Runs against the synthetic instance fixture, so it works offline and without
+# access to any private Instance. This is the same check CI runs, moved earlier:
+# a red kernel should not reach the remote in the first place.
+#
+# Enable in a fresh clone:  git config core.hooksPath hooks
+# Bypass (deliberately):    git push --no-verify
+
+set -e
+ROOT=$(git rev-parse --show-toplevel)
+echo "pre-push: running kernel-validate against test/instance-fixture"
+if ! MERIDIAN_INSTANCE="$ROOT/test/instance-fixture" node "$ROOT/scripts/kernel-validate.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the kernel validator failed."
+  echo "pre-push: this run used the synthetic fixture; it does NOT check the real"
+  echo "pre-push: product's literals. Run with MERIDIAN_INSTANCE pointed at the"
+  echo "pre-push: private Instance for that."
+  exit 1
+fi

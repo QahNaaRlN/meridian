@@ -511,7 +511,7 @@ superseded → archived
 discovered_at: YYYY-MM-DD
 discovered_in: # ссылка на задачу, в ходе которой обнаружено
 area_type: # common | domain | system | platform | unclassified — primary owner
-area: # slug области (production, workstation, engineering, …)
+area: # slug области; конкретные слаги продукта — в naming_conventions Instance
 # domain:                 # устаревшее; не требовать. При миграции заменять на area_type/area
 affected_repositories: []
 

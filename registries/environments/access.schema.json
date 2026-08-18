@@ -81,6 +81,12 @@
         { "if": { "properties": { "state": { "const": "unresolved" } } }, "then": { "not": { "required": ["external_reference"] } } }
       ]
     },
-    "action": { "enum": ["read-only-observation", "authenticate", "create-test-data", "submit-print-job", "physical-print", "mutate-database", "mutate-queue"] }
+    "action": {
+      "description": "Generic actions are enumerated here. Product-specific actions are Instance vocabulary: they carry an `x-` prefix, and their meaning and approval rules live in the Instance, so the Kernel schema never learns a product's domain.",
+      "anyOf": [
+        { "enum": ["read-only-observation", "authenticate", "create-test-data", "mutate-database", "mutate-queue"] },
+        { "type": "string", "pattern": "^x-[a-z0-9]+(-[a-z0-9]+)*$" }
+      ]
+    }
   }
 }

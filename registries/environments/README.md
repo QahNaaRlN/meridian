@@ -24,7 +24,7 @@ Each environment declares one provenance resolver requirement. A Test Contract s
 
 `access.yaml` preserves the Agent Smoke Workflow terms `credentials_by_role` and `default_role`. Values are external references only. An empty map or `null` default is an explicit unresolved state, not permission to guess or reuse a credential.
 
-Action profiles default to unresolved. No environment action is authorized by merely listing it. In particular, test-data creation, print submission, physical printing, database changes, and queue changes require explicit approval.
+Action profiles default to unresolved. No environment action is authorized by merely listing it. In particular, test-data creation, database changes, queue changes, and every instance-defined `x-*` action require explicit approval. Instance-defined actions are product vocabulary: their meaning and approval rules live in the Instance, never in this registry's schema.
 
 ## Capabilities and verdicts
 

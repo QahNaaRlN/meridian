@@ -9,9 +9,9 @@ updated: 2026-08-18
 related_documents:
   - ../README.md
   - ./agent-workspace.md
-- ./document-lifecycle.md
-- ./document-quality.md
-- ../../../engineering-workspace/skills/versioning-standard-docs/SKILL.md
+  - ./document-lifecycle.md
+  - ./document-quality.md
+  - ../../skills/versioning-standard-docs/SKILL.md
 ---
 
 # Статусная модель инженерных документов
@@ -45,8 +45,8 @@ related_documents:
 `publication-drafts/`.
 
 Для документа, создаваемого или редактируемого непосредственно в Confluence,
-авторитетен принятый workspace skill
-`C:\Work\engineering-workspace\skills\versioning-standard-docs\SKILL.md`:
+авторитетен завендоренный Kernel-skill
+`skills/versioning-standard-docs/SKILL.md`:
 
 ```text
 Draft → Proposed → Accepted → Deprecated / Superseded / Archived

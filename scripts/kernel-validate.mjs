@@ -7,9 +7,11 @@
 // docs/agent-standards/workspace/kernel-boundary.md.
 //
 // Checks
-//   1. kernel-purity     — every declared Kernel file (Markdown, YAML *and*
-//                          this script) is free of the current product's
-//                          literals and of personal home-directory paths.
+//   1. kernel-purity     — every Git-tracked file of this repository is free
+//                          of the current product's literals, its forbidden
+//                          patterns and of personal home-directory paths.
+//                          Binary artifacts are covered by sha-provenance
+//                          instead of the text scan, and are counted as such.
 //   2. duplicate-fm      — no scanned Markdown file (Kernel *or* .agent) ends
 //                          with an orphaned second Front-Matter block.
 //   3. front-matter      — .agent artifacts carry leading Front Matter (WARN).
@@ -26,10 +28,14 @@
 //
 // Deliberate limits, stated rather than hidden:
 //   - The YAML reader and the JSON Schema validator below implement documented
-//     subsets. Both THROW on any construct or keyword they do not implement,
-//     so an unsupported input turns the gate red instead of silently passing.
-//   - The Kernel file list is a hand-maintained mirror of kernel-boundary.md.
-//     This script does not parse that document; update both together.
+//     subsets. Both THROW on any construct or keyword they do not implement.
+//     The whole schema tree is walked up front (assertSupportedDeep), so an
+//     unsupported keyword in a branch the data never visits still turns the
+//     gate red instead of silently passing.
+//   - The Kernel file set is enumerated from `git ls-files`, not from a
+//     hand-maintained list, so it cannot drift from what the repository
+//     actually tracks. kernel-boundary.md remains the normative statement of
+//     what belongs on which side; this script covers everything tracked.
 //
 // Usage: node scripts/kernel-validate.mjs
 // Roots: MERIDIAN_KERNEL defaults to this repository. MERIDIAN_INSTANCE has no
@@ -71,7 +77,7 @@ function listFiles(dir, exts) {
     if (EXCLUDED_DIRS.has(e.name)) continue;
     const full = path.join(dir, e.name);
     if (e.isDirectory()) out = out.concat(listFiles(full, exts));
-    else if (exts.some((ext) => e.name.endsWith(ext))) out.push(full);
+    else if (!exts || exts.some((ext) => e.name.endsWith(ext))) out.push(full);
   }
   return out;
 }
@@ -261,6 +267,42 @@ function assertSupported(schema, where) {
   }
 }
 
+// `format` is enforced, not merely tolerated: only the formats implemented
+// here are accepted, and any other format value fails the schema up front.
+// A format that was silently ignored would let a green run claim more than
+// was checked.
+const FORMAT_CHECKS = {
+  'date': (s) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s)),
+  'date-time': (s) => /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(\.\d+)?([Zz]|[+-]\d{2}:\d{2})$/.test(s) && !Number.isNaN(Date.parse(s)),
+  'uri': (s) => { try { new URL(s); return true; } catch { return false; } },
+};
+
+// Walk the whole schema tree once, before any data is validated. Per-node
+// assertion during validation only reaches the branches the data happens to
+// visit; an unsupported keyword in an optional, never-taken branch would
+// otherwise pass silently.
+const SCHEMA_MAP_KEYWORDS = ['properties', 'definitions', '$defs'];
+const SCHEMA_CHILD_KEYWORDS = ['items', 'additionalProperties', 'not', 'if', 'then', 'else', 'propertyNames'];
+const SCHEMA_LIST_KEYWORDS = ['anyOf', 'oneOf', 'allOf'];
+function assertSupportedDeep(schema, where) {
+  if (typeof schema !== 'object' || schema === null || Array.isArray(schema)) return;
+  assertSupported(schema, where);
+  if (schema.format != null && !FORMAT_CHECKS[schema.format]) {
+    throw new UnsupportedSchema(`format "${schema.format}" at ${where} is not implemented by this validator`);
+  }
+  for (const k of SCHEMA_MAP_KEYWORDS) {
+    if (schema[k] && typeof schema[k] === 'object') {
+      for (const [name, sub] of Object.entries(schema[k])) assertSupportedDeep(sub, `${where}/${k}/${name}`);
+    }
+  }
+  for (const k of SCHEMA_CHILD_KEYWORDS) {
+    if (typeof schema[k] === 'object' && schema[k] !== null) assertSupportedDeep(schema[k], `${where}/${k}`);
+  }
+  for (const k of SCHEMA_LIST_KEYWORDS) {
+    if (Array.isArray(schema[k])) schema[k].forEach((sub, i) => assertSupportedDeep(sub, `${where}/${k}/${i}`));
+  }
+}
+
 function resolveRef(ref, root) {
   if (!ref.startsWith('#/')) throw new UnsupportedSchema(`external $ref "${ref}"`);
   let node = root;
@@ -298,6 +340,11 @@ function validate(data, schema, root, ptr, errs) {
     if (schema.pattern && !new RegExp(schema.pattern).test(data)) errs.push(`${ptr}: does not match /${schema.pattern}/`);
     if (schema.minLength != null && data.length < schema.minLength) errs.push(`${ptr}: shorter than ${schema.minLength}`);
     if (schema.maxLength != null && data.length > schema.maxLength) errs.push(`${ptr}: longer than ${schema.maxLength}`);
+    if (schema.format != null) {
+      const check = FORMAT_CHECKS[schema.format];
+      if (!check) throw new UnsupportedSchema(`format "${schema.format}" at ${ptr || '/'} is not implemented by this validator`);
+      if (!check(data)) errs.push(`${ptr}: does not satisfy format "${schema.format}"`);
+    }
   }
   if (typeof data === 'number') {
     if (schema.minimum != null && data < schema.minimum) errs.push(`${ptr}: below minimum`);
@@ -345,31 +392,48 @@ function validate(data, schema, root, ptr, errs) {
 }
 
 // ---------------------------------------------------------------------------
-// Kernel file set (mirror of kernel-boundary.md)
+// Kernel file set. Enumerated from Git so it cannot drift from the repository:
+// everything this repository tracks is Kernel and is subject to the purity
+// scan — including VERSION, LICENSE, .gitignore, .github/, hooks/ and the
+// test fixture, which a hand-maintained list once omitted. Binary artifacts
+// cannot be text-scanned; they are covered by sha-provenance and counted
+// separately so the "clean" claim never silently over-reaches.
 // ---------------------------------------------------------------------------
-const KERNEL_FILES = [
-  ...listFiles(path.join(KERNEL_ROOT, 'standards'), ['.md']),
-  ...listFiles(path.join(KERNEL_ROOT, 'workflows'), ['.md']),
-  ...listFiles(path.join(KERNEL_ROOT, 'verification'), ['.md']),
-  // skills carry their pins alongside them; both are Kernel
-  ...listFiles(path.join(KERNEL_ROOT, 'skills'), ['.md', '.yaml']),
-  // registry rules and their JSON Schemas are Kernel; the data they describe
-  // is Instance. Schemas are scanned too: an example value inside a schema is
-  // just as much a leak as a sentence in a document.
-  ...listFiles(path.join(KERNEL_ROOT, 'registries'), ['.md', '.json']),
-  path.join(KERNEL_ROOT, 'README.md'),
-  path.join(KERNEL_ROOT, 'CHANGELOG.md'),
-  path.join(KERNEL_ROOT, 'COMPATIBILITY.md'),
-  // the validator is declared Kernel by kernel-boundary.md, so it must be
-  // subject to the same purity rule it enforces on everything else
-  path.join(KERNEL_ROOT, 'scripts', 'kernel-validate.mjs'),
-];
-const kernelFiles = [...new Set(KERNEL_FILES)].filter((f) => fs.existsSync(f));
+const BINARY_EXTS = ['.zip'];
+function gitTrackedFiles(root) {
+  try {
+    const out = execFileSync('git', ['-C', root, 'ls-files', '-z'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const files = out.split('\0').filter(Boolean).map((f) => path.join(root, f));
+    return files.length ? files : null;
+  } catch { return null; }
+}
+const trackedKernelFiles = gitTrackedFiles(KERNEL_ROOT);
+if (!trackedKernelFiles) {
+  warn('kernel-purity: Git enumeration unavailable; scanning a filesystem walk instead (untracked files included)');
+}
+const KERNEL_FILES = trackedKernelFiles ?? listFiles(KERNEL_ROOT, null);
+// Files under the Instance root are Instance data by definition, even when the
+// Instance is the synthetic fixture tracked inside this repository. Scanning
+// the fixture against its own declared literals would fail every fixture run
+// on a self-match, so the Instance subtree is excluded — and the exclusion is
+// reported, not hidden. With a real (external) Instance nothing is excluded
+// and the fixture subtree IS scanned against the real product's literals.
+const RESOLVED_INSTANCE_ROOT = INSTANCE_ROOT ? path.resolve(INSTANCE_ROOT) : null;
+const underInstance = (f) => RESOLVED_INSTANCE_ROOT !== null
+  && path.resolve(f).startsWith(RESOLVED_INSTANCE_ROOT + path.sep);
+const kernelBinaryFiles = [...new Set(KERNEL_FILES)].filter((f) => BINARY_EXTS.some((e) => f.endsWith(e)));
+const instanceExcluded = [...new Set(KERNEL_FILES)].filter((f) => underInstance(f));
+if (instanceExcluded.length) {
+  info(`kernel-purity: ${instanceExcluded.length} tracked file(s) under the Instance root are Instance data, excluded from the Kernel scan`);
+}
+const kernelFiles = [...new Set(KERNEL_FILES)]
+  .filter((f) => fs.existsSync(f) && !BINARY_EXTS.some((e) => f.endsWith(e)) && !underInstance(f));
 
 // forbidden literals are derived from the Instance product record
 const productYamlPath = INSTANCE_ROOT ? path.join(INSTANCE_ROOT, 'product.yaml') : null;
 const productRaw = productYamlPath ? readIfExists(productYamlPath) : null;
 let forbiddenLiterals = [];
+let forbiddenPatterns = [];
 let productDoc = null;
 if (productRaw) {
   try {
@@ -388,7 +452,13 @@ if (productRaw) {
       // and being over-inclusive here costs nothing.
       ...(Array.isArray(productDoc?.forbidden_literals) ? productDoc.forbidden_literals : []),
     ].filter(Boolean);
-    ok(`product record parsed; ${forbiddenLiterals.length} kernel-purity literals derived`);
+    // Case-sensitive regex patterns for terms too common to match loosely:
+    // a case-insensitive word-boundary literal for a product component named
+    // after an everyday word would drown the gate in false positives, so the
+    // Instance declares an exact pattern instead.
+    forbiddenPatterns = (Array.isArray(productDoc?.forbidden_patterns) ? productDoc.forbidden_patterns : [])
+      .map((p) => new RegExp(String(p)));
+    ok(`product record parsed; ${forbiddenLiterals.length} kernel-purity literals and ${forbiddenPatterns.length} patterns derived`);
   } catch (e) {
     fail(`product record: ${e.message}`);
   }
@@ -403,18 +473,27 @@ if (productRaw) {
 // sequence it searches for (which would be an unavoidable self-match).
 const PERSONAL_PATH_RE = new RegExp(['[A-Z]:', '\\\\', 'Users', '\\\\', '[^\\\\/\\r\\n]+'].join(''), 'i');
 
+let purityFailures = 0;
+const pfail = (m) => { purityFailures++; fail(m); };
 for (const file of kernelFiles) {
   const text = readIfExists(file);
   if (text === null) continue;
   for (const lit of forbiddenLiterals) {
     const esc = String(lit).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const re = new RegExp(/^https?:\/\//i.test(lit) ? esc : `\\b${esc}\\b`, 'i');
-    if (re.test(text)) fail(`kernel-purity: product literal "${lit}" found in ${file}`);
+    if (re.test(text)) pfail(`kernel-purity: product literal "${lit}" found in ${file}`);
+  }
+  for (const re of forbiddenPatterns) {
+    const m = text.match(re);
+    if (m) pfail(`kernel-purity: forbidden pattern ${re} matched "${m[0]}" in ${file}`);
   }
   const personal = text.match(PERSONAL_PATH_RE);
-  if (personal) fail(`kernel-purity: personal home path "${personal[0]}" found in ${file}`);
+  if (personal) pfail(`kernel-purity: personal home path "${personal[0]}" found in ${file}`);
 }
-if (failures === 0) ok(`kernel-purity: ${kernelFiles.length} kernel files clean (Markdown, YAML and this script)`);
+if (purityFailures === 0 && productDoc) {
+  ok(`kernel-purity: ${kernelFiles.length} tracked text files clean; `
+   + `${kernelBinaryFiles.length} binary artifact(s) covered by sha-provenance, not by this text scan`);
+}
 
 // ---------------------------------------------------------------------------
 // .agent artifacts
@@ -455,6 +534,32 @@ for (const file of allMd) {
 ok(`duplicate-fm: ${allMd.length} Markdown files checked (Kernel and .agent)`);
 
 // links
+// Confinement is decided on real paths, not textual prefixes: a symlink or an
+// NTFS junction inside the Kernel can make a textual descendant of KERNEL_ROOT
+// live physically elsewhere, and a prefix comparison would bless the escape.
+// The deepest existing ancestor is realpath'd and the remaining segments are
+// re-appended, so a link through a symlinked directory is judged by where it
+// actually lands.
+function realResolve(p) {
+  let base = p;
+  const rest = [];
+  while (!fs.existsSync(base)) {
+    const parent = path.dirname(base);
+    if (parent === base) break;
+    rest.unshift(path.basename(base));
+    base = parent;
+  }
+  let real;
+  try { real = fs.realpathSync(base); } catch { real = base; }
+  return path.join(real, ...rest);
+}
+const REAL_KERNEL_ROOT = (() => {
+  try { return fs.realpathSync(KERNEL_ROOT); } catch { return path.resolve(KERNEL_ROOT); }
+})();
+function escapesKernel(target) {
+  const rel = path.relative(REAL_KERNEL_ROOT, realResolve(target));
+  return rel !== '' && (rel.startsWith('..') || path.isAbsolute(rel));
+}
 const LINK_RE = /\]\((\.\.?\/[^)#\s]+|[^):#\s]+\.md)\)/g;
 for (const file of allMd) {
   const text = readIfExists(file);
@@ -466,7 +571,7 @@ for (const file of allMd) {
     // A Kernel link that escapes the Kernel root resolves only by accident of
     // whatever happens to sit next to this checkout. On a clean clone elsewhere
     // it breaks, so "it resolved here" is not evidence that it is correct.
-    if (file.startsWith(KERNEL_ROOT + path.sep) && !resolved.startsWith(KERNEL_ROOT + path.sep)) {
+    if (file.startsWith(KERNEL_ROOT + path.sep) && escapesKernel(resolved)) {
       fail(`link: ${file} -> "${m[1]}" points outside the Kernel; reference Instance material as a $MERIDIAN_INSTANCE path, do not link to it`);
       continue;
     }
@@ -510,7 +615,12 @@ for (const file of registryYaml) {
   try { schema = JSON.parse(schemaRaw); }
   catch (e) { fail(`schema: ${schemaPath} is not valid JSON: ${e.message}`); continue; }
   const errs = [];
-  try { validate(doc, schema, schema, '', errs); }
+  try {
+    // Reject unsupported keywords anywhere in the schema before validating,
+    // including branches this particular document never exercises.
+    assertSupportedDeep(schema, schemaPath);
+    validate(doc, schema, schema, '', errs);
+  }
   catch (e) { fail(`schema: ${file} could not be validated: ${e.message}`); continue; }
   if (errs.length) errs.slice(0, 10).forEach((er) => fail(`schema: ${file} ${er}`));
   else validated++;
@@ -542,6 +652,21 @@ for (const name of skillDirs) {
   if (!pin?.sha256) fail(`sha-provenance: ${name} PIN.yaml records no sha256`);
   else if (actual !== pin.sha256) fail(`sha-provenance: ${name} artifact ${actual.slice(0, 12)} != pinned ${String(pin.sha256).slice(0, 12)}`);
   else ok(`sha-provenance: ${name} matches its pin (${actual.slice(0, 12)}...)`);
+
+  // A derived skill may declare that it is inapplicable without an Instance
+  // context file (its product conventions live there). Missing context is a
+  // blocker by the skill's own rule, so it is enforced here rather than
+  // trusted to be remembered.
+  const ctxRel = pin?.requires_instance_context;
+  if (ctxRel) {
+    if (!INSTANCE_ROOT) {
+      warn(`instance-context: ${name} requires "${ctxRel}" from the Instance; no Instance root set, presence UNVERIFIED`);
+    } else if (readIfExists(path.join(INSTANCE_ROOT, ctxRel)) === null) {
+      fail(`instance-context: ${name} requires "${ctxRel}", which is missing from the Instance; the skill declares this a blocker, not a licence to guess`);
+    } else {
+      ok(`instance-context: ${name} context "${ctxRel}" present in the Instance`);
+    }
+  }
 
   const arch = pin?.source_archive;
   if (arch?.path && arch?.sha256) {

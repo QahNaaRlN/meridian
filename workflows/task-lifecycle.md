@@ -13,8 +13,8 @@ Do not enter a later stage while a required fact, decision, authorization, or ea
 1. State the requested outcome and classify the task: explanation/audit, bugfix, feature, intentional behavior change, or operational verification.
 2. Identify the expected contract or acceptance criteria and distinguish them from current implementation behavior.
 3. Bound the candidate repositories through the [inventory rules](../registries/inventory/README.md) and the Instance data they govern (`$MERIDIAN_INSTANCE/inventory/`). Do not add a repository merely because it is adjacent.
-4. Read `C:\Work\AGENTS.md` and every applicable nearest repository `AGENTS.md` before relying on local rules.
-5. Record what the request authorizes. Product edits, commits, service starts, deployments, test-data creation, physical printing, and other external effects require their own applicable authority.
+4. Read the workspace-root `AGENTS.md` and every applicable nearest repository `AGENTS.md` before relying on local rules.
+5. Record what the request authorizes. Product edits, commits, service starts, deployments, test-data creation, hardware side effects, and other external effects require their own applicable authority.
 
 For an explanation, audit, or status report, stop before implementation unless the user also requested a change.
 

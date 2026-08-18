@@ -13,4 +13,4 @@ Rules:
 - absence from this registry does not prove a command is forbidden, but it does mean the Workspace cannot recommend it without returning to the repository source.
 - registry presence is not execution evidence.
 
-The Core `AGENTS.md` currently mentions `composer run dev`, but `composer.json` has no `dev` script. That command is intentionally excluded until the source conflict is resolved. Install commands are also excluded: lockfile presence identifies the package ecosystem but does not by itself establish the approved install operation for this Workspace.
+When a repository's agent instructions mention a command that its manifest does not define, the command is excluded from the registry until the source conflict is resolved; the concrete exclusions and their evidence are Instance data and are recorded next to the registry data, not here. Install commands are also excluded: lockfile presence identifies the package ecosystem but does not by itself establish the approved install operation for this Workspace.

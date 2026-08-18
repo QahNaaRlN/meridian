@@ -15,6 +15,11 @@ state: vendored-derived
 pinned_at: '2026-08-18'
 pinned_by: workspace-owner
 
+# The derived skill is inapplicable without the Instance's product
+# conventions. Declaring the requirement here lets the validator enforce the
+# blocker mechanically instead of trusting it to be remembered.
+requires_instance_context: skills/bugfix-protocol/context.md
+
 upstream:
   sha256: b1e1c6cafc2f13b7e8fa91c644165aa643efab7373aa549b6010cde36d3aa5cc
   sha_provenance: >

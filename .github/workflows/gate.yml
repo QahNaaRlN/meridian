@@ -1,0 +1,32 @@
+name: gate
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kernel-validate:
+    name: Kernel validate (synthetic instance)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate against the synthetic instance
+        env:
+          MERIDIAN_INSTANCE: ${{ github.workspace }}/test/instance-fixture
+        run: node scripts/kernel-validate.mjs
+
+      - name: State what this run did not verify
+        if: always()
+        run: |
+          echo "::notice::CI ran against test/instance-fixture, a fictional product."
+          echo "::notice::It proves the Kernel works against an Instance, and that personal-path leaks are absent."
+          echo "::notice::It does NOT prove the real product's literals are absent: that check needs the private Instance and runs locally."

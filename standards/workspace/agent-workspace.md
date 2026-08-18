@@ -1,0 +1,13 @@
+# Workspace agent standard
+
+`AGENTS.md` is the vendor-neutral source of instructions. The workspace file governs only cross-repository work; a repository file adds local facts and may refine, but not silently override, workspace rules. `CLAUDE.md` is a one-line adapter (`@AGENTS.md`). Cursor rules are limited to path-scoped, glob-activated, or Cursor-specific behavior.
+
+Resolve instruction conflicts in this order: current user request, nearest repository `AGENTS.md`, workspace `AGENTS.md`, vendor adapter, task artifact. Record equal-scope conflicts instead of guessing.
+
+Use `WORK/.agent` for work spanning repositories and `<repository>/.agent` for one-repository work. Use `.agent/publication-drafts/<problems|rfc|adr|concepts>/active` for unpublished or accepted-but-unpublished Confluence documents, and its `archive` folder for published snapshots or terminal documents. Do not turn plans, reports, analyses, or publication drafts into always-on tool instructions. Select their status through [the status model](document-status-model.md).
+
+Репозиторий — граница реализации (implementation boundary), а не единица канонической документации. Канонический wiki текущего продукта (см. `engineering-workspace/instance/product.yaml`, `canonical_wiki`) организует материалы по **семантическому владению (semantic ownership)**: общая инженерия (Common), предметная область (Domain), система (System), область платформы (Platform Area); при невозможности классификации — временное `unclassified`. У каждого канонического документа ровно один основной семантический владелец. `AGENTS.md` репозитория перечисляет семантические области, в которых участвует реализация (например `System: Core`, `Domain: Production`, `Platform: PrintFlow`), и ссылается на них. Пока сущность в `unclassified`, не утверждать постоянный тип по аналогии. Пока mapping не заполнен — источник истины site map Documentation Standard; отсутствие строки = migration debt. Правила размещения — только в Documentation Standard; таксономию здесь не дублировать. Product-specific наименования системных компонентов текущего продукта фиксируются в `product.yaml` (`naming_conventions`), не в этом kernel-документе.
+
+**Контракты:** семантический поставщик владеет каноническим контрактом; потребитель владеет описанием использования; реализующая система или репозиторий документирует детали реализации (полный контракт не копировать). Область платформы (например PrintFlow) может владеть публичными контрактами capability даже если HTTP endpoint размещён в Core.
+
+**Отношения ≠ тип владельца.** Поставщик, потребитель, `external`, целевая система интеграции — роли/отношения, не отдельные типы семантического владельца.

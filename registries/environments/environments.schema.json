@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "environments.schema.json",
+  "title": "Engineering Workspace Environments",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "applications", "environments"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "applications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "repository_id", "sources"],
+        "properties": {
+          "id": { "$ref": "#/definitions/id" },
+          "repository_id": { "$ref": "#/definitions/id" },
+          "sources": { "$ref": "#/definitions/sources" }
+        }
+      }
+    },
+    "environments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "classification", "applications", "provenance_resolver", "sources", "blockers", "last_verified"],
+        "properties": {
+          "id": { "$ref": "#/definitions/id" },
+          "classification": { "enum": ["local", "deployed"] },
+          "applications": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["application_id", "endpoints", "required_config"],
+              "properties": {
+                "application_id": { "$ref": "#/definitions/id" },
+                "endpoints": { "type": "array", "items": { "$ref": "#/definitions/endpoint" } },
+                "required_config": { "type": "array", "items": { "$ref": "#/definitions/configRequirement" } }
+              }
+            }
+          },
+          "provenance_resolver": { "$ref": "#/definitions/provenanceResolver" },
+          "access_reference_ids": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true },
+          "action_profile_id": { "$ref": "#/definitions/id" },
+          "sources": { "$ref": "#/definitions/sources" },
+          "blockers": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "last_verified": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "sources": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "state", "verification_state", "source"],
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "state": { "enum": ["declared", "unknown"] },
+        "verification_state": { "enum": ["unverified", "verified", "unreachable"] },
+        "url": { "type": "string", "format": "uri" },
+        "source": { "type": "string", "minLength": 1 },
+        "notes": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        { "if": { "properties": { "state": { "const": "declared" } } }, "then": { "required": ["url"] } },
+        { "if": { "properties": { "state": { "const": "unknown" } } }, "then": { "not": { "required": ["url"] } } }
+      ]
+    },
+    "configRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "state", "source"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "state": { "enum": ["declared", "missing-from-template", "unknown"] },
+        "source": { "type": "string", "minLength": 1 },
+        "notes": { "type": "string", "minLength": 1 }
+      }
+    },
+    "provenanceResolver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "method", "requirement", "authoritative_source_refs", "result_target"],
+      "properties": {
+        "state": { "enum": ["defined", "unresolved"] },
+        "method": { "enum": ["local-runtime", "deployment-revision"] },
+        "requirement": { "type": "string", "minLength": 1 },
+        "authoritative_source_refs": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "result_target": { "const": "execution-context" },
+        "blocker": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        { "if": { "properties": { "state": { "const": "defined" } } }, "then": { "properties": { "authoritative_source_refs": { "minItems": 1 } } } },
+        { "if": { "properties": { "state": { "const": "unresolved" } } }, "then": { "required": ["blocker"] } }
+      ]
+    }
+  }
+}

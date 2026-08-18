@@ -1,0 +1,34 @@
+# Vendored into the Kernel on 2026-08-18. Before that date the Kernel referenced
+# this file by a path on one operator's machine, which made the methodology
+# unreproducible anywhere else.
+#
+# This artifact is DERIVED, not a verbatim copy: the upstream file named the
+# current product and carried a product-specific conventions section. Both were
+# removed so the protocol can survive a change of product. The pin therefore
+# records two digests, and neither is presented as the other.
+schema_version: 1
+
+name: bugfix-protocol
+artifact: SKILL.md
+sha256: 269930b06f9f1a17fe9cdb5851e7062b1697bb851cad2e01d699948cd1ac28f4
+state: vendored-derived
+pinned_at: '2026-08-18'
+pinned_by: workspace-owner
+
+upstream:
+  sha256: b1e1c6cafc2f13b7e8fa91c644165aa643efab7373aa549b6010cde36d3aa5cc
+  sha_provenance: >
+    Recomputed from the source file at vendoring time and found equal to the
+    digest previously recorded second-hand in the Instance external-dependencies
+    record. That earlier entry is therefore confirmed, not merely carried forward.
+  transformations:
+    - Removed the product name from the skill description and title.
+    - Replaced product ticket identifiers in examples with a neutral placeholder.
+    - Moved the product-conventions section out to the Instance as
+      skills/bugfix-protocol/context.md, replacing it with a pointer that treats
+      a missing context file as a blocker rather than a licence to guess.
+
+notes: >
+  Regression/bugfix methodology: REPRODUCE -> RED -> DIAGNOSE MISS -> FIX ->
+  GREEN -> REPORT, with explicit human gates. Referenced by
+  verification/regression-testing/README.md.

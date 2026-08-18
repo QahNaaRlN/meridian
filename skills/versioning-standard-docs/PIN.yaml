@@ -1,0 +1,30 @@
+# Vendored into the Kernel on 2026-08-18. The source archive previously lived in
+# a personal downloads folder; provenance could not be re-verified on any other
+# machine. The archive is now part of the Kernel, so the chain
+# archive -> entry -> installed file is checkable from a clean checkout.
+schema_version: 1
+
+name: versioning-standard-docs
+artifact: SKILL.md
+sha256: c196059b2ec2358503bdf451c41e110da3e147b0e6a5f9319659a9eb9a1eabe4
+state: vendored
+version: '1.0.0'
+pinned_at: '2026-08-18'
+pinned_by: workspace-owner
+
+source_archive:
+  path: source/versioning-standard-docs.zip
+  sha256: f1e0f2eff2f21a37077beb3fc424a451e5ebf3504484e3111b472f222b91ad54
+  entry_path: versioning-standard-docs/SKILL.md
+  entry_sha256: c196059b2ec2358503bdf451c41e110da3e147b0e6a5f9319659a9eb9a1eabe4
+
+sha_provenance: >
+  Archive digest, archive-entry digest and installed-file digest all recomputed
+  at vendoring time and found equal to the digests recorded in the Instance
+  governance record.
+
+scope_limitation: >
+  This standard governs documents in a canonical wiki. It does not govern Git
+  artefacts, CI, product releases or agent workflow packages. Applying it to the
+  Kernel's own version line requires a separate accepted profile, which does not
+  exist yet. See COMPATIBILITY.md.

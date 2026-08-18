@@ -1,0 +1,11 @@
+# Document lifecycle
+
+Human-facing problem records, RFCs, ADRs and concepts are canonical in Confluence. Before publication, their local working copies belong in `.agent/publication-drafts/`; after publication, a local copy is only an archived snapshot with a `canonical_url`. Creating a document and changing its status are separate actions: select the location here, then use [the status model](document-status-model.md) for a fact-based status transition.
+
+Физическое размещение следует Documentation Standard (семантическое владение): постоянные стволы Common / Domain / System / Platform. `unclassified` — состояние классификации; staging `90. На классификации` создавать только при реальном документе для временного размещения, не заранее. Этот файл не переопределяет таксономию и не вводит новых типов владельца.
+
+A problem record is the exception to the publication order: it records a mismatch between stated requirements, implementation and tests, it is published immediately without review, and it never reaches a `resolved` state — it closes by referring the work to another artifact, by tolerating the mismatch deliberately, or by being invalidated. Referring does not have to mean an RFC: an ordinary fix task or another team's backlog counts. Write one when a bug turns out to be a divergence across those three layers rather than a defect in one of them. Жизненный цикл Problem Record одинаков для любого постоянного типа владельца (Common, Domain, System, Platform); это не цепочка `Problem → Domain → RFC`.
+
+While a problem record is open, do not turn the disputed behaviour into a normative regression test — a test that asserts the behaviour is the expected contract. A characterization test that records what the system currently does, labelled as such and linked to the record, remains allowed and is often useful before refactoring.
+
+Use `analysis/active` while researching, `plans/active` while a task is open, and `plans/done` when it is finished. Use `technical-specifications/active` while a specification changes and `technical-specifications/done` once it is stable. Put completed outcomes in `reports/current` and historical material in `reports/archive`. Preserve history through ordinary renames within the owning Git repository. Do not delete or move an ambiguous artifact until its scope and lifecycle are known.

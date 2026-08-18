@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "test-data.schema.json",
+  "title": "Engineering Workspace Test Data References",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "references"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "purpose", "environment_id", "application_id", "state", "sensitive_data_allowed", "source", "blocker"],
+        "properties": {
+          "id": { "$ref": "#/definitions/id" },
+          "purpose": { "type": "string", "minLength": 1 },
+          "environment_id": { "oneOf": [{ "$ref": "#/definitions/id" }, { "type": "null" }] },
+          "application_id": { "$ref": "#/definitions/id" },
+          "state": { "enum": ["available", "unresolved", "prohibited"] },
+          "external_reference": { "type": "string", "minLength": 1 },
+          "sensitive_data_allowed": { "const": false },
+          "source": { "type": "string", "minLength": 1 },
+          "blocker": { "type": "string", "minLength": 1 }
+        },
+        "allOf": [
+          { "if": { "properties": { "state": { "const": "available" } } }, "then": { "required": ["external_reference"] } },
+          { "if": { "properties": { "state": { "enum": ["unresolved", "prohibited"] } } }, "then": { "not": { "required": ["external_reference"] } } }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+  }
+}

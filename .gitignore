@@ -1,0 +1,38 @@
+# Meridian Kernel .gitignore
+#
+# Second line of defence only. The first is that the Instance is a different
+# repository entirely and is not reachable from here by a relative path.
+
+# Instance checkouts, if someone places one inside this working tree anyway.
+/instance/
+/instances/
+/.agent/
+/meridian-instance-*/
+/*-instance/
+
+# Secrets — never, in any form.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+secrets*.yaml
+secrets*.yml
+
+# Transient.
+tmp/
+_to_delete/
+*.tmp
+evidence/raw/
+screenshots/
+*.har
+
+# Tooling.
+node_modules/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

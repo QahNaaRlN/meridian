@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "commands-repositories.schema.json",
+  "title": "Engineering Workspace Repository Commands",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "repositories"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repository_id", "commands"],
+        "properties": {
+          "repository_id": { "type": "string", "minLength": 1 },
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "command", "command_kind", "category", "purpose", "applicability", "side_effects", "execution_approval", "source"],
+              "properties": {
+                "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+                "command": { "type": "string", "minLength": 1 },
+                "command_kind": { "enum": ["exact", "template"] },
+                "category": { "enum": ["install", "dev", "build", "lint", "typecheck", "unit", "integration", "regression", "format", "service", "generate", "migration", "maintenance", "release"] },
+                "purpose": { "type": "string", "minLength": 1 },
+                "applicability": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+                "side_effects": { "enum": ["none", "local", "external", "unknown"] },
+                "execution_approval": { "enum": ["not-required", "required"] },
+                "requires": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+                "source": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["path", "pointer", "last_verified"],
+                  "properties": {
+                    "path": { "type": "string", "minLength": 1 },
+                    "pointer": { "type": "string", "minLength": 1 },
+                    "last_verified": { "type": "string", "format": "date-time" }
+                  }
+                },
+                "safety_notes": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+              },
+              "allOf": [
+                {
+                  "if": { "properties": { "side_effects": { "enum": ["external", "unknown"] } } },
+                  "then": { "properties": { "execution_approval": { "const": "required" } } }
+                },
+                {
+                  "if": { "properties": { "category": { "enum": ["install", "service", "migration", "maintenance", "release"] } } },
+                  "then": { "properties": { "execution_approval": { "const": "required" } } }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

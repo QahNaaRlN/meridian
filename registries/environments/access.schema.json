@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "access.schema.json",
+  "title": "Engineering Workspace Access References",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "secret_storage_rule", "applications", "access_references", "action_profiles"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "secret_storage_rule": { "const": "external-reference-only" },
+    "applications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["application_id", "default_role", "credentials_by_role", "mechanism_state", "sources", "blockers"],
+        "properties": {
+          "application_id": { "$ref": "#/definitions/id" },
+          "default_role": { "oneOf": [{ "$ref": "#/definitions/id" }, { "type": "null" }] },
+          "credentials_by_role": {
+            "type": "object",
+            "propertyNames": { "$ref": "#/definitions/id" },
+            "additionalProperties": { "$ref": "#/definitions/credentialReference" }
+          },
+          "mechanism_state": { "enum": ["resolved", "unresolved"] },
+          "sources": { "$ref": "#/definitions/sources" },
+          "blockers": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+        }
+      }
+    },
+    "access_references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "application_id", "credential_role", "credential_kind", "required_config_keys", "retrieval", "sources"],
+        "properties": {
+          "id": { "$ref": "#/definitions/id" },
+          "application_id": { "$ref": "#/definitions/id" },
+          "credential_role": { "$ref": "#/definitions/id" },
+          "credential_kind": { "enum": ["interactive-session", "shared-secret-reference", "token-reference", "certificate-reference"] },
+          "required_config_keys": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }, "uniqueItems": true },
+          "retrieval": { "$ref": "#/definitions/credentialReference" },
+          "sources": { "$ref": "#/definitions/sources" }
+        }
+      }
+    },
+    "action_profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "environment_id", "state", "allowed_actions", "unresolved_actions", "source"],
+        "properties": {
+          "id": { "$ref": "#/definitions/id" },
+          "environment_id": { "$ref": "#/definitions/id" },
+          "state": { "enum": ["approved", "unresolved"] },
+          "allowed_actions": { "type": "array", "items": { "$ref": "#/definitions/action" }, "uniqueItems": true },
+          "unresolved_actions": { "type": "array", "items": { "$ref": "#/definitions/action" }, "uniqueItems": true },
+          "source": { "type": "string", "minLength": 1 },
+          "constraints": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "sources": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+    "credentialReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": { "enum": ["resolved", "unresolved"] },
+        "external_reference": { "type": "string", "minLength": 1 },
+        "notes": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        { "if": { "properties": { "state": { "const": "resolved" } } }, "then": { "required": ["external_reference"] } },
+        { "if": { "properties": { "state": { "const": "unresolved" } } }, "then": { "not": { "required": ["external_reference"] } } }
+      ]
+    },
+    "action": { "enum": ["read-only-observation", "authenticate", "create-test-data", "submit-print-job", "physical-print", "mutate-database", "mutate-queue"] }
+  }
+}

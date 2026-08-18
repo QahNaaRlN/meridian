@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "repositories.schema.json",
+  "title": "Engineering Workspace Repository Inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "repositories"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path", "role", "sources", "vcs", "last_verified"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "path": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 },
+          "products": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "semantic_areas": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "sources": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rules", "manifests"],
+            "properties": {
+              "rules": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+              "manifests": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+              "other": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+            }
+          },
+          "vcs": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "revision", "ref", "working_tree", "evidence_basis"],
+            "properties": {
+              "type": { "const": "git" },
+              "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+              "ref": { "type": "string", "minLength": 1 },
+              "working_tree": { "enum": ["clean", "dirty"] },
+              "evidence_basis": { "enum": ["revision", "revision-plus-working-tree"] }
+            },
+            "allOf": [
+              {
+                "if": { "properties": { "working_tree": { "const": "clean" } } },
+                "then": { "properties": { "evidence_basis": { "const": "revision" } } }
+              },
+              {
+                "if": { "properties": { "working_tree": { "const": "dirty" } } },
+                "then": { "properties": { "evidence_basis": { "const": "revision-plus-working-tree" } } }
+              }
+            ]
+          },
+          "last_verified": { "type": "string", "format": "date-time" },
+          "notes": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

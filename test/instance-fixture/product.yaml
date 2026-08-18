@@ -1,0 +1,44 @@
+# Synthetic Instance used by CI and by the portability acceptance test.
+#
+# It names a product that does not exist. Its purpose is to prove that the
+# Kernel runs against *an* Instance without knowing *which* — not to prove that
+# any particular real product's literals are absent. CI therefore verifies the
+# mechanism; the real product-literal check runs locally against the private
+# Instance and cannot be delegated to CI, which has no access to it.
+schema_version: 1
+
+product:
+  name: Zephyrine
+  description: Fictional product used only to exercise the Kernel end to end.
+
+canonical_wiki:
+  tool: none
+  base_url: https://wiki.zephyrine.invalid
+  space_key: ZPHX
+  documentation_standard_url: https://wiki.zephyrine.invalid/standard
+  documentation_standard_version: 0.0.0
+
+naming_conventions:
+  - rule: No naming conventions are declared for the fixture product.
+    source: fixture
+
+tooling:
+  documentation:
+    tool: none
+    access_method: none
+    constraint: Fixture instance performs no documentation calls.
+  task_tracker:
+    tool: none
+    hosting: none
+    base_url: https://tracker.zephyrine.invalid/
+    access_method: none
+    constraint: Fixture instance performs no tracker calls.
+  repository:
+    tool: none
+    hosting: none
+    git_transport: none
+    api_access: unresolved
+    constraint: Fixture instance performs no remote git operations.
+
+owner: workspace-owner
+last_verified: '2026-08-18'

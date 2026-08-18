@@ -1,0 +1,5 @@
+# The fixture declares no external dependencies: after vendoring, the Kernel has
+# none. An entry appearing here would mean the Kernel regained a dependency on
+# something outside itself.
+schema_version: 1
+dependencies: []

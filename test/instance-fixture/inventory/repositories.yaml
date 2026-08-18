@@ -1,0 +1,6 @@
+$schema: ./repositories.schema.json
+# Empty on purpose. The fixture proves the schema is applied, not that any
+# particular repository exists. Its schema lives in the Kernel and is resolved
+# by registry directory name.
+schema_version: 1
+repositories: []

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "relationships.schema.json",
+  "title": "Engineering Workspace Repository Relationships",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "relationships"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "from", "to", "type", "evidence", "last_verified"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "from": { "type": "string", "minLength": 1 },
+          "to": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
+          "direction": { "enum": ["directed", "bidirectional"] },
+          "description": { "type": "string" },
+          "evidence": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+          "last_verified": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

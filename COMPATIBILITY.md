@@ -18,7 +18,7 @@ Meridian состоит из независимо версионируемых �
 | Kernel | Ожидаемый Instance | Ломающие изменения |
 |---|---|---|
 | `0.1.x` | `schema_version: 1` в `product.yaml` | не объявлены; `0.x` не даёт гарантий стабильности |
-| `0.2.x` | `schema_version: 1` в `product.yaml`; action-профили `environments/access.yaml` используют generic-enum или `x-*`-префикс для продуктовых действий | относительно `0.1.x`: enum действий сужен, продуктовые значения без префикса `x-*` не проходят schema-gate — Instance требует миграции (`environments-cbs` мигрирован при переходе, см. `CHANGELOG.md` 0.2.0 → Breaking) |
+| `0.2.x` | `schema_version: 1` в `product.yaml`; action-профили `environments/access.yaml` используют generic-enum или `x-*`-префикс для продуктовых действий | относительно `0.1.x`: enum действий сужен, продуктовые значения без префикса `x-*` не проходят schema-gate — Instance требует миграции (см. `CHANGELOG.md` 0.2.0 → Breaking) |
 
 Пока Kernel в `0.x`, любой minor может сломать Instance. Instance пиннит точную
 версию Kernel до выхода `1.0.0`.

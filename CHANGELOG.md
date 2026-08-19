@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-19 (`draft`)
+
+Feedback and metrics collection for field testing, requested the same day
+0.2.0 was pinned as the field-testing baseline. Purely additive: no schema
+or behavior change to anything 0.2.0 already validated.
+
 ### Added
 
 - **`standards/workspace/feedback-and-metrics.md`** — methodology for

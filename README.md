@@ -17,8 +17,8 @@ updated: 2026-08-19
 
 **Status:** `draft` · **Version:** [`VERSION`](VERSION) · **Visibility:** private
 
-Новичку — [`MANUAL.md`](MANUAL.md): руководство по эксплуатации для человека,
-который видит систему впервые.
+Впервые здесь — [`start-here.md`](start-here.md): что это и зачем, на простом
+языке. Дальше [`MANUAL.md`](MANUAL.md) — как делать конкретные вещи.
 
 ---
 

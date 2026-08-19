@@ -28,3 +28,16 @@ if ! MERIDIAN_INSTANCE="$ROOT/test/instance-fixture" node "$ROOT/scripts/kernel-
   echo "pre-push: private Instance for that."
   exit 1
 fi
+
+# When MERIDIAN_INSTANCE points at a real Instance (not this fixture), run
+# the same validator through the logging wrapper: it records one metrics
+# entry per push into that Instance's own gate-run log
+# (standards/workspace/feedback-and-metrics.md), with zero extra operator
+# action. This does not block push on its own: a red result here has always
+# been informational at this hook, and this change only adds a data point,
+# not a new block.
+if [ -n "$MERIDIAN_INSTANCE" ] && [ "$MERIDIAN_INSTANCE" != "$ROOT/test/instance-fixture" ]; then
+  echo ""
+  echo "pre-push: running kernel-validate against the configured Instance (logged, non-blocking)"
+  node "$ROOT/scripts/validate-and-log.mjs" || echo "pre-push: the real-Instance run reported problems above — push proceeds, but review them"
+fi

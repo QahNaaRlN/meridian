@@ -82,11 +82,13 @@ Report:
 
 A passing targeted check proves only its stated invariant. Do not claim a broader repository, runtime, or release outcome from narrower evidence.
 
+If a Kernel rule, document, or gate check cost more than it should have during this task, append one entry to `$MERIDIAN_INSTANCE/.agent/feedback/friction-log.md` per [`feedback-and-metrics.md`](../standards/workspace/feedback-and-metrics.md). Skip this when nothing fought back; a quiet task produces no entry.
+
 ## Authority and scope invariants
 
 - Current user request controls the authorized outcome and mutations.
 - Nearest repository `AGENTS.md` controls repository-specific implementation and test rules.
 - Repository manifests control executable command definitions.
 - The [regression route](../verification/regression-testing/README.md) points to the existing bugfix methodology instead of reproducing it.
-- The Agent Smoke Workflow (`$MERIDIAN_INSTANCE/verification/smoke-testing/README.md`) controls smoke execution and verdicts.
+- The smoke protocol (`../verification/smoke-protocol/PROTOCOL.md`), as configured by the product smoke unit (`$MERIDIAN_INSTANCE/verification/smoke-testing/README.md`), controls smoke execution and verdicts.
 - This lifecycle never creates authority for a baseline task, product changes, live execution, acceptance experiments, or release/status transitions.

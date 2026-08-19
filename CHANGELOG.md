@@ -6,6 +6,34 @@
 
 ## [Unreleased]
 
+### Added
+
+- **`standards/workspace/feedback-and-metrics.md`** — methodology for
+  collecting field-testing feedback without turning it into ceremony: a
+  qualitative friction log (`$MERIDIAN_INSTANCE/.agent/feedback/friction-log.md`,
+  one entry per REPORT only when something actually cost time, closed
+  vocabulary of friction categories) and a quantitative gate-run log
+  (`$MERIDIAN_INSTANCE/.agent/metrics/validate-log.jsonl`).
+- **`scripts/validate-and-log.mjs`** — transparent wrapper around
+  `kernel-validate.mjs`: identical output and exit code, plus one JSON
+  record appended per run against a real Instance. Runs against no Instance
+  or the in-repository fixture are deliberately not logged, so the trend is
+  never diluted by synthetic data. Covered by
+  `test/validate-and-log.test.mjs` (5 cases: exit-code parity, one
+  well-formed record per real run, append-only across runs, fixture run not
+  logged, no-Instance run not logged) and wired into CI.
+- `hooks/pre-push` now also runs the logging wrapper against a configured
+  real Instance (non-blocking — this adds a data point, not a new gate) and
+  `workflows/task-lifecycle.md`'s REPORT stage points to the friction log.
+- `instance-template/` ships `.agent/feedback/` and `.agent/metrics/`
+  pre-seeded, so a new product gets both streams from day one.
+
+### Fixed
+
+- `workflows/task-lifecycle.md` still referenced the pre-extraction "Agent
+  Smoke Workflow" path; updated to point at `verification/smoke-protocol/PROTOCOL.md`
+  as configured by the product smoke unit, consistent with the 0.2.0 extraction.
+
 ## [0.2.0] — 2026-08-19 (`draft`)
 
 Правки по результатам внешнего ревью 0.1.0 (verdict: changes_requested), затем

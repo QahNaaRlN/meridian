@@ -21,6 +21,7 @@
 - `standards/` целиком: workspace precedence, tooling axes (`workspace/tooling-axes.md`), document lifecycle, статусная модель, document quality, writers, шаблоны (`templates/`, включая `CONFLUENCE.md` и `*.confluence-template.md` — контракт формы, не product-данные), этот файл, а также `workspace/agent-memory.md` — описание жизненного цикла рабочей памяти (сама память — Instance).
 - `workflows/task-lifecycle.md`, `workflows/README.md`.
 - `verification/README.md`, `verification/regression-testing/README.md`, `verification/smoke-protocol/` — переносимое ядро smoke-методологии (Test Contract, Execution Context, §11 verdict matrix, side-effect tiers, шаблон acceptance gate). Продуктовый smoke-unit остаётся Instance и лишь конформирует этому протоколу.
+- `standards/workspace/feedback-and-metrics.md` — методология сбора обратной связи и метрик gate: *что* и *как* записывать. Сами записи (`friction-log.md`, `validate-log.jsonl`) — Instance.
 - `instance-template/` — bootstrap-каркас нового Instance: заготовки `product.yaml`, реестров и `.agent` с `REPLACE_ME`-блокерами. Он лежит в Kernel именно потому, что не содержит ни одного продуктового факта.
 - `skills/` — сами skill-пакеты вместе с их `PIN.yaml`. С 2026-08-18 обе методологические зависимости завендорены внутрь Kernel и пиннятся по SHA-256:
   - `skills/versioning-standard-docs/` — методология версионирования документов, вместе с исходным архивом в `source/`, так что цепочка «архив → запись в архиве → установленный файл» проверяется из чистого checkout;
@@ -46,6 +47,7 @@
 - `adapters/cursor/` целиком, включая `README.md` (перечисляет конкретные продуктовые репозитории и роли).
 - `skills/bugfix-protocol/context.md` — продуктовые конвенции, вынесенные из Kernel-протокола.
 - `.agent/{analysis,plans,reports,technical-specifications,publication-drafts}` — рабочая память задач.
+- `.agent/feedback/friction-log.md`, `.agent/metrics/validate-log.jsonl` — записи обратной связи и метрик конкретного Instance; методология, которая их порождает, — Kernel (`standards/workspace/feedback-and-metrics.md`).
 - Корневой `AGENTS.md` продуктового рабочего дерева: карта репозиториев и safety-constraints, специфичные для текущего контракта (сама модель precedence, на которую он ссылается, — Kernel, см. `workspace/agent-workspace.md`).
 
 ## Правило классификации новых файлов

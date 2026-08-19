@@ -34,7 +34,10 @@ to make.
    `environments/*.yaml` (topology, access references, test data — external
    references only, never secrets).
 6. Working memory lives under `.agent/` per the Kernel's
-   `standards/workspace/agent-memory.md`.
+   `standards/workspace/agent-memory.md`. `.agent/feedback/friction-log.md`
+   and `.agent/metrics/` are pre-seeded — see
+   `standards/workspace/feedback-and-metrics.md` in the Kernel for what goes
+   in them and when.
 
 ## What this template is not
 

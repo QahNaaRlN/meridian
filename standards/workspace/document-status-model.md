@@ -67,7 +67,8 @@ skill; этот файл продолжает управлять локальн�
 `Черновик (draft)`, `На ревью (in-review)`, `Принят (accepted)`,
 `Заменено (superseded)`. Это правило отображения не изменяет английские
 машинные значения YAML, labels, валидаторов и интеграций. Полный контракт — в
-[`templates/CONFLUENCE.md`](../templates/CONFLUENCE.md).
+[`templates/CONTRACT.md`](../templates/CONTRACT.md); механика конкретной
+платформы — в её [профиле](../templates/profiles/README.md).
 
 ## 1. Основные принципы
 

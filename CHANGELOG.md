@@ -6,8 +6,40 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Слой профилей шаблонов — платформа стала профилем, а не предположением.**
+  `standards/templates/CONTRACT.md` — контракт формы публикуемого документа, не
+  называющий ни одного инструмента: блок метаданных, порядок полей,
+  двуязычность меток, удаление неприменимых строк, отсутствие самоссылки,
+  история изменений и перечень восьми типов, которые профиль обязан покрыть.
+  `standards/templates/profiles/README.md` — что профиль обязан содержать, чего
+  он не вправе переопределять и как добавить новый.
+  `standards/templates/profiles/confluence/PROFILE.md` — механика одной
+  конкретной платформы, сведённая к таблице «требование контракта → чем
+  обеспечено».
+
+  Kernel не выбирает профиль сам: при отсутствии объявления в
+  `$MERIDIAN_INSTANCE/product.yaml` состояние — `unresolved`, а не разрешение
+  взять единственный существующий профиль потому, что он единственный.
+
 ### Changed
 
+- **Девять файлов слоя шаблонов переименованы и перемещены.**
+  `standards/templates/CONFLUENCE.md` → `profiles/confluence/PROFILE.md`;
+  восемь `*.confluence-template.md` → `profiles/confluence/*.body.md`
+  (Tutorial, How-to, Reference, Explanation, RFC, ADR, Incident,
+  Problem Record). Тела не изменены — переехали дословно.
+  Ссылки обновлены в `standards/README.md`, `document-quality.md`,
+  `document-status-model.md`, `kernel-boundary.md` и обоих writers; writers
+  больше не называют платформу даже как «текущую».
+  Заодно в `document-quality.md` устранена ссылка на путь через junction
+  (`docs/agent-standards/…`) — Kernel-документ не должен адресовать сам себя
+  через имя, которого нет в чистом клоне.
+- **`COMPATIBILITY.md` объявляет `0.4.x` и фиксирует асимметрию проверки
+  ссылок.** Текстовая ссылка из Instance на путь внутри Kernel не проверяется
+  ничем; поэтому перемещения в нормативных каталогах объявляются строкой, а не
+  выводятся из зелёного прогона.
 - **The documentation platform is named by role, not by vendor.**
   `standards/workspace/tooling-axes.md` now defines *canonical wiki* as a role
   resolved through `$MERIDIAN_INSTANCE/product.yaml` (`canonical_wiki`), and

@@ -18,7 +18,7 @@
 
 Всё перечисленное лежит в репозитории Meridian:
 
-- `standards/` целиком: workspace precedence, tooling axes (`workspace/tooling-axes.md`), document lifecycle, статусная модель, document quality, writers, шаблоны (`templates/`, включая `CONFLUENCE.md` и `*.confluence-template.md` — контракт формы, не product-данные), этот файл, а также `workspace/agent-memory.md` — описание жизненного цикла рабочей памяти (сама память — Instance).
+- `standards/` целиком: workspace precedence, tooling axes (`workspace/tooling-axes.md`), document lifecycle, статусная модель, document quality, writers, шаблоны (`templates/`: платформенно-нейтральный `CONTRACT.md`, локальные Markdown-шаблоны и профили платформ в `templates/profiles/<платформа>/` — контракт формы, не product-данные), этот файл, а также `workspace/agent-memory.md` — описание жизненного цикла рабочей памяти (сама память — Instance).
 - `workflows/task-lifecycle.md`, `workflows/README.md`.
 - `verification/README.md`, `verification/regression-testing/README.md`, `verification/smoke-protocol/` — переносимое ядро smoke-методологии (Test Contract, Execution Context, §11 verdict matrix, side-effect tiers, шаблон acceptance gate). Продуктовый smoke-unit остаётся Instance и лишь конформирует этому протоколу.
 - `standards/workspace/feedback-and-metrics.md` — методология сбора обратной связи и метрик gate: *что* и *как* записывать. Сами записи (`friction-log.md`, `validate-log.jsonl`) — Instance.

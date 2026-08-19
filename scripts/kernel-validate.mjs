@@ -17,6 +17,10 @@
 //   3. front-matter      — .agent artifacts carry leading Front Matter (WARN).
 //   4. path-placement    — active/ vs done/archive/ vs status (WARN).
 //   5. links             — relative Markdown links resolve.
+//   5b. document-identity — file names follow the level/case rule and every
+//                          Kernel document declares a document_type from the
+//                          closed pool. Templates, vendored artifacts and
+//                          fixture data are exempt by pattern, not by list.
 //   6. schema            — every registry declaring `$schema` is parsed and
 //                          validated against it, in-gate.
 //   7. sha-provenance    — installed skill matches its pinned SHA-256.
@@ -579,6 +583,91 @@ for (const file of allMd) {
   }
 }
 ok(`link check ran over ${allMd.length} files`);
+
+// ---------------------------------------------------------------------------
+// document identity: file names and declared document types
+// Rule, not list: see standards/workspace/document-identity.md. The exemptions
+// below are shaped as patterns for the same reason the Kernel file set comes
+// from git ls-files — a hand-maintained list of files drifts from the tree.
+// ---------------------------------------------------------------------------
+const DOCUMENT_TYPES = new Set([
+  'standard', 'contract', 'protocol', 'skill', 'template', 'readme', 'reference',
+  'tutorial', 'how-to', 'explanation', 'rfc', 'adr', 'concept', 'problem',
+  'incident', 'analysis', 'plan', 'report', 'technical-specification',
+  'changelog', 'unclassified',
+]);
+// Names fixed by conventions this Kernel does not own and must not "correct".
+const EXTERNAL_NAMES = new Set(['README.md', 'SKILL.md', 'AGENTS.md', 'PIN.yaml', 'LICENSE', 'VERSION']);
+// Upper case is legal only for the release unit's root set: the files someone
+// who has just opened the repository is expected to find without looking.
+const ROOT_UPPERCASE = new Set(['README.md', 'LICENSE', 'VERSION', 'CHANGELOG.md', 'COMPATIBILITY.md', 'MANUAL.md']);
+const LOWER_SEGMENT = /^\.?[a-z0-9]+([._-][a-z0-9]+)*$/;
+// State that belongs in Front Matter, where changing it does not break links.
+const NAME_SMELL = /(^|-)(final|new|old|copy|tmp|draft)(-|\.|$)|\d{4}-\d{2}-\d{2}|(^|-)v?\d+\.\d+(\.\d+)?(-|\.|$)/;
+// A file that exists to be copied carries no Front Matter of its own (it would
+// carry the Kernel's metadata into another release unit); a vendored artifact
+// is pinned by SHA and must not be edited to add one; fixture data is test
+// input, not documentation.
+const carriesOwnFrontMatter = (rel) =>
+  !/-(template|body)\.md$/.test(rel)
+  && !rel.startsWith('instance-template/')
+  && !rel.startsWith('test/')
+  && path.posix.basename(rel) !== 'SKILL.md';
+
+let identityFailures = 0;
+const idfail = (m) => { identityFailures++; fail(m); };
+const relKernelFiles = [...new Set(KERNEL_FILES)]
+  .filter((f) => !underInstance(f))
+  .map((f) => path.relative(KERNEL_ROOT, f).split(path.sep).join('/'));
+
+for (const rel of relKernelFiles) {
+  const segs = rel.split('/');
+  const base = segs[segs.length - 1];
+  for (const seg of segs.slice(0, -1)) {
+    if (!LOWER_SEGMENT.test(seg)) {
+      idfail(`document-identity: directory "${seg}" in "${rel}" is not lower kebab-case`);
+    }
+  }
+  const rootAllowed = segs.length === 1 && ROOT_UPPERCASE.has(base);
+  if (!EXTERNAL_NAMES.has(base) && !rootAllowed && !LOWER_SEGMENT.test(base)) {
+    idfail(`document-identity: "${rel}" is not lower kebab-case; upper case is reserved for the release unit's root set`);
+  }
+  if (NAME_SMELL.test(base)) {
+    idfail(`document-identity: "${rel}" carries a date, a version or one of final/new/old/copy/tmp/draft in its name; that state belongs in Front Matter`);
+  }
+}
+
+let typedDocs = 0;
+for (const rel of relKernelFiles.filter((r) => r.endsWith('.md') && carriesOwnFrontMatter(r))) {
+  const text = readIfExists(path.join(KERNEL_ROOT, rel));
+  if (text === null) continue;
+  if (!text.startsWith('---')) {
+    idfail(`document-identity: ${rel} has no Front Matter; a Kernel document declares its type rather than leaving it to be guessed`);
+    continue;
+  }
+  const end = text.indexOf('\n---', 3);
+  const fm = end === -1 ? '' : text.slice(4, end);
+  for (const field of ['title', 'status', 'scope', 'owner', 'created', 'updated']) {
+    if (!new RegExp(`^${field}:\\s*\\S`, 'm').test(fm)) {
+      idfail(`document-identity: ${rel} is missing required Front Matter field "${field}"`);
+    }
+  }
+  const type = fm.match(/^document_type:\s*(\S+)/m)?.[1];
+  if (!type) {
+    idfail(`document-identity: ${rel} declares no document_type`);
+  } else if (!DOCUMENT_TYPES.has(type)) {
+    idfail(`document-identity: ${rel} declares document_type "${type}", which is not in the pool; a new type is a change to the standard, not to one file`);
+  } else if (type === 'unclassified' && !/^unclassified_reason:\s*\S/m.test(fm)) {
+    idfail(`document-identity: ${rel} is unclassified with no unclassified_reason; the state is legal, an unexplained one is not`);
+  } else {
+    typedDocs++;
+  }
+}
+if (identityFailures === 0) {
+  ok(`document-identity: ${relKernelFiles.length} tracked names conform; `
+   + `${typedDocs} documents declare a type from the pool`);
+}
+
 
 // ---------------------------------------------------------------------------
 // registry schema validation, in-gate

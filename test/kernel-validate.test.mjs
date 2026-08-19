@@ -58,9 +58,18 @@ function sha256(text) {
 const LIT = 'zephyrblade';
 const PAT_WORD = 'Gleamfall';
 
+// Front Matter for a synthetic Kernel document. The suite's own kernel has to
+// satisfy document-identity, otherwise every later case would go red for the
+// baseline's sake rather than for the defect it plants.
+function fm(title, type, extra = []) {
+  return ['---', `title: ${title}`, `document_type: ${type}`, 'status: maintained',
+          'scope: workspace', 'owner: test-suite', 'created: 2026-01-01',
+          'updated: 2026-01-01', ...extra, '---', ''].join('\n');
+}
+
 function buildKernel(root) {
-  write(root, 'README.md', '# Synthetic kernel\n\nSee [the note](docs/note.md).\n');
-  write(root, 'docs/note.md', 'A note.\n');
+  write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
+  write(root, 'docs/note.md', `${fm('A note', 'reference')}\n# A note\n\nA note.\n`);
   const skill = '# Demo skill\n\nA fictional vendored skill used only by this suite.\n';
   write(root, 'skills/demo/SKILL.md', skill);
   write(root, 'skills/demo/PIN.yaml', [
@@ -121,6 +130,11 @@ function buildInstance(root) {
     "when: '2026-01-01T00:00:00Z'",
     '',
   ].join('\n'));
+}
+
+function commitAll(root) {
+  sh('git', ['add', '-A'], root);
+  sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'planted'], root);
 }
 
 function freshPair(name) {
@@ -331,6 +345,64 @@ function check(name, res, { expectExit, mustMatch = [], mustNotMatch = [] }) {
     expectExit: 0,
     mustMatch: [/excluded from the Kernel scan/],
     mustNotMatch: [/kernel-purity: product literal/],
+  });
+}
+
+// t16 — a file name that breaks the level/case rule goes red
+{
+  const { kernel, instance } = freshPair('t16');
+  write(kernel, 'docs/BadName.md', `${fm('Bad name', 'reference')}\n# Bad name\n`);
+  commitAll(kernel);
+  check('t16 non-conforming file name detected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/document-identity: "docs\/BadName\.md" is not lower kebab-case/],
+  });
+}
+
+// t17 — a Kernel document with no Front Matter goes red
+{
+  const { kernel, instance } = freshPair('t17');
+  write(kernel, 'docs/plain.md', '# Plain\n\nNo Front Matter at all.\n');
+  commitAll(kernel);
+  check('t17 missing front matter detected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/document-identity: docs\/plain\.md has no Front Matter/],
+  });
+}
+
+// t18 — a document_type outside the closed pool goes red
+{
+  const { kernel, instance } = freshPair('t18');
+  write(kernel, 'docs/typed.md', `${fm('Invented', 'memo')}\n# Invented\n`);
+  commitAll(kernel);
+  check('t18 type outside the pool detected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/declares document_type "memo", which is not in the pool/],
+  });
+}
+
+// t19 — unclassified without a recorded reason goes red; with one it passes,
+// so the state itself is not treated as a defect
+{
+  const { kernel, instance } = freshPair('t19');
+  write(kernel, 'docs/unclear.md', `${fm('Unclear', 'unclassified')}\n# Unclear\n`);
+  commitAll(kernel);
+  check('t19 unclassified without a reason detected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/is unclassified with no unclassified_reason/],
+  });
+}
+
+// t20 — a template body carries no Front Matter by design and is not flagged
+{
+  const { kernel, instance } = freshPair('t20');
+  write(kernel, 'docs/adr-body.md', '| Field | Value |\n| --- | --- |\n');
+  write(kernel, 'docs/unclear.md', `${fm('Unclear', 'unclassified', ['unclassified_reason: two signatures at once'])}\n# Unclear\n`);
+  commitAll(kernel);
+  check('t20 templates exempt and a reasoned unclassified passes', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [/document-identity: \d+ tracked names conform/],
+    mustNotMatch: [/document-identity: docs\/adr-body\.md/, /unclassified with no/],
   });
 }
 

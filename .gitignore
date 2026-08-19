@@ -29,10 +29,13 @@ evidence/raw/
 screenshots/
 *.har
 
-# Tooling.
+# Tooling. Local editor and viewer state: the Kernel is a folder of Markdown and
+# can be opened by any tool that reads one as a graph. Whatever config such a
+# tool leaves behind is that operator's, not the Kernel's.
 node_modules/
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+.obsidian/
 *.log

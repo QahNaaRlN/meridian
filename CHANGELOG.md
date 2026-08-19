@@ -6,6 +6,31 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **The documentation platform is named by role, not by vendor.**
+  `standards/workspace/tooling-axes.md` now defines *canonical wiki* as a role
+  resolved through `$MERIDIAN_INSTANCE/product.yaml` (`canonical_wiki`), and
+  states the only three places a vendor name stays legitimate: a platform
+  profile under `standards/templates/`, this changelog, and Instance data.
+  Every terminological mention across the standards was renamed to the role:
+  `document-status-model.md` (23 occurrences), `document-lifecycle.md`,
+  `agent-memory.md`, `agent-workspace.md`, `document-quality.md`, both writers,
+  `standards/README.md`, and the RFC / ADR / README templates. First step of
+  closing D-3; the template profile layer, the two vendored skills and
+  README section 1 follow as separate changes.
+- `status: published` is redefined as "the canonical version is published on
+  the platform holding the canonical-wiki role", and the definition is
+  explicitly **forward-only**: `canonical_url` and `published_at` on documents
+  already published are not rewritten retroactively — they record a fact that
+  did happen, on the platform that was canonical at the time.
+- The self-hosted example in `tooling-axes.md` no longer carries a vendor's
+  default cloud address. An example naming a real vendor is the same coupling
+  as a rule naming one — which is now what that document says.
+
+No change to validator behaviour: regression suite 15/15, fixture
+`0 failing, 0 warnings`, real Instance unchanged at `0 failing, 2 warnings`.
+
 ## [0.3.0] — 2026-08-19 (`draft`)
 
 Feedback and metrics collection for field testing, requested the same day

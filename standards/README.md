@@ -21,7 +21,7 @@ Start here when creating or reorganizing documentation and agent working artifac
 - [RFC writer](writers/rfc-writer.md) — architecture proposals and decisions.
 - [ADR writer](writers/adr-writer.md) — concise, recorded architecture decisions.
 - [README writer](writers/readme-writer.md) — repository and component entry points.
-- Problem Record — status model §7 and Documentation Standard §8; draft body from `$MERIDIAN_INSTANCE/.agent/publication-drafts/template-problem-record.md` (Confluence Page Template is canonical for new pages).
+- Problem Record — status model §7 and Documentation Standard §8; draft body from `$MERIDIAN_INSTANCE/.agent/publication-drafts/template-problem-record.md` (the canonical wiki's own page template is canonical for new pages).
 
 ## Operational workflows
 
@@ -31,6 +31,6 @@ Start here when creating or reorganizing documentation and agent working artifac
 
 Use a template when creating the corresponding document, but adapt only factual content: [README](templates/README.template.md), [RFC](templates/RFC.template.md), [ADR](templates/ADR.template.md).
 
-For Confluence, first apply the [unified template contract](templates/CONFLUENCE.md), then use the type-specific body: [Tutorial](templates/Tutorial.confluence-template.md), [How-to](templates/How-to.confluence-template.md), [Reference](templates/Reference.confluence-template.md), [Explanation](templates/Explanation.confluence-template.md), [RFC](templates/RFC.confluence-template.md), [ADR](templates/ADR.confluence-template.md), [Incident](templates/Incident.confluence-template.md), or [Problem Record](templates/Problem-Record.confluence-template.md). The file `.agent/publication-drafts/template-problem-record.md` remains an operational note and points to the same canonical template.
+For publication to the canonical wiki, first apply the [unified template contract](templates/CONFLUENCE.md), then use the type-specific body from the platform profile: [Tutorial](templates/Tutorial.confluence-template.md), [How-to](templates/How-to.confluence-template.md), [Reference](templates/Reference.confluence-template.md), [Explanation](templates/Explanation.confluence-template.md), [RFC](templates/RFC.confluence-template.md), [ADR](templates/ADR.confluence-template.md), [Incident](templates/Incident.confluence-template.md), or [Problem Record](templates/Problem-Record.confluence-template.md). The file `.agent/publication-drafts/template-problem-record.md` remains an operational note and points to the same canonical template.
 
-Cursor automatically routes RFC and README paths to their writer standards. All other standards are selected when their document type or task requires them. Publication drafts are working artifacts in `.agent/publication-drafts/` (`problems|rfc|adr|concepts`), not a second canonical product-documentation base. Published Confluence links: `$MERIDIAN_INSTANCE/.agent/publication-drafts/PUBLISHED-INDEX.md`.
+Cursor automatically routes RFC and README paths to their writer standards. All other standards are selected when their document type or task requires them. Publication drafts are working artifacts in `.agent/publication-drafts/` (`problems|rfc|adr|concepts`), not a second canonical product-documentation base. Ссылки на опубликованные канонические версии: `$MERIDIAN_INSTANCE/.agent/publication-drafts/PUBLISHED-INDEX.md`.

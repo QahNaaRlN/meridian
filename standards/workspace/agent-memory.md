@@ -6,7 +6,7 @@
 - `technical-specifications/active` и `technical-specifications/done` — активные и завершённые технические спецификации;
 - `plans/active` и `plans/done` — планы по жизненному циклу задачи;
 - `reports/current` и `reports/archive` — текущие итоговые отчёты и исторические материалы.
-- `publication-drafts/<тип>/{active,archive}` — рабочие копии Problem Records, RFC, ADR и Concepts. Problem Record остаётся в `problems/active` после публикации (`recorded`), пока не достигнут терминальный исход. Для RFC/ADR/Concepts после публикации канон — Confluence; локально — ссылка в `publication-drafts/PUBLISHED-INDEX.md` и при необходимости снимок в `archive/`.
+- `publication-drafts/<тип>/{active,archive}` — рабочие копии Problem Records, RFC, ADR и Concepts. Problem Record остаётся в `problems/active` после публикации (`recorded`), пока не достигнут терминальный исход. Для RFC/ADR/Concepts после публикации канон — канонический wiki продукта (`$MERIDIAN_INSTANCE/product.yaml`, `canonical_wiki`); локально — ссылка в `publication-drafts/PUBLISHED-INDEX.md` и при необходимости снимок в `archive/`.
 
 - `_to_delete/` — **карантин, а не часть рабочей памяти.** Сюда переносятся артефакты, выведенные из эксплуатации по решению владельца, когда прямое удаление недоступно. Содержимое карантина не является источником фактов: оно намеренно исключено из поиска агентов и из проверок `engineering-workspace/governance/kernel-validate.mjs`, поэтому известные дефекты внутри (повторный Front Matter, битые ссылки) не чинятся и не должны интерпретироваться как состояние системы. Не ссылаться на файлы отсюда и не восстанавливать их без явного решения владельца; окончательное удаление владелец выполняет вручную.
 

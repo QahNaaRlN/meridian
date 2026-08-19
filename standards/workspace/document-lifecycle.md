@@ -1,6 +1,6 @@
 # Document lifecycle
 
-Human-facing problem records, RFCs, ADRs and concepts are canonical in Confluence. Before publication, their local working copies belong in `.agent/publication-drafts/`; after publication, a local copy is only an archived snapshot with a `canonical_url`. Creating a document and changing its status are separate actions: select the location here, then use [the status model](document-status-model.md) for a fact-based status transition.
+Human-facing problem records, RFCs, ADRs and concepts are canonical in the product's canonical wiki (the tool playing that role is declared in `$MERIDIAN_INSTANCE/product.yaml`, `canonical_wiki`; see [tooling axes](tooling-axes.md)). Before publication, their local working copies belong in `.agent/publication-drafts/`; after publication, a local copy is only an archived snapshot with a `canonical_url`. Creating a document and changing its status are separate actions: select the location here, then use [the status model](document-status-model.md) for a fact-based status transition.
 
 Физическое размещение следует Documentation Standard (семантическое владение): постоянные стволы Common / Domain / System / Platform. `unclassified` — состояние классификации; staging `90. На классификации` создавать только при реальном документе для временного размещения, не заранее. Этот файл не переопределяет таксономию и не вводит новых типов владельца.
 

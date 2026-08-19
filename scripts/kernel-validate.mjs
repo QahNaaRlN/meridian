@@ -443,8 +443,8 @@ if (productRaw) {
       productDoc?.canonical_wiki?.space_key,
       productDoc?.canonical_wiki?.base_url,
       productDoc?.tooling?.task_tracker?.base_url,
-      // The repository axis identifies the organisation as surely as the wiki
-      // does: a self-hosted git host and its namespace name the employer.
+      // The repository axis identifies the product as surely as the wiki does:
+      // a self-hosted git host and its namespace are product facts.
       productDoc?.tooling?.repository?.base_url,
       productDoc?.tooling?.repository?.namespace,
       // Anything else the Instance declares off-limits. Derivation from known

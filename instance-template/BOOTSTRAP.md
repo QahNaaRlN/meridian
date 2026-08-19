@@ -9,7 +9,7 @@ to make.
 ## Steps
 
 1. Copy `instance-template/` to a new private repository OUTSIDE the Kernel
-   (the Instance lives where its data belongs — usually the customer's
+   (the Instance lives where the product's data lives, on that product's
    infrastructure) and run `git init` there.
 2. Fill `product.yaml`. Every `REPLACE_ME` is a deliberate blocker: the
    validator and the workflows treat an unresolved required value as a stop,

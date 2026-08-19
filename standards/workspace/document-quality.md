@@ -1,6 +1,6 @@
 # Document quality standard
 
-Use descriptive kebab-case names; do not use `final`, `final-v2`, `new`, `old`, `copy`, or merge-request numbers as the primary identifier. Write concise, factual documents with explicit scope, owner, status, and links to authoritative sources where useful.
+File names and `document_type` are governed by [document identity](document-identity.md); this standard does not restate them. Write concise, factual documents with explicit scope, owner, status, and links to authoritative sources where useful.
 
 Нормативные объяснения и определения — на русском языке; канонический английский термин — в скобках при первом определении (см. Documentation Standard §9). Машинные идентификаторы (`area_type`, `document_type`, пути репозиториев) не переводить. Не смешивать оси: семантическое владение ≠ тип документа ≠ привязка реализации ≠ отношения.
 

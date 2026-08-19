@@ -10,10 +10,11 @@ Start here when creating or reorganizing documentation and agent working artifac
 
 1. [Kernel / Instance boundary](workspace/kernel-boundary.md) — what belongs to the portable methodology vs. the current product's data.
 2. [Tooling axes](workspace/tooling-axes.md) — documentation, task tracker, and repository hosting are Instance-configured; never assume vendor, URL, or access protocol.
-3. [Workspace and instruction precedence](workspace/agent-workspace.md) — choose the authoritative instruction source and task scope; repository `AGENTS.md` lists semantic areas.
-4. [Document lifecycle](workspace/document-lifecycle.md) — choose a permanent-document or `.agent` location.
-5. [Document status model](workspace/document-status-model.md) — choose and change a machine-readable status.
-6. [Document quality](workspace/document-quality.md) — apply shared naming and evidence rules.
+3. [Document identity](workspace/document-identity.md) — how a file is named and how its `document_type` is assigned: by full signature match, never as a residual.
+4. [Workspace and instruction precedence](workspace/agent-workspace.md) — choose the authoritative instruction source and task scope; repository `AGENTS.md` lists semantic areas.
+5. [Document lifecycle](workspace/document-lifecycle.md) — choose a permanent-document or `.agent` location.
+6. [Document status model](workspace/document-status-model.md) — choose and change a machine-readable status.
+7. [Document quality](workspace/document-quality.md) — apply shared evidence and writing rules.
 
 ## Use when writing
 

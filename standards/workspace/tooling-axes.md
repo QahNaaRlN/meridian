@@ -1,3 +1,13 @@
+---
+title: Tooling axes: documentation, task tracker, repository hosting
+document_type: standard
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Tooling axes: documentation, task tracker, repository hosting
 
 Kernel определяет три оси интеграции, для которых у продукта всегда есть конкретный инструмент, способ доступа и ограничения — но какие именно, Kernel не знает и не должен предполагать по умолчанию:

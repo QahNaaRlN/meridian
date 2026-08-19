@@ -1,3 +1,13 @@
+---
+title: Workspace agent standard
+document_type: standard
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Workspace agent standard
 
 `AGENTS.md` is the vendor-neutral source of instructions. The workspace file governs only cross-repository work; a repository file adds local facts and may refine, but not silently override, workspace rules. `CLAUDE.md` is a one-line adapter (`@AGENTS.md`). Cursor rules are limited to path-scoped, glob-activated, or Cursor-specific behavior.

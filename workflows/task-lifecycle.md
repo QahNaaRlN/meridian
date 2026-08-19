@@ -1,3 +1,13 @@
+---
+title: Standard task lifecycle
+document_type: protocol
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Standard task lifecycle
 
 This is the workspace-level route for a task that may span repositories. It coordinates decisions; it does not replace the current user request, the nearest repository `AGENTS.md`, repository manifests, or an applicable verification protocol.
@@ -90,5 +100,5 @@ If a Kernel rule, document, or gate check cost more than it should have during t
 - Nearest repository `AGENTS.md` controls repository-specific implementation and test rules.
 - Repository manifests control executable command definitions.
 - The [regression route](../verification/regression-testing/README.md) points to the existing bugfix methodology instead of reproducing it.
-- The smoke protocol (`../verification/smoke-protocol/PROTOCOL.md`), as configured by the product smoke unit (`$MERIDIAN_INSTANCE/verification/smoke-testing/README.md`), controls smoke execution and verdicts.
+- The smoke protocol (`../verification/smoke-protocol/smoke-protocol.md`), as configured by the product smoke unit (`$MERIDIAN_INSTANCE/verification/smoke-testing/README.md`), controls smoke execution and verdicts.
 - This lifecycle never creates authority for a baseline task, product changes, live execution, acceptance experiments, or release/status transitions.

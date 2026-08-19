@@ -1,3 +1,13 @@
+---
+title: Meridian
+document_type: readme
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Meridian
 
 Переносимое ядро для дисциплинированной работы AI-агентов над инженерными
@@ -84,7 +94,7 @@ node test/kernel-validate.test.mjs                    # правила вали�
 Preflight — первый шаг любой агентной сессии: он громко падает, если сессия
 открыта против устаревших корней или без `MERIDIAN_INSTANCE`, вместо того
 чтобы молча читать не те правила. Bootstrap нового Instance начинается с
-[`instance-template/BOOTSTRAP.md`](instance-template/BOOTSTRAP.md).
+[`instance-template/instance-bootstrap.md`](instance-template/instance-bootstrap.md).
 
 Валидатор устроен по правилу «проверка, которую нельзя выполнить, сообщает
 UNVERIFIED, а не OK». Зелёный прогон означает «проверено», а не «не смотрели».

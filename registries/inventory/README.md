@@ -1,3 +1,13 @@
+---
+title: Inventory
+document_type: readme
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Inventory
 
 This area defines repository identities and source-backed relationships. Phase 2 contains the four approved pilot repositories and the relationships demonstrated by repository-owned sources.

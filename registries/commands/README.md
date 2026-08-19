@@ -1,3 +1,13 @@
+---
+title: Commands
+document_type: readme
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Commands
 
 This area records how an agent finds and selects repository-owned commands. It does not replace package or build manifests.

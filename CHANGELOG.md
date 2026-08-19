@@ -1,3 +1,13 @@
+---
+title: Changelog
+document_type: changelog
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Changelog
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);

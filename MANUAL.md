@@ -1,3 +1,18 @@
+---
+title: Meridian — руководство по эксплуатации
+document_type: unclassified
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+unclassified_reason: >
+  Совмещает три сигнатуры и не совпадает целиком ни с одной: tutorial
+  (первый запуск), how-to (починка дефектов, обслуживание) и explanation
+  (зачем система устроена так). Разделение — отдельная работа; до неё тип
+  не присваивается по ближайшему сходству.
+---
+
 # Meridian — руководство по эксплуатации
 
 Это руководство для человека, который видит систему впервые: что это,
@@ -58,7 +73,7 @@ Kernel находит Instance только через переменную ок
    до того, как вы её тронули.
 
 Новый продукт (первый день на другом проекте) — отдельный маршрут:
-[`instance-template/BOOTSTRAP.md`](instance-template/BOOTSTRAP.md).
+[`instance-template/instance-bootstrap.md`](instance-template/instance-bootstrap.md).
 
 ## 3. Ежедневная езда: жизненный цикл задачи
 
@@ -117,7 +132,7 @@ REPRODUCE → RED → DIAGNOSE MISS → FIX → GREEN → REPORT
 regression RED/GREEN; утверждаете «работает в браузере» — нужен smoke.
 
 Smoke-прогоны подчиняются
-[`verification/smoke-protocol/PROTOCOL.md`](verification/smoke-protocol/PROTOCOL.md):
+[`verification/smoke-protocol/smoke-protocol.md`](verification/smoke-protocol/smoke-protocol.md):
 до действия фиксируется неизменяемый Test Contract, после — только факты в
 Execution Context, а вердикт (`PASS` / `FAIL` / `BLOCKED` / `INCONCLUSIVE`)
 назначает единственная матрица §11. Красивый экран без собранного

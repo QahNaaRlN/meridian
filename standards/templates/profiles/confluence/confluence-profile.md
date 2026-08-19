@@ -1,6 +1,16 @@
+---
+title: Профиль платформы: Confluence
+document_type: standard
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-19
+updated: 2026-08-19
+---
+
 # Профиль платформы: Confluence
 
-Реализация [контракта формы](../../CONTRACT.md) для Confluence. Здесь описано
+Реализация [контракта формы](../../template-contract.md) для Confluence. Здесь описано
 только то, чем эта платформа отличается от абстрактного требования; сами
 требования — в контракте, и профиль их не повторяет и не переопределяет.
 
@@ -18,7 +28,7 @@
 
 ## Как устанавливаются шаблоны
 
-Файлы `*.body.md` — локальные эталоны для ручной настройки
+Файлы `*-body.md` — локальные эталоны для ручной настройки
 **Space Settings → Templates**. Они не публикуются как страницы и не являются
 документами: это исходник шаблона пространства.
 
@@ -26,13 +36,13 @@
 
 | Тип документа | Файл |
 |---|---|
-| Tutorial | [`Tutorial.body.md`](Tutorial.body.md) |
-| How-to | [`How-to.body.md`](How-to.body.md) |
-| Reference | [`Reference.body.md`](Reference.body.md) |
-| Explanation | [`Explanation.body.md`](Explanation.body.md) |
-| RFC | [`RFC.body.md`](RFC.body.md) |
-| ADR | [`ADR.body.md`](ADR.body.md) |
-| Incident | [`Incident.body.md`](Incident.body.md) |
-| Problem Record | [`Problem-Record.body.md`](Problem-Record.body.md) |
+| Tutorial | [`tutorial-body.md`](tutorial-body.md) |
+| How-to | [`how-to-body.md`](how-to-body.md) |
+| Reference | [`reference-body.md`](reference-body.md) |
+| Explanation | [`explanation-body.md`](explanation-body.md) |
+| RFC | [`rfc-body.md`](rfc-body.md) |
+| ADR | [`adr-body.md`](adr-body.md) |
+| Incident | [`incident-body.md`](incident-body.md) |
+| Problem Record | [`problem-record-body.md`](problem-record-body.md) |
 
 Восемь из восьми типов §8 контракта покрыты.

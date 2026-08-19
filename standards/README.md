@@ -1,3 +1,13 @@
+---
+title: AI documentation standards
+document_type: readme
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # AI documentation standards
 
 Start here when creating or reorganizing documentation and agent working artifacts.
@@ -30,8 +40,8 @@ Start here when creating or reorganizing documentation and agent working artifac
 
 ## Templates
 
-Use a template when creating the corresponding document, but adapt only factual content: [README](templates/README.template.md), [RFC](templates/RFC.template.md), [ADR](templates/ADR.template.md).
+Use a template when creating the corresponding document, but adapt only factual content: [README](templates/readme-template.md), [RFC](templates/rfc-template.md), [ADR](templates/adr-template.md).
 
-For publication to the canonical wiki, first apply the [template contract](templates/CONTRACT.md) — it names no platform — then take the type-specific body from the [profile](templates/profiles/README.md) of the platform currently holding that role. Which platform that is comes from `$MERIDIAN_INSTANCE/product.yaml`, not from the fact that one profile happens to be the only one present. The file `$MERIDIAN_INSTANCE/.agent/publication-drafts/template-problem-record.md` remains an operational note and points to the same canonical body.
+For publication to the canonical wiki, first apply the [template contract](templates/template-contract.md) — it names no platform — then take the type-specific body from the [profile](templates/profiles/README.md) of the platform currently holding that role. Which platform that is comes from `$MERIDIAN_INSTANCE/product.yaml`, not from the fact that one profile happens to be the only one present. The file `$MERIDIAN_INSTANCE/.agent/publication-drafts/template-problem-record.md` remains an operational note and points to the same canonical body.
 
 Cursor automatically routes RFC and README paths to their writer standards. All other standards are selected when their document type or task requires them. Publication drafts are working artifacts in `.agent/publication-drafts/` (`problems|rfc|adr|concepts`), not a second canonical product-documentation base. Ссылки на опубликованные канонические версии: `$MERIDIAN_INSTANCE/.agent/publication-drafts/PUBLISHED-INDEX.md`.

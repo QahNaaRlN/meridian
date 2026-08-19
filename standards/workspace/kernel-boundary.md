@@ -1,3 +1,13 @@
+---
+title: Kernel / Instance boundary
+document_type: standard
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Kernel / Instance boundary
 
 Граница проходит между **инструментом** и **продуктом**. `Kernel` — инструмент: методология, governance и механика, которые не знают, какой продукт обслуживают, и остаются верными при его замене. `Instance` — продукт: репозитории, environments, команды, smoke-флоу, prompts и рабочая память задач одного конкретного продукта. Инструмент существует отдельно от любого продукта и применяется к следующему без правок; описание продукта вместе с инструментом не переносится никогда.
@@ -18,7 +28,7 @@
 
 Всё перечисленное лежит в репозитории Meridian:
 
-- `standards/` целиком: workspace precedence, tooling axes (`workspace/tooling-axes.md`), document lifecycle, статусная модель, document quality, writers, шаблоны (`templates/`: платформенно-нейтральный `CONTRACT.md`, локальные Markdown-шаблоны и профили платформ в `templates/profiles/<платформа>/` — контракт формы, не product-данные), этот файл, а также `workspace/agent-memory.md` — описание жизненного цикла рабочей памяти (сама память — Instance).
+- `standards/` целиком: workspace precedence, tooling axes (`workspace/tooling-axes.md`), document lifecycle, статусная модель, document quality, writers, шаблоны (`templates/`: платформенно-нейтральный `template-contract.md`, локальные Markdown-шаблоны и профили платформ в `templates/profiles/<платформа>/` — контракт формы, не product-данные), этот файл, а также `workspace/agent-memory.md` — описание жизненного цикла рабочей памяти (сама память — Instance).
 - `workflows/task-lifecycle.md`, `workflows/README.md`.
 - `verification/README.md`, `verification/regression-testing/README.md`, `verification/smoke-protocol/` — переносимое ядро smoke-методологии (Test Contract, Execution Context, §11 verdict matrix, side-effect tiers, шаблон acceptance gate). Продуктовый smoke-unit остаётся Instance и лишь конформирует этому протоколу.
 - `standards/workspace/feedback-and-metrics.md` — методология сбора обратной связи и метрик gate: *что* и *как* записывать. Сами записи (`friction-log.md`, `validate-log.jsonl`) — Instance.

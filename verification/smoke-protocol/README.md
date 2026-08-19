@@ -1,3 +1,13 @@
+---
+title: Smoke protocol (portable)
+document_type: readme
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Smoke protocol (portable)
 
 The product-agnostic core of runtime/browser smoke verification: what a smoke
@@ -9,10 +19,10 @@ unit and could not travel with the Kernel.
 
 ## Contents
 
-- [`PROTOCOL.md`](PROTOCOL.md) — the portable protocol: contract, execution
+- [`smoke-protocol.md`](smoke-protocol.md) — the portable protocol: contract, execution
   context, verdict matrix, side-effect tiers, test-data rules, evidence and
   stop conditions.
-- [`ACCEPTANCE-GATE.template.md`](ACCEPTANCE-GATE.template.md) — the
+- [`acceptance-gate-template.md`](acceptance-gate-template.md) — the
   acceptance-experiment pattern (AE-1…AE-5) a product smoke unit must pass
   before its verdicts are trusted.
 

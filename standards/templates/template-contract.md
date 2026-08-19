@@ -1,3 +1,13 @@
+---
+title: Контракт формы публикуемого документа
+document_type: contract
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-19
+updated: 2026-08-19
+---
+
 # Контракт формы публикуемого документа
 
 Что обязано быть верно для документа, опубликованного в **каноническом wiki**,
@@ -83,4 +93,4 @@ Tutorial, How-to, Reference, Explanation, RFC, ADR, Incident, Problem Record.
 - Локальные Markdown-файлы репозитория. У них машиночитаемое английское Front
   Matter, и собственный H1 они сохраняют: этот контракт про публикацию, а не
   про файлы в git. Локальные шаблоны лежат рядом:
-  [README](README.template.md), [RFC](RFC.template.md), [ADR](ADR.template.md).
+  [README](readme-template.md), [RFC](rfc-template.md), [ADR](adr-template.md).

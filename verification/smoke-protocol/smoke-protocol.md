@@ -1,3 +1,13 @@
+---
+title: Smoke protocol
+document_type: protocol
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Smoke protocol
 
 Portable rules for observing runtime/browser behavior and turning the

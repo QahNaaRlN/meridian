@@ -1,3 +1,13 @@
+---
+title: Document lifecycle
+document_type: standard
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Document lifecycle
 
 Human-facing problem records, RFCs, ADRs and concepts are canonical in the product's canonical wiki (the tool playing that role is declared in `$MERIDIAN_INSTANCE/product.yaml`, `canonical_wiki`; see [tooling axes](tooling-axes.md)). Before publication, their local working copies belong in `.agent/publication-drafts/`; after publication, a local copy is only an archived snapshot with a `canonical_url`. Creating a document and changing its status are separate actions: select the location here, then use [the status model](document-status-model.md) for a fact-based status transition.

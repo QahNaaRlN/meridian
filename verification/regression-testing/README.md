@@ -1,6 +1,12 @@
-> **Статус документа:** поддерживается  
-> **Последняя проверка:** 2026-08-18  
-> **Владелец:** workspace-owner
+---
+title: Regression testing
+document_type: standard
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
 
 # Regression testing
 

@@ -1,3 +1,13 @@
+---
+title: Environments
+document_type: reference
+status: maintained
+scope: workspace
+owner: workspace-owner
+created: 2026-08-18
+updated: 2026-08-19
+---
+
 # Environments
 
 This area stores source-backed environment topology, access references, action permissions, and test-data references. It must never contain credentials, tokens, private keys, personal identifiers, or copied secret values.

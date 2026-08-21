@@ -1689,6 +1689,22 @@ function regionRecord(id, opts = {}) {
   });
 }
 
+
+// t86 — a norm the tool loads but version control never saw. Completeness is
+// measured over tracked files, so such a file is invisible to it: the register
+// covers every tracked artifact and the tree gets reported "complete" while the
+// rules actually in force sit outside the claim.
+{
+  const { kernel, instance } = freshPair('t86');
+  plantIntake(kernel, instance, { records: completingRecord(), repoPath: kernel });
+  commitAll(kernel);
+  write(kernel, '.cursor/rules/loose.mdc', 'A rule nobody added to the index.\n');
+  check('t86 an untracked norm is named and blocks "complete"', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [/not under version control/, /0 repository tree\(s\) confirmed complete/],
+  });
+}
+
 fs.rmSync(workRoot, { recursive: true, force: true });
 
 console.log('---');

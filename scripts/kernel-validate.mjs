@@ -1524,6 +1524,22 @@ if (!INSTANCE_ROOT) {
       try { return execFileSync('git', ['-C', repoPath, 'ls-files'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).split('\n').filter(Boolean); }
       catch { return null; }
     })();
+    // The completeness list is built from tracked files, so a norm that was
+    // never added to version control is invisible to it — and a register that
+    // covers every tracked file then reports the tree "complete" while the
+    // norms the tool actually loads sit outside the claim. Name them, and
+    // refuse to count the tree as confirmed: the same guard the Kernel's own
+    // untracked files got, applied where the corpus actually lives.
+    const untrackedNorms = (() => {
+      if (!repoPath) return [];
+      try {
+        return execFileSync('git', ['-C', repoPath, 'ls-files', '--others', '--exclude-standard'],
+          { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+          .split('\n').filter(Boolean)
+          .filter((m) => INTAKE_MASKS.some((mask) => mask.test(m)));
+      } catch { return []; }
+    })();
+
     if (!repoKnown) {
       // The unresolvable identifier is already a FAIL above. Calling it merely
       // unreachable here would turn a data defect into an environmental gap.
@@ -1611,6 +1627,10 @@ if (!INSTANCE_ROOT) {
              + 'completeness below is claimed over the regions, not over the file');
         }
       }
+      if (untrackedNorms.length) {
+        warn(`instruction-intake: ${repoId} — ${untrackedNorms.length} norm(s) match the intake masks but are not under version control (${untrackedNorms.slice(0, 3).join(', ')}); `
+           + 'completeness is measured over tracked files, so this tree is NOT counted as confirmed complete');
+      }
       if (missing.length) {
         fail(`instruction-intake: ${repoId} — ${missing.length} norm(s) in the tree have no record (${missing.slice(0, 3).join(', ')}); the register is complete or it proves nothing`);
       } else if (uncoveredContainers) {
@@ -1618,7 +1638,7 @@ if (!INSTANCE_ROOT) {
         // belongs to no unit. Counting this tree as confirmed complete would
         // put a claim in the summary line that the warning above just denied.
         info(`instruction-intake: ${repoId} — ${regionsCovered} declared region(s) carry a record, but ${uncoveredContainers} container(s) hold text outside every region; this tree is NOT counted as confirmed complete`);
-      } else {
+      } else if (!untrackedNorms.length) {
         coveredRepos++;
         if (regionsCovered) {
           info(`instruction-intake: ${repoId} — ${regionsCovered} declared region(s) of container files carry a record`);

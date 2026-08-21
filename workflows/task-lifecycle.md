@@ -5,7 +5,15 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-19
+updated: 2026-08-20
+topic: unclassified
+unclassified_reason: >-
+  документ описывает маршрут задачи целиком и склеивает несколько предметов —
+  классификацию, планирование, проверку, отчёт; по agent-instruction-identity.md
+  §3.3 это кандидат на распад, а не на новую тему
+profile: universal
+delivery: kernel-doc
+activation: always
 ---
 
 # Standard task lifecycle

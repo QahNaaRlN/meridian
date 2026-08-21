@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/instruction-intake/intake.schema.json",
+  "title": "Instruction intake register",
+  "description": "One register file per repository. Records what happened to each agent instruction artifact found in that repository. Append-only: a record may gain a later entry, it may not disappear. The normative protocol is standards/workspace/instruction-intake.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "repository", "records"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "repository": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repository identifier, matching an entry in the Instance repository inventory. The register does not record a path: paths are inventory data and would drift here."
+    },
+    "records": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/record" },
+      "description": "Entries for one artifact form a history ordered by recorded_at; the last one is current."
+    }
+  },
+  "definitions": {
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact",
+        "digest",
+        "delivery",
+        "topic",
+        "genre",
+        "scope",
+        "observed_activation",
+        "verdict",
+        "verdict_basis",
+        "recorded_at"
+      ],
+      "properties": {
+        "artifact": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path relative to the repository root."
+        },
+        "region": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$",
+          "description": "Identifier of a declared region inside a container file, exactly as it appears in that region's marker (instruction-intake.md §3.1). Required when delivery is agents-md-section: a container holds several subjects, and one topic assigned to the whole file would be false about most of it. When a record carries a region, its digest is the digest of the region's text, not of the file."
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the artifact at intake time. Without it the record describes an unknown text."
+        },
+        "delivery": {
+          "enum": ["kernel-doc", "skill-package", "cursor-rule", "agents-md-section"],
+          "description": "Packaging the tool loads the norm from. Same vocabulary as agent-instruction-identity.md §5; a register that named it differently would be the drift this system is built to catch."
+        },
+        "topic": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Topic name from the registry, or \"unclassified\"."
+        },
+        "unclassified_reason": { "type": "string", "minLength": 1 },
+        "genre": {
+          "enum": [
+            "standard", "contract", "protocol", "template", "readme", "reference",
+            "tutorial", "how-to", "explanation", "rfc", "adr", "concept", "problem",
+            "incident", "analysis", "plan", "report", "technical-specification",
+            "changelog", "unclassified"
+          ],
+          "description": "Document type pool of standards/workspace/document-identity.md. \"skill\" is deliberately absent: packaging is delivery, not genre."
+        },
+        "scope": { "enum": ["universal", "profile", "repository", "product-domain"] },
+        "profile": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stack profile the norm belongs to. Required when scope is profile."
+        },
+        "observed_activation": {
+          "enum": ["always", "path-glob", "task-class", "explicit", "undetermined"],
+          "description": "How the norm reaches the context today, not how it should. \"undetermined\" is a finding, not a blank."
+        },
+        "verdict": {
+          "enum": ["adopt-core", "adopt-edition", "keep-local", "merge-into", "rename", "retire", "deferred"]
+        },
+        "verdict_basis": { "type": "string", "minLength": 1 },
+        "derived_from": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "path", "revision"],
+          "description": "Qualified reference to the parent edition. A bare path is not a reference: it resolves to a different text in every checkout and at every moment, so the record could never be re-checked by anyone but its author.",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Repository identifier from the Instance inventory, or \"kernel\" for the Meridian Kernel itself."
+            },
+            "path": { "type": "string", "minLength": 1, "description": "Path relative to that repository's root." },
+            "revision": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{7,40}$",
+              "description": "The revision the edition was taken from. The digest below is the digest of the parent at this revision, not of the parent today: a parent that has since moved on makes the edition stale, not the record false."
+            }
+          }
+        },
+        "derived_from_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "narrowing": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "What this edition removes or replaces relative to its parent. An edition without it is indistinguishable from an independent text on the same topic."
+        },
+        "merge_target": { "type": "string", "minLength": 1 },
+        "new_topic_name": { "type": "string", "minLength": 1 },
+        "successor": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Where the content of a retired norm went."
+        },
+        "retire_reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why the content no longer holds. Retiring requires this or a successor; neither is not brevity, it is a defective record."
+        },
+        "resume_condition": { "type": "string", "minLength": 1 },
+        "core_lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "What entered the topic core. Produced when the verdict is carried out, not when it is recorded."
+        },
+        "recorded_at": { "type": "string", "format": "date" },
+        "applied_at": { "type": "string", "format": "date" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "topic": { "const": "unclassified" } }, "required": ["topic"] },
+          "then": { "required": ["unclassified_reason"] }
+        },
+        {
+          "if": { "properties": { "genre": { "const": "unclassified" } }, "required": ["genre"] },
+          "then": { "required": ["unclassified_reason"] }
+        },
+        {
+          "if": { "properties": { "delivery": { "const": "agents-md-section" } }, "required": ["delivery"] },
+          "then": { "required": ["region"] }
+        },
+        {
+          "if": { "properties": { "scope": { "const": "profile" } }, "required": ["scope"] },
+          "then": { "required": ["profile"] }
+        },
+        {
+          "if": { "properties": { "verdict": { "const": "adopt-edition" } }, "required": ["verdict"] },
+          "then": { "required": ["derived_from", "derived_from_digest", "narrowing"] }
+        },
+        {
+          "if": { "properties": { "verdict": { "const": "merge-into" } }, "required": ["verdict"] },
+          "then": { "required": ["merge_target"] }
+        },
+        {
+          "if": { "properties": { "verdict": { "const": "rename" } }, "required": ["verdict"] },
+          "then": { "required": ["new_topic_name"] }
+        },
+        {
+          "if": { "properties": { "verdict": { "const": "retire" } }, "required": ["verdict"] },
+          "then": { "anyOf": [{ "required": ["successor"] }, { "required": ["retire_reason"] }] }
+        },
+        {
+          "if": { "properties": { "verdict": { "const": "deferred" } }, "required": ["verdict"] },
+          "then": { "required": ["resume_condition"] }
+        }
+      ]
+    }
+  }
+}

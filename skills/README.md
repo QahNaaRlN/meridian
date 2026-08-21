@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-19
+updated: 2026-08-20
 ---
 
 # Skills
@@ -28,8 +28,14 @@ updated: 2026-08-19
 
 Файлы `SKILL.md` несут Front Matter внешнего формата (`name`, `description`) и
 не получают полей Kernel: дописать туда своё поле значит изменить артефакт,
-неизменность которого пин и доказывает. Их `document_type` — `skill`, объявлен в
-[`standards/workspace/document-identity.md`](../standards/workspace/document-identity.md).
+неизменность которого пин и доказывает. Их `document_type` объявлен поимённо в
+[`standards/workspace/document-identity.md`](../standards/workspace/document-identity.md)
+§4: обе завендоренные зависимости — `protocol` по сигнатуре содержания.
+
+Каталог `skills/` называет **способ поставки**, а не жанр. Тип `skill` из пула
+жанров выведен: он отличался от `protocol` только упаковкой. Формат поставки
+объявляется полем `delivery` —
+[`agent-instruction-identity.md`](../standards/workspace/agent-instruction-identity.md) §5.
 
 Смена пина — изменение Kernel и требует записи в `CHANGELOG.md`; правила
 совместимости — `COMPATIBILITY.md`.

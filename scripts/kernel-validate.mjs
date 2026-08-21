@@ -28,7 +28,13 @@
 //                          are explicitly and legibly unresolved.
 //   9. inventory-git     — recorded revision/ref/dirty state is compared with
 //                          the repository's actual current state.
-//  10. git-provenance    — whether the control directories are under VCS.
+//  10. instruction-topics — the two halves of the topic pool agree.
+//  11. instruction-intake — the register of agent instruction artifacts covers
+//                          the tree, loses no record (against the file's whole
+//                          history, and against the published branch when
+//                          MERIDIAN_CHECK_PUBLISHED is set), names topics that
+//                          exist and parents that hash as recorded.
+//  12. git-provenance    — whether the control directories are under VCS.
 //
 // Deliberate limits, stated rather than hidden:
 //   - The YAML reader and the JSON Schema validator below implement documented
@@ -40,6 +46,10 @@
 //     hand-maintained list, so it cannot drift from what the repository
 //     actually tracks. kernel-boundary.md remains the normative statement of
 //     what belongs on which side; this script covers everything tracked.
+//     "Everything tracked" is exactly the limit: a file that exists in the
+//     tree but has never been added is invisible to every check here, so the
+//     untracked set is enumerated too and reported as an explicit WARN rather
+//     than left for the reader to infer from a count.
 //
 // Usage: node scripts/kernel-validate.mjs
 // Roots: MERIDIAN_KERNEL defaults to this repository. MERIDIAN_INSTANCE has no
@@ -72,6 +82,69 @@ const ok = (m) => report.push(`OK    ${m}`);
 const info = (m) => report.push(`INFO  ${m}`);
 
 const readIfExists = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch { return null; } };
+
+// ---------------------------------------------------------------------------
+// Marked regions. When something mechanical has to read a part of a Markdown
+// file rather than the whole of it, the part declares its own boundaries. The
+// alternative — locating it by a heading, or by the shape of the tables inside
+// it — makes the parser depend on prose that any author may legitimately
+// rewrite, and a parser that silently reads the wrong region reports agreement
+// it never checked. The vocabulary is one pair of HTML comments:
+//   <!-- meridian:begin <name> [key=value ...] -->
+//   <!-- meridian:end <name> -->
+// Comments render as nothing in every Markdown tool, so the marker costs the
+// reader nothing and costs the parser no guessing. Anything other than exactly
+// one well-ordered pair is an error, never a fallback to the whole file.
+// ---------------------------------------------------------------------------
+// Fenced code blocks are examples, not declarations: a document that explains
+// this very syntax would otherwise declare a region by quoting one. Blanked,
+// not removed, so every offset computed afterwards still points where it did.
+// A fence that never closes is an error rather than a licence to blank the
+// rest of the file — otherwise a Markdown typo hides everything after it.
+// A closing fence must be at least as long as the opening one (CommonMark),
+// or a shorter fence inside a longer one ends the example early.
+function blankFencedBlocks(raw) {
+  const lines = raw.split('\n');
+  let fenceChar = null;
+  let fenceLen = 0;
+  let openedAt = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^ {0,3}(`{3,}|~{3,})/);
+    if (fenceChar === null) {
+      if (!m) continue;
+      fenceChar = m[1][0];
+      fenceLen = m[1].length;
+      openedAt = i;
+    } else if (m && m[1][0] === fenceChar && m[1].length >= fenceLen) {
+      fenceChar = null;
+    }
+    lines[i] = lines[i].replace(/[^\r]/g, ' ');
+  }
+  if (fenceChar !== null) {
+    const original = raw.split('\n');
+    for (let i = openedAt; i < lines.length; i++) lines[i] = original[i] ?? lines[i];
+    return {
+      text: lines.join('\n'),
+      error: `a code fence opens at line ${openedAt + 1} and is never closed; until it is, everything after it can be read either as an example or as a declaration, and neither reading can be trusted`,
+    };
+  }
+  return { text: lines.join('\n'), error: null };
+}
+
+function markedRegion(raw, name) {
+  const fenced = blankFencedBlocks(raw);
+  if (fenced.error) return { error: fenced.error };
+  const text = fenced.text;
+  const begin = [...text.matchAll(new RegExp(`<!--\\s*meridian:begin\\s+${name}\\b([^>]*?)-->`, 'g'))];
+  const end = [...text.matchAll(new RegExp(`<!--\\s*meridian:end\\s+${name}\\s*-->`, 'g'))];
+  if (begin.length !== 1 || end.length !== 1) {
+    return { error: `expected exactly one "meridian:begin ${name}" marker and one "meridian:end ${name}" marker, found ${begin.length} and ${end.length}` };
+  }
+  const from = begin[0].index + begin[0][0].length;
+  const to = end[0].index;
+  if (to < from) return { error: `"meridian:end ${name}" comes before "meridian:begin ${name}"` };
+  return { text: text.slice(from, to), attrs: begin[0][1].trim() };
+}
 
 function listFiles(dir, exts) {
   let out = [];
@@ -411,6 +484,18 @@ function gitTrackedFiles(root) {
     return files.length ? files : null;
   } catch { return null; }
 }
+// The complement of the set above, and the reason it has to be reported: the
+// file set comes from the index, so a file that exists in the tree but has
+// never been added is scanned by nothing — while the "N tracked text files
+// clean" line below reads as "everything here is clean". Files excluded by
+// .gitignore are deliberately outside the release unit and stay out; anything
+// else untracked is named.
+function gitUntrackedFiles(root) {
+  try {
+    const out = execFileSync('git', ['-C', root, 'ls-files', '--others', '--exclude-standard', '-z'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    return out.split('\0').filter(Boolean).map((f) => path.join(root, f));
+  } catch { return null; }
+}
 const trackedKernelFiles = gitTrackedFiles(KERNEL_ROOT);
 if (!trackedKernelFiles) {
   warn('kernel-purity: Git enumeration unavailable; scanning a filesystem walk instead (untracked files included)');
@@ -429,6 +514,18 @@ const kernelBinaryFiles = [...new Set(KERNEL_FILES)].filter((f) => BINARY_EXTS.s
 const instanceExcluded = [...new Set(KERNEL_FILES)].filter((f) => underInstance(f));
 if (instanceExcluded.length) {
   info(`kernel-purity: ${instanceExcluded.length} tracked file(s) under the Instance root are Instance data, excluded from the Kernel scan`);
+}
+// Untracked files in the Kernel tree: named here so that no later "clean" line
+// can be read as covering them.
+const untrackedKernelFiles = trackedKernelFiles
+  ? (gitUntrackedFiles(KERNEL_ROOT) ?? []).filter((f) => !underInstance(f))
+  : [];
+if (untrackedKernelFiles.length) {
+  const rels = untrackedKernelFiles
+    .map((f) => path.relative(KERNEL_ROOT, f).split(path.sep).join('/'));
+  warn(`kernel-purity: ${untrackedKernelFiles.length} file(s) in the Kernel tree are untracked and were therefore NOT scanned `
+     + `by any check in this run (${rels.slice(0, 5).join(', ')}${rels.length > 5 ? ', …' : ''}); `
+     + 'add them to the index or to .gitignore — a file the gate cannot see is not a file the gate approved');
 }
 const kernelFiles = [...new Set(KERNEL_FILES)]
   .filter((f) => fs.existsSync(f) && !BINARY_EXTS.some((e) => f.endsWith(e)) && !underInstance(f));
@@ -496,7 +593,8 @@ for (const file of kernelFiles) {
 }
 if (purityFailures === 0 && productDoc) {
   ok(`kernel-purity: ${kernelFiles.length} tracked text files clean; `
-   + `${kernelBinaryFiles.length} binary artifact(s) covered by sha-provenance, not by this text scan`);
+   + `${kernelBinaryFiles.length} binary artifact(s) covered by sha-provenance, not by this text scan`
+   + (untrackedKernelFiles.length ? `; ${untrackedKernelFiles.length} untracked file(s) outside this claim, see WARN above` : ''));
 }
 
 // ---------------------------------------------------------------------------
@@ -590,8 +688,11 @@ ok(`link check ran over ${allMd.length} files`);
 // below are shaped as patterns for the same reason the Kernel file set comes
 // from git ls-files — a hand-maintained list of files drifts from the tree.
 // ---------------------------------------------------------------------------
+// "skill" is deliberately absent: its signature duplicated "protocol" and
+// differed only in how the artifact is delivered. Delivery is a field of its
+// own now (agent-instruction-identity.md), not a type.
 const DOCUMENT_TYPES = new Set([
-  'standard', 'contract', 'protocol', 'skill', 'template', 'readme', 'reference',
+  'standard', 'contract', 'protocol', 'template', 'readme', 'reference',
   'tutorial', 'how-to', 'explanation', 'rfc', 'adr', 'concept', 'problem',
   'incident', 'analysis', 'plan', 'report', 'technical-specification',
   'changelog', 'unclassified',
@@ -647,8 +748,12 @@ for (const rel of relKernelFiles.filter((r) => r.endsWith('.md') && carriesOwnFr
   }
   const end = text.indexOf('\n---', 3);
   const fm = end === -1 ? '' : text.slice(4, end);
+  // `[^\S\r\n]` and not `\s`: `\s` matches the newline, so `field:\s*\S` was
+  // satisfied by the first character of the NEXT line and an empty field
+  // passed. Five of the six required fields could be blank and the run stayed
+  // green — the check that was supposed to catch exactly that.
   for (const field of ['title', 'status', 'scope', 'owner', 'created', 'updated']) {
-    if (!new RegExp(`^${field}:\\s*\\S`, 'm').test(fm)) {
+    if (!new RegExp(`^${field}:[^\\S\\r\\n]*\\S`, 'm').test(fm)) {
       idfail(`document-identity: ${rel} is missing required Front Matter field "${field}"`);
     }
   }
@@ -657,7 +762,7 @@ for (const rel of relKernelFiles.filter((r) => r.endsWith('.md') && carriesOwnFr
     idfail(`document-identity: ${rel} declares no document_type`);
   } else if (!DOCUMENT_TYPES.has(type)) {
     idfail(`document-identity: ${rel} declares document_type "${type}", which is not in the pool; a new type is a change to the standard, not to one file`);
-  } else if (type === 'unclassified' && !/^unclassified_reason:\s*\S/m.test(fm)) {
+  } else if (type === 'unclassified' && !/^unclassified_reason:[^\S\r\n]*\S/m.test(fm)) {
     idfail(`document-identity: ${rel} is unclassified with no unclassified_reason; the state is legal, an unexplained one is not`);
   } else {
     typedDocs++;
@@ -842,6 +947,708 @@ if (invRaw) {
     if (!verified && repos.length) warn(`inventory-git: 0/${repos.length} entries could be confirmed`);
   } catch (e) { fail(`inventory-git: ${e.message}`); }
 } else warn(INSTANCE_ROOT ? 'inventory-git: repository inventory not found' : 'inventory-git: no Instance root, not checked');
+
+// ---------------------------------------------------------------------------
+// instruction-intake: nothing leaves the register silently
+// ---------------------------------------------------------------------------
+// Record shape is checked by the generic $schema pass above — but that pass is
+// opt-in: it validates a file only if the file declares `$schema`. A register
+// that simply omits the line was validated by nothing and still reported as
+// covered, so the declaration is required here rather than assumed. What needs
+// its own code beyond the shape is what a schema cannot express. Three claims,
+// and each degrades
+// to UNVERIFIED rather than to a pass when its evidence is out of reach:
+//   completeness — every norm in the repository tree has a record;
+//   preservation — no record disappeared relative to the previous revision;
+//   parentage    — an edition was derived from the text it names.
+const INTAKE_MASKS = [/\.mdc$/, /(^|\/)SKILL\.md$/, /(^|\/)AGENTS\.md$/, /(^|\/)CLAUDE\.md$/];
+
+// Preservation is checked over records, not over the set of artifact paths the
+// records name. A path-set comparison cannot see an artifact lose two of its
+// three entries, because the path is still there — and the history is the
+// whole point: "deferred, then retired" is two records, and the question people
+// ask afterwards is about the transition. A record's identity is therefore the
+// decision it carries and the thing it was carried about: artifact, region,
+// date, verdict. Everything else in a record may be corrected in place; those
+// four may not be edited away.
+//
+// `region` belongs in the key for the same reason `artifact` does. Without it,
+// two records about one container, taken on one day with one verdict, differ
+// only in which section they judged — and re-pointing one of them at the other
+// section erased a decision while the multiset stayed the same size.
+const KEY_SEP = '␟';
+const recordKey = (r) => [r?.artifact, r?.region, r?.recorded_at, r?.verdict]
+  .map((v) => String(v ?? '')).join(KEY_SEP);
+const readableKey = (k) => {
+  const [a, region, d, v] = k.split(KEY_SEP);
+  return `${a}${region ? `#${region}` : ''} @ ${d} → ${v}`;
+};
+const countKeys = (keys) => {
+  const m = new Map();
+  for (const k of keys) m.set(k, (m.get(k) ?? 0) + 1);
+  return m;
+};
+// Two identical records are two records, so the comparison counts rather than
+// tests membership. Across revisions the requirement is per-key: the file must
+// hold at least as many copies of a key as the fullest revision that ever did.
+const lostKeys = (required, present) =>
+  [...required].filter(([k, n]) => (present.get(k) ?? 0) < n).map(([k]) => k);
+function mergeHighWaterMark(into, counts) {
+  for (const [k, n] of counts) into.set(k, Math.max(into.get(k) ?? 0, n));
+  return into;
+}
+// `--follow`: without it, renaming the register file in the same commit that
+// drops a record leaves one revision to compare against — the truncated one —
+// and the loss reads as "every record ever committed is still present". A
+// rename is cheaper to perform than an amend, so the hole was the wider of the
+// two.
+// Following the rename is only half of it: at an earlier revision the file
+// answered to its earlier name, so each revision is paired with the path the
+// file had there. Following without that pairing turns every pre-rename
+// revision into "could not be read", which is a warning where the answer
+// should have been a red run.
+function gitRevisionsOf(repo, rel) {
+  try {
+    const out = execFileSync('git', ['-C', repo, 'log', '--follow', '--format=%x01%H', '--name-status', '--', rel], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    return out.split('\x01').filter((b) => b.trim()).map((block) => {
+      const lines = block.split('\n').filter((l) => l.trim());
+      const statusLine = lines.slice(1).find((l) => l.includes('\t'));
+      return { rev: lines[0].trim(), path: statusLine ? statusLine.split('\t').pop().trim() : rel };
+    });
+  } catch { return null; }
+}
+// `git show <rev>:<path>` fails the same way for "this revision has no such
+// file" and for "this revision is not in this checkout" (a shallow or partial
+// clone). The two deserve opposite verdicts, so the revision is resolved first.
+function gitHasRevision(repo, rev) {
+  try {
+    execFileSync('git', ['-C', repo, 'cat-file', '-e', `${rev}^{commit}`], { stdio: ['ignore', 'ignore', 'ignore'] });
+    return true;
+  } catch { return false; }
+}
+function gitShowAt(repo, rev, rel) {
+  try { return execFileSync('git', ['-C', repo, 'show', `${rev}:${rel}`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); }
+  catch { return null; }
+}
+function gitFilesAt(repo, rev, relDir) {
+  try {
+    return execFileSync('git', ['-C', repo, 'ls-tree', '-r', '--name-only', '-z', rev, '--', relDir], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+      .split('\0').filter((p) => /\.ya?ml$/i.test(p));
+  } catch { return null; }
+}
+function gitDirectoryRevisions(repo, relDir) {
+  try {
+    return execFileSync('git', ['-C', repo, 'log', '--format=%H', '--', relDir], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+      .split('\n').map((s) => s.trim()).filter(Boolean);
+  } catch { return null; }
+}
+function intakeDocumentsAt(repo, rev) {
+  const paths = gitFilesAt(repo, rev, 'instruction-intake');
+  if (paths === null) return null;
+  return paths.map((rel) => {
+    const raw = gitShowAt(repo, rev, rel);
+    if (raw === null) return { rel, error: 'file could not be read' };
+    try { return { rel, doc: yamlParse(raw) }; }
+    catch (e) { return { rel, error: e.message }; }
+  });
+}
+function gitUpstreamOf(repo) {
+  try {
+    return execFileSync('git', ['-C', repo, 'rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null;
+  } catch { return null; }
+}
+function gitFetch(repo) {
+  try { execFileSync('git', ['-C', repo, 'fetch', '--quiet'], { stdio: ['ignore', 'ignore', 'ignore'] }); return true; }
+  catch { return false; }
+}
+// Container files hold several subjects at once and are partly written by a
+// generator. The unit of intake for them is a declared region, not the file:
+// one topic assigned to a whole AGENTS.md would be false about most of it.
+// Regions declare themselves with the same marker vocabulary the topic pool
+// uses, plus the two attributes a container needs — who owns the region, and
+// whether a generator writes it.
+const CONTAINER_MASKS = [/(^|\/)AGENTS\.md$/, /(^|\/)CLAUDE\.md$/];
+const REGION_TOKEN = /<!--\s*meridian:(begin|end)\s+instruction-section\b([^>]*?)-->/g;
+function parseMarkerAttrs(s) {
+  const out = {};
+  for (const m of String(s).matchAll(/([a-z][a-z0-9-]*)=("([^"]*)"|[^\s"]+)/g)) out[m[1]] = m[3] ?? m[2];
+  return out;
+}
+function instructionRegions(raw) {
+  // A leading Front Matter block is the file's own metadata, not a subject of
+  // intake. It is blanked rather than removed so that every offset below still
+  // points where it did.
+  let text = raw;
+  if (text.startsWith('---')) {
+    const close = text.indexOf('\n---', 3);
+    if (close !== -1) {
+      const after = text.indexOf('\n', close + 1);
+      const cut = after === -1 ? text.length : after + 1;
+      text = text.slice(0, cut).replace(/[^\n]/g, ' ') + text.slice(cut);
+    }
+  }
+  // The same treatment of fenced examples the topic pool gets, from the same
+  // helper: one rule, one implementation, one way to be wrong.
+  const fenced = blankFencedBlocks(text);
+  text = fenced.text;
+  const errors = fenced.error ? [fenced.error] : [];
+  const regions = [];
+  const seen = new Set();
+  let open = null;
+  let cursor = 0;
+  let outside = '';
+  for (const m of text.matchAll(REGION_TOKEN)) {
+    const attrs = parseMarkerAttrs(m[2] || '');
+    if (m[1] === 'begin') {
+      if (open) {
+        errors.push(`region "${open.id}" is still open where region "${attrs.id ?? '?'}" begins; regions sit side by side, they do not nest`);
+        return { errors, regions: [], uncoveredLines: 0 };
+      }
+      outside += text.slice(cursor, m.index);
+      if (!attrs.id) errors.push('a region begins without an id; a region that cannot be named cannot be recorded');
+      else if (seen.has(attrs.id)) errors.push(`region id "${attrs.id}" is declared twice; two regions with one name are one name for two subjects`);
+      else seen.add(attrs.id);
+      const generated = String(attrs.generated ?? 'no');
+      if (!['yes', 'no'].includes(generated)) errors.push(`region "${attrs.id}" declares generated="${generated}"; the answer is yes or no`);
+      open = { id: attrs.id ?? '', owner: attrs.owner ?? '', generated: generated === 'yes', start: m.index + m[0].length };
+    } else {
+      if (!open) { errors.push('a region ends where none is open'); return { errors, regions: [], uncoveredLines: 0 }; }
+      if (attrs.id && attrs.id !== open.id) errors.push(`region "${open.id}" is closed by a marker naming "${attrs.id}"`);
+      regions.push({ ...open, text: text.slice(open.start, m.index) });
+      open = null;
+    }
+    cursor = m.index + m[0].length;
+  }
+  if (open) errors.push(`region "${open.id}" is opened and never closed; everything after it would silently belong to it`);
+  outside += text.slice(cursor);
+  // Headings are the container's own scaffolding and belong to no subject.
+  // Anything else outside every region is text that no unit of intake covers.
+  const uncoveredLines = outside.split('\n').filter((l) => l.trim() && !/^#{1,6}\s/.test(l.trim())).length;
+  return { errors, regions, uncoveredLines };
+}
+
+// The published half of preservation needs the network, so it is opt-in: the
+// Instance's pre-push hook sets this, and an ordinary offline run neither pays
+// for it nor pretends to have done it.
+const CHECK_PUBLISHED = Boolean(process.env.MERIDIAN_CHECK_PUBLISHED);
+let publishedFetchAttempted = false;
+let publishedFetchOk = false;
+
+// The topic pool lives in two files on purpose: names where the gate can read
+// them, signatures where a person can compare them. Two files holding one pool
+// are two pools unless something checks they agree, so that is checked first
+// and the pool is refused outright when they do not.
+const topicsYamlRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'instruction-topics.yaml'));
+const topicsMdRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'instruction-topics.md'));
+let TOPIC_POOL = null;
+if (topicsYamlRaw === null || topicsMdRaw === null) {
+  // Fail-closed. The pool is a Kernel artifact, not an optional extra: without
+  // it not one topic in any register can be judged, and reporting that as a
+  // warning would let a register full of invented topics finish green. An
+  // absent pool is a broken Kernel, and the gate says so.
+  const missing = [
+    topicsYamlRaw === null ? 'standards/workspace/instruction-topics.yaml' : null,
+    topicsMdRaw === null ? 'standards/workspace/instruction-topics.md' : null,
+  ].filter(Boolean);
+  fail(`instruction-topics: the topic pool is missing from the Kernel (${missing.join(', ')}); `
+     + 'no topic in any register could be checked against it, and an unreadable pool is a defect of the Kernel, not a reason to skip the check');
+} else {
+  let names = [];
+  try { names = (yamlParse(topicsYamlRaw)?.topics || []).map(String); }
+  catch (e) { fail(`instruction-topics: ${e.message}`); }
+  // Signatures are read from the marked pool region only. Reading the whole
+  // file would enrol any future table whose first cell is a back-quoted
+  // identifier into the set of documented topics — and a name that is
+  // "documented" by accident masks exactly the drift this check exists to
+  // find. The region declares itself; an unmarked file is an error, not a
+  // licence to fall back to the whole text.
+  const region = markedRegion(topicsMdRaw, 'topic-pool');
+  if (region.error) {
+    fail(`instruction-topics: the pool region of instruction-topics.md is not readable — ${region.error}; `
+       + 'the signatures the gate compares against are the ones inside the markers, and nothing else');
+  } else {
+    const documented = new Set(
+      [...region.text.matchAll(/^\|\s*`([a-z0-9-]+)`\s*\|/gm)].map((m) => m[1]),
+    );
+    const declared = new Set(names);
+    const undocumented = [...declared].filter((n) => !documented.has(n));
+    const unlisted = [...documented].filter((n) => !declared.has(n));
+    if (undocumented.length || unlisted.length) {
+      const parts = [];
+      if (undocumented.length) parts.push(`named in the data but carrying no signature: ${undocumented.join(', ')}`);
+      if (unlisted.length) parts.push(`carrying a signature but absent from the data: ${unlisted.join(', ')}`);
+      fail(`instruction-topics: the two halves of the pool disagree — ${parts.join('; ')}`);
+    } else {
+      TOPIC_POOL = declared;
+      ok(`instruction-topics: ${declared.size} topics; names and signatures agree`);
+    }
+  }
+}
+const intakeDir = INSTANCE_ROOT ? path.join(INSTANCE_ROOT, 'instruction-intake') : null;
+const intakeFiles = intakeDir && fs.existsSync(intakeDir) ? listFiles(intakeDir, ['.yaml', '.yml']) : [];
+
+// A per-file check cannot see the most destructive loss: removing the whole
+// register also removes the loop that would have checked its history. Keep a
+// directory-level identity guard keyed by `repository`, which is stable across
+// file renames. This guard intentionally checks existence only; the per-file
+// comparison below remains responsible for record-level high-water marks.
+if (INSTANCE_ROOT) {
+  const currentRepoIds = new Set();
+  const currentRepoFiles = new Map();
+  for (const file of intakeFiles) {
+    try {
+      const repoId = String(yamlParse(readIfExists(file) ?? '')?.repository ?? '');
+      if (repoId) {
+        const rel = path.relative(INSTANCE_ROOT, file).split(path.sep).join('/');
+        if (currentRepoFiles.has(repoId)) {
+          fail(`instruction-intake: repository "${repoId}" has more than one current register (${currentRepoFiles.get(repoId)}, ${rel}); `
+             + 'one identity split across files has no unambiguous history');
+        } else {
+          currentRepoFiles.set(repoId, rel);
+        }
+        currentRepoIds.add(repoId);
+      }
+    } catch { /* the ordinary register pass reports the parse failure */ }
+  }
+  const revisions = gitDirectoryRevisions(INSTANCE_ROOT, 'instruction-intake');
+  if (revisions === null) {
+    if (intakeFiles.length === 0) {
+      warn('instruction-intake: the Instance history is unreadable and no register is present; whether a whole register disappeared is UNVERIFIED, not confirmed');
+    }
+  } else {
+    const historical = new Map();
+    for (const rev of revisions) {
+      const docs = intakeDocumentsAt(INSTANCE_ROOT, rev);
+      if (docs === null) continue;
+      for (const item of docs) {
+        if (item.error) { fail(`instruction-intake: revision ${rev.slice(0, 7)} of ${item.rel} does not parse: ${item.error}`); continue; }
+        const repoId = String(item.doc?.repository ?? '');
+        if (repoId && !historical.has(repoId)) historical.set(repoId, item.rel);
+      }
+    }
+    for (const [repoId, oldRel] of historical) {
+      if (!currentRepoIds.has(repoId)) {
+        fail(`instruction-intake: the complete register for repository "${repoId}" disappeared (it existed as ${oldRel}); `
+           + 'append-only protects the register itself as well as records inside it');
+      }
+    }
+  }
+}
+
+if (!INSTANCE_ROOT) {
+  warn('instruction-intake: no Instance root, not checked');
+} else if (intakeFiles.length === 0) {
+  // Intake is a process, not a precondition: an absent register means it has
+  // not started, which is a fact to state rather than a defect to fail on.
+  info('instruction-intake: no register in the Instance; intake has not started');
+} else {
+  const repoPaths = new Map();
+  try {
+    for (const r of (yamlParse(readIfExists(path.join(INSTANCE_ROOT, 'inventory', 'repositories.yaml')) ?? '') || {}).repositories || []) {
+      if (r?.id) repoPaths.set(String(r.id), r.path);
+    }
+  } catch { /* inventory problems are reported by inventory-git, not twice */ }
+
+  let recordCount = 0;
+  let coveredRepos = 0;
+  for (const file of intakeFiles) {
+    const rel = path.relative(INSTANCE_ROOT, file).split(path.sep).join('/');
+    let doc;
+    try { doc = yamlParse(readIfExists(file) ?? ''); }
+    catch (e) { fail(`instruction-intake: cannot parse ${rel}: ${e.message}`); continue; }
+    if (typeof doc?.$schema !== 'string' || !doc.$schema.trim()) {
+      fail(`instruction-intake: ${rel} declares no $schema, so the shape of every record in it was validated by nothing; `
+         + 'the checks below assume that shape and would report a defective register as covered');
+    }
+    const records = Array.isArray(doc?.records) ? doc.records : [];
+    recordCount += records.length;
+    const repoId = String(doc?.repository ?? '');
+    const repoKnown = repoPaths.has(repoId);
+    if (!repoKnown) {
+      fail(`instruction-intake: ${rel} names repository "${repoId}", which the Instance inventory does not name; `
+         + 'this is an unresolvable reference, not an unreachable repository');
+    }
+    const covered = new Set(records.map((r) => String(r?.artifact ?? '')));
+
+    // preservation, level 1 — against the file's own history. Comparing with
+    // HEAD alone was blind to the case that matters most: once the deletion is
+    // itself committed, HEAD *is* the truncated file and the difference is
+    // gone. The baseline is therefore every revision of this file, which is
+    // what "append-only" literally says.
+    const currentCounts = countKeys(records.map(recordKey));
+    const revisions = gitRevisionsOf(INSTANCE_ROOT, rel);
+    if (revisions === null) {
+      warn(`instruction-intake: ${rel} — the Instance's history is unreadable from here; preservation is UNVERIFIED, not confirmed`);
+    } else if (revisions.length === 0) {
+      info(`instruction-intake: ${rel} has never been committed; preservation is UNVERIFIED for this run, not confirmed`);
+    } else {
+      const everRecorded = new Map();
+      let unreadable = 0;
+      for (const { rev, path: pathThen } of revisions) {
+        const text = gitShowAt(INSTANCE_ROOT, rev, pathThen);
+        if (text === null) { unreadable++; continue; }
+        try { mergeHighWaterMark(everRecorded, countKeys((yamlParse(text)?.records || []).map(recordKey))); }
+        catch (e) { fail(`instruction-intake: revision ${rev.slice(0, 7)} of ${pathThen} does not parse: ${e.message}`); }
+      }
+      if (unreadable) {
+        warn(`instruction-intake: ${unreadable} of ${revisions.length} revision(s) of ${rel} could not be read; preservation is confirmed only against the rest`);
+      }
+      const gone = lostKeys(everRecorded, currentCounts);
+      if (gone.length) {
+        fail(`instruction-intake: ${rel} lost ${gone.length} record(s) that earlier revisions of this file carried `
+           + `(${gone.slice(0, 3).map(readableKey).join('; ')}); the register is append-only — a decision is superseded by a new record, never edited away`);
+      } else {
+        info(`instruction-intake: ${rel} — ${revisions.length} revision(s) of the file compared; every record ever committed is still present`);
+      }
+    }
+
+    // preservation, level 2 — against what has been published. Local history
+    // can be rewritten: an amend or a rebase removes the revision that held the
+    // lost record, and level 1 then has nothing to compare with. The branch
+    // other people read cannot be changed that quietly. Off unless asked for,
+    // because it needs the network — and when it is asked for and the network
+    // is not there, that is a warning, never a pass.
+    if (CHECK_PUBLISHED) {
+      const upstream = gitUpstreamOf(INSTANCE_ROOT);
+      if (!upstream) {
+        warn(`instruction-intake: ${rel} — the Instance has no upstream branch; the published state of the register was NOT compared`);
+      } else {
+        if (!publishedFetchAttempted) { publishedFetchAttempted = true; publishedFetchOk = gitFetch(INSTANCE_ROOT); }
+        if (!publishedFetchOk) {
+          warn(`instruction-intake: ${rel} — ${upstream} could not be fetched; the published state is UNVERIFIED, not confirmed`);
+        } else {
+          const publishedDocs = intakeDocumentsAt(INSTANCE_ROOT, upstream);
+          if (publishedDocs === null) {
+            warn(`instruction-intake: ${rel} — the intake directory on ${upstream} could not be read; the published state is UNVERIFIED, not confirmed`);
+          } else {
+            const malformed = publishedDocs.filter((d) => d.error);
+            for (const item of malformed) {
+              fail(`instruction-intake: the published revision of ${item.rel} does not parse: ${item.error}`);
+            }
+            const matches = publishedDocs.filter((d) => !d.error && String(d.doc?.repository ?? '') === repoId);
+            if (matches.length > 1) {
+              fail(`instruction-intake: ${upstream} carries ${matches.length} registers for repository "${repoId}"; the published baseline is ambiguous`);
+            } else if (matches.length === 0) {
+              info(`instruction-intake: repository "${repoId}" has no register on ${upstream} yet; there is nothing published to lose`);
+            } else {
+              const publishedCounts = countKeys((matches[0].doc?.records || []).map(recordKey));
+              const gone = lostKeys(publishedCounts, currentCounts);
+              if (gone.length) {
+                fail(`instruction-intake: ${rel} lost ${gone.length} record(s) that are published on ${upstream} `
+                   + `(${gone.slice(0, 3).map(readableKey).join('; ')}); rewriting local history does not unpublish a decision`);
+              } else {
+                info(`instruction-intake: ${rel} — every record published on ${upstream} is still present`);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // completeness — the artifact list comes from the tree, never from a hand-kept list
+    const repoPath = repoPaths.get(repoId);
+    const tracked = (() => {
+      if (!repoPath) return null;
+      try { return execFileSync('git', ['-C', repoPath, 'ls-files'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).split('\n').filter(Boolean); }
+      catch { return null; }
+    })();
+    if (!repoKnown) {
+      // The unresolvable identifier is already a FAIL above. Calling it merely
+      // unreachable here would turn a data defect into an environmental gap.
+    } else if (tracked === null) {
+      info(`instruction-intake: ${repoId} — repository not reachable from here; completeness is UNVERIFIED, not confirmed`);
+    } else {
+      // The unit is the region for containers and the file for everything
+      // else. Measuring a container by the file would let one topic stand for
+      // a text that holds several, which is the defect §3.1 of the protocol
+      // describes — and would report "complete" while saying nothing true.
+      const coveredRegions = new Set(records
+        .filter((r) => r?.region)
+        .map((r) => `${String(r?.artifact ?? '')}#${String(r.region)}`));
+      const missing = [];
+      let regionsCovered = 0;
+      let uncoveredContainers = 0;
+      for (const f of tracked.filter((m) => INTAKE_MASKS.some((mask) => mask.test(m)))) {
+        if (!CONTAINER_MASKS.some((mask) => mask.test(f))) {
+          if (!covered.has(f)) missing.push(f);
+          continue;
+        }
+        const body = readIfExists(path.join(repoPath, f));
+        if (body === null) {
+          info(`instruction-intake: ${repoId}/${f} could not be read; its regions are UNVERIFIED, not confirmed`);
+          continue;
+        }
+        const parsed = instructionRegions(body);
+        for (const e of parsed.errors) fail(`instruction-intake: ${repoId}/${f} — ${e}`);
+        if (parsed.errors.length) continue;
+        // The reverse direction, checked before the branches below so that it
+        // also reaches a container declaring no regions at all: a record naming
+        // a region the file does not declare. Alone it looks like nothing — but
+        // it is what a typo in the id produces, and the real region then shows
+        // up as uncovered while the record that meant to cover it judges a
+        // section that is not there.
+        const declaredIds = new Set(parsed.regions.map((region) => region.id));
+        for (const r of records) {
+          if (String(r?.artifact ?? '') !== f || !r?.region) continue;
+          if (!declaredIds.has(String(r.region))) {
+            fail(`instruction-intake: ${repoId}/${f} — a record names region "${r.region}", which the file does not declare`);
+          }
+        }
+        if (parsed.regions.length === 0) {
+          // A container whose regions are not declared is itself the finding,
+          // and the protocol says how it is recorded: one deferred entry with
+          // that as the reason. Checking only that *some* entry exists let any
+          // verdict stand in for that one — including a verdict that assigns a
+          // single topic to a text holding several, which is the defect §3.1
+          // was written against, arriving through the back door.
+          // "Current" is the latest by date, not the last line in the file.
+          // Ordering by position let the rule be sidestepped by moving two
+          // blocks of YAML: a superseded `deferred` placed at the bottom would
+          // stand in for a decision taken six months later.
+          const fileRecords = records
+            .filter((r) => String(r?.artifact ?? '') === f && !r?.region)
+            .map((r, i) => ({ r, i }))
+            .sort((a, b) => String(a.r?.recorded_at ?? '').localeCompare(String(b.r?.recorded_at ?? '')) || a.i - b.i)
+            .map((x) => x.r);
+          if (fileRecords.length === 0) { missing.push(f); continue; }
+          const current = fileRecords[fileRecords.length - 1];
+          if (String(current?.verdict ?? '') !== 'deferred') {
+            fail(`instruction-intake: ${repoId}/${f} declares no regions and its current record is "${current?.verdict}"; `
+               + 'a container whose boundaries are not declared is itself the finding and is recorded as deferred with that reason (protocol §3.1)');
+          } else {
+            info(`instruction-intake: ${repoId}/${f} declares no regions and is recorded as deferred; the unit of intake for it is still undeclared`);
+          }
+          continue;
+        }
+        for (const region of parsed.regions) {
+          const key = `${f}#${region.id}`;
+          if (!region.owner) {
+            fail(`instruction-intake: ${repoId}/${f} — region "${region.id}" declares no owner; without one there is no answer to whether the next generation may overwrite it`);
+          }
+          if (region.generated) {
+            if (coveredRegions.has(key)) {
+              fail(`instruction-intake: ${repoId}/${f} — region "${region.id}" is declared generated and yet carries an intake record; a generated region is not the owner's norm and is not taken in`);
+            }
+            continue;
+          }
+          if (coveredRegions.has(key)) regionsCovered++; else missing.push(key);
+        }
+        if (parsed.uncoveredLines) {
+          uncoveredContainers++;
+          warn(`instruction-intake: ${repoId}/${f} — ${parsed.uncoveredLines} line(s) lie outside every declared region and belong to no unit of intake; `
+             + 'completeness below is claimed over the regions, not over the file');
+        }
+      }
+      if (missing.length) {
+        fail(`instruction-intake: ${repoId} — ${missing.length} norm(s) in the tree have no record (${missing.slice(0, 3).join(', ')}); the register is complete or it proves nothing`);
+      } else if (uncoveredContainers) {
+        // Every declared unit carries a record and part of a container still
+        // belongs to no unit. Counting this tree as confirmed complete would
+        // put a claim in the summary line that the warning above just denied.
+        info(`instruction-intake: ${repoId} — ${regionsCovered} declared region(s) carry a record, but ${uncoveredContainers} container(s) hold text outside every region; this tree is NOT counted as confirmed complete`);
+      } else {
+        coveredRepos++;
+        if (regionsCovered) {
+          info(`instruction-intake: ${repoId} — ${regionsCovered} declared region(s) of container files carry a record`);
+        }
+      }
+    }
+
+    // topic existence — not topic correctness, which no gate can see
+    if (TOPIC_POOL) {
+      const strays = [...new Set(records
+        .map((r) => String(r?.topic ?? ''))
+        .filter((t) => t && t !== 'unclassified' && !TOPIC_POOL.has(t)))];
+      if (strays.length) {
+        fail(`instruction-intake: ${rel} names ${strays.length} topic(s) outside the pool (${strays.slice(0, 3).join(', ')}); a new topic is a change to the registry, not to one record`);
+      }
+    }
+
+    // packaging discipline, readable only where the repository is reachable
+    for (const r of records) {
+      if (r?.delivery !== 'skill-package') continue;
+      const artifact = String(r?.artifact ?? '');
+      if (!repoPath || !/\/SKILL\.md$/.test(artifact)) continue;
+      const body = readIfExists(path.join(repoPath, artifact));
+      if (body === null) {
+        info(`instruction-intake: ${artifact} not reachable; its packaging is UNVERIFIED, not confirmed`);
+        continue;
+      }
+      const declaredName = body.match(/^name:\s*(\S+)\s*$/m)?.[1];
+      const dirName = path.basename(path.dirname(artifact));
+      if (declaredName && declaredName !== dirName) {
+        fail(`instruction-intake: ${artifact} is a skill named "${declaredName}" in a directory named "${dirName}"; a norm that cannot be found by its own name makes every reference to it dangling`);
+      }
+      const front = body.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
+      const foreign = ['alwaysApply', 'globs'].filter((k) => new RegExp(`^${k}\\s*:`, 'm').test(front));
+      if (foreign.length) {
+        fail(`instruction-intake: ${artifact} declares activation twice — ${foreign.join(' and ')} belong to the rule vocabulary, not the package one; which one applies is then decided by the tool, not by the author`);
+      }
+    }
+
+    // parentage — the reference is qualified (repository, path, revision) and
+    // is resolved at the revision it names. The earlier version searched two
+    // roots for a bare path and hashed whatever it found today, which conflated
+    // two different findings under one verdict:
+    //   the reference points at a different text     — a defect of the record;
+    //   the parent has moved on since it was taken   — an edition that lags.
+    // The first is FAIL, the second is WARN. Treating a legitimate change to
+    // the parent as a broken record trains the operator to re-date entries,
+    // which is the one repair the protocol forbids.
+    //
+    // The digest still proves only that the parent is that text; whether the
+    // narrowing describes it honestly is not checkable and is stated as such.
+    for (const r of records) {
+      if (r?.verdict !== 'adopt-edition' || !r?.derived_from) continue;
+      const ref = r.derived_from;
+      if (typeof ref !== 'object' || Array.isArray(ref) || !ref.repository || !ref.path || !ref.revision) {
+        fail(`instruction-intake: ${r.artifact} names a parent that is not a qualified reference (repository, path, revision); a bare path resolves to a different text in every checkout that reads it`);
+        continue;
+      }
+      const refRepoId = String(ref.repository);
+      const parentRepo = refRepoId === 'kernel' ? KERNEL_ROOT : repoPaths.get(refRepoId);
+      if (parentRepo === undefined) {
+        fail(`instruction-intake: ${r.artifact} derives from repository "${refRepoId}", which the Instance inventory does not name; the reference cannot be resolved by anyone, here or elsewhere`);
+        continue;
+      }
+      if (!gitFacts(parentRepo)) {
+        info(`instruction-intake: repository "${refRepoId}" is not reachable from here; the parent of ${r.artifact} is UNVERIFIED, not confirmed`);
+        continue;
+      }
+      const shortRev = String(ref.revision).slice(0, 7);
+      if (!gitHasRevision(parentRepo, String(ref.revision))) {
+        // Not a defect of the record: a shallow or partial clone simply does
+        // not carry that commit. Failing here would be a red run on a correct
+        // entry, which is the mistake this whole check was rewritten to stop.
+        info(`instruction-intake: revision ${shortRev} of ${refRepoId} is not present in this checkout; the parent of ${r.artifact} is UNVERIFIED, not confirmed`);
+        continue;
+      }
+      const atRevision = gitShowAt(parentRepo, String(ref.revision), String(ref.path));
+      if (atRevision === null) {
+        fail(`instruction-intake: ${r.artifact} derives from "${ref.path}" at ${shortRev} in ${refRepoId}, and that revision holds no such file; the reference points at nothing`);
+        continue;
+      }
+      const takenDigest = crypto.createHash('sha256').update(atRevision, 'utf8').digest('hex');
+      if (takenDigest !== String(r.derived_from_digest)) {
+        fail(`instruction-intake: ${r.artifact} records parent digest ${String(r.derived_from_digest).slice(0, 12)} but "${ref.path}" at ${shortRev} hashes to ${takenDigest.slice(0, 12)}; `
+           + 'the reference names a different text, which no re-dating can fix');
+        continue;
+      }
+      const atHead = gitShowAt(parentRepo, 'HEAD', String(ref.path));
+      if (atHead === null) {
+        warn(`instruction-intake: ${r.artifact} — its parent "${ref.path}" no longer exists at HEAD of ${refRepoId}; the edition stays anchored to ${shortRev}, but the text it narrows has been removed or moved`);
+      } else if (crypto.createHash('sha256').update(atHead, 'utf8').digest('hex') !== takenDigest) {
+        warn(`instruction-intake: ${r.artifact} — the edition is behind its parent: "${ref.path}" has changed in ${refRepoId} since ${shortRev}. `
+           + 'This is not a defective record: re-take the edition against the current parent when the difference matters');
+      }
+    }
+  }
+  ok(`instruction-intake: ${recordCount} record(s) across ${intakeFiles.length} register file(s); ${coveredRepos} repository tree(s) confirmed complete`);
+}
+
+// ---------------------------------------------------------------------------
+// agent-instruction norms living in the Kernel: §7 applied to the Kernel itself
+// ---------------------------------------------------------------------------
+// The standard used to require four fields of Kernel documents and nothing
+// checked whether its own documents carried them — the exact shape of defect
+// the whole system exists to catch, found in the first package written under
+// its rules.
+//
+// Which Kernel documents are agent instruction norms is declared, not derived:
+// a document says so by carrying `delivery`. Deriving it from the genre would
+// sweep in every prescriptive document in the tree, most of which no tool ever
+// loads into an agent's context, and a claim that broad would be false in the
+// same way the old one was. The cost of declaring is stated in §7.2 of the
+// standard: a norm that never declares itself is invisible here, and the count
+// below is printed so that the size of that gap is visible on every run.
+const NORM_DELIVERY = new Set(['kernel-doc', 'skill-package', 'cursor-rule', 'agents-md-section']);
+const NORM_ACTIVATION = new Set(['always', 'path-glob', 'task-class', 'explicit']);
+const NORM_FIELDS = ['topic', 'profile', 'delivery', 'activation'];
+const PRESCRIPTIVE_TYPES = new Set(['standard', 'contract', 'protocol']);
+
+let normFailures = 0;
+const nfail = (m) => { normFailures++; fail(m); };
+let declaredNorms = 0;
+let undeclaredPrescriptive = 0;
+let undeclaredOther = 0;
+for (const rel of relKernelFiles.filter((r) => r.endsWith('.md') && carriesOwnFrontMatter(r))) {
+  const text = readIfExists(path.join(KERNEL_ROOT, rel));
+  if (text === null || !text.startsWith('---')) continue;
+  const end = text.indexOf('\n---', 3);
+  const fm = end === -1 ? '' : text.slice(4, end);
+  const present = NORM_FIELDS.filter((f) => new RegExp(`^${f}:[^\\S\\r\\n]*\\S`, 'm').test(fm));
+  // `derived_from` is a field of this standard too, so declaring it alone is
+  // also a half-declaration; without this the whole check below could be
+  // stepped over by declaring parentage and nothing else.
+  const declaresParent = /^derived_from:/m.test(fm);
+  if (present.length === 0 && !declaresParent) {
+    const type = fm.match(/^document_type:\s*(\S+)/m)?.[1];
+    if (PRESCRIPTIVE_TYPES.has(type)) undeclaredPrescriptive++; else undeclaredOther++;
+    continue;
+  }
+  declaredNorms++;
+  const absent = NORM_FIELDS.filter((f) => !present.includes(f));
+  if (absent.length) {
+    nfail(`agent-instruction-identity: ${rel} declares ${present.join(', ')} but not ${absent.join(', ')}; `
+        + '§7 is four independent answers, and a half-declared norm is exactly the drift this standard was written against');
+  }
+  const delivery = fm.match(/^delivery:\s*(\S+)/m)?.[1];
+  if (delivery && !NORM_DELIVERY.has(delivery)) {
+    nfail(`agent-instruction-identity: ${rel} declares delivery "${delivery}", which is not in the pool of §5`);
+  }
+  const activation = fm.match(/^activation:\s*(\S+)/m)?.[1];
+  if (activation && !NORM_ACTIVATION.has(activation)) {
+    nfail(`agent-instruction-identity: ${rel} declares activation "${activation}", which is not in the pool of §5`);
+  }
+  const topic = fm.match(/^topic:\s*(\S+)/m)?.[1];
+  if (topic === 'unclassified') {
+    if (!/^unclassified_reason:[^\S\r\n]*\S/m.test(fm)) {
+      nfail(`agent-instruction-identity: ${rel} carries topic "unclassified" with no unclassified_reason; the state is legal, an unexplained one is not`);
+    }
+  } else if (topic && TOPIC_POOL && !TOPIC_POOL.has(topic)) {
+    nfail(`agent-instruction-identity: ${rel} names topic "${topic}", which is not in the pool; a new topic is a change to the registry, not to one document`);
+  }
+  // derived_from in Front Matter obeys the same rule as in the register: a
+  // qualified reference, or it is not a reference at all. A scalar value sits
+  // on the same line as the key; a mapping does not, which is the whole
+  // difference being tested.
+  if (/^derived_from:[^\S\r\n]*\S/m.test(fm)) {
+    nfail(`agent-instruction-identity: ${rel} records derived_from as a scalar; the parent reference is a mapping of repository, path and revision`);
+  } else if (declaresParent && !/^narrowing:/m.test(fm)) {
+    // §8 claims this is checked always; before this line it was checked
+    // nowhere for a Kernel document, and only by the register's schema for a
+    // record. An edition with no list of narrowings is indistinguishable from
+    // an independent text on the same subject.
+    nfail(`agent-instruction-identity: ${rel} declares derived_from with no narrowing list; an edition that does not say what it removed is not distinguishable from a text written independently`);
+  }
+}
+if (normFailures === 0) {
+  ok(`agent-instruction-identity: ${declaredNorms} Kernel document(s) declare themselves agent instruction norms and carry all four fields of §7`);
+}
+// Both numbers, because a document is free to answer "what does it assert"
+// with a genre outside the prescriptive three and still be loaded into an
+// agent's context. Printing only the prescriptive count would describe the
+// gap as smaller than it is.
+info(`agent-instruction-identity: ${undeclaredPrescriptive} prescriptive and ${undeclaredOther} other Kernel document(s) declare no delivery, so §7 does not reach them; `
+   + 'a norm that does not declare itself is invisible to this check, and that is its declared boundary, not its result');
+
+// ---------------------------------------------------------------------------
+// the same watchdog, on the Instance side
+// ---------------------------------------------------------------------------
+// The Kernel-only version missed the case that produced it: a report written
+// as the evidence for a claim sat untracked in the Instance, so the claim
+// still rested on a text that no revision carried. Instance artifacts are
+// evidence; an unrecorded one proves nothing, however carefully it is written.
+if (INSTANCE_ROOT) {
+  const untrackedInstance = gitUntrackedFiles(INSTANCE_ROOT);
+  if (untrackedInstance === null) {
+    warn('instance-provenance: the Instance is not enumerable by Git from here; whether its artifacts are recorded is UNVERIFIED, not confirmed');
+  } else if (untrackedInstance.length) {
+    const rels = untrackedInstance.map((f) => path.relative(INSTANCE_ROOT, f).split(path.sep).join('/'));
+    warn(`instance-provenance: ${rels.length} file(s) in the Instance are untracked `
+       + `(${rels.slice(0, 5).join(', ')}${rels.length > 5 ? ', …' : ''}); an artifact no revision carries cannot be cited as evidence for anything`);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // git provenance of the control directories

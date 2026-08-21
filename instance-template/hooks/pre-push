@@ -1,0 +1,33 @@
+#!/bin/sh
+# Instance pre-push — refuse to publish an intake register that has lost a
+# decision.
+#
+# An ordinary gate run compares the register with its own local history. That
+# is blind by construction to a rewritten history: an amend or a rebase removes
+# the revision that still held the record, and level 1 has nothing left to
+# compare with. This hook turns on the second comparison — against the branch
+# other people read — at the one moment it is both meaningful and affordable,
+# because the network is needed anyway.
+#
+# See standards/workspace/instruction-intake.md §6 in the Kernel.
+#
+# Enable in this Instance:  git config core.hooksPath hooks
+# Bypass (deliberately):    git push --no-verify
+
+set -e
+
+if [ -z "$MERIDIAN_KERNEL" ]; then
+  echo "pre-push: MERIDIAN_KERNEL is not set, so the validator cannot be found." >&2
+  echo "pre-push: set it and push again, or push with --no-verify and accept" >&2
+  echo "pre-push: that nothing about this register was checked." >&2
+  exit 1
+fi
+
+INSTANCE=$(git rev-parse --show-toplevel)
+
+echo "pre-push: validating this Instance, including the published state of the intake register"
+if ! MERIDIAN_INSTANCE="$INSTANCE" MERIDIAN_CHECK_PUBLISHED=1 node "$MERIDIAN_KERNEL/scripts/kernel-validate.mjs"; then
+  echo "" >&2
+  echo "pre-push: BLOCKED — the validator failed against this Instance." >&2
+  exit 1
+fi

@@ -1,0 +1,37 @@
+# Machine-readable pool of neutral topic names.
+#
+# The names live here so the gate can check that an intake record names a topic
+# that exists; the three-part signatures live in instruction-topics.md, where a
+# reader can compare them. Neither file is complete without the other, and the
+# gate checks that the two have not drifted apart — a pool split across two
+# files without that check would be two pools.
+#
+# Topics named after a library do not belong here. They live in the stack
+# profile release unit and declare a neutral parent from this pool.
+schema_version: 1
+topics:
+  # работа агента
+  - agent-conduct
+  - language-policy
+  - repository-context
+  - task-classification
+  # доказательство
+  - test-planning
+  - defect-repair
+  - test-implementation
+  - runtime-verification
+  - code-review
+  # устройство кода
+  - naming
+  - documentation-comments
+  - module-boundary
+  - layer-architecture
+  - boundary-validation
+  - error-handling
+  - state-management
+  - application-bootstrap
+  - date-and-time
+  - localization
+  # среда и история
+  - version-control-flow
+  - release-versioning

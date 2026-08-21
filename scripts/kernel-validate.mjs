@@ -1540,6 +1540,33 @@ if (!INSTANCE_ROOT) {
       } catch { return []; }
     })();
 
+    // "Untracked" and "ignored" are different answers, and the first guard sees
+    // only the first: `--exclude-standard` looks away from anything .gitignore
+    // covers. A norm inside an ignored directory is therefore MORE invisible
+    // than an untracked one, and the guard written to catch invisibility would
+    // have passed over it in silence. Asked the other way round — for the
+    // artifacts the register already names — the answer is one cheap call.
+    //
+    // Declared boundary: this direction cannot DISCOVER an ignored norm nobody
+    // recorded. Enumerating every ignored path is not affordable in a working
+    // repository, so what is claimed here is exactly what is checked — recorded
+    // artifacts, not the ignored tree.
+    const ignoredNorms = (() => {
+      if (!repoPath || tracked === null) return [];
+      const trackedSet = new Set(tracked);
+      const candidates = [...new Set(records
+        .map((r) => String(r?.artifact ?? ''))
+        .filter(Boolean)
+        .filter((a) => !trackedSet.has(a)))]
+        .filter((a) => fs.existsSync(path.join(repoPath, a)));
+      if (!candidates.length) return [];
+      try {
+        return execFileSync('git', ['-C', repoPath, 'check-ignore', '--stdin'],
+          { input: candidates.join('\n'), encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] })
+          .split('\n').filter(Boolean);
+      } catch { return []; }
+    })();
+
     if (!repoKnown) {
       // The unresolvable identifier is already a FAIL above. Calling it merely
       // unreachable here would turn a data defect into an environmental gap.
@@ -1627,6 +1654,10 @@ if (!INSTANCE_ROOT) {
              + 'completeness below is claimed over the regions, not over the file');
         }
       }
+      if (ignoredNorms.length) {
+        warn(`instruction-intake: ${repoId} — ${ignoredNorms.length} recorded norm(s) are excluded from version control by .gitignore (${ignoredNorms.slice(0, 3).join(', ')}); `
+           + 'a norm the repository deliberately keeps out of its history has no revision to cite, and this tree is NOT counted as confirmed complete');
+      }
       if (untrackedNorms.length) {
         warn(`instruction-intake: ${repoId} — ${untrackedNorms.length} norm(s) match the intake masks but are not under version control (${untrackedNorms.slice(0, 3).join(', ')}); `
            + 'completeness is measured over tracked files, so this tree is NOT counted as confirmed complete');
@@ -1638,7 +1669,7 @@ if (!INSTANCE_ROOT) {
         // belongs to no unit. Counting this tree as confirmed complete would
         // put a claim in the summary line that the warning above just denied.
         info(`instruction-intake: ${repoId} — ${regionsCovered} declared region(s) carry a record, but ${uncoveredContainers} container(s) hold text outside every region; this tree is NOT counted as confirmed complete`);
-      } else if (!untrackedNorms.length) {
+      } else if (!untrackedNorms.length && !ignoredNorms.length) {
         coveredRepos++;
         if (regionsCovered) {
           info(`instruction-intake: ${repoId} — ${regionsCovered} declared region(s) of container files carry a record`);

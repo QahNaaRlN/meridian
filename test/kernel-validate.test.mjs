@@ -1705,6 +1705,27 @@ function regionRecord(id, opts = {}) {
   });
 }
 
+
+// t87 — a recorded norm the repository deliberately keeps out of its history.
+// The untracked guard cannot see it: --exclude-standard looks away from
+// everything .gitignore covers, so the more invisible case was the one the
+// guard passed over.
+{
+  const { kernel, instance } = freshPair('t87');
+  write(kernel, '.gitignore', '.cursor\n');
+  write(kernel, '.cursor/rules/hidden.mdc', 'A rule the repository ignores.\n');
+  plantIntake(kernel, instance, {
+    records: [...completingRecord(), ...intakeRecord('.cursor/rules/hidden.mdc', sha256('h'))],
+    repoPath: kernel,
+  });
+  commitAll(kernel);
+  check('t87 an ignored norm is named and blocks "complete"', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [/excluded from version control by .gitignore/, /0 repository tree\(s\) confirmed complete/],
+    mustNotMatch: [/not under version control/],
+  });
+}
+
 fs.rmSync(workRoot, { recursive: true, force: true });
 
 console.log('---');

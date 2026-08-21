@@ -1,0 +1,40 @@
+# Machine-readable pool of stack profile names and their manifest evidence.
+#
+# The names live here so the gate can check that a repository declares a profile
+# that exists; the three-part signatures live in stack-profiles.md, where a
+# reader can compare them. Neither file is complete without the other, and the
+# gate checks that the two have not drifted apart.
+#
+# `requires` and `forbids` name manifest sections and the dependency names
+# expected inside them; `forbids_fields` names top-level manifest fields whose
+# presence contradicts the profile. Nothing here infers a profile: a repository
+# declares one, and these predicates only refuse a declaration the manifest
+# does not support.
+$schema: ./stack-profiles.schema.json
+schema_version: 1
+profiles:
+  - name: vue-spa
+    manifest: package.json
+    requires:
+      dependencies:
+        - vue
+      devDependencies:
+        - vite
+    forbids_fields:
+      - workspaces
+  - name: laravel-app
+    manifest: composer.json
+    requires:
+      require:
+        - laravel/framework
+  - name: node-ts-service
+    manifest: package.json
+    requires:
+      devDependencies:
+        - typescript
+    forbids:
+      dependencies:
+        - vue
+        - react
+        - svelte
+        - '@angular/core'

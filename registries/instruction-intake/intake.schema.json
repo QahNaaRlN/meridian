@@ -143,7 +143,13 @@
           "then": { "required": ["unclassified_reason"] }
         },
         {
-          "if": { "properties": { "delivery": { "const": "agents-md-section" } }, "required": ["delivery"] },
+          "comment": "A container record names a region — except in the one case the protocol names: a container that declares no region boundaries at all, which §3.1 requires to be recorded as a single deferred entry. Without this exception that record was unrepresentable: the schema demanded a region name the file does not have, so the protocols own answer for an unmarked container could only be written by misdeclaring its delivery.",
+          "if": {
+            "allOf": [
+              { "properties": { "delivery": { "const": "agents-md-section" } }, "required": ["delivery"] },
+              { "not": { "properties": { "verdict": { "const": "deferred" } }, "required": ["verdict"] } }
+            ]
+          },
           "then": { "required": ["region"] }
         },
         {

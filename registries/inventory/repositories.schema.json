@@ -13,11 +13,12 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "path", "role", "sources", "vcs", "last_verified"],
+        "required": ["id", "path", "role", "profile", "sources", "vcs", "last_verified"],
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
           "path": { "type": "string", "minLength": 1 },
           "role": { "type": "string", "minLength": 1 },
+          "profile": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
           "products": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
           "semantic_areas": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
           "sources": {

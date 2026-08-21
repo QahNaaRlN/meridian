@@ -29,6 +29,9 @@
 //   9. inventory-git     — recorded revision/ref/dirty state is compared with
 //                          the repository's actual current state.
 //  10. instruction-topics — the two halves of the topic pool agree.
+//  10b. stack-profiles  — the two halves of the stack profile pool agree, and
+//                          every inventoried repository declares a profile from
+//                          the pool that its own manifest supports.
 //  11. instruction-intake — the register of agent instruction artifacts covers
 //                          the tree, loses no record (against the file's whole
 //                          history, and against the published branch when
@@ -161,11 +164,27 @@ function listFiles(dir, exts) {
 
 // ---------------------------------------------------------------------------
 // YAML: documented subset. Supports block mappings, block sequences, plain and
-// quoted scalars, `|` and `>` block scalars, comments, empty values as null.
+// quoted scalars, `|`/`>` block scalars with optional `-` chomping, comments,
+// empty values as null.
 // Throws UnsupportedYaml on flow style, anchors, aliases, tags, multi-document
 // streams and tab indentation.
 // ---------------------------------------------------------------------------
 class UnsupportedYaml extends Error {}
+
+// A block scalar header may carry a chomping indicator. `-` strips the trailing
+// newline, which is what this reader does anyway, so it is accepted; `+` keeps
+// trailing newlines, which this reader does not model, so it is refused rather
+// than quietly read as `|`. Anything else after the indicator (an explicit
+// indent, say) is likewise refused. This mattered: `>-` used to fall through to
+// the plain-scalar branch, and every indented line under it was then read as a
+// sibling key — the fields of a record silently vanished instead of the reader
+// saying it could not read them.
+function blockScalarStyle(v) {
+  const m = /^([|>])([-+]?)$/.exec(v);
+  if (!m) return null;
+  if (m[2] === '+') throw new UnsupportedYaml(`block scalar with keep chomping ("${v}") is not implemented by this reader`);
+  return m[1];
+}
 
 function stripComment(line) {
   let inS = false, inD = false;
@@ -281,7 +300,8 @@ function yamlParse(text) {
           const key = m[1];
           const inlineVal = (m[2] ?? '').trim();
           pos++;
-          if (inlineVal === '|' || inlineVal === '>') obj[key] = readBlockScalar(itemIndent, inlineVal);
+          const inlineStyle = blockScalarStyle(inlineVal);
+          if (inlineStyle) obj[key] = readBlockScalar(itemIndent, inlineStyle);
           else if (inlineVal === '') {
             const child = (pos < lines.length && lines[pos].indent > itemIndent) ? parseNode(lines[pos].indent) : null;
             obj[key] = child;
@@ -303,7 +323,8 @@ function yamlParse(text) {
       const key = m[1];
       const val = (m[2] ?? '').trim();
       pos++;
-      if (val === '|' || val === '>') { obj[key] = readBlockScalar(indent, val); continue; }
+      const style = blockScalarStyle(val);
+      if (style) { obj[key] = readBlockScalar(indent, style); continue; }
       if (val === '') {
         if (pos < lines.length && lines[pos].indent > indent) obj[key] = parseNode(lines[pos].indent);
         else if (pos < lines.length && lines[pos].indent === indent &&
@@ -721,6 +742,20 @@ const relKernelFiles = [...new Set(KERNEL_FILES)]
   .filter((f) => !underInstance(f))
   .map((f) => path.relative(KERNEL_ROOT, f).split(path.sep).join('/'));
 
+// The upper-case root set belongs to the root of a RELEASE UNIT, not to the
+// root of the repository: the Kernel now carries a nested unit with its own
+// version line, and reading the rule as "top level only" would have forced that
+// unit to rename the very files that make it a unit. A release unit is
+// recognised by carrying its own VERSION — a checkable property, not a list to
+// keep in step by hand.
+const RELEASE_UNIT_ROOTS = new Set(['']);
+for (const rel of relKernelFiles) {
+  if (path.posix.basename(rel) === 'VERSION') {
+    const dir = path.posix.dirname(rel);
+    RELEASE_UNIT_ROOTS.add(dir === '.' ? '' : dir);
+  }
+}
+
 for (const rel of relKernelFiles) {
   const segs = rel.split('/');
   const base = segs[segs.length - 1];
@@ -729,7 +764,8 @@ for (const rel of relKernelFiles) {
       idfail(`document-identity: directory "${seg}" in "${rel}" is not lower kebab-case`);
     }
   }
-  const rootAllowed = segs.length === 1 && ROOT_UPPERCASE.has(base);
+  const dir = segs.length === 1 ? '' : segs.slice(0, -1).join('/');
+  const rootAllowed = ROOT_UPPERCASE.has(base) && RELEASE_UNIT_ROOTS.has(dir);
   if (!EXTERNAL_NAMES.has(base) && !rootAllowed && !LOWER_SEGMENT.test(base)) {
     idfail(`document-identity: "${rel}" is not lower kebab-case; upper case is reserved for the release unit's root set`);
   }
@@ -1184,6 +1220,142 @@ if (topicsYamlRaw === null || topicsMdRaw === null) {
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// stack profiles: the pool, and every repository's declaration against it
+// ---------------------------------------------------------------------------
+// A profile is declared, never inferred. This check therefore does two
+// separable things, and neither works without the other: it refuses a name the
+// pool does not contain, and it refuses a declaration the repository's own
+// manifest does not support. Inferring the profile from the manifest would be
+// guessing; accepting the declaration unchecked would be a fact free to drift
+// away from reality in silence.
+const profilesYamlRaw = readIfExists(path.join(KERNEL_ROOT, 'stack-profiles', 'stack-profiles.yaml'));
+const profilesMdRaw = readIfExists(path.join(KERNEL_ROOT, 'stack-profiles', 'stack-profiles.md'));
+let STACK_PROFILES = null;
+if (profilesYamlRaw === null || profilesMdRaw === null) {
+  // Fail-closed, for the same reason the topic pool is: without the pool not
+  // one declaration can be judged, and a register of invented profile names
+  // would finish green.
+  const missing = [
+    profilesYamlRaw === null ? 'stack-profiles/stack-profiles.yaml' : null,
+    profilesMdRaw === null ? 'stack-profiles/stack-profiles.md' : null,
+  ].filter(Boolean);
+  fail(`stack-profiles: the profile pool is missing from the Kernel (${missing.join(', ')}); `
+     + 'no declaration could be checked against it, and an unreadable pool is a defect of the Kernel, not a reason to skip the check');
+} else {
+  let entries = [];
+  let parsed = true;
+  try { entries = yamlParse(profilesYamlRaw)?.profiles || []; }
+  catch (e) { parsed = false; fail(`stack-profiles: ${e.message}`); }
+  const region = markedRegion(profilesMdRaw, 'stack-profile-pool');
+  if (region.error) {
+    fail(`stack-profiles: the pool region of stack-profiles.md is not readable — ${region.error}; `
+       + 'the signatures the gate compares against are the ones inside the markers, and nothing else');
+  } else if (parsed) {
+    const documented = new Set(
+      [...region.text.matchAll(/^\|\s*`([a-z0-9-]+)`\s*\|/gm)].map((m) => m[1]),
+    );
+    const declared = new Set(entries.map((e) => String(e?.name ?? '')));
+    const undocumented = [...declared].filter((n) => !documented.has(n));
+    const unlisted = [...documented].filter((n) => !declared.has(n));
+    if (undocumented.length || unlisted.length) {
+      const parts = [];
+      if (undocumented.length) parts.push(`named in the data but carrying no signature: ${undocumented.join(', ')}`);
+      if (unlisted.length) parts.push(`carrying a signature but absent from the data: ${unlisted.join(', ')}`);
+      fail(`stack-profiles: the two halves of the pool disagree — ${parts.join('; ')}`);
+    } else if (declared.has('universal')) {
+      // "universal" means the profile axis does not apply. Letting it into the
+      // pool would make "no profile" and "this profile" the same declaration.
+      fail('stack-profiles: "universal" is not a stack profile and must not be listed in the pool; it is the declared absence of one');
+    } else {
+      STACK_PROFILES = new Map(entries.map((e) => [String(e.name), e]));
+      ok(`stack-profiles: ${STACK_PROFILES.size} profiles; names and signatures agree`);
+    }
+  }
+}
+
+// A manifest section is an object of dependency-name keys. Anything else is
+// not a section, and a predicate written against it is unsatisfiable rather
+// than trivially satisfied.
+function manifestSection(doc, name) {
+  const v = doc?.[name];
+  return v && typeof v === 'object' && !Array.isArray(v) ? v : null;
+}
+
+function profileMismatches(spec, manifest) {
+  const problems = [];
+  for (const [section, names] of Object.entries(spec.requires || {})) {
+    const sec = manifestSection(manifest, section);
+    if (!sec) { problems.push(`manifest has no "${section}" section, which the profile requires`); continue; }
+    const absent = names.filter((n) => !Object.prototype.hasOwnProperty.call(sec, String(n)));
+    if (absent.length) problems.push(`"${section}" does not carry ${absent.map((n) => `"${n}"`).join(', ')}`);
+  }
+  for (const [section, names] of Object.entries(spec.forbids || {})) {
+    const sec = manifestSection(manifest, section);
+    if (!sec) continue;
+    const present = names.filter((n) => Object.prototype.hasOwnProperty.call(sec, String(n)));
+    if (present.length) problems.push(`"${section}" carries ${present.map((n) => `"${n}"`).join(', ')}, which this profile excludes`);
+  }
+  for (const field of spec.forbids_fields || []) {
+    if (Object.prototype.hasOwnProperty.call(manifest ?? {}, String(field))) {
+      problems.push(`manifest declares "${field}", which this profile excludes`);
+    }
+  }
+  return problems;
+}
+
+if (invRaw && STACK_PROFILES) {
+  try {
+    const repos = yamlParse(invRaw)?.repositories || [];
+    let confirmed = 0;
+    let unconfirmed = 0;
+    for (const r of repos) {
+      const name = r.profile == null ? '' : String(r.profile).trim();
+      if (!name) {
+        fail(`stack-profile: ${r.id} declares no profile; a repository whose type is unstated cannot have its norms judged applicable or not`);
+        continue;
+      }
+      if (name === 'universal') {
+        fail(`stack-profile: ${r.id} declares "universal", which is the absence of a profile, not the type of a project`);
+        continue;
+      }
+      if (!STACK_PROFILES.has(name)) {
+        fail(`stack-profile: ${r.id} declares "${name}", which is not in the pool; a profile is named from the pool or added to it by decision, never invented at the point of use`);
+        continue;
+      }
+      const spec = STACK_PROFILES.get(name);
+      const manifestPath = (r.sources?.manifests || [])
+        .map(String)
+        .find((m) => path.basename(m.replace(/\\/g, '/')) === spec.manifest);
+      if (!manifestPath) {
+        fail(`stack-profile: ${r.id} declares "${name}", whose evidence is ${spec.manifest}, but the entry lists no such manifest`);
+        continue;
+      }
+      const raw = readIfExists(manifestPath.replace(/\\/g, path.sep));
+      if (raw === null) {
+        // Same posture as inventory-git: unreachable is UNVERIFIED, never green.
+        info(`stack-profile: ${r.id} — ${spec.manifest} at ${manifestPath} is not readable from here; the declared "${name}" is UNVERIFIED, not confirmed`);
+        unconfirmed++;
+        continue;
+      }
+      let manifest;
+      try { manifest = JSON.parse(raw); }
+      catch (e) { fail(`stack-profile: ${r.id} — ${manifestPath} is not valid JSON: ${e.message}`); continue; }
+      const problems = profileMismatches(spec, manifest);
+      if (problems.length) {
+        fail(`stack-profile: ${r.id} declares "${name}" but its manifest does not support it — ${problems.join('; ')}; correct the declaration or the pool, do not widen the predicate to fit`);
+      } else confirmed++;
+    }
+    if (confirmed) ok(`stack-profile: ${confirmed}/${repos.length} declarations confirmed against the repository's own manifest`);
+    if (unconfirmed) warn(`stack-profile: ${unconfirmed}/${repos.length} declarations could not be confirmed; the manifest was not reachable from here`);
+  } catch (e) { fail(`stack-profile: ${e.message}`); }
+} else if (STACK_PROFILES && INSTANCE_ROOT) {
+  warn('stack-profile: repository inventory not found; no declaration was checked');
+} else if (STACK_PROFILES) {
+  warn('stack-profile: no Instance root, declarations were not checked');
+}
+
 const intakeDir = INSTANCE_ROOT ? path.join(INSTANCE_ROOT, 'instruction-intake') : null;
 const intakeFiles = intakeDir && fs.existsSync(intakeDir) ? listFiles(intakeDir, ['.yaml', '.yml']) : [];
 

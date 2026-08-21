@@ -1,11 +1,11 @@
 ---
 title: Реестр тем агентных норм
 document_type: reference
-status: in-review
+status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-20
-updated: 2026-08-20
+updated: 2026-08-21
 related_documents:
   - ./agent-instruction-identity.md
   - ./instruction-intake.md

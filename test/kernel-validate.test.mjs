@@ -85,9 +85,82 @@ function writeTopicPool(root, { names = ['naming'], documented = ['naming'], out
       : ''));
 }
 
+// The stack profile pool, like the topic pool, is split between data and prose
+// and is fail-closed when absent. The synthetic kernel therefore carries a
+// miniature of both halves; without them every later case would run against an
+// absent pool and go red for the baseline's sake.
+function writeStackProfilePool(root, { entries = null, documented = null } = {}) {
+  const list = entries ?? [{
+    name: 'demo-runtime',
+    manifest: 'package.json',
+    requires: { devDependencies: ['typescript'] },
+    forbids: { dependencies: ['synthframe'] },
+  }];
+  const lines = ['schema_version: 1', 'profiles:'];
+  for (const e of list) {
+    lines.push(`  - name: ${e.name}`);
+    lines.push(`    manifest: ${e.manifest}`);
+    for (const key of ['requires', 'forbids']) {
+      if (!e[key]) continue;
+      lines.push(`    ${key}:`);
+      for (const [section, names] of Object.entries(e[key])) {
+        lines.push(`      ${section}:`);
+        for (const n of names) lines.push(`        - ${n}`);
+      }
+    }
+    if (e.forbids_fields) {
+      lines.push('    forbids_fields:');
+      for (const f of e.forbids_fields) lines.push(`      - ${f}`);
+    }
+  }
+  write(root, 'stack-profiles/stack-profiles.yaml', `${lines.join('\n')}\n`);
+  const docs = documented ?? list.map((e) => e.name);
+  write(root, 'stack-profiles/stack-profiles.md',
+    `${fm('Synthetic stack profiles', 'reference')}\n# Synthetic stack profiles\n\n`
+    + '<!-- meridian:begin stack-profile-pool -->\n\n| Профиль | Утверждает |\n|---|---|\n'
+    + docs.map((n) => `| \`${n}\` | synthetic |\n`).join('')
+    + '\n<!-- meridian:end stack-profile-pool -->\n');
+}
+
+// An inventoried repository with a manifest that actually exists on disk: the
+// declaration half and the evidence half of the profile rule are separable, and
+// a case that cannot reach a manifest exercises only one of them.
+function plantProfiledRepo(instance, repoRoot, {
+  id = 'synthetic-repo',
+  profile = 'demo-runtime',
+  manifestName = 'package.json',
+  manifest = { devDependencies: { typescript: '^5.0.0' } },
+  manifestPath = null,
+} = {}) {
+  if (manifest !== null) write(repoRoot, manifestName, JSON.stringify(manifest, null, 2));
+  const declared = manifestPath ?? path.join(repoRoot, manifestName);
+  write(instance, 'inventory/repositories.yaml', [
+    'schema_version: 1',
+    'repositories:',
+    `  - id: ${id}`,
+    `    path: '${repoRoot}'`,
+    '    role: synthetic',
+    ...(profile === null ? [] : [`    profile: ${profile}`]),
+    '    sources:',
+    '      rules:',
+    `        - '${path.join(repoRoot, 'AGENTS.md')}'`,
+    '      manifests:',
+    `        - '${declared}'`,
+    '    vcs:',
+    '      type: git',
+    `      revision: ${'0'.repeat(40)}`,
+    '      ref: main',
+    '      working_tree: clean',
+    '      evidence_basis: revision',
+    "    last_verified: '2026-01-01T00:00:00Z'",
+    '',
+  ].join('\n'));
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
+  writeStackProfilePool(root);
   write(root, 'docs/note.md', `${fm('A note', 'reference')}\n# A note\n\nA note.\n`);
   const skill = '# Demo skill\n\nA fictional vendored skill used only by this suite.\n';
   write(root, 'skills/demo/SKILL.md', skill);
@@ -448,11 +521,21 @@ const REAL_INTAKE_SCHEMA = path.join(__dirname, '..', 'registries', 'instruction
 
 function plantIntake(kernel, instance, { records, repoPath }) {
   write(kernel, 'registries/instruction-intake/intake.schema.json', fs.readFileSync(REAL_INTAKE_SCHEMA, 'utf8'));
+  // The repository entry declares a stack profile and points at a manifest that
+  // supports it: the profile rule is not the subject of these cases, but a
+  // fixture that cannot satisfy it would turn every intake case red for the
+  // baseline's sake.
+  const fixtureManifest = path.join(instance, 'synthetic-repo', 'package.json');
+  write(instance, 'synthetic-repo/package.json', JSON.stringify({ devDependencies: { typescript: '^5.0.0' } }, null, 2));
   write(instance, 'inventory/repositories.yaml', [
     'schema_version: 1',
     'repositories:',
     '  - id: synthetic',
     `    path: ${repoPath.split(path.sep).join('/')}`,
+    '    profile: demo-runtime',
+    '    sources:',
+    '      manifests:',
+    `        - '${fixtureManifest}'`,
     "    last_verified: '2026-01-01'",
     '',
   ].join('\n'));
@@ -1107,7 +1190,11 @@ function regionRecord(id, opts = {}) {
 {
   const { kernel, instance } = freshPair('t56');
   write(kernel, 'AGENTS.md', `${fm('Container', 'reference')}\n# Container\n\nThree unrelated rules, no markers.\n`);
-  const asAdopted = intakeRecord('AGENTS.md', sha256('c'), { verdict: 'adopt-core' });
+  // The delivery is the one a container actually has. The earlier version of
+  // this case said "cursor-rule" for an AGENTS.md, and that misdeclaration was
+  // the only reason it passed the schema: the container record the protocol
+  // prescribes could not be written truthfully at all.
+  const asAdopted = intakeRecord('AGENTS.md', sha256('c'), { verdict: 'adopt-core', delivery: 'agents-md-section' });
   plantIntake(kernel, instance, { records: [...completingRecord(), ...asAdopted], repoPath: kernel });
   commitAll(kernel);
   check('t56 an undeclared container adopted wholesale detected', run(kernel, instance), {
@@ -1115,7 +1202,8 @@ function regionRecord(id, opts = {}) {
     mustMatch: [/declares no regions and its current record is "adopt-core"/],
   });
   const asDeferred = intakeRecord('AGENTS.md', sha256('c'), {
-    verdict: 'deferred', extra: ['    resume_condition: after the container declares its region boundaries'],
+    verdict: 'deferred', delivery: 'agents-md-section',
+    extra: ['    resume_condition: after the container declares its region boundaries'],
   });
   plantIntake(kernel, instance, { records: [...completingRecord(), ...asDeferred], repoPath: kernel });
   check('t56 the same container recorded as deferred passes', run(kernel, instance), {
@@ -1384,6 +1472,220 @@ function regionRecord(id, opts = {}) {
   check('t70 duplicate current register identity detected', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/repository "synthetic" has more than one current register/, /no unambiguous history/],
+  });
+}
+
+
+// t71 — the positive case: a declaration its own manifest supports is confirmed,
+// not merely accepted. A rule with only negative tests cannot show that the
+// green path is reachable at all.
+{
+  const { kernel, instance } = freshPair('t71');
+  plantProfiledRepo(instance, path.join(workRoot, 't71', 'repo'));
+  check('t71 a profile its manifest supports is confirmed', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [/stack-profile: 1\/1 declarations confirmed/],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t72 — a name invented at the point of use is not a profile.
+{
+  const { kernel, instance } = freshPair('t72');
+  plantProfiledRepo(instance, path.join(workRoot, 't72', 'repo'), { profile: 'invented-profile' });
+  check('t72 a profile outside the pool is refused', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/declares "invented-profile", which is not in the pool/],
+  });
+}
+
+// t73 — an unstated type is not a permissive default.
+{
+  const { kernel, instance } = freshPair('t73');
+  plantProfiledRepo(instance, path.join(workRoot, 't73', 'repo'), { profile: null });
+  check('t73 a repository declaring no profile fails', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/declares no profile/],
+  });
+}
+
+// t74 — the half that matters most: a declaration the manifest contradicts.
+{
+  const { kernel, instance } = freshPair('t74');
+  plantProfiledRepo(instance, path.join(workRoot, 't74', 'repo'), {
+    manifest: { dependencies: { synthframe: '^1.0.0' }, devDependencies: { typescript: '^5.0.0' } },
+  });
+  check('t74 a declaration the manifest contradicts fails', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/but its manifest does not support it/, /which this profile excludes/],
+  });
+}
+
+// t74b — a required dependency that is simply absent is the same defect seen
+// from the other side, and must not be reported as satisfied.
+{
+  const { kernel, instance } = freshPair('t74b');
+  plantProfiledRepo(instance, path.join(workRoot, 't74b', 'repo'), { manifest: { dependencies: {} } });
+  check('t74b a missing required dependency fails', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/manifest has no "devDependencies" section, which the profile requires/],
+  });
+}
+
+// t75 — an absent pool fails closed: with no pool, no declaration anywhere can
+// be judged, and reporting that as a warning would let invented names pass.
+{
+  const { kernel, instance } = freshPair('t75');
+  fs.rmSync(path.join(kernel, 'stack-profiles'), { recursive: true, force: true });
+  plantProfiledRepo(instance, path.join(workRoot, 't75', 'repo'));
+  commitAll(kernel);
+  check('t75 an absent profile pool fails closed', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/the profile pool is missing from the Kernel/],
+  });
+}
+
+// t76 — two files holding one pool are two pools unless drift is caught.
+{
+  const { kernel, instance } = freshPair('t76');
+  writeStackProfilePool(kernel, { documented: [] });
+  plantProfiledRepo(instance, path.join(workRoot, 't76', 'repo'));
+  commitAll(kernel);
+  check('t76 disagreeing halves of the profile pool fail', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/the two halves of the pool disagree/, /named in the data but carrying no signature: demo-runtime/],
+  });
+}
+
+// t77 — "universal" is the declared absence of a profile, not a project type.
+{
+  const { kernel, instance } = freshPair('t77');
+  plantProfiledRepo(instance, path.join(workRoot, 't77', 'repo'), { profile: 'universal' });
+  check('t77 a repository declaring "universal" fails', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/which is the absence of a profile, not the type of a project/],
+  });
+}
+
+// t78 — the same word in the pool would make "no profile" and "this profile"
+// the same declaration.
+{
+  const { kernel, instance } = freshPair('t78');
+  writeStackProfilePool(kernel, {
+    entries: [{ name: 'universal', manifest: 'package.json', requires: { devDependencies: ['typescript'] } }],
+  });
+  plantProfiledRepo(instance, path.join(workRoot, 't78', 'repo'), { profile: 'universal' });
+  commitAll(kernel);
+  check('t78 "universal" inside the pool is refused', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/"universal" is not a stack profile and must not be listed in the pool/],
+  });
+}
+
+// t79 — an unreachable manifest is UNVERIFIED, never a confirmation.
+{
+  const { kernel, instance } = freshPair('t79');
+  plantProfiledRepo(instance, path.join(workRoot, 't79', 'repo'), {
+    manifest: null,
+    manifestPath: path.join(workRoot, 't79', 'repo', 'package.json'),
+  });
+  check('t79 an unreachable manifest is UNVERIFIED, not confirmed', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [/is UNVERIFIED, not confirmed/, /declarations could not be confirmed/],
+    mustNotMatch: [/declarations confirmed against/],
+  });
+}
+
+// t80 — the entry names a manifest of the wrong kind: the profile's evidence
+// cannot be found, and that is a defect of the record, not a reason to skip.
+{
+  const { kernel, instance } = freshPair('t80');
+  plantProfiledRepo(instance, path.join(workRoot, 't80', 'repo'), { manifestName: 'composer.json' });
+  check('t80 an entry without the profile\'s manifest fails', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/whose evidence is package.json, but the entry lists no such manifest/],
+  });
+}
+
+
+// t81 — the upper-case root set is the root set of a RELEASE UNIT. A directory
+// that is not one may not borrow the names that mark one.
+{
+  const { kernel, instance } = freshPair('t81');
+  write(kernel, 'plain-dir/CHANGELOG.md', `${fm('Not a unit', 'changelog')}\n# Not a unit\n\nNo VERSION here.\n`);
+  commitAll(kernel);
+  check('t81 upper case outside a release unit root detected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/"plain-dir\/CHANGELOG.md" is not lower kebab-case/],
+  });
+}
+
+// t82 — and the same file inside a directory that carries its own VERSION is
+// the rule working as written, not an exception carved out by name.
+{
+  const { kernel, instance } = freshPair('t82');
+  write(kernel, 'nested-unit/VERSION', '0.1.0\n');
+  write(kernel, 'nested-unit/CHANGELOG.md', `${fm('Nested unit', 'changelog')}\n# Nested unit\n\nIts own version line.\n`);
+  commitAll(kernel);
+  check('t82 upper case at a release unit root passes', run(kernel, instance), {
+    expectExit: 0,
+    mustNotMatch: [/is not lower kebab-case/],
+  });
+}
+
+
+// t83 — a folded block scalar with the '-' chomping indicator is a scalar, not
+// a plain string followed by orphan lines. The register of intake records is
+// written with them, and the old reader swallowed every field that followed one.
+{
+  const { kernel, instance } = freshPair('t83');
+  write(instance, 'data/thing.yaml', [
+    '$schema: ./thing.schema.json',
+    'schema_version: 1',
+    "when: '2026-01-01T00:00:00Z'",
+    'maybe: >-',
+    '  a reason that runs',
+    '  across two lines',
+    '',
+  ].join('\n'));
+  check('t83 a folded scalar with strip chomping is read as one value', run(kernel, instance), {
+    expectExit: 0,
+    mustNotMatch: [/cannot parse/, /required property missing/],
+  });
+}
+
+// t84 — keep chomping is NOT implemented, and an unimplemented construct is
+// refused rather than read as something close enough.
+{
+  const { kernel, instance } = freshPair('t84');
+  write(instance, 'data/thing.yaml', [
+    '$schema: ./thing.schema.json',
+    'schema_version: 1',
+    "when: '2026-01-01T00:00:00Z'",
+    'maybe: >+',
+    '  kept trailing newlines',
+    '',
+  ].join('\n'));
+  check('t84 keep chomping is refused, not approximated', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/keep chomping/],
+  });
+}
+
+
+// t85 — the exception is exactly one case wide: a container record with any
+// verdict other than deferred still has to name the region it judges.
+{
+  const { kernel, instance } = freshPair('t85');
+  write(kernel, 'AGENTS.md', `${fm('Container', 'reference')}\n# Container\n\nUnmarked container.\n`);
+  plantIntake(kernel, instance, {
+    records: [...completingRecord(), ...intakeRecord('AGENTS.md', sha256('c'), { verdict: 'keep-local', delivery: 'agents-md-section' })],
+    repoPath: kernel,
+  });
+  commitAll(kernel);
+  check('t85 a container record other than deferred still needs its region', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/region: required property missing/],
   });
 }
 

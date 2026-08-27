@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-19
+updated: 2026-08-27
 ---
 
 # AI documentation standards
@@ -26,6 +26,7 @@ Start here when creating or reorganizing documentation and agent working artifac
 6. [Document lifecycle](workspace/document-lifecycle.md) — choose a permanent-document or `.agent` location.
 7. [Document status model](workspace/document-status-model.md) — choose and change a machine-readable status.
 8. [Document quality](workspace/document-quality.md) — apply shared evidence and writing rules.
+9. [Repository references](workspace/repository-references.md) — how an adapter display alias resolves to a canonical repository id: exact-match, fail-closed, the alias is never the identity.
 
 ## Use when writing
 

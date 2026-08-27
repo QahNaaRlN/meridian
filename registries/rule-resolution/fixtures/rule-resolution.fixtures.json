@@ -1,0 +1,371 @@
+[
+  {
+    "schema": "applicability.schema.json",
+    "note": "Representative applicability records. `valid` entries must satisfy the schema; `invalid` entries must each produce at least one violation. Placeholders only — no product literals.",
+    "valid": [
+      {
+        "note": "universal scope, always activation, kernel source",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "profile scope carries technology_profile",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "profile", "technology_profile": "some-profile", "activation": "always", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "repository scope carries repository id and an intake_record with a verdict",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "repository", "repository": "example-repo", "activation": "always", "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "keep-local" }, "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "product-domain scope carries product_domain",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "product-domain", "product_domain": "analytics", "activation": "always", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "path-glob activation carries globs",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "path-glob", "globs": ["pkg/**/*.ts"], "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "task-class activation, work_kind mix without change_class",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "task-class", "task_class": { "work_kind": ["assessment", "change"] }, "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "task-class narrowed by change_class, work_kind is exactly change",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "task-class", "task_class": { "work_kind": ["change"], "change_class": ["REFACTOR"] }, "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "task-class narrowed by change_class, work_kind lists change alongside assessment",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "task-class", "task_class": { "work_kind": ["assessment", "change"], "change_class": ["BUGFIX"] }, "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "explicit activation needs no discriminator field",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "explicit", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "undetermined activation needs no discriminator field",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "undetermined", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "a record whose intake verdict is deferred is still runtime-resolved; the verdict is reached through the pointer, not a status",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md", "region": "naming-rules" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "repository", "repository": "example-repo", "activation": "path-glob", "globs": ["pkg/**/*.ts"], "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "deferred" }, "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "an unresolved record carries its own registry-owned resume_condition",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "profile", "technology_profile": "some-profile", "activation": "path-glob", "globs": ["pkg/**/*.ts"], "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "deferred", "revision": "0abcdef" }, "status": "unresolved", "resume_condition": "a new append-only repository-scope intake record is added", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "delivery-adapter source also requires an intake_record with a verdict",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "delivery-adapter", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "keep-local" }, "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "two records for one artifact, region and date are told apart by the intake_record verdict",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md", "region": "naming-rules" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "repository", "repository": "example-repo", "activation": "always", "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "deferred" }, "status": "unresolved", "resume_condition": "the topic core is extracted", "recorded_at": "2026-08-27" },
+            { "norm": { "repository": "example-repo", "path": "rules/example.md", "region": "naming-rules" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "repository", "repository": "example-repo", "activation": "always", "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "keep-local" }, "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      }
+    ],
+    "invalid": [
+      {
+        "note": "repository scope without a repository id",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "repository", "activation": "always", "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "keep-local" }, "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "profile scope carrying a repository id is an incompatible pairing",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "profile", "technology_profile": "some-profile", "repository": "example-repo", "activation": "always", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "universal scope carrying a technology_profile",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "technology_profile": "some-profile", "activation": "always", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "a product_domain field under repository scope",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "repository", "repository": "example-repo", "product_domain": "analytics", "activation": "always", "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "keep-local" }, "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "path-glob activation without globs",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "path-glob", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "always activation carrying globs",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "globs": ["pkg/**/*.ts"], "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "task-class activation without task_class",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "task-class", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "change_class present while work_kind does not contain change",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "task-class", "task_class": { "work_kind": ["assessment"], "change_class": ["BUGFIX"] }, "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "architecture_profile is not a field of the MVP schema",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27", "architecture_profile": "layered" }
+          ]
+        }
+      },
+      {
+        "note": "kernel source carrying an intake_record",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "kernel", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "keep-local" }, "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "repository source without an intake_record",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "repository", "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "an intake_record without a verdict is not an unambiguous pointer",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20" }, "status": "resolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "deferred is an intake verdict, not an applicability status",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "kernel", "status": "deferred", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "an unresolved record without its own resume_condition",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "kernel", "status": "unresolved", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "a resolved record must not carry a resume_condition",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "kernel", "status": "resolved", "resume_condition": "should not be here", "recorded_at": "2026-08-27" }
+          ]
+        }
+      },
+      {
+        "note": "an unknown property on a record",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-27", "note": "stray" }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "schema": "resolver-output.schema.json",
+    "note": "Representative resolver output objects. `unresolved_items` (initiative decomposition blockers) is kept distinct from `unresolved_applicability` (undecidable norm applicability).",
+    "valid": [
+      {
+        "note": "empty output for a resolved single change",
+        "doc": { "applicable_norms": [], "applicable_protocols": [], "required_verification": [], "conflicts": [], "unresolved_applicability": [], "unresolved_items": [], "requires_reresolution": false, "decomposition_required": false, "applicable_initiative_protocol": null, "pre_decomposition_norms": [] }
+      },
+      {
+        "note": "initiative output separates unresolved_items from unresolved_applicability",
+        "doc": { "applicable_norms": [], "applicable_protocols": [], "required_verification": [], "conflicts": [], "unresolved_applicability": [], "unresolved_items": [ { "item": "complete list of source repositories", "reason": "only two of three are named in the request" } ], "requires_reresolution": false, "decomposition_required": true, "applicable_initiative_protocol": null, "pre_decomposition_norms": ["parity-registry-required"] }
+      },
+      {
+        "note": "protocol provenance carried by digest",
+        "doc": { "applicable_norms": [], "applicable_protocols": [ { "protocol": "bugfix-protocol", "routed_from": "BUGFIX", "source": "kernel", "scope": "universal", "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" } ], "required_verification": [], "conflicts": [], "unresolved_applicability": [], "unresolved_items": [], "requires_reresolution": false, "decomposition_required": false, "applicable_initiative_protocol": null, "pre_decomposition_norms": [] }
+      },
+      {
+        "note": "protocol provenance carried by revision",
+        "doc": { "applicable_norms": [], "applicable_protocols": [ { "protocol": "test-planning", "routed_from": "FEATURE", "source": "repository", "scope": "repository", "revision": "0abcdef" } ], "required_verification": [], "conflicts": [], "unresolved_applicability": [], "unresolved_items": [], "requires_reresolution": false, "decomposition_required": false, "applicable_initiative_protocol": null, "pre_decomposition_norms": [] }
+      },
+      {
+        "note": "a norm entry and an unresolved_applicability entry coexist",
+        "doc": { "applicable_norms": [ { "norm": "example-norm", "activation_reason": "always", "source": "kernel", "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "delivery": "kernel-doc" } ], "applicable_protocols": [], "required_verification": [], "conflicts": [], "unresolved_applicability": [ { "subject": "layer-architecture", "reason": "recorded scope conflicts with the owner-decided target and the new intake record is absent" } ], "unresolved_items": [], "requires_reresolution": false, "decomposition_required": false, "applicable_initiative_protocol": null, "pre_decomposition_norms": [] }
+      }
+    ],
+    "invalid": [
+      {
+        "note": "output missing the unresolved_items array",
+        "doc": { "applicable_norms": [], "applicable_protocols": [], "required_verification": [], "conflicts": [], "unresolved_applicability": [], "requires_reresolution": false, "decomposition_required": false, "applicable_initiative_protocol": null, "pre_decomposition_norms": [] }
+      },
+      {
+        "note": "output missing decomposition_required",
+        "doc": { "applicable_norms": [], "applicable_protocols": [], "required_verification": [], "conflicts": [], "unresolved_applicability": [], "unresolved_items": [], "requires_reresolution": false, "applicable_initiative_protocol": null, "pre_decomposition_norms": [] }
+      },
+      {
+        "note": "output missing applicable_initiative_protocol",
+        "doc": { "applicable_norms": [], "applicable_protocols": [], "required_verification": [], "conflicts": [], "unresolved_applicability": [], "unresolved_items": [], "requires_reresolution": false, "decomposition_required": false, "pre_decomposition_norms": [] }
+      },
+      {
+        "note": "a protocol entry with neither digest nor revision",
+        "doc": { "applicable_norms": [], "applicable_protocols": [ { "protocol": "x", "routed_from": "BUGFIX", "source": "kernel", "scope": "universal" } ], "required_verification": [], "conflicts": [], "unresolved_applicability": [], "unresolved_items": [], "requires_reresolution": false, "decomposition_required": false, "applicable_initiative_protocol": null, "pre_decomposition_norms": [] }
+      },
+      {
+        "note": "a protocol entry missing source",
+        "doc": { "applicable_norms": [], "applicable_protocols": [ { "protocol": "x", "routed_from": "BUGFIX", "scope": "universal", "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" } ], "required_verification": [], "conflicts": [], "unresolved_applicability": [], "unresolved_items": [], "requires_reresolution": false, "decomposition_required": false, "applicable_initiative_protocol": null, "pre_decomposition_norms": [] }
+      },
+      {
+        "note": "a protocol entry missing scope",
+        "doc": { "applicable_norms": [], "applicable_protocols": [ { "protocol": "x", "routed_from": "BUGFIX", "source": "kernel", "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" } ], "required_verification": [], "conflicts": [], "unresolved_applicability": [], "unresolved_items": [], "requires_reresolution": false, "decomposition_required": false, "applicable_initiative_protocol": null, "pre_decomposition_norms": [] }
+      },
+      {
+        "note": "a decomposition blocker placed in unresolved_applicability",
+        "doc": { "applicable_norms": [], "applicable_protocols": [], "required_verification": [], "conflicts": [], "unresolved_applicability": [ { "item": "list", "reason": "incomplete" } ], "unresolved_items": [], "requires_reresolution": false, "decomposition_required": false, "applicable_initiative_protocol": null, "pre_decomposition_norms": [] }
+      },
+      {
+        "note": "an unresolved norm placed in unresolved_items",
+        "doc": { "applicable_norms": [], "applicable_protocols": [], "required_verification": [], "conflicts": [], "unresolved_applicability": [], "unresolved_items": [ { "subject": "some-norm", "reason": "scope undecidable" } ], "requires_reresolution": false, "decomposition_required": false, "applicable_initiative_protocol": null, "pre_decomposition_norms": [] }
+      }
+    ]
+  }
+]

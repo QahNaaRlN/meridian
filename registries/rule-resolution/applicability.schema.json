@@ -1,0 +1,215 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/rule-resolution/applicability.schema.json",
+  "title": "Rule resolution applicability register",
+  "description": "One record per agent-norm intake entry states the axes on which the resolver decides whether that norm reaches a given work item (standards/workspace/rule-resolution.md §5). A record does not carry the norm's text or its intake verdict: it carries a qualified reference to where the norm is recorded, the digest the resolver checks for staleness, an unambiguous pointer to the one append-only intake record it is synced to, and this record's own runtime-applicability status. The intake verdict (deferred, keep-local, adopt-core, …), its verdict_basis and its own resume_condition are read by joining on that pointer, not copied here: standards/workspace/kernel-boundary.md's rule that Instance stores links, not copies, applies to applicability data the same way it applies to instruction-intake.md's own derived_from. Runtime applicability has exactly two states — resolved and unresolved — and is not the intake verdict: a deferred intake verdict does not by itself make a record unresolved, activate it, or disable it (standards/workspace/rule-resolution.md §4). Absence of a record is not how an undecidable norm is represented — a norm whose scope, activation or source cannot be decided deterministically is present here with status \"unresolved\" and its own resume_condition, so that the resolver returns unresolved_applicability for it from an explicit status, never from a missing entry. The axis named architecture_profile in standards/workspace/rule-resolution.md §5.2 is deliberately absent: the owner decided not to introduce it as a schema field for the MVP, and its storage form remains open for a future revision of this schema, not a silent addition to this one; additionalProperties:false below refuses it until then.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "records"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "records": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/record" },
+      "description": "One entry per intake record in the MVP perimeter, represented individually — including every record whose intake verdict is deferred and every record the axes below cannot resolve. There is no group status: the count of deferred intake records is a counter, not a shared resume trigger (standards/workspace/rule-resolution.md §9), so each record carries its own status, its own resume_condition when unresolved, and its own intake_record pointer, and is resumed on its own condition, never on another record's."
+    }
+  },
+  "definitions": {
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["norm", "digest", "scope", "activation", "source", "status", "recorded_at"],
+      "properties": {
+        "norm": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "path"],
+          "description": "Qualified reference to where the norm's text is recorded — the same shape as derived_from in registries/instruction-intake/intake.schema.json, reused rather than reinvented. This names where the text lives, which is independent of which repository the applicability axes below say it applies to: a norm found in one repository's intake register can be scoped to a whole technology profile, or to no repository in particular.",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Repository identifier from the Instance inventory, or \"kernel\" for a norm that lives in the Meridian Kernel and never went through instruction-intake."
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path relative to that repository's root, or to the Kernel root when repository is \"kernel\"."
+            },
+            "region": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$",
+              "description": "Identifier of a declared region inside a container file (instruction-intake.md §3.1), present only when the norm is one participant of a container rather than a whole artifact. When present it is part of the pointer to the one intake record this applicability entry is synced to."
+            }
+          }
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the norm's text as it stood when this applicability record was last synced to it — of the file's bytes when norm.region is absent, of the region's text under instruction-intake.md §7.1 when it is present. A norm whose current digest no longer matches this value has moved since this record was written; that is a staleness finding for whoever reads the record, not a value this schema can check by itself."
+        },
+        "intake_record": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["register", "recorded_at", "verdict"],
+          "description": "Unambiguous pointer to the one append-only instruction-intake record this applicability entry is synced to. It reuses the record identity instruction-intake.md already defines and the gate already keys on — artifact + region + recorded_at + verdict — it does not invent a parallel one: norm.path is the artifact and norm.region the region, so this object adds register (which file), recorded_at (which revision date) and verdict (which of possibly several entries made on that date). recorded_at alone does not identify a record: one artifact and region can carry more than one entry on the same date with different verdicts, and only the full tuple picks one out. The intake verdict, its verdict_basis and its own resume_condition are then read from that one record, not copied here. Required when source is repository or delivery-adapter; forbidden when source is kernel, because a norm that never went through intake has no intake record to point at.",
+          "properties": {
+            "register": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path to the instruction-intake/*.yaml register file that carries the record, relative to the Instance root."
+            },
+            "recorded_at": {
+              "type": "string",
+              "format": "date",
+              "description": "The recorded_at of that one append-only intake record. It is one component of the record identity, not the whole of it — norm.path, norm.region and verdict are the others."
+            },
+            "verdict": {
+              "enum": ["adopt-core", "adopt-edition", "keep-local", "merge-into", "rename", "retire", "deferred"],
+              "description": "The verdict of that one intake record, from the pool in registries/instruction-intake/intake.schema.json. Part of the record identity: two entries for one artifact and region on one date are told apart by verdict. Carrying it here is a pointer component, not a copy of the intake decision into applicability data."
+            },
+            "revision": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{7,40}$",
+              "description": "VCS revision the intake record was read at, for a register identified by revision rather than by recorded_at."
+            }
+          }
+        },
+        "scope": {
+          "enum": ["universal", "profile", "repository", "product-domain"],
+          "description": "Same pool as instruction-intake.md §7 and agent-instruction-identity.md §4: reused, not paralleled. This is the currently recorded scope of the authoritative intake record. When the owner has decided a target scope that this recorded value conflicts with and the new append-only intake record does not exist yet, the recorded value stays here and status is \"unresolved\" (standards/workspace/rule-resolution.md §4)."
+        },
+        "repository": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "description": "Repository identifier from the Instance inventory that this norm applies to. Required when scope is repository and forbidden otherwise. Distinct from norm.repository: the two happen to agree in the common case and are not required to."
+        },
+        "technology_profile": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "description": "Stack profile identifier from stack-profiles.yaml. Required when scope is profile and forbidden otherwise."
+        },
+        "product_domain": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Value from a repository's semantic_areas in the Instance inventory. Required when scope is product-domain and forbidden otherwise."
+        },
+        "activation": {
+          "enum": ["always", "path-glob", "task-class", "explicit", "undetermined"],
+          "description": "Same pool as instruction-intake.md's observed_activation. This is the axis the resolver checks, not a restatement of what the intake record already says; the two are expected to agree and are read from different files."
+        },
+        "globs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Path masks, same vocabulary as sources.rules in registries/inventory/repositories.schema.json and the delivery-adapter masks named in agent-instruction-identity.md §4.1. Required when activation is path-glob and forbidden otherwise."
+        },
+        "task_class": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["work_kind"],
+          "description": "Required when activation is task-class and forbidden otherwise. Narrows applicability to specific work_kind values and, optionally, specific change_class values — the closed pools of standards/workspace/rule-resolution.md §2 and §3.",
+          "properties": {
+            "work_kind": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "enum": ["change", "assessment", "operation", "initiative"] }
+            },
+            "change_class": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "enum": ["BUGFIX", "FEATURE", "BEHAVIOR_CHANGE", "REFACTOR"] },
+              "description": "Absent means the norm applies to every change_class within the listed work_kind values, not that it applies to none. change_class is meaningful only inside work_kind: change (standards/workspace/rule-resolution.md §3), so when it is present work_kind must contain \"change\"; it may also list other work_kind values, but a change_class with no \"change\" in work_kind (for example work_kind: [\"assessment\"]) is an incompatible pairing and is rejected."
+            }
+          },
+          "allOf": [
+            {
+              "if": { "required": ["change_class"] },
+              "then": { "properties": { "work_kind": { "contains": { "const": "change" } } } }
+            }
+          ]
+        },
+        "source": {
+          "enum": ["repository", "kernel", "delivery-adapter"],
+          "description": "Same three values the resolver output contract (registries/rule-resolution/resolver-output.schema.json) uses for applicable_norms[].source. Not the same pool as a protocol route's source (kernel | instance | repository, standards/workspace/rule-resolution.md §7) — a norm and a route answer different questions and are not forced into one vocabulary because the words look alike."
+        },
+        "status": {
+          "enum": ["resolved", "unresolved"],
+          "description": "This record's own runtime-applicability state (standards/workspace/rule-resolution.md §4). It has exactly these two values and is not the intake verdict. \"resolved\": the axes above decide applicability deterministically — this includes a record whose intake verdict is deferred, since a deferred verdict neither activates, disables, nor unresolves a norm. \"unresolved\": scope, activation, source or a conflict cannot be decided deterministically (for example a recorded scope that conflicts with an owner-decided target whose new append-only intake record does not exist yet); the resolver returns unresolved_applicability for this subject from this status, not from a missing record. \"unresolved\" requires this record's own resume_condition; \"resolved\" must not carry one."
+        },
+        "resume_condition": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The exact condition under which this one unresolved record is revisited — the applicability registry's own return condition, owned here, distinct from and not a copy of the resume_condition of the intake record reached through intake_record. Its own, not shared with any other unresolved record (standards/workspace/rule-resolution.md §9). Required when status is \"unresolved\", absent when status is \"resolved\"."
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date",
+          "description": "When this applicability record was established or last synced to the norm it names. Distinct from intake_record.recorded_at, which dates the intake record this one points at."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "scope": { "const": "repository" } }, "required": ["scope"] },
+          "then": { "required": ["repository"] }
+        },
+        {
+          "if": { "properties": { "scope": { "not": { "const": "repository" } } }, "required": ["scope"] },
+          "then": { "not": { "required": ["repository"] } }
+        },
+        {
+          "if": { "properties": { "scope": { "const": "profile" } }, "required": ["scope"] },
+          "then": { "required": ["technology_profile"] }
+        },
+        {
+          "if": { "properties": { "scope": { "not": { "const": "profile" } } }, "required": ["scope"] },
+          "then": { "not": { "required": ["technology_profile"] } }
+        },
+        {
+          "if": { "properties": { "scope": { "const": "product-domain" } }, "required": ["scope"] },
+          "then": { "required": ["product_domain"] }
+        },
+        {
+          "if": { "properties": { "scope": { "not": { "const": "product-domain" } } }, "required": ["scope"] },
+          "then": { "not": { "required": ["product_domain"] } }
+        },
+        {
+          "if": { "properties": { "activation": { "const": "path-glob" } }, "required": ["activation"] },
+          "then": { "required": ["globs"] }
+        },
+        {
+          "if": { "properties": { "activation": { "not": { "const": "path-glob" } } }, "required": ["activation"] },
+          "then": { "not": { "required": ["globs"] } }
+        },
+        {
+          "if": { "properties": { "activation": { "const": "task-class" } }, "required": ["activation"] },
+          "then": { "required": ["task_class"] }
+        },
+        {
+          "if": { "properties": { "activation": { "not": { "const": "task-class" } } }, "required": ["activation"] },
+          "then": { "not": { "required": ["task_class"] } }
+        },
+        {
+          "if": { "properties": { "source": { "const": "kernel" } }, "required": ["source"] },
+          "then": { "not": { "required": ["intake_record"] } }
+        },
+        {
+          "if": { "properties": { "source": { "not": { "const": "kernel" } } }, "required": ["source"] },
+          "then": { "required": ["intake_record"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "unresolved" } }, "required": ["status"] },
+          "then": { "required": ["resume_condition"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "resolved" } }, "required": ["status"] },
+          "then": { "not": { "required": ["resume_condition"] } }
+        }
+      ]
+    }
+  }
+}

@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-21
+updated: 2026-08-27
 ---
 
 # Changelog
@@ -16,7 +16,117 @@ updated: 2026-08-21
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-08-27 (`draft`)
+
 ### Added
+
+- **Repository reference mechanism — каноническая идентичность и display alias
+  разведены.** Единственная каноническая идентичность продуктового репозитория
+  — `inventory/repositories.yaml` → `repositories[].id`; display alias adapter
+  (`folders[].name` в файле Cursor workspace) идентичностью не является и
+  repository scope не создаёт. Новый стандарт
+  `standards/workspace/repository-references.md` и схема
+  `registries/inventory/repository-references.schema.json` вводят
+  типизированную reference-запись (`kind` / `alias` / `repository_id` /
+  `sources`) и fail-closed exact resolution: сначала точное совпадение с
+  каноническим `id`, иначе точное case-sensitive совпадение с объявленным
+  alias — ровно в один `repository_id`; ноль совпадений —
+  `unresolved_repository_reference` / STOP, несколько разных — `conflict` /
+  STOP; alias выходной идентичностью не становится. Без fuzzy-, remote-,
+  path- и basename-подбора. Instance хранит конкретные aliases в
+  `inventory/repository-references.yaml`; `instance-template/` несёт пустой
+  реестр. `VERSION` не менялся (`0.3.0`), релиз не выполнялся.
+
+- **Режим продвижения — свойство репозитория, а не каждой вложенной release
+  unit.** `version-control-flow.md` объявлял себя применимым к Kernel, Instance
+  и delivery adapters, но требовал для стабильной линии `release/<semver>`,
+  `VERSION`, тег `vX.Y.Z` и SemVer-hotfix — а `release-versioning.md` §8
+  одновременно фиксирует Instance как Git-revision без SemVer. Обе нормы
+  Instance исполнить не мог. Correction разделяет две сущности: режим
+  продвижения описывает **верхнеуровневую (repository-level) release identity
+  репозитория**. Закрытый набор: `semver-release` (repository-level `VERSION` и
+  repository-level тег `vX.Y.Z`; так объявлен Kernel — `master` / `develop`) и
+  `revision-promotion` (repository-level состояние идентифицируется Git SHA
+  итогового non-fast-forward advancement commit; repository-level `VERSION` и
+  тег не создаются; так объявлен тип репозитория Instance до отдельного решения
+  владельца о SemVer — конкретные имена линий и само объявление остаются в
+  Instance).
+
+  Вложенная независимо версионируемая единица (`stack-profiles/` в Kernel,
+  smoke-пакет в Instance) разведена по **двум независимым осям**. Ось A
+  (версионирование): режим репозитория не переопределяет её `VERSION`,
+  `CHANGELOG`, SemVer и tag convention; изменение вложенного `VERSION` — не
+  повышение repository-level `VERSION` и режим репозитория не выбирает. Ось B
+  (Git-flow файлов): изменение вложенной единицы — обычный package change,
+  идёт через `feature/<slug>` в интеграционную линию, а в стабильную линию его
+  файлы попадают только следующим repository advancement своего режима
+  (`release/<semver>` или `promotion/<slug>`); независимость номера единицы не
+  разрешает прямую запись в стабильную линию и не создаёт третий способ
+  продвижения репозитория; такое advancement не обязано повышать
+  repository-level `VERSION` только из-за вложенного. Отдельного flow и нового
+  tag namespace для вложенных единиц стандарт не проектирует.
+
+  Общая часть модели сохранена: `feature/<slug>` от интеграционной линии и
+  обратно, запрет прямой записи в стабильную линию, first-parent чтение,
+  отдельный non-fast-forward advancement commit на каждое продвижение,
+  неизменность опубликованной истории, `push` не подразумевается. Режим,
+  стабильная и интеграционная линии объявляются в tracked репозиторий-локальном
+  источнике governance/конфигурации (для Kernel — сам стандарт). Общее
+  ожидаемое правило для типа репозитория (`revision-promotion` для Instance)
+  **не заменяет** локальное объявление конкретного репозитория: каждый
+  конкретный Instance обязан объявить режим и линии в своём tracked-источнике,
+  до этого Git-интегратор fail-closed и не начинает release/promotion
+  integration, а противоречащее общему правилу локальное объявление требует
+  явного решения владельца. Fail-closed также при нескольких конфликтующих
+  объявлениях и при конфликте объявления с repository-level evidence; имя
+  `main`/`master`, исторические теги и `VERSION`/тег вложенной единицы
+  repository-level evidence не являются.
+
+  `VERSION` не менялся (`0.3.0`), релиз не создавался; оба стандарта остаются
+  `maintained`.
+
+- **Git-flow и release versioning приняты как два раздельных нормативных
+  стандарта** (`status: maintained`) после независимого review Codex
+  2026-08-27. `standards/workspace/version-control-flow.md` вводит роль
+  стабильной линии (её имя объявляет репозиторий; для Kernel это `master`, для
+  репозитория с веткой по умолчанию `main` — `main`) и интеграционную линию
+  `develop`, ветки `feature/<slug>`, `release/<semver>` и `hotfix/<slug>` с
+  объявленными точками ветвления и возврата, запрет прямых package-коммитов в
+  стабильную линию, раздельные коммиты Kernel и Instance, запрет на
+  переписывание опубликованной истории без решения владельца и на неявный
+  `push`. Применение перспективное:
+  отдельный раздел adoption/migration фиксирует, что история до точки принятия
+  нарушением не объявляется, что Kernel сейчас в переходном состоянии (`master`
+  с коммитами после `v0.3.0`, `develop` с дополнительными принятыми пакетами) и
+  что переход к модели выполняет первый будущий `release`, а миграцию —
+  Git-интегратор. `standards/workspace/release-versioning.md` описывает Kernel
+  как самостоятельную SemVer release unit с источником версии `VERSION`,
+  ведение `CHANGELOG.md` по Keep a Changelog, фиксацию незавершённой работы в
+  `Unreleased`, повышение `VERSION` только в `release/<semver>` и переход к
+  `1.0.0` только по решению владельца. Стабильная линия читается по first-parent
+  history: каждый её шаг — принятый release или hotfix, слитый отдельным
+  merge-коммитом (release advancement commit) без fast-forward; аннотированный
+  тег `vX.Y.Z` несёт этот merge-коммит и обозначает целостный snapshot, а
+  package-коммиты, вошедшие в выпуск, индивидуально не версионируются и своих
+  тегов не получают. Правила выбора MAJOR/MINOR/PATCH однозначны. Hotfix
+  допустим только для изменения PATCH-класса и повышает patch; изменение,
+  требующее MINOR/MAJOR, готовится как `release` соответствующего номера, а не
+  как hotfix. `stack-profiles/` и Instance остаются самостоятельными линиями,
+  vendored-зависимости — привязанными к SHA.
+  Обе темы (`version-control-flow`, `release-versioning`) уже были в пуле
+  `instruction-topics`; теперь у них есть принятый нормативный текст.
+
+- **README §6 и `COMPATIBILITY.md` больше не утверждают, что принятого профиля
+  версионирования Git-артефактов нет** — оба ссылаются на два принятых
+  `maintained`-стандарта; compatibility matrix не тронута. `AGENTS.md` §6
+  фиксирует, что при назначенном внешнем исполнителе создание и переключение
+  веток, staging, commit, merge и tag принадлежат Git-интегратору; он вправе
+  временно
+  проиндексировать поимённо ограниченный candidate package, чтобы прогнать
+  гейты по новым файлам, а снимает его path-limited операцией
+  (`git restore --staged -- <path>...`), не очищая остальной индекс. Такая
+  индексация приёмкой не является; исполнитель Git-записей не выполняет.
+  `VERSION` не изменён: этот пакет релизом не является.
 
 - **Пул профилей стека — релизная единица `stack-profiles/`.**
   Собственные `VERSION` (0.1.0) и `CHANGELOG.md`, пул в двух половинах

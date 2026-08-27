@@ -117,9 +117,23 @@ Kernel — собственная релизная единица со свое�
 в границах того, что валидатор на тот момент проверял; сам объём его проверок
 расширяется и зафиксирован в `CHANGELOG.md`, а не подразумевается полным.
 Переход к `1.0.0` требует явного решения о приёмке, а не истечения времени.
-Принятого внутреннего профиля версионирования Git-артефактов пока нет
-(`COMPATIBILITY.md` фиксирует это явно): `0.1.0` — корректная SemVer-декларация
-draft-релиза, не более.
+
+Поток веток и правило повышения версии описаны двумя стандартами:
+[`standards/workspace/version-control-flow.md`](standards/workspace/version-control-flow.md)
+— стабильная линия (для Kernel это `master`) и интеграционная `develop`, ветки
+`feature`/`release`/`hotfix`, запрет прямых package-коммитов в стабильную линию,
+перспективное применение; и
+[`standards/workspace/release-versioning.md`](standards/workspace/release-versioning.md)
+— источник версии `VERSION`, changelog по Keep a Changelog, повышение версии
+только в `release/<semver>` с аннотированным тегом `vX.Y.Z`, hotfix только для
+изменения PATCH-класса. Стандарты задают режим продвижения репозитория:
+`semver-release` (Kernel — repository-level `VERSION` и тег `vX.Y.Z`) и
+`revision-promotion` (репозиторий без решения о SemVer, например Instance —
+верхнеуровневое состояние идентифицируется Git SHA advancement commit,
+repository-level `VERSION`/тег не создаются). Вложенные независимо
+версионируемые единицы (`stack-profiles/`, smoke-пакет) ведут свои номера
+независимо от режима репозитория. Kernel в `0.x`: `0.1.0` и последующие
+остаются draft-релизами в смысле `COMPATIBILITY.md`.
 
 Совместимость Kernel и Instance объявляется в
 [`COMPATIBILITY.md`](COMPATIBILITY.md), а не выводится из близости номеров.

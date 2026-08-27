@@ -71,6 +71,13 @@ Meridian состоит из независимо версионируемых �
 ## Чего этот контракт намеренно не покрывает
 
 - Продуктовые релизы и их CI — вне области Kernel.
-- Область действия стандарта версионирования документов ограничена документами в
-  каноническом wiki. Применение его к Git-артефактам требует отдельного принятого
-  профиля; такого профиля пока нет.
+- Область действия завендоренного стандарта версионирования документов
+  (`skills/versioning-standard-docs/`) ограничена документами в каноническом
+  wiki. Версионирование Git-артефактов Kernel — отдельный предмет; он
+  зафиксирован двумя принятыми (`maintained`) стандартами:
+  [`standards/workspace/version-control-flow.md`](standards/workspace/version-control-flow.md)
+  (поток веток: стабильная линия, `develop`, `feature`/`release`/`hotfix`) и
+  [`standards/workspace/release-versioning.md`](standards/workspace/release-versioning.md)
+  (SemVer-линия Kernel, `VERSION`, Keep a Changelog, тег `vX.Y.Z`). Их правила
+  выбора MAJOR/MINOR/PATCH ссылаются на ломающие изменения в терминах этого
+  контракта, не переопределяя его.

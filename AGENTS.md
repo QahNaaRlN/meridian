@@ -99,7 +99,19 @@ external executor:**
 - automatically produce a paste-ready instruction for the executor;
 - automatically produce a correction instruction after review findings, without
   waiting for the owner to ask again;
-- independently perform review, gates, and Git integration.
+- independently perform review, gates, and Git integration. With an external
+  executor assigned, the Git integrator also owns branch creation and switching,
+  staging, commit, merge, and tag; the executor performs none of these Git
+  operations. To run gates that must see files not yet tracked, the Git
+  integrator may temporarily stage a name-limited candidate package, reviewing
+  the staged name list and staged diff first; temporary staging is not
+  acceptance — a `CHANGES_REQUESTED` verdict unstages it with a path-limited
+  `git restore --staged -- <candidate-path>...` (never a whole-index reset,
+  which would drop unrelated staged state) without touching the working tree,
+  and only the finally approved package is staged after `ACCEPTED`. The branch
+  and versioning rules themselves are
+  `standards/workspace/version-control-flow.md` and
+  `standards/workspace/release-versioning.md`.
 
 **If no separate reviewer is assigned:**
 

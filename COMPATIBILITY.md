@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-19
+updated: 2026-08-27
 ---
 
 # Meridian compatibility contract
@@ -29,7 +29,7 @@ Meridian состоит из независимо версионируемых �
 |---|---|---|
 | `0.1.x` | `schema_version: 1` в `product.yaml` | не объявлены; `0.x` не даёт гарантий стабильности |
 | `0.2.x` | `schema_version: 1` в `product.yaml`; action-профили `environments/access.yaml` используют generic-enum или `x-*`-префикс для продуктовых действий | относительно `0.1.x`: enum действий сужен, продуктовые значения без префикса `x-*` не проходят schema-gate — Instance требует миграции (см. `CHANGELOG.md` 0.2.0 → Breaking) |
-| `0.4.x` | то же, что `0.2.x`; плюс: рабочие заметки Instance, ссылающиеся на слой шаблонов, указывают на `standards/templates/template-contract.md` и `standards/templates/profiles/<платформа>/<тип>-body.md` | относительно `0.3.x`: слой шаблонов разделён на контракт и профиль, после чего всё дерево приведено к единому правилу имён (`standards/workspace/document-identity.md`). Переименовано шестнадцать файлов, в том числе `CONFLUENCE.md` → `profiles/confluence/confluence-profile.md`, восемь `*.confluence-template.md` → `profiles/confluence/*-body.md`, `PROTOCOL.md` → `smoke-protocol.md`, `ACCEPTANCE-GATE.template.md` → `acceptance-gate-template.md`, `BOOTSTRAP.md` → `instance-bootstrap.md`. Ломает текстовые ссылки Instance, и гейт этого не видит — см. следующий раздел |
+| `0.4.x` | то же, что `0.2.x`; плюс: рабочие заметки Instance, ссылающиеся на слой шаблонов, указывают на `standards/templates/template-contract.md` и `standards/templates/profiles/<платформа>/<тип>-body.md`; плюс: каждая запись `inventory/repositories.yaml` несёт `profile`, значение которого названо из закрытого пула Kernel stack profiles и подтверждается манифестом соответствующего репозитория | относительно `0.3.x`: слой шаблонов разделён на контракт и профиль, после чего всё дерево приведено к единому правилу имён (`standards/workspace/document-identity.md`). Переименовано шестнадцать файлов, в том числе `CONFLUENCE.md` → `profiles/confluence/confluence-profile.md`, восемь `*.confluence-template.md` → `profiles/confluence/*-body.md`, `PROTOCOL.md` → `smoke-protocol.md`, `ACCEPTANCE-GATE.template.md` → `acceptance-gate-template.md`, `BOOTSTRAP.md` → `instance-bootstrap.md`. Ломает текстовые ссылки Instance, и гейт этого не видит — см. следующий раздел. Плюс относительно `0.3.x`: `registries/inventory/repositories.schema.json` сделал `repositories[].profile` обязательным; отсутствие `profile`, имя вне закрытого пула Kernel stack profiles или объявление, противоречащее манифесту репозитория, даёт FAIL валидатора и требует миграции Instance |
 
 Пока Kernel в `0.x`, любой minor может сломать Instance. Instance пиннит точную
 версию Kernel до выхода `1.0.0`.

@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-21
+updated: 2026-08-27
 ---
 
 # Changelog
@@ -15,6 +15,8 @@ updated: 2026-08-21
 Линия версий Kernel независима от Instance и от продуктовых репозиториев.
 
 ## [Unreleased]
+
+## [0.4.0] — 2026-08-27 (`draft`)
 
 ### Added
 

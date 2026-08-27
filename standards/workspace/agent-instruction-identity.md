@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-20
-updated: 2026-08-21
+updated: 2026-08-27
 topic: unclassified
 unclassified_reason: >-
   пул тем выведен из корпуса продуктовых норм и предмета «нормы о нормах» не
@@ -16,6 +16,7 @@ activation: task-class
 related_documents:
   - ./document-identity.md
   - ./instruction-intake.md
+  - ./rule-resolution.md
   - ./tooling-axes.md
   - ./kernel-boundary.md
 ---
@@ -71,6 +72,13 @@ related_documents:
 Вывод одного ответа из другого — дефект. Норма, лежащая в `skills/`, не обязана
 быть навыком по жанру; норма с маской путей не обязана быть привязанной к
 профилю; участок `AGENTS.md` не обязан действовать всегда.
+
+Класс единицы работы (`work_kind`) и класс изменения (`change_class`), по
+которым норма может активироваться через `activation: task-class`, определены
+отдельным стандартом — `rule-resolution.md` §2–3, — и здесь не
+переопределяются и не дублируются. Оттуда же берётся правило, что
+`change_class` осмыслен только внутри `work_kind: change` и не выводится из
+`topic` или жанра.
 
 ## 3. Тема
 

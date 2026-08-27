@@ -1,0 +1,184 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/rule-resolution/resolver-output.schema.json",
+  "title": "Rule resolver output contract",
+  "description": "Shape of the value a deterministic rule resolver returns for one work item, per standards/workspace/rule-resolution.md. This is the contract of a function's return value, not a registry file: it carries no $schema/schema_version envelope of its own, and nothing here is committed data waiting to be validated by the generic registry pass. PHASE C (implementation of the resolver) and PHASE F (population of the data this contract is computed from) are out of scope for the schema itself.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "applicable_norms",
+    "applicable_protocols",
+    "required_verification",
+    "conflicts",
+    "unresolved_applicability",
+    "unresolved_items",
+    "requires_reresolution",
+    "decomposition_required",
+    "applicable_initiative_protocol",
+    "pre_decomposition_norms"
+  ],
+  "properties": {
+    "applicable_norms": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/applicable_norm" },
+      "description": "Norms found applicable, one entry per norm. Fragments of one container norm are separate entries, never merged into one: standards/workspace/rule-resolution.md §1, delivery does not determine content."
+    },
+    "applicable_protocols": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/applicable_protocol" },
+      "description": "Protocols routed from work_kind or change_class. Several change_class values may route to one protocol; one change_class does not receive several incompatible mandatory protocols without an explicit composition named at the route record itself (standards/workspace/rule-resolution.md §7)."
+    },
+    "required_verification": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "References to a verification router, smoke-protocol or regression-testing path."
+    },
+    "conflicts": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/conflict" }
+    },
+    "unresolved_applicability": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/unresolved" },
+      "description": "Norms whose applicability the resolver could not decide deterministically — scope, activation, source or a conflict left open (standards/workspace/rule-resolution.md §4) — not norms whose instruction-intake verdict merely has not been unified yet. A deferred intake verdict does not by itself put its subject here. This array is about norm applicability only; obstacles to decomposing an initiative go in unresolved_items, and the two are never merged."
+    },
+    "unresolved_items": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/decomposition_blocker" },
+      "description": "Obstacles that stop a work_kind: initiative from being decomposed into child work items — for example the source-repository list is incomplete (standards/workspace/rule-resolution.md §6). This is a separate, always-present array, distinct in kind from unresolved_applicability: an unresolved item is missing input for decomposition, not a norm whose applicability is undecidable. Empty for every non-initiative work item and for an initiative that has already been decomposed."
+    },
+    "requires_reresolution": {
+      "type": "boolean",
+      "description": "True when changed_paths diverged from the candidate_paths a previous resolution for the same work item used. The resolver does not extend the prior applicable_norms heuristically on that divergence; it reports the need for a fresh call."
+    },
+    "decomposition_required": {
+      "type": "boolean",
+      "description": "True when work_kind is initiative and an explicit list of child work items has not yet been supplied (standards/workspace/rule-resolution.md §6). False for every non-initiative work item and for an initiative already decomposed."
+    },
+    "applicable_initiative_protocol": {
+      "type": ["string", "null"],
+      "description": "Identifier of the decomposition protocol for this initiative, if one is already declared for its kind; null when none is declared yet. Present (possibly null) regardless of work_kind, so that the output shape does not change with the input."
+    },
+    "pre_decomposition_norms": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Product-wide norms applicable to an initiative before it is decomposed into child work items — for example a requirement on a parity registry used to reconcile the initiative's source editions."
+    }
+  },
+  "definitions": {
+    "applicable_norm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["norm", "activation_reason", "source", "digest", "delivery"],
+      "properties": {
+        "norm": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identifier of the norm — a reference to its instruction-intake record, or to its Kernel path when it never went through intake."
+        },
+        "activation_reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Which axis or mask fired, in the vocabulary of activation in registries/rule-resolution/applicability.schema.json — not a free restatement, so that the output stays checkable against the applicability record it came from."
+        },
+        "source": {
+          "enum": ["repository", "kernel", "delivery-adapter"],
+          "description": "Same three values as registries/rule-resolution/applicability.schema.json record.source for a norm. Distinct from a protocol route's source pool below — a norm and a route answer different questions."
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the norm at resolution time, so the output is checkable the same way an instruction-intake record is: by recomputing the digest, not by trusting the label."
+        },
+        "delivery": {
+          "enum": ["kernel-doc", "skill-package", "cursor-rule", "agents-md-section"]
+        }
+      }
+    },
+    "applicable_protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "routed_from", "source", "scope"],
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "minLength": 1
+        },
+        "routed_from": {
+          "enum": ["change", "assessment", "operation", "initiative", "BUGFIX", "FEATURE", "BEHAVIOR_CHANGE", "REFACTOR"],
+          "description": "The work_kind or change_class value that produced this route — one pool, because a route may be keyed on either (standards/workspace/rule-resolution.md §7)."
+        },
+        "source": {
+          "enum": ["kernel", "instance", "repository"],
+          "description": "Where the routing line came from: Kernel carries universal routes, Instance/repository may add a product- or repository-specific route, and a local record never silently overrides a universal one — disagreement is a conflict entry above, not a silent replacement."
+        },
+        "scope": {
+          "enum": ["universal", "product-domain", "repository"]
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the route record at resolution time. A route record carries either this or revision, whichever its own store identifies it by; not both are required, and neither is optional in isolation — at least one is (see allOf below)."
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$",
+          "description": "VCS revision the route record was read at, used instead of digest when the record's home identifies it by revision rather than by content hash."
+        }
+      },
+      "anyOf": [
+        { "required": ["digest"] },
+        { "required": ["revision"] }
+      ]
+    },
+    "conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["norms", "reason"],
+      "properties": {
+        "norms": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "The norms or routes in conflict — including two incompatible mandatory change_class → protocol routes, standards/workspace/rule-resolution.md §7, not only conflicting agent norms."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Which axis or claim they contradict on."
+        }
+      }
+    },
+    "unresolved": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject", "reason"],
+      "properties": {
+        "subject": { "type": "string", "minLength": 1 },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this norm's applicability is not deterministically decidable today — scope, activation, source or conflict left open, per standards/workspace/rule-resolution.md §4. Not used to record a subject whose intake verdict is merely deferred while its runtime applicability is otherwise decided, and not used for a decomposition obstacle, which is a decomposition_blocker in unresolved_items."
+        }
+      }
+    },
+    "decomposition_blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item", "reason"],
+      "description": "One missing input that must be supplied before a work_kind: initiative can be decomposed. Deliberately shaped and named apart from unresolved: item, not subject, so the two arrays cannot be filled from one code path.",
+      "properties": {
+        "item": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What is missing for decomposition — for example \"complete list of source repositories\"."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why decomposition cannot proceed without it."
+        }
+      }
+    }
+  }
+}

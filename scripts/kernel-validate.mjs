@@ -23,6 +23,10 @@
 //                          fixture data are exempt by pattern, not by list.
 //   6. schema            — every registry declaring `$schema` is parsed and
 //                          validated against it, in-gate.
+//   6b. rule-resolution  — the PHASE B rule-resolution schemas parse, use only
+//                          keywords this validator implements, and accept their
+//                          representative valid fixtures while rejecting the
+//                          invalid ones. Reached before any Instance population.
 //   7. sha-provenance    — installed skill matches its pinned SHA-256.
 //   8. ext-dependencies  — declared external dependencies are resolvable, or
 //                          are explicitly and legibly unresolved.
@@ -353,7 +357,7 @@ const SUPPORTED_KEYWORDS = new Set([
   'pattern', 'minLength', 'maxLength', 'minItems', 'maxItems', 'uniqueItems',
   'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum',
   'anyOf', 'oneOf', 'allOf', 'not', '$ref', 'definitions', '$defs', 'format',
-  'if', 'then', 'else', 'propertyNames',
+  'if', 'then', 'else', 'propertyNames', 'contains',
 ]);
 
 function assertSupported(schema, where) {
@@ -380,7 +384,7 @@ const FORMAT_CHECKS = {
 // visit; an unsupported keyword in an optional, never-taken branch would
 // otherwise pass silently.
 const SCHEMA_MAP_KEYWORDS = ['properties', 'definitions', '$defs'];
-const SCHEMA_CHILD_KEYWORDS = ['items', 'additionalProperties', 'not', 'if', 'then', 'else', 'propertyNames'];
+const SCHEMA_CHILD_KEYWORDS = ['items', 'additionalProperties', 'not', 'if', 'then', 'else', 'propertyNames', 'contains'];
 const SCHEMA_LIST_KEYWORDS = ['anyOf', 'oneOf', 'allOf'];
 function assertSupportedDeep(schema, where) {
   if (typeof schema !== 'object' || schema === null || Array.isArray(schema)) return;
@@ -458,6 +462,10 @@ function validate(data, schema, root, ptr, errs) {
       if (seen.size !== data.length) errs.push(`${ptr}: items are not unique`);
     }
     if (schema.items) data.forEach((d, i) => validate(d, schema.items, root, `${ptr}/${i}`, errs));
+    if (schema.contains) {
+      const hit = data.some((d) => { const e = []; validate(d, schema.contains, root, ptr, e); return e.length === 0; });
+      if (!hit) errs.push(`${ptr || '/'}: no item matches "contains"`);
+    }
   }
   if (data && typeof data === 'object' && !Array.isArray(data)) {
     for (const req of schema.required || []) {
@@ -857,6 +865,120 @@ for (const file of registryYaml) {
 }
 if (attempted === 0) warn('schema: no registry declared a $schema; nothing was validated');
 else ok(`schema: ${validated}/${attempted} registries passed in-gate validation against their declared JSON Schema`);
+
+// ---------------------------------------------------------------------------
+// rule-resolution: the PHASE B schemas are reachable by this gate
+// ---------------------------------------------------------------------------
+// The generic pass above only reaches a document that declares `$schema`
+// pointing at a local file; a JSON Schema is not such a document and would
+// otherwise sit unchecked until PHASE F writes data against it. Here the two
+// PHASE B schemas are parsed, walked for unsupported keywords (the same
+// assertSupportedDeep the generic pass uses), and exercised against bundled
+// fixtures. The check is fail-closed on the fixture bundle's own shape: the
+// success line is printed only when the bundle is an array carrying exactly
+// one recognised group for each of the two schemas, every group's `valid` and
+// `invalid` are non-empty arrays, and every fixture behaved as declared. A
+// bundle that is an object, empty, short a group, carrying a stray or
+// duplicate group, or carrying an empty `valid`/`invalid` is a FAIL — a
+// schema no run exercises is not one this gate has reached.
+{
+  const rrDir = path.join(KERNEL_ROOT, 'registries', 'rule-resolution');
+  const rrNames = ['applicability.schema.json', 'resolver-output.schema.json'];
+  const rrRaw = new Map(rrNames.map((n) => [n, readIfExists(path.join(rrDir, n))]));
+  const rrPresent = rrNames.filter((n) => rrRaw.get(n) !== null);
+  if (rrPresent.length === 0) {
+    info('rule-resolution: no PHASE B schema in this Kernel; nothing to check');
+  } else {
+    let rrOk = true;
+    const rrSchemas = new Map();
+    for (const n of rrNames) {
+      const raw = rrRaw.get(n);
+      if (raw === null) {
+        fail(`rule-resolution: ${n} is missing while the other PHASE B schema is present; that is a gap, not an opt-out`);
+        rrOk = false; continue;
+      }
+      let parsed;
+      try { parsed = JSON.parse(raw); }
+      catch (e) { fail(`rule-resolution: ${n} is not valid JSON: ${e.message}`); rrOk = false; continue; }
+      try { assertSupportedDeep(parsed, n); }
+      catch (e) { fail(`rule-resolution: ${n} uses a construct this validator cannot check: ${e.message}`); rrOk = false; continue; }
+      rrSchemas.set(n, parsed);
+    }
+    let satisfied = 0;
+    let rejected = 0;
+    let coverageComplete = false;
+    const fxRaw = readIfExists(path.join(rrDir, 'fixtures', 'rule-resolution.fixtures.json'));
+    if (fxRaw === null) {
+      fail('rule-resolution: the PHASE B schemas carry no fixtures (registries/rule-resolution/fixtures/rule-resolution.fixtures.json); a schema no run exercises is not one this gate has reached');
+      rrOk = false;
+    } else if (rrOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(fxRaw); }
+      catch (e) { bundleOk = false; fail(`rule-resolution: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && !Array.isArray(bundle)) {
+        bundleOk = false;
+        fail('rule-resolution: the fixtures file must be an array of one group per PHASE B schema; it is not an array');
+      }
+      if (bundleOk && bundle.length === 0) {
+        bundleOk = false;
+        fail('rule-resolution: the fixtures file is an empty array; neither PHASE B schema is covered');
+      }
+      if (!bundleOk) {
+        rrOk = false;
+      } else {
+        // Exactly one recognised group per schema: no stray, no duplicate, none missing.
+        const byName = new Map();
+        for (const group of bundle) {
+          const name = group?.schema;
+          if (!rrSchemas.has(name)) {
+            fail(`rule-resolution: a fixture group names schema "${name}", which is not one of the two PHASE B schemas`);
+            rrOk = false; continue;
+          }
+          if (byName.has(name)) {
+            fail(`rule-resolution: schema "${name}" has more than one fixture group; exactly one is expected`);
+            rrOk = false; continue;
+          }
+          byName.set(name, group);
+        }
+        for (const n of rrNames) {
+          if (!byName.has(n)) { fail(`rule-resolution: no fixture group for "${n}"; both PHASE B schemas must be covered`); rrOk = false; }
+        }
+        for (const [name, group] of byName) {
+          const schema = rrSchemas.get(name);
+          const groupShapeOk = ['valid', 'invalid'].every((k) => {
+            if (Array.isArray(group[k]) && group[k].length > 0) return true;
+            fail(`rule-resolution: fixture group "${name}" has no non-empty "${k}" array`);
+            rrOk = false;
+            return false;
+          });
+          if (!groupShapeOk) continue;
+          for (const c of group.valid) {
+            const e = [];
+            let threw = null;
+            try { validate(c?.doc, schema, schema, '', e); } catch (err) { threw = err; }
+            if (threw) { fail(`rule-resolution: a fixture that must satisfy ${name} threw (${c?.note}): ${threw.message}`); rrOk = false; }
+            else if (e.length) { fail(`rule-resolution: a fixture that must satisfy ${name} did not (${c?.note}): ${e[0]}`); rrOk = false; }
+            else satisfied++;
+          }
+          for (const c of group.invalid) {
+            const e = [];
+            let threw = null;
+            try { validate(c?.doc, schema, schema, '', e); } catch (err) { threw = err; }
+            if (threw) { fail(`rule-resolution: an invalid fixture for ${name} threw instead of being rejected with errors (${c?.note}): ${threw.message}`); rrOk = false; }
+            else if (e.length === 0) { fail(`rule-resolution: a fixture that must violate ${name} validated clean (${c?.note})`); rrOk = false; }
+            else rejected++;
+          }
+        }
+        coverageComplete = rrOk && rrNames.every((n) => byName.has(n));
+      }
+    }
+    if (rrOk && coverageComplete) {
+      ok('rule-resolution: 2/2 PHASE B schemas parsed and keyword-checked; '
+       + `${satisfied} representative fixture(s) satisfied them and ${rejected} were rejected as declared`);
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // SHA provenance

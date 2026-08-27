@@ -1726,6 +1726,557 @@ function regionRecord(id, opts = {}) {
   });
 }
 
+// PHASE B — the rule-resolution schemas are reachable by the gate
+// ===========================================================================
+// These cases exercise the gate's "6b.
+// rule-resolution" check: the two PHASE B schemas parse, use only keywords the
+// in-gate validator implements, and classify their bundled fixtures — every
+// valid one satisfied, every invalid one rejected — before any Instance
+// population exists. Each negative case plants a document that the corrected
+// schema must refuse; on a schema that does not carry the corresponding rule
+// the document validates clean and the case goes green where it must be red,
+// which is how it fails on the pre-correction schema and passes after.
+
+const RR_SRC = path.join(__dirname, '..', 'registries', 'rule-resolution');
+
+// Copies the real PHASE B schemas (or overrides) and a fixtures bundle into a
+// synthetic kernel, the same way plantIntake copies the real intake schema.
+function plantRuleResolution(kernel, { appl = null, rout = null, bundle = 'real', omitFixtures = false } = {}) {
+  write(kernel, 'registries/rule-resolution/applicability.schema.json',
+    appl ?? fs.readFileSync(path.join(RR_SRC, 'applicability.schema.json'), 'utf8'));
+  write(kernel, 'registries/rule-resolution/resolver-output.schema.json',
+    rout ?? fs.readFileSync(path.join(RR_SRC, 'resolver-output.schema.json'), 'utf8'));
+  if (omitFixtures) return;
+  write(kernel, 'registries/rule-resolution/fixtures/rule-resolution.fixtures.json',
+    bundle === 'real'
+      ? fs.readFileSync(path.join(RR_SRC, 'fixtures', 'rule-resolution.fixtures.json'), 'utf8')
+      : JSON.stringify(bundle, null, 2));
+}
+
+const RR_DIGEST = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+const applDoc = (rec) => ({ $schema: './applicability.schema.json', schema_version: 1, records: [rec] });
+const applRec = (o = {}) => ({
+  norm: { repository: 'kernel', path: 'standards/workspace/example.md' },
+  digest: RR_DIGEST, scope: 'universal', activation: 'always', source: 'kernel',
+  status: 'resolved', recorded_at: '2026-01-01', ...o,
+});
+const routDoc = (o = {}) => ({
+  applicable_norms: [], applicable_protocols: [], required_verification: [],
+  conflicts: [], unresolved_applicability: [], unresolved_items: [],
+  requires_reresolution: false, decomposition_required: false,
+  applicable_initiative_protocol: null, pre_decomposition_norms: [], ...o,
+});
+// The real fixtures bundle with `doc` appended to the named schema's `valid`
+// array. The bundle stays topologically complete — both groups present, each
+// with a non-empty `valid` and `invalid` — so the fail-closed shape checks
+// pass and the only thing that can turn the run red is the planted document
+// itself: for a negative case it fails to satisfy its schema (the assertion),
+// for a positive case it satisfies it and the success line still prints.
+function bundleWithPlantedDoc(schemaName, doc) {
+  const real = JSON.parse(fs.readFileSync(path.join(RR_SRC, 'fixtures', 'rule-resolution.fixtures.json'), 'utf8'));
+  for (const g of real) if (g.schema === schemaName) g.valid = [...g.valid, { note: 'planted', doc }];
+  return real;
+}
+const mustRejectBundle = bundleWithPlantedDoc;
+
+// t98 — the real schemas and their real fixtures are classified by the gate.
+{
+  const { kernel, instance } = freshPair('t98');
+  plantRuleResolution(kernel);
+  commitAll(kernel);
+  check('t98 PHASE B schemas are reached and their fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [/rule-resolution: 2\/2 PHASE B schemas parsed and keyword-checked; \d+ representative fixture\(s\) satisfied them and \d+ were rejected/],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t99 — a PHASE B schema that uses a keyword the in-gate validator does not
+// implement fails loudly, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t99');
+  const appl = fs.readFileSync(path.join(RR_SRC, 'applicability.schema.json'), 'utf8')
+    .replace('"type": "object",', '"type": "object",\n  "minProperties": 1,');
+  plantRuleResolution(kernel, { appl });
+  commitAll(kernel);
+  check('t99 an unsupported keyword in a PHASE B schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: applicability\.schema\.json uses a construct this validator cannot check/],
+  });
+}
+
+// t100 — a PHASE B schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t100');
+  plantRuleResolution(kernel, { rout: '{ not json' });
+  commitAll(kernel);
+  check('t100 a malformed PHASE B schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: resolver-output\.schema\.json is not valid JSON/],
+  });
+}
+
+// t101 — a PHASE B schema present with no fixtures beside it is a gap: a schema
+// no run exercises is not one the gate has reached.
+{
+  const { kernel, instance } = freshPair('t101');
+  plantRuleResolution(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t101 PHASE B schemas without fixtures are a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: the PHASE B schemas carry no fixtures/],
+  });
+}
+
+// t102 — scope discriminators: a field that belongs to another scope is an
+// incompatible pairing and is rejected (here: repository id under profile scope).
+{
+  const { kernel, instance } = freshPair('t102');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json',
+      applDoc(applRec({ scope: 'profile', technology_profile: 'some-profile', repository: 'example-repo' }))),
+  });
+  commitAll(kernel);
+  check('t102 a scope discriminator field under the wrong scope is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// t102b — and the required discriminator for a scope is enforced (repository
+// scope with no repository id).
+{
+  const { kernel, instance } = freshPair('t102b');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json',
+      applDoc(applRec({ scope: 'repository', source: 'repository',
+        intake_record: { register: 'instruction-intake/example-repo.yaml', recorded_at: '2026-01-01' } }))),
+  });
+  commitAll(kernel);
+  check('t102b repository scope without a repository id is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// t103 — activation discriminators: globs only belong to path-glob activation.
+{
+  const { kernel, instance } = freshPair('t103');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json',
+      applDoc(applRec({ activation: 'always', globs: ['pkg/**/*.ts'] }))),
+  });
+  commitAll(kernel);
+  check('t103 globs under a non path-glob activation is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// t103b — and task_class is required when activation is task-class.
+{
+  const { kernel, instance } = freshPair('t103b');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json',
+      applDoc(applRec({ activation: 'task-class' }))),
+  });
+  commitAll(kernel);
+  check('t103b task-class activation without task_class is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// t104 — change_class is meaningful only inside work_kind: change.
+{
+  const { kernel, instance } = freshPair('t104');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json',
+      applDoc(applRec({ activation: 'task-class',
+        task_class: { work_kind: ['assessment'], change_class: ['BUGFIX'] } }))),
+  });
+  commitAll(kernel);
+  check('t104 change_class without work_kind change is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// t105 — a repository-found norm must carry an unambiguous pointer to its one
+// append-only intake record.
+{
+  const { kernel, instance } = freshPair('t105');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json',
+      applDoc(applRec({ source: 'repository' }))),
+  });
+  commitAll(kernel);
+  check('t105 a repository source without an intake_record is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// t105b — deferred is an intake verdict, not an applicability status: the
+// applicability status pool is resolved | unresolved only.
+{
+  const { kernel, instance } = freshPair('t105b');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json',
+      applDoc(applRec({ status: 'deferred' }))),
+  });
+  commitAll(kernel);
+  check('t105b deferred is not an applicability status', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// t106 — architecture_profile is not a field of the MVP schema.
+{
+  const { kernel, instance } = freshPair('t106');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json',
+      applDoc(applRec({ architecture_profile: 'layered' }))),
+  });
+  commitAll(kernel);
+  check('t106 architecture_profile is refused by the MVP schema', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// t107 — resolver output: unresolved_items is a required array, separate from
+// unresolved_applicability.
+{
+  const { kernel, instance } = freshPair('t107');
+  const noItems = routDoc();
+  delete noItems.unresolved_items;
+  plantRuleResolution(kernel, { bundle: mustRejectBundle('resolver-output.schema.json', noItems) });
+  commitAll(kernel);
+  check('t107 resolver output without unresolved_items is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy resolver-output\.schema\.json did not/],
+  });
+}
+
+// t107b — and the two arrays are not interchangeable: a decomposition blocker
+// shape is refused inside unresolved_applicability.
+{
+  const { kernel, instance } = freshPair('t107b');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('resolver-output.schema.json',
+      routDoc({ unresolved_applicability: [{ item: 'list', reason: 'incomplete' }] })),
+  });
+  commitAll(kernel);
+  check('t107b a decomposition blocker inside unresolved_applicability is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy resolver-output\.schema\.json did not/],
+  });
+}
+
+// t108 — a protocol route entry carries provenance: source, scope and digest
+// or revision; with neither of the last two it is rejected.
+{
+  const { kernel, instance } = freshPair('t108');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('resolver-output.schema.json',
+      routDoc({ applicable_protocols: [{ protocol: 'x', routed_from: 'BUGFIX', source: 'kernel', scope: 'universal' }] })),
+  });
+  commitAll(kernel);
+  check('t108 a protocol entry with neither digest nor revision is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy resolver-output\.schema\.json did not/],
+  });
+}
+
+// t109 — a required output field left out is rejected.
+{
+  const { kernel, instance } = freshPair('t109');
+  const noFlag = routDoc();
+  delete noFlag.decomposition_required;
+  plantRuleResolution(kernel, { bundle: mustRejectBundle('resolver-output.schema.json', noFlag) });
+  commitAll(kernel);
+  check('t109 resolver output missing a required field is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy resolver-output\.schema\.json did not/],
+  });
+}
+
+// --- fixture-bundle topology: the gate is fail-closed on the bundle's shape --
+// A bundle that does not carry exactly one usable group per PHASE B schema is a
+// FAIL, and the success line must not print. Each case below plants one broken
+// topology and asserts both.
+const realBundle = () => JSON.parse(fs.readFileSync(path.join(RR_SRC, 'fixtures', 'rule-resolution.fixtures.json'), 'utf8'));
+const OK_LINE = /rule-resolution: 2\/2 PHASE B schemas parsed and keyword-checked/;
+
+// t110 — an object where an array is required.
+{
+  const { kernel, instance } = freshPair('t110');
+  plantRuleResolution(kernel, { bundle: { schema: 'applicability.schema.json', valid: [], invalid: [] } });
+  commitAll(kernel);
+  check('t110 a fixture bundle that is not an array is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: the fixtures file must be an array/],
+    mustNotMatch: [OK_LINE],
+  });
+}
+
+// t111 — an empty array covers neither schema.
+{
+  const { kernel, instance } = freshPair('t111');
+  plantRuleResolution(kernel, { bundle: [] });
+  commitAll(kernel);
+  check('t111 an empty fixture bundle is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: the fixtures file is an empty array/],
+    mustNotMatch: [OK_LINE],
+  });
+}
+
+// t112 — two groups for one schema.
+{
+  const { kernel, instance } = freshPair('t112');
+  const b = realBundle();
+  b.push(JSON.parse(JSON.stringify(b.find((g) => g.schema === 'applicability.schema.json'))));
+  plantRuleResolution(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t112 a duplicate fixture group is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: schema "applicability\.schema\.json" has more than one fixture group/],
+    mustNotMatch: [OK_LINE],
+  });
+}
+
+// t113 — a group naming a schema that is not one of the two.
+{
+  const { kernel, instance } = freshPair('t113');
+  const b = realBundle();
+  b.push({ schema: 'made-up.schema.json', valid: [{ note: 'x', doc: {} }], invalid: [{ note: 'y', doc: {} }] });
+  plantRuleResolution(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t113 an unknown fixture group is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture group names schema "made-up\.schema\.json", which is not one of the two/],
+    mustNotMatch: [OK_LINE],
+  });
+}
+
+// t114 — a bundle that covers only one of the two schemas.
+{
+  const { kernel, instance } = freshPair('t114');
+  plantRuleResolution(kernel, { bundle: realBundle().filter((g) => g.schema === 'applicability.schema.json') });
+  commitAll(kernel);
+  check('t114 a fixture bundle missing a group is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: no fixture group for "resolver-output\.schema\.json"/],
+    mustNotMatch: [OK_LINE],
+  });
+}
+
+// t115 — a group whose valid array is empty.
+{
+  const { kernel, instance } = freshPair('t115');
+  const b = realBundle();
+  b.find((g) => g.schema === 'resolver-output.schema.json').valid = [];
+  plantRuleResolution(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t115 an empty valid array in a fixture group is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: fixture group "resolver-output\.schema\.json" has no non-empty "valid" array/],
+    mustNotMatch: [OK_LINE],
+  });
+}
+
+// t116 — a group whose invalid array is empty.
+{
+  const { kernel, instance } = freshPair('t116');
+  const b = realBundle();
+  b.find((g) => g.schema === 'applicability.schema.json').invalid = [];
+  plantRuleResolution(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t116 an empty invalid array in a fixture group is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: fixture group "applicability\.schema\.json" has no non-empty "invalid" array/],
+    mustNotMatch: [OK_LINE],
+  });
+}
+
+// t117 — an invalid fixture that makes the validator throw is a FAIL, not a
+// silent pass: the earlier catch left the error list empty and the throw read
+// as "validated clean". The schema override points records.items at a
+// definition that does not exist, so any record reaches a dangling $ref.
+{
+  const { kernel, instance } = freshPair('t117');
+  const appl = fs.readFileSync(path.join(RR_SRC, 'applicability.schema.json'), 'utf8')
+    .replace('"$ref": "#/definitions/record"', '"$ref": "#/definitions/gone"');
+  const bundle = [
+    {
+      schema: 'applicability.schema.json',
+      valid: [{ note: 'empty records never reaches the ref', doc: { $schema: './applicability.schema.json', schema_version: 1, records: [] } }],
+      invalid: [{ note: 'a record reaches the dangling ref and throws', doc: { $schema: './applicability.schema.json', schema_version: 1, records: [applRec()] } }],
+    },
+    realBundle().find((g) => g.schema === 'resolver-output.schema.json'),
+  ];
+  plantRuleResolution(kernel, { appl, bundle });
+  commitAll(kernel);
+  check('t117 an invalid fixture that throws is a FAIL, not a silent pass', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: an invalid fixture for applicability\.schema\.json threw instead of being rejected/],
+    mustNotMatch: [OK_LINE],
+  });
+}
+
+// --- intake_record identity: recorded_at alone is not unique (fix 1) ---------
+
+// t118 — two applicability records for one artifact, region and date are told
+// apart by the intake_record verdict; both are valid and the success line prints.
+{
+  const { kernel, instance } = freshPair('t118');
+  const twoRecords = {
+    $schema: './applicability.schema.json',
+    schema_version: 1,
+    records: [
+      applRec({
+        norm: { repository: 'example-repo', path: 'rules/example.md', region: 'naming-rules' },
+        scope: 'repository', repository: 'example-repo', source: 'repository',
+        intake_record: { register: 'instruction-intake/example-repo.yaml', recorded_at: '2026-01-01', verdict: 'deferred' },
+        status: 'unresolved', resume_condition: 'the topic core is extracted',
+      }),
+      applRec({
+        norm: { repository: 'example-repo', path: 'rules/example.md', region: 'naming-rules' },
+        scope: 'repository', repository: 'example-repo', source: 'repository',
+        intake_record: { register: 'instruction-intake/example-repo.yaml', recorded_at: '2026-01-01', verdict: 'keep-local' },
+      }),
+    ],
+  };
+  plantRuleResolution(kernel, { bundle: bundleWithPlantedDoc('applicability.schema.json', twoRecords) });
+  commitAll(kernel);
+  check('t118 two records on one date are distinguished by intake_record verdict', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t119 — an intake_record without a verdict is not an unambiguous pointer.
+{
+  const { kernel, instance } = freshPair('t119');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json', applDoc(applRec({
+      source: 'repository',
+      intake_record: { register: 'instruction-intake/example-repo.yaml', recorded_at: '2026-01-01' },
+    }))),
+  });
+  commitAll(kernel);
+  check('t119 an intake_record without a verdict is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// --- applicability status is resolved | unresolved, not the intake verdict ---
+
+// t120 — a record whose intake verdict is deferred is still runtime-resolved:
+// the deferred verdict is reached through the pointer, not carried as a status.
+{
+  const { kernel, instance } = freshPair('t120');
+  plantRuleResolution(kernel, {
+    bundle: bundleWithPlantedDoc('applicability.schema.json', applDoc(applRec({
+      scope: 'repository', repository: 'example-repo', source: 'repository',
+      intake_record: { register: 'instruction-intake/example-repo.yaml', recorded_at: '2026-01-01', verdict: 'deferred' },
+      status: 'resolved',
+    }))),
+  });
+  commitAll(kernel);
+  check('t120 a deferred intake verdict does not force status unresolved', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t121 — a resolved record must not carry a resume_condition (that field is the
+// unresolved record's own return condition, kept separate from the intake one).
+{
+  const { kernel, instance } = freshPair('t121');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json',
+      applDoc(applRec({ status: 'resolved', resume_condition: 'must not be here' }))),
+  });
+  commitAll(kernel);
+  check('t121 a resolved record carrying a resume_condition is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// t122 — an unresolved record still needs its own resume_condition.
+{
+  const { kernel, instance } = freshPair('t122');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json',
+      applDoc(applRec({ status: 'unresolved' }))),
+  });
+  commitAll(kernel);
+  check('t122 an unresolved record without a resume_condition is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// --- change_class requires "change" in work_kind, but not [\"change\"] alone --
+// These exercise the `contains` construct added to the in-gate validator.
+
+// t123 — work_kind lists change alongside another value; change_class is allowed.
+{
+  const { kernel, instance } = freshPair('t123');
+  plantRuleResolution(kernel, {
+    bundle: bundleWithPlantedDoc('applicability.schema.json', applDoc(applRec({
+      activation: 'task-class',
+      task_class: { work_kind: ['assessment', 'change'], change_class: ['BUGFIX'] },
+    }))),
+  });
+  commitAll(kernel);
+  check('t123 change_class with work_kind [assessment, change] is accepted', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t124 — but change_class with no change in work_kind is still rejected.
+{
+  const { kernel, instance } = freshPair('t124');
+  plantRuleResolution(kernel, {
+    bundle: mustRejectBundle('applicability.schema.json', applDoc(applRec({
+      activation: 'task-class',
+      task_class: { work_kind: ['assessment'], change_class: ['BUGFIX'] },
+    }))),
+  });
+  commitAll(kernel);
+  check('t124 change_class with no change in work_kind is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: a fixture that must satisfy applicability\.schema\.json did not/],
+  });
+}
+
+// t125 — the `contains` keyword is now implemented by the in-gate validator:
+// the real applicability schema uses it, so t98's green run already proves it
+// is accepted; here we prove the opposite keyword class still fails, so the
+// acceptance in t98 is not the validator having gone permissive.
+{
+  const { kernel, instance } = freshPair('t125');
+  const appl = fs.readFileSync(path.join(RR_SRC, 'applicability.schema.json'), 'utf8')
+    .replace('"contains": { "const": "change" }', '"minContains": 1, "contains": { "const": "change" }');
+  plantRuleResolution(kernel, { appl });
+  commitAll(kernel);
+  check('t125 an unimplemented sibling keyword still fails while contains is accepted', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/rule-resolution: applicability\.schema\.json uses a construct this validator cannot check/],
+  });
+}
+
 fs.rmSync(workRoot, { recursive: true, force: true });
 
 console.log('---');

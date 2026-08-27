@@ -18,6 +18,23 @@ updated: 2026-08-21
 
 ### Added
 
+- **Repository reference mechanism — каноническая идентичность и display alias
+  разведены.** Единственная каноническая идентичность продуктового репозитория
+  — `inventory/repositories.yaml` → `repositories[].id`; display alias adapter
+  (`folders[].name` в файле Cursor workspace) идентичностью не является и
+  repository scope не создаёт. Новый стандарт
+  `standards/workspace/repository-references.md` и схема
+  `registries/inventory/repository-references.schema.json` вводят
+  типизированную reference-запись (`kind` / `alias` / `repository_id` /
+  `sources`) и fail-closed exact resolution: сначала точное совпадение с
+  каноническим `id`, иначе точное case-sensitive совпадение с объявленным
+  alias — ровно в один `repository_id`; ноль совпадений —
+  `unresolved_repository_reference` / STOP, несколько разных — `conflict` /
+  STOP; alias выходной идентичностью не становится. Без fuzzy-, remote-,
+  path- и basename-подбора. Instance хранит конкретные aliases в
+  `inventory/repository-references.yaml`; `instance-template/` несёт пустой
+  реестр. `VERSION` не менялся (`0.3.0`), релиз не выполнялся.
+
 - **Режим продвижения — свойство репозитория, а не каждой вложенной release
   unit.** `version-control-flow.md` объявлял себя применимым к Kernel, Instance
   и delivery adapters, но требовал для стабильной линии `release/<semver>`,

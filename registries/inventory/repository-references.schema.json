@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "repository-references.schema.json",
+  "title": "Repository reference records",
+  "description": "Product-neutral shape for resolving an adapter display alias to a canonical repository id. Canonical identity is repositories[].id in the repository inventory; this registry references those ids and never redefines their shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "references"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "references": {
+      "type": "array",
+      "description": "May be empty: the bootstrap template ships no references, and an Instance adds one entry per verified adapter alias.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "alias", "repository_id", "sources"],
+        "properties": {
+          "kind": {
+            "const": "cursor-workspace-folder",
+            "description": "Closed for the MVP: the only reference kind is a folder display name inside a Cursor workspace file."
+          },
+          "alias": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The human-readable display label exactly as the adapter writes it. A label, not an identity."
+          },
+          "repository_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "The canonical id this alias resolves to. Lowercase kebab-case, and it must exist as repositories[].id in the repository inventory."
+          },
+          "sources": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "Every place the display alias is actually written. Provenance only: the adapter text itself is not copied here.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["artifact", "pointer"],
+              "properties": {
+                "artifact": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:[\\\\/])(?!.*\\\\)(?!(?:.*/)?\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._/-]*$",
+                  "description": "Instance-relative path to the adapter file that carries the alias. A leading slash, a drive-letter prefix, any backslash, and any `..` path segment (in any position) are rejected as far as one pattern can express it."
+                },
+                "pointer": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Exact location of the alias inside the artifact, e.g. folders[name=<alias>].name."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

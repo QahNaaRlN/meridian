@@ -18,6 +18,54 @@ updated: 2026-08-21
 
 ### Added
 
+- **Режим продвижения — свойство репозитория, а не каждой вложенной release
+  unit.** `version-control-flow.md` объявлял себя применимым к Kernel, Instance
+  и delivery adapters, но требовал для стабильной линии `release/<semver>`,
+  `VERSION`, тег `vX.Y.Z` и SemVer-hotfix — а `release-versioning.md` §8
+  одновременно фиксирует Instance как Git-revision без SemVer. Обе нормы
+  Instance исполнить не мог. Correction разделяет две сущности: режим
+  продвижения описывает **верхнеуровневую (repository-level) release identity
+  репозитория**. Закрытый набор: `semver-release` (repository-level `VERSION` и
+  repository-level тег `vX.Y.Z`; так объявлен Kernel — `master` / `develop`) и
+  `revision-promotion` (repository-level состояние идентифицируется Git SHA
+  итогового non-fast-forward advancement commit; repository-level `VERSION` и
+  тег не создаются; так объявлен тип репозитория Instance до отдельного решения
+  владельца о SemVer — конкретные имена линий и само объявление остаются в
+  Instance).
+
+  Вложенная независимо версионируемая единица (`stack-profiles/` в Kernel,
+  smoke-пакет в Instance) разведена по **двум независимым осям**. Ось A
+  (версионирование): режим репозитория не переопределяет её `VERSION`,
+  `CHANGELOG`, SemVer и tag convention; изменение вложенного `VERSION` — не
+  повышение repository-level `VERSION` и режим репозитория не выбирает. Ось B
+  (Git-flow файлов): изменение вложенной единицы — обычный package change,
+  идёт через `feature/<slug>` в интеграционную линию, а в стабильную линию его
+  файлы попадают только следующим repository advancement своего режима
+  (`release/<semver>` или `promotion/<slug>`); независимость номера единицы не
+  разрешает прямую запись в стабильную линию и не создаёт третий способ
+  продвижения репозитория; такое advancement не обязано повышать
+  repository-level `VERSION` только из-за вложенного. Отдельного flow и нового
+  tag namespace для вложенных единиц стандарт не проектирует.
+
+  Общая часть модели сохранена: `feature/<slug>` от интеграционной линии и
+  обратно, запрет прямой записи в стабильную линию, first-parent чтение,
+  отдельный non-fast-forward advancement commit на каждое продвижение,
+  неизменность опубликованной истории, `push` не подразумевается. Режим,
+  стабильная и интеграционная линии объявляются в tracked репозиторий-локальном
+  источнике governance/конфигурации (для Kernel — сам стандарт). Общее
+  ожидаемое правило для типа репозитория (`revision-promotion` для Instance)
+  **не заменяет** локальное объявление конкретного репозитория: каждый
+  конкретный Instance обязан объявить режим и линии в своём tracked-источнике,
+  до этого Git-интегратор fail-closed и не начинает release/promotion
+  integration, а противоречащее общему правилу локальное объявление требует
+  явного решения владельца. Fail-closed также при нескольких конфликтующих
+  объявлениях и при конфликте объявления с repository-level evidence; имя
+  `main`/`master`, исторические теги и `VERSION`/тег вложенной единицы
+  repository-level evidence не являются.
+
+  `VERSION` не менялся (`0.3.0`), релиз не создавался; оба стандарта остаются
+  `maintained`.
+
 - **Git-flow и release versioning приняты как два раздельных нормативных
   стандарта** (`status: maintained`) после независимого review Codex
   2026-08-27. `standards/workspace/version-control-flow.md` вводит роль

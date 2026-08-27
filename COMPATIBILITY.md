@@ -73,11 +73,18 @@ Meridian состоит из независимо версионируемых �
 - Продуктовые релизы и их CI — вне области Kernel.
 - Область действия завендоренного стандарта версионирования документов
   (`skills/versioning-standard-docs/`) ограничена документами в каноническом
-  wiki. Версионирование Git-артефактов Kernel — отдельный предмет; он
-  зафиксирован двумя принятыми (`maintained`) стандартами:
+  wiki. Версионирование Git-артефактов Kernel — отдельный предмет; он описан
+  двумя стандартами:
   [`standards/workspace/version-control-flow.md`](standards/workspace/version-control-flow.md)
   (поток веток: стабильная линия, `develop`, `feature`/`release`/`hotfix`) и
   [`standards/workspace/release-versioning.md`](standards/workspace/release-versioning.md)
-  (SemVer-линия Kernel, `VERSION`, Keep a Changelog, тег `vX.Y.Z`). Их правила
-  выбора MAJOR/MINOR/PATCH ссылаются на ломающие изменения в терминах этого
-  контракта, не переопределяя его.
+  (SemVer-линия Kernel, `VERSION`, Keep a Changelog, тег `vX.Y.Z`). Стандарты
+  задают режим продвижения **репозитория**: `semver-release` (Kernel —
+  repository-level `VERSION`, тег `vX.Y.Z`) и `revision-promotion` (репозиторий
+  без решения о SemVer, включая Instance — верхнеуровневое состояние
+  идентифицируется Git SHA advancement commit, repository-level `VERSION`/тег не
+  создаются). Вложенные независимо версионируемые единицы (`stack-profiles/`,
+  smoke-пакет) режим репозитория не переопределяет — они ведут свои
+  `VERSION`/`CHANGELOG`/теги сами. Правила выбора MAJOR/MINOR/PATCH обоих
+  стандартов ссылаются на ломающие изменения в терминах этого контракта, не
+  переопределяя его.

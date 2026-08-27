@@ -28,12 +28,25 @@ related_documents:
 Поток веток, в котором выпуск готовится, описан отдельно
 (`version-control-flow.md`).
 
+Правила номера в этом стандарте — правила **repository-level** версии
+репозитория в **режиме `semver-release`** (`version-control-flow.md` §1.3).
+Репозиторий в режиме `revision-promotion` — Instance, пока владелец не принял
+решение распространять его как SemVer-продукт, — repository-level номера не
+ведёт: его принятое верхнеуровневое состояние идентифицируется Git SHA
+advancement commit (§8). Вложенные независимо версионируемые единицы такого
+репозитория (`version-control-flow.md` §1.4) продолжают вести свои номера.
+
 ## 1. Kernel — самостоятельная релизная единица
 
 Kernel версионируется по [SemVer](https://semver.org/spec/v2.0.0.html)
 собственной линией, независимой от Instance и от любого продуктового
 репозитория (`COMPATIBILITY.md`). Совместимость Kernel и Instance
 **объявляется** в `COMPATIBILITY.md`, а не выводится из близости номеров.
+
+Kernel как репозиторий работает в режиме `semver-release`
+(`version-control-flow.md` §1.3): всё, что ниже, — правила repository-level
+версии Kernel в этом режиме. Вложенная единица `stack-profiles/` ведёт свою
+линию сама (§8, `version-control-flow.md` §1.4).
 
 ## 2. Источник версии — файл `VERSION`
 
@@ -123,7 +136,7 @@ Kernel версионируется по [SemVer](https://semver.org/spec/v2.0.0
 
 ### 7.3. Hotfix и номер
 
-`hotfix/<slug>` (`version-control-flow.md` §2.3) допустим **только** для
+`hotfix/<slug>` (`version-control-flow.md` §2.4) допустим **только** для
 изменения, которое по правилам этой релизной единицы (§7.1–§7.2) соответствует
 **PATCH**: не меняет смысла ни одной нормы, ни одной схемы, контракта гейта и
 совместимости.
@@ -143,19 +156,31 @@ Kernel версионируется по [SemVer](https://semver.org/spec/v2.0.0
 Meridian состоит из независимо версионируемых единиц; общей линии версий у них
 нет (`COMPATIBILITY.md`).
 
-- **`stack-profiles/`** — отдельная релизная единица с собственными `VERSION` и
-  `CHANGELOG.md`, версионируется независимо от `VERSION` Kernel
+- **`stack-profiles/`** — вложенная независимо версионируемая единица
+  (`version-control-flow.md` §1.4) с собственными `VERSION` и `CHANGELOG.md`,
+  версионируется независимо от repository-level `VERSION` Kernel
   (`stack-profiles/README.md`). Этот стандарт на её номер не влияет; правила §3,
-  §4 и §7 она применяет к своей линии сама.
-- **Instance** — использует **Git revision**, а не SemVer. Номер версии Instance
-  получает только если и когда владелец примет отдельное решение распространять
-  его как продукт (`COMPATIBILITY.md`). До такого решения ссылка на состояние
-  Instance — это ревизия, а не версия.
+  §4 и §7 она применяет к своей линии сама. `semver-release` репозитория Kernel
+  её линию не поглощает.
+- **Instance** — использует **Git revision**, а не repository-level SemVer.
+  Repository-level номер Instance получает только если и когда владелец примет
+  отдельное решение распространять его как SemVer-продукт (`COMPATIBILITY.md`).
+  До такого решения ссылка на верхнеуровневое состояние Instance — это ревизия,
+  а не версия. Продвижение выполняется в режиме `revision-promotion`
+  (`version-control-flow.md` §1.3, §2.3): ветка `promotion/<slug>`, отдельный
+  non-fast-forward promotion advancement commit, идентификатор — его Git SHA,
+  без repository-level `VERSION` и без repository-level тега `vX.Y.Z`. Общее
+  правило типа не заменяет локальное объявление: каждый конкретный Instance
+  обязан объявить режим и имена своих линий в собственном tracked-источнике, и
+  до этого Git-интегратор fail-closed (`version-control-flow.md` §5.2).
+  Собственный SemVer вложенных единиц Instance режим репозитория не отменяет.
 - **Завендоренные зависимости** (`skills/<name>/`) привязаны к неизменяемому
   SHA-256 в `PIN.yaml`. Это пин, а не номер версии: смена пина — изменение
   Kernel и требует записи в `CHANGELOG.md` (`COMPATIBILITY.md`).
-- **Smoke-пакет** Instance несёт собственный SemVer по своей природе
-  (`COMPATIBILITY.md`) и этим стандартом не переопределяется.
+- **Smoke-пакет** Instance — вложенная независимо версионируемая единица
+  (`version-control-flow.md` §1.4): несёт собственный SemVer по своей природе
+  (`COMPATIBILITY.md`), и `revision-promotion` репозитория Instance его не
+  отменяет и не переопределяет.
 
 ## 9. Что этот стандарт не описывает
 

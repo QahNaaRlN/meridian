@@ -1,0 +1,10 @@
+$schema: ./repository-references.schema.json
+# Repository reference records. Each entry resolves an adapter display alias to a
+# canonical repository id (inventory/repositories.yaml -> repositories[].id).
+# Add an entry only from an adapter file whose alias you have actually verified,
+# and always point repository_id at an id that already exists in the canonical
+# repository inventory. An unknown or conflicting alias is fail-closed, never
+# guessed (standards/workspace/repository-references.md). The schema lives in the
+# Kernel and is resolved by registry directory name.
+schema_version: 1
+references: []

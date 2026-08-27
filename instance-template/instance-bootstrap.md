@@ -33,7 +33,13 @@ to make.
    `commands/repositories.yaml` (source-cited commands),
    `environments/*.yaml` (topology, access references, test data — external
    references only, never secrets).
-6. Working memory lives under `.agent/` per the Kernel's
+6. Fill `inventory/repository-references.yaml` only after
+   `inventory/repositories.yaml` already carries the canonical ids. Add one
+   entry per adapter display alias you have actually verified in an adapter
+   file, each pointing at an existing `repositories[].id`. An unknown or
+   conflicting alias is fail-closed — resolution stops, it is not guessed
+   (`standards/workspace/repository-references.md`).
+7. Working memory lives under `.agent/` per the Kernel's
    `standards/workspace/agent-memory.md`. `.agent/feedback/friction-log.md`
    and `.agent/metrics/` are pre-seeded — see
    `standards/workspace/feedback-and-metrics.md` in the Kernel for what goes

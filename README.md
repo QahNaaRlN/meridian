@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-19
+updated: 2026-08-28
 ---
 
 # Meridian
@@ -74,9 +74,11 @@ meridian/
 ├── verification/       verification router, regression-правила, smoke-protocol
 ├── skills/             завендоренные skill-пакеты с SHA-пинами
 ├── registries/         правила и JSON Schema реестров (не данные)
+│   └── rule-resolution/ схемы применимости норм и вывода резолвера (PHASE B)
 ├── instance-template/  bootstrap-каркас нового Instance (первый день на продукте)
-├── scripts/            kernel-validate.mjs, preflight.mjs
-├── test/               instance-fixture/ и регрессионный набор валидатора
+├── scripts/            kernel-validate.mjs, preflight.mjs, rule-resolver.mjs
+│   └── lib/            общие чистые helpers (YAML-subset, JSON-Schema-subset, marked-region reader)
+├── test/               instance-fixture/ и регрессионные наборы валидатора и резолвера
 ├── hooks/              pre-push: тесты валидатора + прогон против fixture
 └── .github/workflows/gate.yml
 ```
@@ -95,6 +97,55 @@ Preflight — первый шаг любой агентной сессии: он
 открыта против устаревших корней или без `MERIDIAN_INSTANCE`, вместо того
 чтобы молча читать не те правила. Bootstrap нового Instance начинается с
 [`instance-template/instance-bootstrap.md`](instance-template/instance-bootstrap.md).
+
+## 4a. Резолвер норм
+
+`scripts/rule-resolver.mjs` (PHASE C программы `MERIDIAN-RULE-RESOLUTION-001`) —
+read-only механика ядра рядом с валидатором. Она отвечает на вопрос «какие
+агентные нормы, протоколы и верификация применимы к этой единице работы и
+почему» как детерминированная функция от явного входа: один и тот же вход на
+одной ревизии источников даёт байт-идентичный, одинаково упорядоченный вывод
+по контракту
+[`registries/rule-resolution/resolver-output.schema.json`](registries/rule-resolution/resolver-output.schema.json).
+Это не расширение `kernel-validate.mjs`; гейтом остаётся валидатор. Общий
+YAML-reader, JSON-Schema-движок и reader маркированных участков вынесены в
+`scripts/lib/`, чтобы оба скрипта использовали одну реализацию, а не копию;
+участок норм-контейнера пересчитывается тем же reader'ом — маркеры ищутся в
+буфере с погашёнными fenced-блоками (пример не становится объявлением), но в
+дайджест идёт дословный source-срез участка между маркерами, со всеми
+символами, включая fenced-код; объявленный, но отсутствующий/дублированный/
+незакрытый участок — fail-closed, без отката к чтению всего файла.
+
+```bash
+node test/rule-resolver.test.mjs                       # десять acceptance-кейсов + fail-closed пути
+
+MERIDIAN_INSTANCE=/path/to/meridian-instance-<product> \
+node scripts/rule-resolver.mjs \
+  --request <request.json> \
+  --applicability <applicability-register.yaml|json> \
+  [--protocol-routes <routes.json|yaml>] \
+  [--verification-routes <routes.json|yaml>] \
+  [--prior-state <prior.json|yaml>]
+```
+
+- `--request` — JSON `{ "work_item": { … } }` в форме §3.1 нормативной модели
+  (`repository_id`, `work_kind`, `change_class` при `work_kind: change`,
+  `candidate_paths`, `changed_paths`, опционально `declared_profiles`).
+- `--applicability` — весь envelope реестра применимости PHASE B
+  (`{ "$schema", "schema_version", "records" }`). До извлечения записей документ
+  целиком проверяется тем же JSON-Schema-движком против
+  [`registries/rule-resolution/applicability.schema.json`](registries/rule-resolution/applicability.schema.json);
+  пустой `{}`, отсутствие `records`, неверный `schema_version`, лишнее поле,
+  `records` не-массивом или голый массив верхнего уровня — fail-closed с
+  кодом возврата 2. Отсутствующий `records` не превращается в `[]`.
+- `--protocol-routes` / `--verification-routes` / `--prior-state` — ещё не
+  стандартизованные источники; используются, только если переданы, без
+  скрытого пути по умолчанию.
+- Instance читается **только** через `MERIDIAN_INSTANCE`: оттуда берутся
+  `inventory/repositories.yaml` и те `instruction-intake/*.yaml`, на которые
+  ссылаются записи применимости. Вывод — JSON в stdout. Отсутствие
+  обязательного источника — fail-closed: ясная диагностика в stderr и
+  ненулевой код возврата. Скрипт ничего не изменяет.
 
 Валидатор устроен по правилу «проверка, которую нельзя выполнить, сообщает
 UNVERIFIED, а не OK». Зелёный прогон означает «проверено», а не «не смотрели».

@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-27
+updated: 2026-08-28
 ---
 
 # Changelog
@@ -15,6 +15,105 @@ updated: 2026-08-27
 Линия версий Kernel независима от Instance и от продуктовых репозиториев.
 
 ## [Unreleased]
+
+### Added
+
+- **Deterministic rule resolver (PHASE C of `MERIDIAN-RULE-RESOLUTION-001`).**
+  `scripts/rule-resolver.mjs` — a read-only Kernel mechanic beside
+  `kernel-validate.mjs`, not an extension of it; the validator stays the gate.
+  A pure core `resolveRules(workItem, sources)` plus a CLI wrapper: the work
+  item is exactly the §3.1 shape of the normative model, `sources` are
+  explicitly injected environmental data (repository inventory, PHASE B
+  applicability records, instruction-intake registers, and the not-yet-
+  standardised protocol/verification route records), and the same input on the
+  same source revision returns a byte-identical, identically ordered object
+  that satisfies `registries/rule-resolution/resolver-output.schema.json`.
+  Axes are checked separately and conjunctively; a technology profile never
+  yields an architecture profile; `architecture_profile` absence is not by
+  itself unresolved; a `deferred` intake verdict does not disable a norm.
+  Path-glob: every separate `**` is zero or more whole path segments, several
+  and adjacent `**` are supported (`**/**/x`, `a/**/**/b`) and collapse to one,
+  and any mask outside the declared grammar is refused, never approximated.
+  Protocol routes are filtered against the work context — the injected route
+  shape carries its own exact `repository` / `product_domain` selectors — before
+  any conflict is computed, so a repository route for one repository never
+  reaches another and a local/universal disagreement that survives scope
+  filtering is a `conflicts` entry, not a silent override. Provenance is
+  verified for every applicability record that matches the work item —
+  `status: resolved`, `status: unresolved` and `activation: undetermined`
+  alike: each must have a resolvable exact intake pointer and a supplied norm
+  text/region whose SHA-256 equals the recorded digest; records irrelevant on
+  scope/path/task-class need no text. Append-only precedence: the authoritative
+  latest applicability record decides one norm identity — a newer `unresolved`
+  suppresses an older `resolved` and a newer `resolved` suppresses an older
+  `unresolved`; records that cannot be ordered within the available
+  identity/date are fail-closed, never ordered by JSON lexical order. A
+  container norm's region is recomputed through the shared marked-region reader:
+  markers are located in the fenced-blanked buffer (a marker quoted in a fenced
+  example is not a declaration), but the text handed to the digest is the
+  region's verbatim source slice — `instructionRegions().regions[].sourceText`,
+  every character of the region between its markers intact, fenced code
+  included — never the space-blanked parser view; a named region that is
+  missing, duplicated or unclosed is fail-closed, never a fallback to the whole
+  file. The CLI's `--applicability` input is the whole PHASE B register
+  envelope: it is validated against
+  `registries/rule-resolution/applicability.schema.json` with the shared engine
+  before records are touched, so a bare `{}`, a missing `records`, a wrong
+  `schema_version`, an additional property, a non-array `records` or a
+  top-level raw array is fail-closed with exit 2 — `records` is never coerced
+  to `[]`. The pure core still takes an injected `applicability_records` array.
+  The work item is validated strictly against §3.1:
+  `candidate_paths` and `changed_paths` are mandatory string arrays and a
+  missing or non-array value is not coerced to `[]`, an unknown work-item field
+  and a malformed `declared_profiles` are rejected. Repository ids, intake
+  pointers and route keys match exactly, with no fuzzy/path/basename fallback;
+  `changed_paths` that widen the prior `candidate_paths` set
+  `requires_reresolution`; `REFACTOR` gets `unresolved_applicability`, never
+  another class's protocol, until PHASE D/E; a defect found inside a `REFACTOR`
+  needs a separate `BUGFIX` child or an owner decision and does not reclassify
+  the original work; an undecomposed `initiative` returns
+  `decomposition_required`, the declared decomposition protocol or `null`,
+  pre-decomposition norms and separate `unresolved_items`; a reviewer
+  assignment is not an input and does not change the result.
+
+- **Shared pure helpers under `scripts/lib/`.** The YAML subset reader
+  (`scripts/lib/yaml.mjs`), the JSON Schema subset engine
+  (`scripts/lib/json-schema.mjs`) and the marked-region reader
+  (`scripts/lib/regions.mjs` — `blankFencedBlocks`, `markedRegion`,
+  `instructionRegions`) moved verbatim out of `kernel-validate.mjs`, which now
+  imports them, so the validator and the resolver read YAML, validate against
+  JSON Schema and parse marked regions through one implementation each rather
+  than a second copy. The documented subsets, the supported keyword set, the
+  format checks, the region parsing rules and every throw are unchanged; the
+  validator's regression suite is unaffected. `instructionRegions()` additionally
+  exposes, per region, a `sourceText` (the verbatim slice of the original input
+  between the markers) beside the existing `text` (the fenced-blanked parser
+  view) — an additive field; the validator keeps reading `text`.
+
+- **Regression coverage for the resolver.** `test/rule-resolver.test.mjs` and
+  the product-neutral `test/fixtures/rule-resolver.fixtures.json`: one named
+  test per acceptance case of §4/§9 of the normative model (cases 9 and 10 are
+  separate tests), plus a genuine `status: unresolved` case surfaced under its
+  own resume condition; append-only precedence in both directions and its
+  unorderable-records fail-closed; cross-repository and product-domain protocol
+  route isolation; missing/duplicate/unclosed region, a fenced-example marker,
+  and a region whose `sourceText` keeps fenced code verbatim and hashes to the
+  same SHA-256 as the raw slice between its markers; a valid `--applicability`
+  envelope resolving via the CLI and malformed envelopes (no `records`, bare
+  `{}`, wrong `schema_version`, non-array `records`, an extra property, a raw
+  array) each fail-closed with exit 2;
+  missing/non-array/non-string `candidate_paths` and `changed_paths`;
+  negative tests for a stale digest, a missing text and an unresolvable intake
+  pointer on `unresolved` and `undetermined` records as well as `resolved`
+  ones; the new several/adjacent `**` glob cases; and the pre-existing
+  fail-closed paths (unknown repository id, `work_kind`/`change_class` pairing,
+  malformed applicability record, unsupported glob, incompatible mandatory
+  routes, missing mandatory source), stable ordering and output-schema
+  conformance. Wired into `.github/workflows/gate.yml` and `hooks/pre-push`;
+  `README.md` documents the CLI and the test command.
+  `instance-template/hooks/pre-push` is left untouched — it checks published
+  Instance state, not Kernel unit tests. `VERSION` unchanged; no release, no
+  tag.
 
 ## [0.4.0] — 2026-08-27 (`draft`)
 

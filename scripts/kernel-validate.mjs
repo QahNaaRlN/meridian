@@ -69,6 +69,15 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+// The YAML subset reader, the JSON Schema subset engine and the marked-region
+// reader live in scripts/lib/ so this validator and scripts/rule-resolver.mjs
+// share one implementation of each rather than each carrying its own copy.
+// Behaviour is unchanged: all three modules are the verbatim code that used to
+// sit inline here.
+import { yamlParse } from './lib/yaml.mjs';
+import { validate, assertSupportedDeep } from './lib/json-schema.mjs';
+import { markedRegion, instructionRegions } from './lib/regions.mjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The Kernel is this repository. The Instance is elsewhere, by construction:
@@ -91,67 +100,14 @@ const info = (m) => report.push(`INFO  ${m}`);
 const readIfExists = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch { return null; } };
 
 // ---------------------------------------------------------------------------
-// Marked regions. When something mechanical has to read a part of a Markdown
-// file rather than the whole of it, the part declares its own boundaries. The
-// alternative — locating it by a heading, or by the shape of the tables inside
-// it — makes the parser depend on prose that any author may legitimately
-// rewrite, and a parser that silently reads the wrong region reports agreement
-// it never checked. The vocabulary is one pair of HTML comments:
-//   <!-- meridian:begin <name> [key=value ...] -->
-//   <!-- meridian:end <name> -->
-// Comments render as nothing in every Markdown tool, so the marker costs the
-// reader nothing and costs the parser no guessing. Anything other than exactly
-// one well-ordered pair is an error, never a fallback to the whole file.
+// blankFencedBlocks and markedRegion moved verbatim to scripts/lib/regions.mjs
+// (imported above) so this validator and scripts/rule-resolver.mjs read marked
+// regions through one implementation. The vocabulary is one pair of HTML
+// comments — <!-- meridian:begin <name> [key=value ...] --> / <!-- meridian:end
+// <name> --> — fenced examples are blanked before the search, and anything
+// other than exactly one well-ordered pair is an error, never a fallback to the
+// whole file. The parsing rules and every error string are unchanged.
 // ---------------------------------------------------------------------------
-// Fenced code blocks are examples, not declarations: a document that explains
-// this very syntax would otherwise declare a region by quoting one. Blanked,
-// not removed, so every offset computed afterwards still points where it did.
-// A fence that never closes is an error rather than a licence to blank the
-// rest of the file — otherwise a Markdown typo hides everything after it.
-// A closing fence must be at least as long as the opening one (CommonMark),
-// or a shorter fence inside a longer one ends the example early.
-function blankFencedBlocks(raw) {
-  const lines = raw.split('\n');
-  let fenceChar = null;
-  let fenceLen = 0;
-  let openedAt = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(/^ {0,3}(`{3,}|~{3,})/);
-    if (fenceChar === null) {
-      if (!m) continue;
-      fenceChar = m[1][0];
-      fenceLen = m[1].length;
-      openedAt = i;
-    } else if (m && m[1][0] === fenceChar && m[1].length >= fenceLen) {
-      fenceChar = null;
-    }
-    lines[i] = lines[i].replace(/[^\r]/g, ' ');
-  }
-  if (fenceChar !== null) {
-    const original = raw.split('\n');
-    for (let i = openedAt; i < lines.length; i++) lines[i] = original[i] ?? lines[i];
-    return {
-      text: lines.join('\n'),
-      error: `a code fence opens at line ${openedAt + 1} and is never closed; until it is, everything after it can be read either as an example or as a declaration, and neither reading can be trusted`,
-    };
-  }
-  return { text: lines.join('\n'), error: null };
-}
-
-function markedRegion(raw, name) {
-  const fenced = blankFencedBlocks(raw);
-  if (fenced.error) return { error: fenced.error };
-  const text = fenced.text;
-  const begin = [...text.matchAll(new RegExp(`<!--\\s*meridian:begin\\s+${name}\\b([^>]*?)-->`, 'g'))];
-  const end = [...text.matchAll(new RegExp(`<!--\\s*meridian:end\\s+${name}\\s*-->`, 'g'))];
-  if (begin.length !== 1 || end.length !== 1) {
-    return { error: `expected exactly one "meridian:begin ${name}" marker and one "meridian:end ${name}" marker, found ${begin.length} and ${end.length}` };
-  }
-  const from = begin[0].index + begin[0][0].length;
-  const to = end[0].index;
-  if (to < from) return { error: `"meridian:end ${name}" comes before "meridian:begin ${name}"` };
-  return { text: text.slice(from, to), attrs: begin[0][1].trim() };
-}
 
 function listFiles(dir, exts) {
   let out = [];
@@ -166,336 +122,15 @@ function listFiles(dir, exts) {
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// YAML: documented subset. Supports block mappings, block sequences, plain and
-// quoted scalars, `|`/`>` block scalars with optional `-` chomping, comments,
-// empty values as null.
-// Throws UnsupportedYaml on flow style, anchors, aliases, tags, multi-document
-// streams and tab indentation.
-// ---------------------------------------------------------------------------
-class UnsupportedYaml extends Error {}
-
-// A block scalar header may carry a chomping indicator. `-` strips the trailing
-// newline, which is what this reader does anyway, so it is accepted; `+` keeps
-// trailing newlines, which this reader does not model, so it is refused rather
-// than quietly read as `|`. Anything else after the indicator (an explicit
-// indent, say) is likewise refused. This mattered: `>-` used to fall through to
-// the plain-scalar branch, and every indented line under it was then read as a
-// sibling key — the fields of a record silently vanished instead of the reader
-// saying it could not read them.
-function blockScalarStyle(v) {
-  const m = /^([|>])([-+]?)$/.exec(v);
-  if (!m) return null;
-  if (m[2] === '+') throw new UnsupportedYaml(`block scalar with keep chomping ("${v}") is not implemented by this reader`);
-  return m[1];
-}
-
-function stripComment(line) {
-  let inS = false, inD = false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c === "'" && !inD) inS = !inS;
-    else if (c === '"' && !inS) inD = !inD;
-    else if (c === '#' && !inS && !inD && (i === 0 || /\s/.test(line[i - 1]))) return line.slice(0, i);
-  }
-  return line;
-}
-
-// Flow-style collections: [], {}, [a, b], {k: v}, nested. Quoted strings are
-// honoured; ':' only terminates a token when a key is being read inside {},
-// so plain scalars containing ':' (URLs) survive inside sequences.
-function parseFlow(src) {
-  let i = 0;
-  const ws = () => { while (i < src.length && /\s/.test(src[i])) i++; };
-  const token = (isKey) => {
-    ws();
-    if (src[i] === "'" || src[i] === '"') {
-      const q = src[i++]; let out = '';
-      while (i < src.length && src[i] !== q) out += src[i++];
-      if (src[i] !== q) throw new UnsupportedYaml('unterminated quoted string in flow collection');
-      i++; return out;
-    }
-    const stop = isKey ? ',]}:' : ',]}';
-    const start = i;
-    while (i < src.length && !stop.includes(src[i])) i++;
-    const raw = src.slice(start, i).trim();
-    return isKey ? raw : parseScalar(raw);
-  };
-  const value = () => {
-    ws();
-    if (src[i] === '[') {
-      i++; const arr = []; ws();
-      if (src[i] === ']') { i++; return arr; }
-      for (;;) {
-        arr.push(value()); ws();
-        if (src[i] === ',') { i++; continue; }
-        if (src[i] === ']') { i++; return arr; }
-        throw new UnsupportedYaml('malformed flow sequence');
-      }
-    }
-    if (src[i] === '{') {
-      i++; const obj = {}; ws();
-      if (src[i] === '}') { i++; return obj; }
-      for (;;) {
-        const k = token(true); ws();
-        if (src[i] !== ':') throw new UnsupportedYaml('malformed flow mapping');
-        i++; obj[k] = value(); ws();
-        if (src[i] === ',') { i++; continue; }
-        if (src[i] === '}') { i++; return obj; }
-        throw new UnsupportedYaml('malformed flow mapping');
-      }
-    }
-    return token(false);
-  };
-  const out = value();
-  ws();
-  if (i !== src.length) throw new UnsupportedYaml('trailing content after flow collection');
-  return out;
-}
-
-function parseScalar(raw) {
-  const s = raw.trim();
-  if (s === '' || s === '~' || s === 'null') return null;
-  if (s.startsWith('{') || s.startsWith('[')) return parseFlow(s);
-  if (s.startsWith('&') || s.startsWith('*')) throw new UnsupportedYaml('anchor or alias');
-  if (s.startsWith('!')) throw new UnsupportedYaml('explicit tag');
-  if (/^'(.*)'$/s.test(s)) return s.slice(1, -1).replace(/''/g, "'");
-  if (/^"(.*)"$/s.test(s)) return s.slice(1, -1).replace(/\\"/g, '"');
-  if (s === 'true') return true;
-  if (s === 'false') return false;
-  if (/^-?\d+$/.test(s)) return Number.parseInt(s, 10);
-  if (/^-?\d+\.\d+$/.test(s)) return Number.parseFloat(s);
-  return s;
-}
-
-function yamlParse(text) {
-  const rawLines = text.split(/\r?\n/);
-  const lines = [];
-  rawLines.forEach((raw, i) => {
-    if (/^\t/.test(raw)) throw new UnsupportedYaml(`tab indentation at line ${i + 1}`);
-    if (i > 0 && /^---\s*$/.test(raw)) throw new UnsupportedYaml(`multi-document stream at line ${i + 1}`);
-    const stripped = stripComment(raw);
-    if (stripped.trim() === '') return;
-    lines.push({ indent: stripped.match(/^ */)[0].length, text: stripped.trim(), n: i + 1 });
-  });
-
-  let pos = 0;
-
-  function readBlockScalar(parentIndent, style) {
-    const parts = [];
-    while (pos < lines.length && lines[pos].indent > parentIndent) parts.push(lines[pos++].text);
-    return style === '|' ? parts.join('\n') : parts.join(' ');
-  }
-
-  function parseNode(indent) {
-    if (pos >= lines.length || lines[pos].indent < indent) return null;
-    if (lines[pos].text.startsWith('- ') || lines[pos].text === '-') {
-      const arr = [];
-      while (pos < lines.length && lines[pos].indent === indent &&
-             (lines[pos].text.startsWith('- ') || lines[pos].text === '-')) {
-        const line = lines[pos];
-        const rest = line.text === '-' ? '' : line.text.slice(2).trim();
-        if (rest === '') { pos++; arr.push(parseNode(indent + 2)); continue; }
-        const m = rest.match(/^([A-Za-z0-9_$.-]+):(?:\s+(.*))?$/);
-        if (m) {
-          // sequence item that is a mapping; its first key sits on this line
-          const itemIndent = indent + 2;
-          const obj = {};
-          const key = m[1];
-          const inlineVal = (m[2] ?? '').trim();
-          pos++;
-          const inlineStyle = blockScalarStyle(inlineVal);
-          if (inlineStyle) obj[key] = readBlockScalar(itemIndent, inlineStyle);
-          else if (inlineVal === '') {
-            const child = (pos < lines.length && lines[pos].indent > itemIndent) ? parseNode(lines[pos].indent) : null;
-            obj[key] = child;
-          } else obj[key] = parseScalar(inlineVal);
-          const more = parseNode(itemIndent);
-          if (more && typeof more === 'object' && !Array.isArray(more)) Object.assign(obj, more);
-          arr.push(obj);
-        } else { pos++; arr.push(parseScalar(rest)); }
-      }
-      return arr;
-    }
-
-    const obj = {};
-    while (pos < lines.length && lines[pos].indent === indent) {
-      const line = lines[pos];
-      if (line.text.startsWith('- ')) break;
-      const m = line.text.match(/^([A-Za-z0-9_$.-]+):(?:\s+(.*))?$/);
-      if (!m) throw new UnsupportedYaml(`unrecognized construct at line ${line.n}: ${line.text}`);
-      const key = m[1];
-      const val = (m[2] ?? '').trim();
-      pos++;
-      const style = blockScalarStyle(val);
-      if (style) { obj[key] = readBlockScalar(indent, style); continue; }
-      if (val === '') {
-        if (pos < lines.length && lines[pos].indent > indent) obj[key] = parseNode(lines[pos].indent);
-        else if (pos < lines.length && lines[pos].indent === indent &&
-                 (lines[pos].text.startsWith('- ') || lines[pos].text === '-')) obj[key] = parseNode(indent);
-        else obj[key] = null;
-        continue;
-      }
-      obj[key] = parseScalar(val);
-    }
-    return obj;
-  }
-
-  const result = parseNode(lines.length ? lines[0].indent : 0);
-  return result ?? {};
-}
-
-// ---------------------------------------------------------------------------
-// JSON Schema: documented subset. Throws UnsupportedSchema on any keyword it
-// does not implement, so an unvalidatable schema fails the gate.
-// ---------------------------------------------------------------------------
-class UnsupportedSchema extends Error {}
-
-const SUPPORTED_KEYWORDS = new Set([
-  '$schema', '$id', 'id', 'title', 'description', 'examples', 'default', 'comment', '$comment',
-  'type', 'properties', 'required', 'items', 'additionalProperties', 'enum', 'const',
-  'pattern', 'minLength', 'maxLength', 'minItems', 'maxItems', 'uniqueItems',
-  'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum',
-  'anyOf', 'oneOf', 'allOf', 'not', '$ref', 'definitions', '$defs', 'format',
-  'if', 'then', 'else', 'propertyNames', 'contains',
-]);
-
-function assertSupported(schema, where) {
-  if (typeof schema !== 'object' || schema === null) return;
-  for (const k of Object.keys(schema)) {
-    if (!SUPPORTED_KEYWORDS.has(k)) {
-      throw new UnsupportedSchema(`keyword "${k}" at ${where} is not implemented by this validator`);
-    }
-  }
-}
-
-// `format` is enforced, not merely tolerated: only the formats implemented
-// here are accepted, and any other format value fails the schema up front.
-// A format that was silently ignored would let a green run claim more than
-// was checked.
-const FORMAT_CHECKS = {
-  'date': (s) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s)),
-  'date-time': (s) => /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(\.\d+)?([Zz]|[+-]\d{2}:\d{2})$/.test(s) && !Number.isNaN(Date.parse(s)),
-  'uri': (s) => { try { new URL(s); return true; } catch { return false; } },
-};
-
-// Walk the whole schema tree once, before any data is validated. Per-node
-// assertion during validation only reaches the branches the data happens to
-// visit; an unsupported keyword in an optional, never-taken branch would
-// otherwise pass silently.
-const SCHEMA_MAP_KEYWORDS = ['properties', 'definitions', '$defs'];
-const SCHEMA_CHILD_KEYWORDS = ['items', 'additionalProperties', 'not', 'if', 'then', 'else', 'propertyNames', 'contains'];
-const SCHEMA_LIST_KEYWORDS = ['anyOf', 'oneOf', 'allOf'];
-function assertSupportedDeep(schema, where) {
-  if (typeof schema !== 'object' || schema === null || Array.isArray(schema)) return;
-  assertSupported(schema, where);
-  if (schema.format != null && !FORMAT_CHECKS[schema.format]) {
-    throw new UnsupportedSchema(`format "${schema.format}" at ${where} is not implemented by this validator`);
-  }
-  for (const k of SCHEMA_MAP_KEYWORDS) {
-    if (schema[k] && typeof schema[k] === 'object') {
-      for (const [name, sub] of Object.entries(schema[k])) assertSupportedDeep(sub, `${where}/${k}/${name}`);
-    }
-  }
-  for (const k of SCHEMA_CHILD_KEYWORDS) {
-    if (typeof schema[k] === 'object' && schema[k] !== null) assertSupportedDeep(schema[k], `${where}/${k}`);
-  }
-  for (const k of SCHEMA_LIST_KEYWORDS) {
-    if (Array.isArray(schema[k])) schema[k].forEach((sub, i) => assertSupportedDeep(sub, `${where}/${k}/${i}`));
-  }
-}
-
-function resolveRef(ref, root) {
-  if (!ref.startsWith('#/')) throw new UnsupportedSchema(`external $ref "${ref}"`);
-  let node = root;
-  for (const seg of ref.slice(2).split('/')) {
-    node = node?.[seg.replace(/~1/g, '/').replace(/~0/g, '~')];
-    if (node === undefined) throw new UnsupportedSchema(`unresolvable $ref "${ref}"`);
-  }
-  return node;
-}
-
-function typeOf(v) {
-  if (v === null) return 'null';
-  if (Array.isArray(v)) return 'array';
-  if (Number.isInteger(v)) return 'integer';
-  return typeof v;
-}
-
-function validate(data, schema, root, ptr, errs) {
-  assertSupported(schema, ptr || '/');
-  if (schema.$ref) return validate(data, resolveRef(schema.$ref, root), root, ptr, errs);
-
-  if (schema.type) {
-    const types = Array.isArray(schema.type) ? schema.type : [schema.type];
-    const actual = typeOf(data);
-    const okType = types.some((t) => t === actual || (t === 'number' && actual === 'integer'));
-    if (!okType) { errs.push(`${ptr || '/'}: expected ${types.join('|')}, got ${actual}`); return; }
-  }
-  if (schema.enum && !schema.enum.some((e) => JSON.stringify(e) === JSON.stringify(data))) {
-    errs.push(`${ptr || '/'}: value ${JSON.stringify(data)} not in enum`);
-  }
-  if ('const' in schema && JSON.stringify(schema.const) !== JSON.stringify(data)) {
-    errs.push(`${ptr || '/'}: value must equal ${JSON.stringify(schema.const)}`);
-  }
-  if (typeof data === 'string') {
-    if (schema.pattern && !new RegExp(schema.pattern).test(data)) errs.push(`${ptr}: does not match /${schema.pattern}/`);
-    if (schema.minLength != null && data.length < schema.minLength) errs.push(`${ptr}: shorter than ${schema.minLength}`);
-    if (schema.maxLength != null && data.length > schema.maxLength) errs.push(`${ptr}: longer than ${schema.maxLength}`);
-    if (schema.format != null) {
-      const check = FORMAT_CHECKS[schema.format];
-      if (!check) throw new UnsupportedSchema(`format "${schema.format}" at ${ptr || '/'} is not implemented by this validator`);
-      if (!check(data)) errs.push(`${ptr}: does not satisfy format "${schema.format}"`);
-    }
-  }
-  if (typeof data === 'number') {
-    if (schema.minimum != null && data < schema.minimum) errs.push(`${ptr}: below minimum`);
-    if (schema.maximum != null && data > schema.maximum) errs.push(`${ptr}: above maximum`);
-    if (schema.exclusiveMinimum != null && data <= schema.exclusiveMinimum) errs.push(`${ptr}: at/below exclusiveMinimum`);
-    if (schema.exclusiveMaximum != null && data >= schema.exclusiveMaximum) errs.push(`${ptr}: at/above exclusiveMaximum`);
-  }
-  if (Array.isArray(data)) {
-    if (schema.minItems != null && data.length < schema.minItems) errs.push(`${ptr}: fewer than ${schema.minItems} items`);
-    if (schema.maxItems != null && data.length > schema.maxItems) errs.push(`${ptr}: more than ${schema.maxItems} items`);
-    if (schema.uniqueItems) {
-      const seen = new Set(data.map((d) => JSON.stringify(d)));
-      if (seen.size !== data.length) errs.push(`${ptr}: items are not unique`);
-    }
-    if (schema.items) data.forEach((d, i) => validate(d, schema.items, root, `${ptr}/${i}`, errs));
-    if (schema.contains) {
-      const hit = data.some((d) => { const e = []; validate(d, schema.contains, root, ptr, e); return e.length === 0; });
-      if (!hit) errs.push(`${ptr || '/'}: no item matches "contains"`);
-    }
-  }
-  if (data && typeof data === 'object' && !Array.isArray(data)) {
-    for (const req of schema.required || []) {
-      if (!(req in data) || data[req] === undefined) errs.push(`${ptr || ''}/${req}: required property missing`);
-    }
-    if (schema.propertyNames) {
-      for (const k of Object.keys(data)) validate(k, schema.propertyNames, root, `${ptr}/${k}<name>`, errs);
-    }
-    for (const [k, v] of Object.entries(data)) {
-      const sub = schema.properties?.[k];
-      if (sub) validate(v, sub, root, `${ptr}/${k}`, errs);
-      else if (schema.additionalProperties === false) errs.push(`${ptr}/${k}: additional property not allowed`);
-      else if (typeof schema.additionalProperties === 'object') validate(v, schema.additionalProperties, root, `${ptr}/${k}`, errs);
-    }
-  }
-  for (const kw of ['allOf']) if (schema[kw]) schema[kw].forEach((s, i) => validate(data, s, root, `${ptr}/allOf/${i}`, errs));
-  for (const kw of ['anyOf', 'oneOf']) {
-    if (!schema[kw]) continue;
-    const passing = schema[kw].filter((s) => { const e = []; validate(data, s, root, ptr, e); return e.length === 0; }).length;
-    if (kw === 'anyOf' && passing === 0) errs.push(`${ptr || '/'}: matches none of anyOf`);
-    if (kw === 'oneOf' && passing !== 1) errs.push(`${ptr || '/'}: matches ${passing} of oneOf (expected exactly 1)`);
-  }
-  if (schema.not) { const e = []; validate(data, schema.not, root, ptr, e); if (e.length === 0) errs.push(`${ptr || '/'}: must not match "not" schema`); }
-  if (schema.if) {
-    const probe = [];
-    validate(data, schema.if, root, ptr, probe);
-    const branch = probe.length === 0 ? schema.then : schema.else;
-    if (branch) validate(data, branch, root, ptr, errs);
-  }
-}
+// The YAML subset reader (UnsupportedYaml, blockScalarStyle, stripComment,
+// parseFlow, parseScalar, yamlParse) and the JSON Schema subset engine
+// (UnsupportedSchema, SUPPORTED_KEYWORDS, assertSupported, FORMAT_CHECKS,
+// assertSupportedDeep, resolveRef, typeOf, validate) used to sit inline here.
+// They now live in scripts/lib/yaml.mjs and scripts/lib/json-schema.mjs,
+// imported at the top of this file, so that scripts/rule-resolver.mjs reads
+// YAML and validates against JSON Schema through the same implementations
+// rather than a second copy of each. The code moved verbatim; the documented
+// subsets, the keyword set, the format checks and every throw are unchanged.
 
 // ---------------------------------------------------------------------------
 // Kernel file set. Enumerated from Git so it cannot drift from the repository:
@@ -1226,64 +861,12 @@ function gitFetch(repo) {
 // uses, plus the two attributes a container needs — who owns the region, and
 // whether a generator writes it.
 const CONTAINER_MASKS = [/(^|\/)AGENTS\.md$/, /(^|\/)CLAUDE\.md$/];
-const REGION_TOKEN = /<!--\s*meridian:(begin|end)\s+instruction-section\b([^>]*?)-->/g;
-function parseMarkerAttrs(s) {
-  const out = {};
-  for (const m of String(s).matchAll(/([a-z][a-z0-9-]*)=("([^"]*)"|[^\s"]+)/g)) out[m[1]] = m[3] ?? m[2];
-  return out;
-}
-function instructionRegions(raw) {
-  // A leading Front Matter block is the file's own metadata, not a subject of
-  // intake. It is blanked rather than removed so that every offset below still
-  // points where it did.
-  let text = raw;
-  if (text.startsWith('---')) {
-    const close = text.indexOf('\n---', 3);
-    if (close !== -1) {
-      const after = text.indexOf('\n', close + 1);
-      const cut = after === -1 ? text.length : after + 1;
-      text = text.slice(0, cut).replace(/[^\n]/g, ' ') + text.slice(cut);
-    }
-  }
-  // The same treatment of fenced examples the topic pool gets, from the same
-  // helper: one rule, one implementation, one way to be wrong.
-  const fenced = blankFencedBlocks(text);
-  text = fenced.text;
-  const errors = fenced.error ? [fenced.error] : [];
-  const regions = [];
-  const seen = new Set();
-  let open = null;
-  let cursor = 0;
-  let outside = '';
-  for (const m of text.matchAll(REGION_TOKEN)) {
-    const attrs = parseMarkerAttrs(m[2] || '');
-    if (m[1] === 'begin') {
-      if (open) {
-        errors.push(`region "${open.id}" is still open where region "${attrs.id ?? '?'}" begins; regions sit side by side, they do not nest`);
-        return { errors, regions: [], uncoveredLines: 0 };
-      }
-      outside += text.slice(cursor, m.index);
-      if (!attrs.id) errors.push('a region begins without an id; a region that cannot be named cannot be recorded');
-      else if (seen.has(attrs.id)) errors.push(`region id "${attrs.id}" is declared twice; two regions with one name are one name for two subjects`);
-      else seen.add(attrs.id);
-      const generated = String(attrs.generated ?? 'no');
-      if (!['yes', 'no'].includes(generated)) errors.push(`region "${attrs.id}" declares generated="${generated}"; the answer is yes or no`);
-      open = { id: attrs.id ?? '', owner: attrs.owner ?? '', generated: generated === 'yes', start: m.index + m[0].length };
-    } else {
-      if (!open) { errors.push('a region ends where none is open'); return { errors, regions: [], uncoveredLines: 0 }; }
-      if (attrs.id && attrs.id !== open.id) errors.push(`region "${open.id}" is closed by a marker naming "${attrs.id}"`);
-      regions.push({ ...open, text: text.slice(open.start, m.index) });
-      open = null;
-    }
-    cursor = m.index + m[0].length;
-  }
-  if (open) errors.push(`region "${open.id}" is opened and never closed; everything after it would silently belong to it`);
-  outside += text.slice(cursor);
-  // Headings are the container's own scaffolding and belong to no subject.
-  // Anything else outside every region is text that no unit of intake covers.
-  const uncoveredLines = outside.split('\n').filter((l) => l.trim() && !/^#{1,6}\s/.test(l.trim())).length;
-  return { errors, regions, uncoveredLines };
-}
+// REGION_TOKEN, parseMarkerAttrs and instructionRegions moved verbatim to
+// scripts/lib/regions.mjs (imported above). instructionRegions still blanks a
+// leading Front Matter block and fenced examples, refuses nested, unnamed,
+// duplicate, cross-closed and unclosed regions, and reports the lines that lie
+// outside every declared region. The parsing rules and every error string are
+// unchanged, so this validator's regression suite is unaffected.
 
 // The published half of preservation needs the network, so it is opt-in: the
 // Instance's pre-push hook sets this, and an ordinary offline run neither pays

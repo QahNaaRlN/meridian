@@ -19,6 +19,14 @@ if ! node "$ROOT/test/kernel-validate.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: running the rule resolver's regression suite"
+if ! node "$ROOT/test/rule-resolver.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the rule resolver regression suite failed."
+  echo "pre-push: an acceptance case or a fail-closed path of rule-resolver.mjs no longer behaves as claimed."
+  exit 1
+fi
+
 echo "pre-push: running kernel-validate against test/instance-fixture"
 if ! MERIDIAN_INSTANCE="$ROOT/test/instance-fixture" node "$ROOT/scripts/kernel-validate.mjs"; then
   echo ""

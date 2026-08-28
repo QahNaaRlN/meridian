@@ -16,6 +16,118 @@ updated: 2026-08-28
 
 ## [Unreleased]
 
+### Added
+
+- **`verification/functional-parity/` — portable functional-parity evidence
+  contract for `REFACTOR` (PHASE D of `MERIDIAN-RULE-RESOLUTION-001`).** A new
+  verification unit beside `regression-testing/` and `smoke-protocol/` in the
+  verification router, answering one question: how the observable behaviour of
+  the system before an internal change is fixed and compared with the behaviour
+  after it.
+  - `functional-parity-evidence-contract.md` (`document_type: standard`) — the
+    normative contract. The preserved observable contract across four facets
+    (`public_api`, `observable_io`, `side_effects_and_interactions`,
+    `user_visible_behavior`), with assertion ids unique across the whole record
+    and each under one owning facet; the baseline before the change (identifiable
+    source state, identified inputs and observation conditions, provenance, the
+    result actually observed); the post-change evidence (state after the change;
+    conditions that are either `same` — referencing every baseline condition id
+    and no others — or `explicitly-comparable` with a justification; the observed
+    result; contract links that resolve to a declared assertion's exact
+    `{facet, id}` pair); six neutral evidence kinds with the limitations of each;
+    the public-contract snapshot as **one** kind among them — permitted only with
+    an explicit applicability justification, never the primary or default proof,
+    its limits named; explicit gaps and `UNVERIFIED` — an incomplete baseline,
+    non-comparable conditions, a missing facet, incomplete post-change evidence
+    or an unjustified kind leave the affected assertion, or the whole claim,
+    `UNVERIFIED`, a narrow kind is not widened into a broader claim, a
+    per-assertion `VERIFIED` needs both a covering evidence entry and a resolving
+    link, and an unestablished baseline forces every assertion and the overall
+    `UNVERIFIED`; the product/repository boundary — concrete test runners,
+    snapshot frameworks, commands, configuration and test paths stay
+    Instance/repository data; and the per-assertion and overall verdict rules.
+    The contract defines requirements and form; it does not design the order in
+    which a `REFACTOR` is executed (that is PHASE E).
+  - `functional-parity-evidence.schema.json` — JSON Schema for one evidence
+    record, using only keyword and format subsets `scripts/kernel-validate.mjs`
+    implements. `records` is non-empty (`minItems: 1`). Every facet must be
+    addressed (an assertion or a stated not-applicable justification, never a
+    blank); each baseline condition carries a stable `id`; `relationship: same`
+    carries `baseline_condition_ids` and neither restated `items` nor a
+    justification, `explicitly-comparable` carries `items` and a comparability
+    justification and no id references; `contract_links` is always present and
+    may be empty; every evidence entry names at least one limitation; a
+    `public-contract-snapshot` entry requires an applicability justification; an
+    `UNVERIFIED` per-assertion state or overall verdict requires a reason;
+    `additionalProperties: false` throughout, so an unrecognised form extension
+    fails closed. No `kind` value and no required field names a product tool.
+  - `fixtures/functional-parity-evidence.fixtures.json` — product-neutral valid
+    and invalid fixtures (no real repository, path, URL, runner, framework or
+    command): 8 valid, 29 invalid. Valid records show a snapshot is not required
+    where other kinds cover the claim, that different single kinds each form a
+    valid record, that `explicitly-comparable` conditions with a justification
+    are accepted, a mixed record with one assertion `VERIFIED`-with-link and one
+    `UNVERIFIED`-without-link, that an incomplete or unestablished baseline
+    yields `UNVERIFIED` for every assertion, and an honest all-`UNVERIFIED`
+    record with an empty `contract_links` array. Invalid records cover an empty
+    record set, an absent baseline, absent or non-comparable post-change
+    evidence, a `same` relation that carries `items` / references a non-baseline
+    condition / reproduces only some conditions, a duplicate baseline condition
+    id, a blank facet, a snapshot with no applicability justification, an empty
+    limitations list, an unknown property, an empty observation, a missing
+    verdict reason, and — schema-clean but rejected by the inference rules — a
+    record-scoped gap under a `VERIFIED` overall, a record-scoped gap that leaves
+    an assertion `VERIFIED`, an `UNVERIFIED` assertion under a `VERIFIED`
+    overall, evidence covering an undeclared assertion, a declared assertion with
+    no verdict, a `VERIFIED` assertion no evidence covers, a `VERIFIED` assertion
+    with no resolving link, a contract link under the wrong facet, a duplicate
+    assertion id across facets, an unestablished baseline that still carries a
+    `VERIFIED` assertion, and identical baseline / post-change source states.
+  - `scripts/kernel-validate.mjs` — new check `functional-parity` (`6c` in the
+    header). The schema is parsed and walked for unsupported keywords; the
+    fixtures bundle is classified fail-closed on its own shape (a non-empty
+    array, exactly one group for the schema, non-empty `valid` and `invalid`),
+    exactly as the `rule-resolution` block is. Beyond the schema,
+    `functionalParityConsistency()` enforces the record-level inference rules
+    the draft-07 subset cannot state: the document carries at least one record;
+    assertion ids unique record-wide, each under one owning facet; every
+    per-assertion verdict names a declared assertion and every declared assertion
+    carries exactly one; every `covers` id resolves, and every `contract_links`
+    entry resolves to the exact `{facet, assertion_id}` pair; a `VERIFIED`
+    assertion has both a covering evidence entry and a resolving link (an empty
+    `contract_links` array is legal only when nothing is `VERIFIED`); any
+    `UNVERIFIED` per-assertion state forces an `UNVERIFIED` overall; a
+    record-scoped gap forces every declared per-assertion verdict and the overall
+    `UNVERIFIED`, an assertion-scoped gap only the assertions it names;
+    `relationship: same` references every baseline condition id and no others
+    with no duplicate baseline condition id; an unestablished baseline forces
+    every declared per-assertion verdict and the overall `UNVERIFIED`; the
+    baseline and post-change source states are a distinguishable
+    `{identifier_kind, identifier}` pair. `kernel-validate` remains the gate;
+    this is not a new script.
+  - `test/kernel-validate.test.mjs` — new adversarial cases (t126–t158) proving
+    the check goes red on a malformed schema, missing fixtures, a misclassified
+    fixture, an unsupported schema keyword, each fail-closed bundle-shape
+    violation, and each negative case of the contract (an empty record set, a
+    missing baseline, missing or non-comparable post-change evidence, a
+    mechanically-broken `same` relation, a duplicate baseline condition id, an
+    unclosed gap left `VERIFIED`, a record-scoped gap that still leaves an
+    assertion `VERIFIED`, identical before/after source states, a snapshot with
+    no applicability justification, a `VERIFIED` assertion with no resolving
+    link, a contract link under the wrong facet, a duplicate assertion id, an
+    unestablished baseline still carrying a `VERIFIED` assertion, an unknown form
+    extension), plus green cases proving a single non-snapshot kind, an
+    `explicitly-comparable`-with-justification record, the mixed
+    `VERIFIED`/`UNVERIFIED` record, the honest all-`UNVERIFIED` unestablished
+    baseline, an honest all-`UNVERIFIED` record with an empty `contract_links`
+    array, and the same identifier string under a different `identifier_kind` are
+    accepted. Existing PHASE B / PHASE C checks are unchanged and still pass.
+  - Linked from `verification/README.md` (strategy router and evidence
+    boundary), the VERIFY stage of `workflows/task-lifecycle.md`, the Kernel
+    file list in `standards/workspace/kernel-boundary.md`, and the structure
+    tree in `README.md`.
+  - `VERSION` unchanged: this package is not a release.
+
 ### Fixed
 
 - **`hooks/pre-push` now binds its gates to the Kernel being pushed instead of

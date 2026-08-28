@@ -71,7 +71,7 @@ meridian/
 ├── standards/          методология, lifecycle, статусная модель, writers, шаблоны
 │   └── workspace/kernel-boundary.md    ← нормативная граница
 ├── workflows/          жизненный цикл задачи
-├── verification/       verification router, regression-правила, smoke-protocol
+├── verification/       verification router, regression-правила, smoke-protocol, functional-parity
 ├── skills/             завендоренные skill-пакеты с SHA-пинами
 ├── registries/         правила и JSON Schema реестров (не данные)
 │   └── rule-resolution/ схемы применимости норм и вывода резолвера (PHASE B)

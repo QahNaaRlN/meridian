@@ -2277,6 +2277,816 @@ const OK_LINE = /rule-resolution: 2\/2 PHASE B schemas parsed and keyword-checke
   });
 }
 
+// ===========================================================================
+// PHASE D — the functional-parity evidence schema is reachable by the gate
+// ===========================================================================
+// These cases exercise the gate's "6c. functional-parity" check: the PHASE D
+// evidence schema parses, uses only keywords the in-gate validator implements,
+// and — together with the record-level inference rules JSON Schema cannot
+// express — classifies its product-neutral fixtures, every valid one satisfied
+// and every invalid one rejected, before any Instance evidence register exists.
+// A negative case plants a document the corrected schema or the inference rules
+// must refuse; a positive case plants one they must accept and the success line
+// must still print.
+
+const FP_SRC = path.join(__dirname, '..', 'verification', 'functional-parity');
+const FP_SCHEMA_NAME = 'functional-parity-evidence.schema.json';
+const FP_OK_LINE = /functional-parity: the PHASE D evidence schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied it and its inference rules, and \d+ were rejected/;
+
+// Copies the real PHASE D schema (or an override) and a fixtures bundle into a
+// synthetic kernel, the same way plantRuleResolution copies the PHASE B pair.
+function plantFunctionalParity(kernel, { schema = null, bundle = 'real', omitFixtures = false } = {}) {
+  write(kernel, `verification/functional-parity/${FP_SCHEMA_NAME}`,
+    schema ?? fs.readFileSync(path.join(FP_SRC, FP_SCHEMA_NAME), 'utf8'));
+  if (omitFixtures) return;
+  write(kernel, `verification/functional-parity/fixtures/${FP_SCHEMA_NAME.replace('.schema.', '.fixtures.')}`,
+    bundle === 'real'
+      ? fs.readFileSync(path.join(FP_SRC, 'fixtures', FP_SCHEMA_NAME.replace('.schema.', '.fixtures.')), 'utf8')
+      : JSON.stringify(bundle, null, 2));
+}
+
+const fpRealBundle = () => JSON.parse(fs.readFileSync(path.join(FP_SRC, 'fixtures', FP_SCHEMA_NAME.replace('.schema.', '.fixtures.')), 'utf8'));
+
+// A minimal internally consistent record, mutated per case. Top-level keys are
+// shallow-overridden; nested changes pass a whole replacement sub-object.
+function fpRecord(over = {}) {
+  return {
+    work_item: 'refactor-test-001',
+    preserved_contract: {
+      public_api: { assertions: [{ id: 'api.exports', statement: 'the exported surface is unchanged' }] },
+      observable_io: { not_applicable_justification: 'the unit returns nothing' },
+      side_effects_and_interactions: { not_applicable_justification: 'no interactions' },
+      user_visible_behavior: { not_applicable_justification: 'no user-visible surface' },
+    },
+    baseline: {
+      source_state: { identifier: 'state-A', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: [{ id: 'cond.inputs', description: 'the recorded input set', kind: 'input-set' }],
+      provenance: { method: 'observed at state-A before the change', established: true },
+      observed_result: { summary: 'the exported surface was enumerated' },
+    },
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'] },
+      observed_result: { summary: 'the exported surface matched the baseline enumeration' },
+      contract_links: [{ facet: 'public_api', assertion_id: 'api.exports' }],
+    },
+    evidence: [
+      { kind: 'interface-enumeration', observed_scope: 'exported names and signatures', covers: ['api.exports'], limitations: ['declared surface only'] },
+    ],
+    gaps: [],
+    verdict: { per_assertion: [{ assertion_id: 'api.exports', state: 'VERIFIED' }], overall: 'VERIFIED' },
+    recorded_at: '2026-08-28',
+    ...over,
+  };
+}
+const fpDoc = (rec) => ({ $schema: `./${FP_SCHEMA_NAME}`, schema_version: 1, records: [rec] });
+// The real bundle with `doc` appended to the group's `valid` or `invalid`
+// array, so the fail-closed shape checks still pass and the planted document is
+// the only thing that can decide the run.
+function fpBundleWith(where, doc) {
+  const real = fpRealBundle();
+  for (const g of real) if (g.schema === FP_SCHEMA_NAME) g[where] = [...g[where], { note: 'planted', doc }];
+  return real;
+}
+
+// t126 — the real schema and its real fixtures are reached and classified, and
+// the PHASE B check is still green in the same run (no regression).
+{
+  const { kernel, instance } = freshPair('t126');
+  plantFunctionalParity(kernel);
+  plantRuleResolution(kernel);
+  commitAll(kernel);
+  check('t126 PHASE D evidence schema is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [FP_OK_LINE, /rule-resolution: 2\/2 PHASE B schemas parsed and keyword-checked/],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t127 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t127');
+  const s = JSON.parse(fs.readFileSync(path.join(FP_SRC, FP_SCHEMA_NAME), 'utf8'));
+  s.definitions.record.minProperties = 1;
+  plantFunctionalParity(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t127 an unsupported keyword in the PHASE D schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: functional-parity-evidence\.schema\.json uses a construct this validator cannot check/],
+  });
+}
+
+// t128 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t128');
+  plantFunctionalParity(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t128 a malformed PHASE D schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: functional-parity-evidence\.schema\.json is not valid JSON/],
+  });
+}
+
+// t129 — the schema present with no fixtures beside it is a gap: a schema no run
+// exercises is not one the gate has reached.
+{
+  const { kernel, instance } = freshPair('t129');
+  plantFunctionalParity(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t129 the PHASE D schema without fixtures is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: the PHASE D evidence schema carries no fixtures/],
+  });
+}
+
+// t130 — an object where the fixtures bundle must be an array.
+{
+  const { kernel, instance } = freshPair('t130');
+  plantFunctionalParity(kernel, { bundle: { schema: FP_SCHEMA_NAME, valid: [], invalid: [] } });
+  commitAll(kernel);
+  check('t130 a non-array fixtures bundle is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: the fixtures file must be an array/],
+  });
+}
+
+// t131 — an empty array covers nothing.
+{
+  const { kernel, instance } = freshPair('t131');
+  plantFunctionalParity(kernel, { bundle: [] });
+  commitAll(kernel);
+  check('t131 an empty fixtures array is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: the fixtures file is an empty array/],
+  });
+}
+
+// t132 — two groups for the one schema.
+{
+  const { kernel, instance } = freshPair('t132');
+  plantFunctionalParity(kernel, { bundle: [...fpRealBundle(), ...fpRealBundle()] });
+  commitAll(kernel);
+  check('t132 more than one fixture group for the schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: schema "functional-parity-evidence\.schema\.json" has more than one fixture group/],
+  });
+}
+
+// t133 — a group naming a schema that is not the PHASE D one.
+{
+  const { kernel, instance } = freshPair('t133');
+  plantFunctionalParity(kernel, { bundle: [{ schema: 'made-up.schema.json', valid: [{ note: 'x', doc: {} }], invalid: [{ note: 'y', doc: {} }] }] });
+  commitAll(kernel);
+  check('t133 a stray fixture group is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture group names schema "made-up\.schema\.json", which is not the PHASE D evidence schema/],
+  });
+}
+
+// t134 — a group whose valid array is empty.
+{
+  const { kernel, instance } = freshPair('t134');
+  plantFunctionalParity(kernel, { bundle: [{ schema: FP_SCHEMA_NAME, valid: [], invalid: [{ note: 'x', doc: {} }] }] });
+  commitAll(kernel);
+  check('t134 an empty valid array is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: fixture group "functional-parity-evidence\.schema\.json" has no non-empty "valid" array/],
+  });
+}
+
+// t135 — a group whose invalid array is empty.
+{
+  const { kernel, instance } = freshPair('t135');
+  plantFunctionalParity(kernel, { bundle: [{ schema: FP_SCHEMA_NAME, valid: [{ note: 'x', doc: {} }], invalid: [] }] });
+  commitAll(kernel);
+  check('t135 an empty invalid array is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: fixture group "functional-parity-evidence\.schema\.json" has no non-empty "invalid" array/],
+  });
+}
+
+// t136 — a fixture placed in `valid` that the schema must reject (missing
+// baseline): an absent baseline cannot yield confirmed parity.
+{
+  const { kernel, instance } = freshPair('t136');
+  const rec = fpRecord();
+  delete rec.baseline;
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t136 a missing baseline cannot pass as confirmed parity', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy functional-parity-evidence\.schema\.json did not/],
+  });
+}
+
+// t137 — a fully valid record placed in `invalid`: a check that refuses
+// everything would look identical without this.
+{
+  const { kernel, instance } = freshPair('t137');
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('invalid', fpDoc(fpRecord())) });
+  commitAll(kernel);
+  check('t137 a clean record wrongly classified invalid is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must be rejected by functional-parity-evidence\.schema\.json or its inference rules validated clean/],
+  });
+}
+
+// t138 — post-change conditions declared explicitly-comparable with no
+// comparability justification: non-comparable post-change evidence cannot yield
+// confirmed parity.
+{
+  const { kernel, instance } = freshPair('t138');
+  const rec = fpRecord({
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'explicitly-comparable', items: [{ description: 'a different input set' }] },
+      observed_result: { summary: 'a result was recorded' },
+      contract_links: [{ facet: 'public_api', assertion_id: 'api.exports' }],
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t138 explicitly-comparable conditions with no justification are rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy functional-parity-evidence\.schema\.json did not/],
+  });
+}
+
+// t139 — a record-scoped gap left under a VERIFIED overall: an unclosed gap
+// requires UNVERIFIED. Schema-clean; the inference rules reject it.
+{
+  const { kernel, instance } = freshPair('t139');
+  const rec = fpRecord({ gaps: [{ description: 'the post-change run covered only part of the input set', scope: 'record' }] });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t139 an unclosed gap under a VERIFIED verdict is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
+// t140 — a public-contract-snapshot evidence entry with no applicability
+// justification is rejected.
+{
+  const { kernel, instance } = freshPair('t140');
+  const rec = fpRecord({
+    evidence: [{ kind: 'public-contract-snapshot', observed_scope: 'the serialized declaration', covers: ['api.exports'], limitations: ['serialized form only'] }],
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t140 a snapshot with no applicability justification is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy functional-parity-evidence\.schema\.json did not/],
+  });
+}
+
+// t141 — a snapshot is NOT required where another kind fully covers the claim:
+// a record built entirely from differential-execution is accepted.
+{
+  const { kernel, instance } = freshPair('t141');
+  const rec = fpRecord({
+    evidence: [{ kind: 'differential-execution', observed_scope: 'the generated input set', covers: ['api.exports'], limitations: ['generated inputs only'] }],
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t141 a record with no snapshot, fully covered by another kind, is accepted', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [FP_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t142 — different allowed kinds each form a valid record on their own: an
+// observation-log-only record is accepted, so no kind is a hidden default.
+{
+  const { kernel, instance } = freshPair('t142');
+  const rec = fpRecord({
+    evidence: [{ kind: 'observation-log', observed_scope: 'the documented scenarios', covers: ['api.exports'], limitations: ['documented scenarios only', 'weak on timing'] }],
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t142 a single non-snapshot kind forms a valid record', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [FP_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t143 — an unknown property on a record: an unrecognised form extension fails
+// closed rather than being ignored.
+{
+  const { kernel, instance } = freshPair('t143');
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(fpRecord({ tool: 'some-runner' }))) });
+  commitAll(kernel);
+  check('t143 an unknown form extension fails closed', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy functional-parity-evidence\.schema\.json did not/],
+  });
+}
+
+// t144 — narrow evidence is not widened: an evidence entry covering an
+// assertion no facet declares is rejected by the inference rules.
+{
+  const { kernel, instance } = freshPair('t144');
+  const rec = fpRecord({
+    evidence: [{ kind: 'interface-enumeration', observed_scope: 'exported names', covers: ['api.exports', 'io.phantom'], limitations: ['declared surface only'] }],
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t144 evidence covering an undeclared assertion is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
+// t145 — an UNVERIFIED per-assertion state under a VERIFIED overall is rejected
+// by the inference rules: a narrow record cannot pass as a full one.
+{
+  const { kernel, instance } = freshPair('t145');
+  const rec = fpRecord({
+    preserved_contract: {
+      public_api: { assertions: [{ id: 'api.exports', statement: 'unchanged' }] },
+      observable_io: { assertions: [{ id: 'io.mapping', statement: 'unchanged' }] },
+      side_effects_and_interactions: { not_applicable_justification: 'none' },
+      user_visible_behavior: { not_applicable_justification: 'none' },
+    },
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'] },
+      observed_result: { summary: 'surface matched; mapping not re-observed' },
+      contract_links: [{ facet: 'public_api', assertion_id: 'api.exports' }, { facet: 'observable_io', assertion_id: 'io.mapping' }],
+    },
+    evidence: [{ kind: 'interface-enumeration', observed_scope: 'exported names', covers: ['api.exports', 'io.mapping'], limitations: ['declared surface only'] }],
+    gaps: [{ description: 'the mapping was not re-observed', scope: 'assertion', assertion_ids: ['io.mapping'] }],
+    verdict: {
+      per_assertion: [
+        { assertion_id: 'api.exports', state: 'VERIFIED' },
+        { assertion_id: 'io.mapping', state: 'UNVERIFIED', unverified_reason: 'not re-observed' },
+      ],
+      overall: 'VERIFIED',
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t145 an UNVERIFIED assertion under a VERIFIED overall is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
+// t146 — no product test tool is baked into the evidence schema: the `kind`
+// enum is neutral, and no required field names a runner or framework.
+{
+  const fpSchemaText = fs.readFileSync(path.join(FP_SRC, FP_SCHEMA_NAME), 'utf8');
+  const fpSchema = JSON.parse(fpSchemaText);
+  const kindEnum = fpSchema.definitions.evidence_entry.properties.kind.enum;
+  const requiredFields = new Set();
+  (function collect(node) {
+    if (!node || typeof node !== 'object') return;
+    for (const r of node.required ?? []) requiredFields.add(String(r));
+    for (const v of Object.values(node)) {
+      if (Array.isArray(v)) v.forEach(collect);
+      else if (v && typeof v === 'object') collect(v);
+    }
+  })(fpSchema);
+  const problems = [];
+  if (!kindEnum.every((k) => /^[a-z][a-z-]*$/.test(k))) problems.push(`kind enum is not all neutral: ${kindEnum.join(', ')}`);
+  if (/\b(vitest|jest|cypress|playwright|mocha|jasmine|pytest|storybook|chai|junit)\b/i.test(fpSchemaText)) {
+    problems.push('schema text names a product test tool');
+  }
+  for (const banned of ['tool', 'runner', 'framework', 'command', 'test_path']) {
+    if (requiredFields.has(banned)) problems.push(`"${banned}" is a required field`);
+  }
+  if (problems.length) {
+    failed++;
+    failures.push(`t146 no product tool in the evidence schema: ${problems.join('; ')}`);
+    console.log('FAIL  t146 no product tool in the evidence schema');
+  } else {
+    passed++;
+    console.log('ok    t146 no product tool in the evidence schema');
+  }
+}
+
+// --- correction round 1: the four CHANGES_REQUESTED findings -----------------
+
+// t147 (finding 1) — `relationship: same` is mechanically checked. The post-
+// change observation references a baseline condition id the baseline does not
+// define, while the verdict is VERIFIED. The word "same" in a description would
+// have let this through; referencing ids does not.
+{
+  const { kernel, instance } = freshPair('t147');
+  const rec = fpRecord({
+    baseline: {
+      source_state: { identifier: 'state-A', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: [{ id: 'cond.a', description: 'input set A under configuration A' }],
+      provenance: { method: 'observed before the change under configuration A', established: true },
+      observed_result: { summary: 'enumerated under configuration A' },
+    },
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.b'] },
+      observed_result: { summary: 'enumerated under configuration B' },
+      contract_links: [{ facet: 'public_api', assertion_id: 'api.exports' }],
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t147 relationship "same" referencing a non-baseline condition is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
+// t147b (finding 1) — `relationship: same` reproducing only some of the
+// baseline conditions is rejected: exactly, and completely.
+{
+  const { kernel, instance } = freshPair('t147b');
+  const rec = fpRecord({
+    baseline: {
+      source_state: { identifier: 'state-A', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: [
+        { id: 'cond.inputs', description: 'the recorded input set' },
+        { id: 'cond.env', description: 'the recorded environment fixture' },
+      ],
+      provenance: { method: 'observed before the change', established: true },
+      observed_result: { summary: 'enumerated' },
+    },
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'] },
+      observed_result: { summary: 'enumerated' },
+      contract_links: [{ facet: 'public_api', assertion_id: 'api.exports' }],
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t147b relationship "same" that reproduces only some baseline conditions is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
+// t147c (finding 1) — `relationship: same` carrying a restated items list is a
+// schema violation: the two condition forms are mutually exclusive.
+{
+  const { kernel, instance } = freshPair('t147c');
+  const rec = fpRecord({
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'], items: [{ description: 'the input set' }] },
+      observed_result: { summary: 'enumerated' },
+      contract_links: [{ facet: 'public_api', assertion_id: 'api.exports' }],
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t147c relationship "same" carrying an items list is a schema violation', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy functional-parity-evidence\.schema\.json did not/],
+  });
+}
+
+// t148 (finding 2) — a per-assertion VERIFIED with a covering evidence entry
+// but no post-change contract link resolving to it: coverage alone is not
+// enough for VERIFIED.
+{
+  const { kernel, instance } = freshPair('t148');
+  const rec = fpRecord({
+    preserved_contract: {
+      public_api: { assertions: [{ id: 'api.exports', statement: 'unchanged' }] },
+      observable_io: { assertions: [{ id: 'io.mapping', statement: 'unchanged' }] },
+      side_effects_and_interactions: { not_applicable_justification: 'none' },
+      user_visible_behavior: { not_applicable_justification: 'none' },
+    },
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'] },
+      observed_result: { summary: 'the mapping was re-observed and matched' },
+      contract_links: [{ facet: 'observable_io', assertion_id: 'io.mapping' }],
+    },
+    evidence: [{ kind: 'behavioral-assertion', observed_scope: 'the recorded input set', covers: ['api.exports', 'io.mapping'], limitations: ['recorded inputs only'] }],
+    verdict: {
+      per_assertion: [
+        { assertion_id: 'api.exports', state: 'VERIFIED' },
+        { assertion_id: 'io.mapping', state: 'VERIFIED' },
+      ],
+      overall: 'VERIFIED',
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t148 a VERIFIED assertion with no resolving post-change link is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
+// t149 (finding 2) — a post-change contract link names a declared assertion
+// under the wrong facet.
+{
+  const { kernel, instance } = freshPair('t149');
+  const rec = fpRecord({
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'] },
+      observed_result: { summary: 'enumerated' },
+      contract_links: [
+        { facet: 'public_api', assertion_id: 'api.exports' },
+        { facet: 'observable_io', assertion_id: 'api.exports' },
+      ],
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t149 a contract link under the wrong facet is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
+// t150 (finding 2) — the same assertion id declared under two facets.
+{
+  const { kernel, instance } = freshPair('t150');
+  const rec = fpRecord({
+    preserved_contract: {
+      public_api: { assertions: [{ id: 'shared.id', statement: 'the exported surface is unchanged' }] },
+      observable_io: { assertions: [{ id: 'shared.id', statement: 'the mapping is unchanged' }] },
+      side_effects_and_interactions: { not_applicable_justification: 'none' },
+      user_visible_behavior: { not_applicable_justification: 'none' },
+    },
+    evidence: [{ kind: 'behavioral-assertion', observed_scope: 'the recorded input set', covers: ['shared.id'], limitations: ['recorded inputs only'] }],
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'] },
+      observed_result: { summary: 'matched' },
+      contract_links: [{ facet: 'public_api', assertion_id: 'shared.id' }],
+    },
+    verdict: { per_assertion: [{ assertion_id: 'shared.id', state: 'VERIFIED' }], overall: 'VERIFIED' },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t150 a duplicate assertion id across facets is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
+// t151 (finding 2) — the positive mixed record: one assertion VERIFIED with a
+// resolving link, a second UNVERIFIED with no link and an assertion-scoped gap.
+{
+  const { kernel, instance } = freshPair('t151');
+  const rec = fpRecord({
+    preserved_contract: {
+      public_api: { assertions: [{ id: 'api.exports', statement: 'unchanged' }] },
+      observable_io: { not_applicable_justification: 'none' },
+      side_effects_and_interactions: { assertions: [{ id: 'fx.writes', statement: 'unchanged' }] },
+      user_visible_behavior: { not_applicable_justification: 'none' },
+    },
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'] },
+      observed_result: { summary: 'the exported surface matched the baseline' },
+      contract_links: [{ facet: 'public_api', assertion_id: 'api.exports' }],
+    },
+    evidence: [{ kind: 'interface-enumeration', observed_scope: 'exported names', covers: ['api.exports'], limitations: ['declared surface only'] }],
+    gaps: [{ description: 'the write trace could not be captured', scope: 'assertion', assertion_ids: ['fx.writes'] }],
+    verdict: {
+      per_assertion: [
+        { assertion_id: 'api.exports', state: 'VERIFIED' },
+        { assertion_id: 'fx.writes', state: 'UNVERIFIED', unverified_reason: 'the write trace could not be captured' },
+      ],
+      overall: 'UNVERIFIED',
+      overall_unverified_reason: 'one preserved-contract assertion is unverified',
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t151 a mixed record — one VERIFIED with a link, one UNVERIFIED without — is accepted', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [FP_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t152 (finding 3) — an unestablished baseline forces EVERY declared assertion
+// UNVERIFIED. A record-scoped gap and an UNVERIFIED overall do not license one
+// per-assertion verdict to stay VERIFIED.
+{
+  const { kernel, instance } = freshPair('t152');
+  const rec = fpRecord({
+    preserved_contract: {
+      public_api: { assertions: [{ id: 'api.exports', statement: 'unchanged' }] },
+      observable_io: { assertions: [{ id: 'io.mapping', statement: 'unchanged' }] },
+      side_effects_and_interactions: { not_applicable_justification: 'none' },
+      user_visible_behavior: { not_applicable_justification: 'none' },
+    },
+    baseline: {
+      source_state: { identifier: 'state-A', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: [{ id: 'cond.inputs', description: 'the input set' }],
+      provenance: { method: 'the pre-change observation was not run', established: false },
+      observed_result: { summary: 'no baseline observation was obtained' },
+    },
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'] },
+      observed_result: { summary: 'post-change surface enumerated and mapping recorded' },
+      contract_links: [{ facet: 'public_api', assertion_id: 'api.exports' }, { facet: 'observable_io', assertion_id: 'io.mapping' }],
+    },
+    evidence: [{ kind: 'behavioral-assertion', observed_scope: 'the post-change run only', covers: ['api.exports', 'io.mapping'], limitations: ['one-sided'] }],
+    gaps: [{ description: 'the baseline was never established', scope: 'record' }],
+    verdict: {
+      per_assertion: [
+        { assertion_id: 'api.exports', state: 'VERIFIED' },
+        { assertion_id: 'io.mapping', state: 'UNVERIFIED', unverified_reason: 'no baseline' },
+      ],
+      overall: 'UNVERIFIED',
+      overall_unverified_reason: 'the baseline was never established',
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t152 an unestablished baseline with one VERIFIED assertion is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
+// t153 (finding 3) — the honest positive: an unestablished baseline with every
+// declared per-assertion verdict UNVERIFIED and the overall UNVERIFIED.
+{
+  const { kernel, instance } = freshPair('t153');
+  const rec = fpRecord({
+    baseline: {
+      source_state: { identifier: 'state-A', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: [{ id: 'cond.inputs', description: 'the intended input set' }],
+      provenance: { method: 'the pre-change observation could not be run', established: false },
+      observed_result: { summary: 'no baseline observation was obtained' },
+    },
+    evidence: [{ kind: 'behavioral-assertion', observed_scope: 'the post-change run only', covers: ['api.exports'], limitations: ['one-sided'] }],
+    gaps: [{ description: 'the baseline was never established', scope: 'record' }],
+    verdict: {
+      per_assertion: [{ assertion_id: 'api.exports', state: 'UNVERIFIED', unverified_reason: 'no baseline observation to compare against' }],
+      overall: 'UNVERIFIED',
+      overall_unverified_reason: 'the baseline is incomplete',
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t153 an unestablished baseline with all verdicts UNVERIFIED is accepted', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [FP_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// --- correction round 2: the four review findings + missing coverage ---------
+
+// t154 (finding 1) — an evidence document with an empty record set is rejected:
+// a functional-parity document with no record proves nothing.
+{
+  const { kernel, instance } = freshPair('t154');
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', { $schema: `./${FP_SCHEMA_NAME}`, schema_version: 1, records: [] }) });
+  commitAll(kernel);
+  check('t154 an empty record set is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy functional-parity-evidence\.schema\.json did not/],
+  });
+}
+
+// t155 (finding 2) — a record-scoped gap with the overall UNVERIFIED but a
+// per-assertion verdict still VERIFIED is rejected: a record-scoped gap leaves
+// every assertion UNVERIFIED, not just the overall.
+{
+  const { kernel, instance } = freshPair('t155');
+  const rec = fpRecord({
+    gaps: [{ description: 'the recorded input set covers only a fraction of the documented ranges', scope: 'record' }],
+    verdict: {
+      per_assertion: [{ assertion_id: 'api.exports', state: 'VERIFIED' }],
+      overall: 'UNVERIFIED',
+      overall_unverified_reason: 'input coverage too narrow to claim parity',
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t155 a record-scoped gap leaving an assertion VERIFIED is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
+// t156 (finding 3) — the baseline and post-change source states are the
+// identical {identifier_kind, identifier} pair: not a before/after comparison.
+{
+  const { kernel, instance } = freshPair('t156');
+  const rec = fpRecord({
+    baseline: {
+      source_state: { identifier: 'state-X', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: [{ id: 'cond.inputs', description: 'the input set' }],
+      provenance: { method: 'observed before the change', established: true },
+      observed_result: { summary: 'surface enumerated' },
+    },
+    post_change_evidence: {
+      source_state: { identifier: 'state-X', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'] },
+      observed_result: { summary: 'surface enumerated' },
+      contract_links: [{ facet: 'public_api', assertion_id: 'api.exports' }],
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t156 identical baseline and post-change source states are rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
+// t156b (finding 3) — the same identifier string under a *different*
+// identifier_kind is a different pair and is accepted on that ground.
+{
+  const { kernel, instance } = freshPair('t156b');
+  const rec = fpRecord({
+    baseline: {
+      source_state: { identifier: 'r-42', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: [{ id: 'cond.inputs', description: 'the input set' }],
+      provenance: { method: 'observed before the change', established: true },
+      observed_result: { summary: 'surface enumerated' },
+    },
+    post_change_evidence: {
+      source_state: { identifier: 'r-42', identifier_kind: 'described-environment-state' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'] },
+      observed_result: { summary: 'surface enumerated and matched the baseline' },
+      contract_links: [{ facet: 'public_api', assertion_id: 'api.exports' }],
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t156b same identifier under a different identifier_kind is accepted', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [FP_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t157 (finding 4) — an honest all-UNVERIFIED record with an empty
+// contract_links array is accepted: nothing is VERIFIED, so no link is owed.
+// t148 (VERIFIED-without-link) and t151 (mixed) still hold.
+{
+  const { kernel, instance } = freshPair('t157');
+  const rec = fpRecord({
+    preserved_contract: {
+      public_api: { assertions: [{ id: 'api.exports', statement: 'unchanged' }] },
+      observable_io: { assertions: [{ id: 'io.mapping', statement: 'unchanged' }] },
+      side_effects_and_interactions: { not_applicable_justification: 'none' },
+      user_visible_behavior: { not_applicable_justification: 'none' },
+    },
+    post_change_evidence: {
+      source_state: { identifier: 'state-B', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: { relationship: 'same', baseline_condition_ids: ['cond.inputs'] },
+      observed_result: { summary: 'the post-change observation run was interrupted before either assertion was re-observed' },
+      contract_links: [],
+    },
+    evidence: [{ kind: 'behavioral-assertion', observed_scope: 'attempted post-change only', covers: ['api.exports', 'io.mapping'], limitations: ['the run did not complete; nothing was compared'] }],
+    gaps: [{ description: 'the post-change observation run was interrupted', scope: 'record' }],
+    verdict: {
+      per_assertion: [
+        { assertion_id: 'api.exports', state: 'UNVERIFIED', unverified_reason: 'post-change observation did not complete' },
+        { assertion_id: 'io.mapping', state: 'UNVERIFIED', unverified_reason: 'post-change observation did not complete' },
+      ],
+      overall: 'UNVERIFIED',
+      overall_unverified_reason: 'the post-change observation was not completed',
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t157 an all-UNVERIFIED record with an empty contract_links array is accepted', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [FP_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t158 (missing coverage) — two baseline conditions sharing one id.
+{
+  const { kernel, instance } = freshPair('t158');
+  const rec = fpRecord({
+    baseline: {
+      source_state: { identifier: 'state-A', identifier_kind: 'described-source-revision' },
+      inputs_and_conditions: [
+        { id: 'cond.inputs', description: 'the recorded input set' },
+        { id: 'cond.inputs', description: 'the recorded environment fixture' },
+      ],
+      provenance: { method: 'observed before the change', established: true },
+      observed_result: { summary: 'surface enumerated' },
+    },
+  });
+  plantFunctionalParity(kernel, { bundle: fpBundleWith('valid', fpDoc(rec)) });
+  commitAll(kernel);
+  check('t158 a duplicate baseline condition id is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
+  });
+}
+
 fs.rmSync(workRoot, { recursive: true, force: true });
 
 console.log('---');

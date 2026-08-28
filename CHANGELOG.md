@@ -16,6 +16,49 @@ updated: 2026-08-28
 
 ## [Unreleased]
 
+### Fixed
+
+- **`hooks/pre-push` now binds its gates to the Kernel being pushed instead of
+  inheriting the caller's Git environment.** Two problems in the pre-push hook,
+  both of which made the gates read the wrong tree:
+  - Git runs the hook with `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE` and the
+    rest of `git rev-parse --local-env-vars` exported. The regression suites
+    build throwaway synthetic repositories and run `git init/add/commit` inside
+    them; those child `git` invocations were inheriting the caller's variables
+    and operating on the repository being pushed — a synthetic test had
+    committed straight onto a Kernel branch that way, and an ordinary push was
+    blocked as a side effect. The hook now computes `ROOT` while the Git
+    environment is still intact and then sources the new
+    `hooks/lib/git-env-isolate.sh`, which unsets every repository-local Git
+    variable (the list comes from `git rev-parse --local-env-vars`, not a
+    hard-coded copy) before any gate runs. The helper is fail-closed: it checks
+    the exit status of `git rev-parse --local-env-vars` explicitly instead of
+    swallowing a failure into a successful empty list, so on any non-zero exit
+    it prints a diagnostic and returns non-zero and the hook — under `set -e` —
+    exits before a single gate is started. The helper does not touch
+    `MERIDIAN_*` or `PATH`.
+  - `scripts/kernel-validate.mjs` and `scripts/rule-resolver.mjs` prefer
+    `$MERIDIAN_KERNEL` over their own location, so an ambient `MERIDIAN_KERNEL`
+    left in the operator's shell (a different, possibly dirty checkout) made the
+    gates validate that other tree and falsely block the push. After the scrub
+    the hook now pins `export MERIDIAN_KERNEL="$ROOT"` — the worktree Git is
+    pushing from — so every gate sees the pushed Kernel. `MERIDIAN_INSTANCE` is
+    left as the owner set it: the fixture gate still overrides it inline to
+    `$ROOT/test/instance-fixture`, and the optional logged real-Instance run
+    still uses the value passed in. No `--no-verify` is needed.
+
+  New regression test `test/pre-push-git-isolation.test.mjs` — wired into
+  `hooks/pre-push` and `.github/workflows/gate.yml` — runs the verbatim
+  production hook and helper against a synthetic Kernel repo with gate shims
+  that record what each gate received, and drives a normal `git push` to a
+  local bare remote with no `--no-verify`. It proves the Git environment is
+  scrubbed before the first gate and that every gate sees `MERIDIAN_KERNEL`
+  equal to the pushed root even when a stale ambient value is set; deleting the
+  isolation sourcing line or the `MERIDIAN_KERNEL` pin makes the push fail
+  closed and the test red; a failing `git rev-parse --local-env-vars` fails the
+  hook with no gate started; and the caller and real Kernel HEADs are unchanged
+  throughout. Nothing touches the network or any real repository.
+
 ### Added
 
 - **Deterministic rule resolver (PHASE C of `MERIDIAN-RULE-RESOLUTION-001`).**

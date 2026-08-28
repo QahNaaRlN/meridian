@@ -27,6 +27,11 @@
 //                          keywords this validator implements, and accept their
 //                          representative valid fixtures while rejecting the
 //                          invalid ones. Reached before any Instance population.
+//   6c. functional-parity — the PHASE D functional-parity evidence schema parses,
+//                          uses only implemented keywords, and — together with
+//                          the record-level inference rules JSON Schema cannot
+//                          express — classifies its product-neutral fixtures:
+//                          every valid one satisfied, every invalid one rejected.
 //   7. sha-provenance    — installed skill matches its pinned SHA-256.
 //   8. ext-dependencies  — declared external dependencies are resolvable, or
 //                          are explicitly and legibly unresolved.
@@ -611,6 +616,294 @@ else ok(`schema: ${validated}/${attempted} registries passed in-gate validation 
     if (rrOk && coverageComplete) {
       ok('rule-resolution: 2/2 PHASE B schemas parsed and keyword-checked; '
        + `${satisfied} representative fixture(s) satisfied them and ${rejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// functional-parity: the PHASE D evidence schema is reachable by this gate
+// ---------------------------------------------------------------------------
+// verification/functional-parity/ carries a portable functional-parity evidence
+// contract, its JSON Schema and product-neutral fixtures. The generic $schema
+// pass never reaches a JSON Schema file or a .json fixtures bundle, so — as with
+// the rule-resolution block above — the schema is parsed, walked for unsupported
+// keywords, and exercised against its bundled fixtures here, before any Instance
+// population against it exists. Beyond the schema, the inference rules the
+// draft-07 subset cannot express because they relate one part of a record to
+// another are enforced against every fixture by functionalParityConsistency():
+//    1. the document carries at least one record;
+//    2. every preserved-contract assertion id is unique across the whole
+//       record, the four facets included, and maps to exactly one owning facet;
+//    3. every per-assertion verdict names a declared assertion, and every
+//       declared assertion carries exactly one per-assertion verdict;
+//    4. every evidence `covers` id resolves to a declared assertion;
+//    5. every post-change `contract_links` entry resolves to the exact
+//       {facet, assertion_id} pair of a declared assertion; a right id under
+//       the wrong facet is rejected;
+//    6. a per-assertion VERIFIED needs BOTH a covering evidence entry AND a
+//       post-change contract link that resolves to it; `covers` alone is not
+//       enough (an empty `contract_links` array is legal only when nothing is
+//       VERIFIED);
+//    7. any UNVERIFIED per-assertion state forces an UNVERIFIED overall;
+//    8. a record-scoped gap forces every declared per-assertion verdict
+//       UNVERIFIED and the overall UNVERIFIED; an assertion-scoped gap forces
+//       only the assertions it names, leaving the rest free to stand;
+//    9. `relationship: same` means the post-change observation referenced every
+//       baseline condition id and no others, with no duplicate baseline
+//       condition id; the word in a description is not evidence of it;
+//   10. a baseline whose provenance is not established forces every declared
+//       per-assertion verdict UNVERIFIED and the overall UNVERIFIED, whatever
+//       gaps are recorded;
+//   11. the baseline and post-change source states are a distinguishable pair;
+//       the same {identifier_kind, identifier} for both is not a before/after
+//       comparison.
+// Fail-closed on the bundle's own shape, exactly as the rule-resolution block
+// is: the success line prints only when the bundle is a non-empty array
+// carrying exactly one group for the evidence schema, with a non-empty `valid`
+// and `invalid`, and every fixture behaved as declared.
+function functionalParityConsistency(rec) {
+  const problems = [];
+  const records = Array.isArray(rec?.records) ? rec.records : [];
+  const FACETS = ['public_api', 'observable_io', 'side_effects_and_interactions', 'user_visible_behavior'];
+
+  // 1. the document carries at least one record
+  if (records.length === 0) {
+    problems.push('the evidence document carries no records; a functional-parity document with no record proves nothing');
+  }
+
+  for (let ri = 0; ri < records.length; ri++) {
+    const r = records[ri];
+    const at = records.length > 1 ? ` (record ${ri})` : '';
+    const pc = r?.preserved_contract ?? {};
+
+    // 2. assertion catalogue: id -> its one owning facet, unique record-wide
+    const catalog = new Map();
+    for (const fn of FACETS) {
+      for (const a of (pc[fn]?.assertions ?? [])) {
+        const id = String(a?.id ?? '');
+        if (!id) continue;
+        if (catalog.has(id)) {
+          problems.push(`assertion id "${id}"${at} is declared more than once (facets "${catalog.get(id)}" and "${fn}"); ids are unique across the whole record`);
+        } else {
+          catalog.set(id, fn);
+        }
+      }
+    }
+    const declared = new Set(catalog.keys());
+    if (declared.size === 0) {
+      problems.push(`no preserved-contract assertion is declared${at}; a parity record with no assertion proves nothing`);
+    }
+
+    // 3. one per-assertion verdict per declared assertion, none stray
+    const verdict = r?.verdict ?? {};
+    const perAssertion = Array.isArray(verdict.per_assertion) ? verdict.per_assertion : [];
+    const seen = new Map();
+    for (const v of perAssertion) {
+      const id = String(v?.assertion_id ?? '');
+      seen.set(id, (seen.get(id) ?? 0) + 1);
+      if (!declared.has(id)) problems.push(`the verdict names assertion "${id}"${at}, which no preserved-contract facet declares`);
+    }
+    for (const id of declared) {
+      const n = seen.get(id) ?? 0;
+      if (n === 0) problems.push(`assertion "${id}"${at} carries no per-assertion verdict`);
+      else if (n > 1) problems.push(`assertion "${id}"${at} carries more than one per-assertion verdict`);
+    }
+    const stateOf = new Map(perAssertion.map((v) => [String(v?.assertion_id ?? ''), String(v?.state ?? '')]));
+
+    // 4. evidence `covers` -> declared assertion
+    const covered = new Set();
+    for (const ev of (Array.isArray(r?.evidence) ? r.evidence : [])) {
+      for (const id of (Array.isArray(ev?.covers) ? ev.covers : [])) {
+        const s = String(id);
+        if (!declared.has(s)) problems.push(`an evidence entry covers assertion "${s}"${at}, which no preserved-contract facet declares`);
+        else covered.add(s);
+      }
+    }
+
+    // 5. post-change contract link -> exact {facet, assertion_id} pair
+    const linked = new Set();
+    for (const link of (Array.isArray(r?.post_change_evidence?.contract_links) ? r.post_change_evidence.contract_links : [])) {
+      const s = String(link?.assertion_id ?? '');
+      const f = String(link?.facet ?? '');
+      if (!declared.has(s)) {
+        problems.push(`a post-change contract link names assertion "${s}"${at}, which no preserved-contract facet declares`);
+      } else if (catalog.get(s) !== f) {
+        problems.push(`a post-change contract link names assertion "${s}"${at} under facet "${f}", but it is declared under facet "${catalog.get(s)}"`);
+      } else {
+        linked.add(s);
+      }
+    }
+
+    // 6. a per-assertion VERIFIED needs BOTH covering evidence AND a link
+    //    (an empty contract_links array is legal only when nothing is VERIFIED)
+    for (const id of declared) {
+      if (stateOf.get(id) !== 'VERIFIED') continue;
+      if (!covered.has(id)) problems.push(`assertion "${id}"${at} is VERIFIED but no evidence entry covers it`);
+      if (!linked.has(id)) problems.push(`assertion "${id}"${at} is VERIFIED but no post-change contract link resolves to it; evidence coverage alone is not sufficient`);
+    }
+
+    // 7. any UNVERIFIED per-assertion state forces an UNVERIFIED overall
+    const anyUnverified = [...stateOf.values()].some((s) => s === 'UNVERIFIED');
+    if (anyUnverified && String(verdict.overall ?? '') !== 'UNVERIFIED') {
+      problems.push(`a per-assertion verdict is UNVERIFIED${at} but the overall verdict is not`);
+    }
+
+    // 8. gaps force their assertion(s), or the whole record, UNVERIFIED. A
+    //    record-scoped gap reaches every declared assertion, not just the
+    //    overall verdict; an assertion-scoped gap reaches only the assertions
+    //    it names.
+    for (const g of (Array.isArray(r?.gaps) ? r.gaps : [])) {
+      if (g?.scope === 'record') {
+        for (const id of declared) {
+          if (stateOf.get(id) === 'VERIFIED') {
+            problems.push(`a record-scoped gap is recorded${at} but assertion "${id}" is VERIFIED; a record-scoped gap leaves every assertion UNVERIFIED`);
+          }
+        }
+        if (String(verdict.overall ?? '') !== 'UNVERIFIED') {
+          problems.push(`a record-scoped gap is recorded${at} but the overall verdict is not UNVERIFIED`);
+        }
+      } else if (g?.scope === 'assertion') {
+        for (const id of (Array.isArray(g.assertion_ids) ? g.assertion_ids : [])) {
+          const s = String(id);
+          if (!declared.has(s)) problems.push(`a gap names assertion "${s}"${at}, which no preserved-contract facet declares`);
+          else if (stateOf.get(s) !== 'UNVERIFIED') problems.push(`a gap leaves assertion "${s}"${at} unclosed but its verdict is not UNVERIFIED`);
+        }
+      }
+    }
+
+    // 9. `relationship: same` means every baseline condition id, and no others
+    const baseCondIds = new Set();
+    for (const c of (Array.isArray(r?.baseline?.inputs_and_conditions) ? r.baseline.inputs_and_conditions : [])) {
+      const id = String(c?.id ?? '');
+      if (!id) continue;
+      if (baseCondIds.has(id)) problems.push(`baseline condition id "${id}"${at} is declared more than once`);
+      else baseCondIds.add(id);
+    }
+    const pcCond = r?.post_change_evidence?.inputs_and_conditions ?? {};
+    if (pcCond.relationship === 'same') {
+      const refs = (Array.isArray(pcCond.baseline_condition_ids) ? pcCond.baseline_condition_ids : []).map(String);
+      const refSet = new Set(refs);
+      for (const ref of refs) {
+        if (!baseCondIds.has(ref)) problems.push(`post-change conditions are declared "same"${at} but reference baseline condition "${ref}", which the baseline does not define`);
+      }
+      for (const id of baseCondIds) {
+        if (!refSet.has(id)) problems.push(`post-change conditions are declared "same"${at} but do not reproduce baseline condition "${id}"`);
+      }
+    }
+
+    // 10. an unestablished baseline forces EVERY declared assertion, and the
+    //     overall, UNVERIFIED — a gap does not rescue any assertion
+    if (r?.baseline?.provenance?.established === false) {
+      for (const id of declared) {
+        if (stateOf.get(id) === 'VERIFIED') {
+          problems.push(`the baseline provenance was not established${at} but assertion "${id}" is VERIFIED; an unestablished baseline leaves every assertion UNVERIFIED`);
+        }
+      }
+      if (String(verdict.overall ?? '') !== 'UNVERIFIED') {
+        problems.push(`the baseline provenance was not established${at} but the overall verdict is not UNVERIFIED`);
+      }
+    }
+
+    // 11. the baseline and post-change source states must be a distinguishable
+    //     pair. Both fields equal is not a before/after comparison; the same
+    //     identifier string under a different identifier_kind is a different
+    //     pair and is not rejected on that ground.
+    const bss = r?.baseline?.source_state ?? {};
+    const pss = r?.post_change_evidence?.source_state ?? {};
+    const bId = String(bss.identifier ?? '');
+    const bKind = String(bss.identifier_kind ?? '');
+    if (bId !== '' && bId === String(pss.identifier ?? '') && bKind === String(pss.identifier_kind ?? '')) {
+      problems.push(`the baseline and post-change source states are the identical pair {identifier_kind: "${bKind}", identifier: "${bId}"}${at}; a before/after comparison needs two distinguishable states`);
+    }
+  }
+  return problems;
+}
+{
+  const fpDir = path.join(KERNEL_ROOT, 'verification', 'functional-parity');
+  const fpSchemaName = 'functional-parity-evidence.schema.json';
+  const fpSchemaRaw = readIfExists(path.join(fpDir, fpSchemaName));
+  if (fpSchemaRaw === null) {
+    info('functional-parity: no PHASE D evidence schema in this Kernel; nothing to check');
+  } else {
+    let fpOk = true;
+    let fpSchema = null;
+    try { fpSchema = JSON.parse(fpSchemaRaw); }
+    catch (e) { fail(`functional-parity: ${fpSchemaName} is not valid JSON: ${e.message}`); fpOk = false; }
+    if (fpSchema) {
+      try { assertSupportedDeep(fpSchema, fpSchemaName); }
+      catch (e) { fail(`functional-parity: ${fpSchemaName} uses a construct this validator cannot check: ${e.message}`); fpOk = false; }
+    }
+    let satisfied = 0;
+    let rejected = 0;
+    let coverageComplete = false;
+    const fxRaw = readIfExists(path.join(fpDir, 'fixtures', 'functional-parity-evidence.fixtures.json'));
+    if (fxRaw === null) {
+      fail('functional-parity: the PHASE D evidence schema carries no fixtures (verification/functional-parity/fixtures/functional-parity-evidence.fixtures.json); a schema no run exercises is not one this gate has reached');
+      fpOk = false;
+    } else if (fpOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(fxRaw); }
+      catch (e) { bundleOk = false; fail(`functional-parity: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && !Array.isArray(bundle)) {
+        bundleOk = false;
+        fail('functional-parity: the fixtures file must be an array carrying one group for the evidence schema; it is not an array');
+      }
+      if (bundleOk && Array.isArray(bundle) && bundle.length === 0) {
+        bundleOk = false;
+        fail('functional-parity: the fixtures file is an empty array; the evidence schema is not covered');
+      }
+      if (!bundleOk) {
+        fpOk = false;
+      } else {
+        const groups = bundle.filter((g) => g?.schema === fpSchemaName);
+        const strays = bundle.filter((g) => g?.schema !== fpSchemaName);
+        if (strays.length) {
+          fail(`functional-parity: a fixture group names schema "${strays[0]?.schema}", which is not the PHASE D evidence schema`);
+          fpOk = false;
+        }
+        if (groups.length === 0) {
+          fail(`functional-parity: no fixture group for "${fpSchemaName}"; the evidence schema must be covered`);
+          fpOk = false;
+        } else if (groups.length > 1) {
+          fail(`functional-parity: schema "${fpSchemaName}" has more than one fixture group; exactly one is expected`);
+          fpOk = false;
+        } else {
+          const group = groups[0];
+          const groupShapeOk = ['valid', 'invalid'].every((k) => {
+            if (Array.isArray(group[k]) && group[k].length > 0) return true;
+            fail(`functional-parity: fixture group "${fpSchemaName}" has no non-empty "${k}" array`);
+            fpOk = false;
+            return false;
+          });
+          if (groupShapeOk) {
+            for (const c of group.valid) {
+              const e = [];
+              let threw = null;
+              try { validate(c?.doc, fpSchema, fpSchema, '', e); } catch (err) { threw = err; }
+              const semantic = threw ? [] : functionalParityConsistency(c?.doc);
+              if (threw) { fail(`functional-parity: a fixture that must satisfy ${fpSchemaName} threw (${c?.note}): ${threw.message}`); fpOk = false; }
+              else if (e.length) { fail(`functional-parity: a fixture that must satisfy ${fpSchemaName} did not (${c?.note}): ${e[0]}`); fpOk = false; }
+              else if (semantic.length) { fail(`functional-parity: a fixture that must satisfy the evidence inference rules did not (${c?.note}): ${semantic[0]}`); fpOk = false; }
+              else satisfied++;
+            }
+            for (const c of group.invalid) {
+              const e = [];
+              let threw = null;
+              try { validate(c?.doc, fpSchema, fpSchema, '', e); } catch (err) { threw = err; }
+              const semantic = threw ? [] : functionalParityConsistency(c?.doc);
+              if (threw) { fail(`functional-parity: an invalid fixture for ${fpSchemaName} threw instead of being rejected with errors (${c?.note}): ${threw.message}`); fpOk = false; }
+              else if (e.length === 0 && semantic.length === 0) { fail(`functional-parity: a fixture that must be rejected by ${fpSchemaName} or its inference rules validated clean (${c?.note})`); fpOk = false; }
+              else rejected++;
+            }
+            coverageComplete = fpOk;
+          }
+        }
+      }
+    }
+    if (fpOk && coverageComplete) {
+      ok('functional-parity: the PHASE D evidence schema parsed and keyword-checked; '
+       + `${satisfied} representative fixture(s) satisfied it and its inference rules, and ${rejected} were rejected as declared`);
     }
   }
 }

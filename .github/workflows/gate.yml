@@ -25,6 +25,9 @@ jobs:
       - name: Regression-test the rule resolver
         run: node test/rule-resolver.test.mjs
 
+      - name: Regression-test the pre-push Git-environment isolation
+        run: node test/pre-push-git-isolation.test.mjs
+
       - name: Regression-test the metrics-logging wrapper
         run: node test/validate-and-log.test.mjs
 

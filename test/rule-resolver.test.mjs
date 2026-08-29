@@ -3,10 +3,23 @@
 //
 // The ten acceptance cases of §4 / §9 of the normative model are each covered
 // by a named test — cases 9 and 10 are separate tests — plus append-only
-// precedence in both directions, protocol-route scope isolation, provenance
-// checks on unresolved and undetermined records, strict work-item validation,
-// container-region fail-closed behaviour, the several/adjacent "**" glob cases,
-// and negative tests for every other fail-closed path and for stable ordering.
+// precedence in both directions, same-day precedence via an explicit
+// `supersedes` relationship. EVERY declared `supersedes` relationship is
+// validated before an authoritative record is returned — in the greatest-date
+// cohort and in every historical cohort — and a `supersedes` that cannot name
+// exactly one same-date target fails closed, including on a record that is
+// alone on its applicability date. Covered: valid head selection, a
+// no-relationship tie fail-closed, the intake verdict never a precedence key,
+// a missing / cross-identity / self / cyclic pointer on a unique latest record,
+// an invalid relationship in a historical cohort while a newer unique record
+// exists, a valid historical same-day cohort followed by a newer unique date,
+// ambiguous / missing target, multiple incomparable heads, different-date
+// precedence unchanged, byte-identical output under reversed input for every
+// successful case, and the schema shape at the resolver boundary. Then
+// protocol-route scope isolation, provenance checks on unresolved and
+// undetermined records, strict work-item validation, container-region
+// fail-closed behaviour, the several/adjacent "**" glob cases, and negative
+// tests for every other fail-closed path and for stable ordering.
 // All fixture data is product-neutral: test/fixtures/rule-resolver.fixtures.json
 // names fictional repositories, norms and paths, and this file computes each
 // norm's SHA-256 from its text — a digest is never hard-coded.
@@ -429,6 +442,249 @@ check('precedence — a newer status:resolved suppresses an older status:unresol
 check('precedence — records that cannot be ordered within identity/date are fail-closed', () => {
   const src = precedencePair('resolved', '2026-08-15', 'unresolved', '2026-08-15');
   throws(() => resolveRules(precWi, src), /sharing the latest recorded_at|append-only precedence cannot be decided/);
+});
+
+// ===========================================================================
+// same-day append-only precedence via an explicit `supersedes` relationship
+// (rule-resolution.md §4, §9; MERIDIAN-RULE-RESOLUTION — same-day precedence)
+// ===========================================================================
+// Append-only applicability records for ONE norm identity, each with its own
+// intake pointer (a distinct verdict), built inline so the only thing under
+// test is the `supersedes` wiring. `recorded_at` per spec puts records into
+// applicability-date cohorts. Provenance is made to pass (one norm text,
+// digests recomputed, an intake register with an entry per verdict) so a valid
+// relationship reaches applicable_norms. Every declared `supersedes` is
+// validated — current cohort and historical — before a record is returned;
+// a `supersedes` with no same-date target fails closed, never ignored.
+const SUP_TEXT = '# Supersede\n\nA rule under same-day precedence test.\n';
+function supersedeSet(specs) {
+  const src = assemble(['kernel-conduct']);
+  const base = {
+    norm: { repository: 'app-frontend', path: 'rules/supersede.md' },
+    digest: sha256(SUP_TEXT),
+    scope: 'repository', repository: 'app-frontend',
+    activation: 'always', source: 'repository',
+  };
+  for (const s of specs) {
+    const r = {
+      ...base,
+      intake_record: { register: 'instruction-intake/app-frontend.yaml', recorded_at: '2026-08-01', verdict: s.verdict },
+      status: s.status || 'resolved',
+      recorded_at: s.recorded_at || '2026-08-29',
+    };
+    if ((s.status || 'resolved') === 'unresolved') r.resume_condition = `resume when the ${s.verdict} record is revisited`;
+    if (s.supersedes) r.supersedes = s.supersedes;
+    src.applicability_records.push(r);
+  }
+  src.norm_texts['app-frontend::rules/supersede.md'] = SUP_TEXT;
+  src.intake_registers = [{
+    register: 'instruction-intake/app-frontend.yaml', repository: 'app-frontend',
+    records: ['keep-local', 'deferred', 'adopt-edition', 'adopt-core'].map((verdict) => ({
+      artifact: 'rules/supersede.md', recorded_at: '2026-08-01', verdict, delivery: 'cursor-rule',
+    })),
+  }];
+  return src;
+}
+const supWi = {
+  repository_id: 'app-frontend', work_kind: 'change', change_class: 'FEATURE',
+  candidate_paths: ['x'], changed_paths: [],
+};
+const supId = (v) => `instruction-intake/app-frontend.yaml#rules/supersede.md@2026-08-01/${v}`;
+const supPtr = (v, over = {}) => ({
+  register: 'instruction-intake/app-frontend.yaml', path: 'rules/supersede.md',
+  recorded_at: '2026-08-01', verdict: v, ...over,
+});
+
+// 1 — a valid explicit supersession selects a unique authoritative head, and the
+//     result is byte-identical under reversed input order.
+check('supersedes — the declared successor is authoritative on a same-day pair', () => {
+  const specs = [
+    { verdict: 'deferred', status: 'unresolved' },
+    { verdict: 'keep-local', status: 'resolved', supersedes: supPtr('deferred') },
+  ];
+  const out = resolveRules(supWi, supersedeSet(specs));
+  assert(out.applicable_norms.some((e) => e.norm === supId('keep-local')), 'the keep-local successor must be authoritative');
+  assert(!out.applicable_norms.some((e) => e.norm === supId('deferred')), 'the superseded deferred record must not win');
+  assert(!out.unresolved_applicability.some((u) => u.subject === supId('deferred')), 'the superseded record must not surface as unresolved');
+});
+check('supersedes — resolution is byte-identical under reversed input order', () => {
+  const specs = [
+    { verdict: 'deferred', status: 'unresolved' },
+    { verdict: 'keep-local', status: 'resolved', supersedes: supPtr('deferred') },
+  ];
+  const forward = JSON.stringify(resolveRules(supWi, supersedeSet(specs)));
+  const reversed = JSON.stringify(resolveRules(supWi, supersedeSet([...specs].reverse())));
+  assert(forward === reversed, `output differs under reordering:\n${forward}\n${reversed}`);
+});
+
+// 2 — the same pair with no explicit relationship stays fail-closed; the intake
+//     verdict does not by itself order them (no adopt-edition > deferred).
+check('supersedes — a same-day pair with no supersedes relationship stays fail-closed', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'unresolved' },
+    { verdict: 'adopt-edition', status: 'unresolved' },
+  ]);
+  throws(() => resolveRules(supWi, src),
+    /no "supersedes" relationship orders them|append-only precedence cannot be decided/);
+});
+check('supersedes — intake verdict alone never orders a same-day pair', () => {
+  // adopt-edition is "stronger" as an intake verdict, but nothing here says it
+  // supersedes the deferred record, so the resolver must not pick it.
+  const src = supersedeSet([
+    { verdict: 'adopt-edition', status: 'resolved' },
+    { verdict: 'deferred', status: 'resolved' },
+  ]);
+  throws(() => resolveRules(supWi, src), /no "supersedes" relationship orders them/);
+});
+
+// 3 — a supersedes target that does not exist among the same-day records.
+check('supersedes — a pointer to a non-existent record is fail-closed', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'unresolved' },
+    { verdict: 'keep-local', status: 'resolved', supersedes: supPtr('adopt-core') },
+  ]);
+  throws(() => resolveRules(supWi, src), /resolves to no applicability record/);
+});
+
+// 4 — a supersedes pointer that names a different norm identity.
+check('supersedes — a cross-norm-identity pointer is fail-closed', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'unresolved' },
+    { verdict: 'keep-local', status: 'resolved', supersedes: supPtr('deferred', { path: 'rules/other.md' }) },
+  ]);
+  throws(() => resolveRules(supWi, src), /different norm identity/);
+});
+
+// 5 — a self-referential supersedes pointer.
+check('supersedes — a self-referential pointer is fail-closed', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'unresolved' },
+    { verdict: 'keep-local', status: 'resolved', supersedes: supPtr('keep-local') },
+  ]);
+  throws(() => resolveRules(supWi, src), /supersedes itself/);
+});
+
+// 6 — a cycle in the supersedes relationship.
+check('supersedes — a cycle in the relationship is fail-closed', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'resolved', supersedes: supPtr('keep-local') },
+    { verdict: 'keep-local', status: 'resolved', supersedes: supPtr('deferred') },
+  ]);
+  throws(() => resolveRules(supWi, src), /forms a cycle/);
+});
+
+// 7 — multiple incomparable heads: a third same-day record that nothing orders.
+check('supersedes — multiple incomparable heads are fail-closed', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'unresolved' },
+    { verdict: 'keep-local', status: 'resolved', supersedes: supPtr('deferred') },
+    { verdict: 'adopt-edition', status: 'resolved' },
+  ]);
+  throws(() => resolveRules(supWi, src), /un-superseded head\(s\)/);
+});
+
+// 8 — a `supersedes` on the UNIQUE greatest-date record is not harmless stray
+//     data: it has no same-date target, so it must fail closed (replaces the
+//     former "ignores a stray supersedes" test).
+check('supersedes — a dangling pointer on the unique latest record is fail-closed', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'unresolved', recorded_at: '2026-08-10' },
+    { verdict: 'keep-local', status: 'resolved', recorded_at: '2026-08-20', supersedes: supPtr('adopt-core') },
+  ]);
+  throws(() => resolveRules(supWi, src), /resolves to no applicability record/);
+});
+check('supersedes — a cross-identity pointer on the unique latest record is fail-closed', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'unresolved', recorded_at: '2026-08-10' },
+    { verdict: 'keep-local', status: 'resolved', recorded_at: '2026-08-20', supersedes: supPtr('deferred', { path: 'rules/other.md' }) },
+  ]);
+  throws(() => resolveRules(supWi, src), /different norm identity/);
+});
+check('supersedes — a self-pointer on the unique latest record is fail-closed', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'unresolved', recorded_at: '2026-08-10' },
+    { verdict: 'keep-local', status: 'resolved', recorded_at: '2026-08-20', supersedes: supPtr('keep-local') },
+  ]);
+  throws(() => resolveRules(supWi, src), /supersedes itself/);
+});
+check('supersedes — a pointer to a record on another applicability date is fail-closed', () => {
+  // keep-local (latest, 2026-08-20) points at the deferred record's intake
+  // identity, but that record lives in the 2026-08-10 cohort — not the carrier's.
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'unresolved', recorded_at: '2026-08-10' },
+    { verdict: 'keep-local', status: 'resolved', recorded_at: '2026-08-20', supersedes: supPtr('deferred') },
+  ]);
+  throws(() => resolveRules(supWi, src), /does not share this record's applicability recorded_at/);
+});
+
+// 8b — an INVALID relationship in a historical (non-authoritative) cohort fails
+//      closed even though a newer unique record would otherwise be authoritative.
+check('supersedes — a cyclic relationship in a historical cohort fails closed despite a newer unique record', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'resolved', recorded_at: '2026-08-10', supersedes: supPtr('keep-local') },
+    { verdict: 'keep-local', status: 'resolved', recorded_at: '2026-08-10', supersedes: supPtr('deferred') },
+    { verdict: 'adopt-edition', status: 'resolved', recorded_at: '2026-08-20' },
+  ]);
+  throws(() => resolveRules(supWi, src), /forms a cycle/);
+});
+check('supersedes — a historical cohort that declares ordering but leaves two heads fails closed', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'unresolved', recorded_at: '2026-08-10' },
+    { verdict: 'keep-local', status: 'resolved', recorded_at: '2026-08-10', supersedes: supPtr('deferred') },
+    { verdict: 'adopt-edition', status: 'resolved', recorded_at: '2026-08-10' },
+    { verdict: 'adopt-core', status: 'resolved', recorded_at: '2026-08-20' },
+  ]);
+  throws(() => resolveRules(supWi, src), /un-superseded head\(s\)/);
+});
+
+// 8c — a VALID historical same-day cohort validates, and then the newer unique
+//      date wins; order-independent.
+check('supersedes — a valid historical same-day cohort validates, then the newer unique date wins', () => {
+  const specs = [
+    { verdict: 'deferred', status: 'unresolved', recorded_at: '2026-08-10' },
+    { verdict: 'keep-local', status: 'resolved', recorded_at: '2026-08-10', supersedes: supPtr('deferred') },
+    { verdict: 'adopt-edition', status: 'resolved', recorded_at: '2026-08-20' },
+  ];
+  const out = resolveRules(supWi, supersedeSet(specs));
+  assert(out.applicable_norms.some((e) => e.norm === supId('adopt-edition')), 'the newer unique date must be authoritative');
+  assert(!out.applicable_norms.some((e) => e.norm === supId('keep-local')), 'the historical cohort head is not authoritative');
+  assert(!out.unresolved_applicability.some((u) => u.subject === supId('deferred')), 'a superseded historical record must not surface');
+  const reversed = JSON.stringify(resolveRules(supWi, supersedeSet([...specs].reverse())));
+  assert(JSON.stringify(out) === reversed, 'resolution must be byte-identical under reversed input order');
+});
+
+// 8d — different-date records with no supersedes relation keep the existing
+//      precedence (a newer unresolved suppresses an older resolved), unchanged.
+check('supersedes — different-date records with no relationship keep existing precedence', () => {
+  const specs = [
+    { verdict: 'keep-local', status: 'resolved', recorded_at: '2026-08-10' },
+    { verdict: 'deferred', status: 'unresolved', recorded_at: '2026-08-20' },
+  ];
+  const out = resolveRules(supWi, supersedeSet(specs));
+  assert(!out.applicable_norms.some((e) => e.norm === supId('keep-local')), 'older resolved must not win');
+  assert(out.unresolved_applicability.some((u) => u.subject === supId('deferred')), 'newer unresolved must set the outcome');
+  const reversed = JSON.stringify(resolveRules(supWi, supersedeSet([...specs].reverse())));
+  assert(JSON.stringify(out) === reversed, 'different-date resolution must be order-independent');
+});
+
+// 9 — schema shape of the relationship is enforced at the resolver boundary too.
+check('supersedes — a malformed supersedes pointer is rejected as a malformed record', () => {
+  const src = supersedeSet([
+    { verdict: 'deferred', status: 'unresolved' },
+    { verdict: 'keep-local', status: 'resolved', supersedes: { register: 'instruction-intake/app-frontend.yaml', path: 'rules/supersede.md', recorded_at: '2026-08-01' } },
+  ]);
+  throws(() => resolveRules(supWi, src), /malformed applicability record/);
+});
+check('supersedes — a kernel-source record must not carry supersedes (malformed record)', () => {
+  const src = assemble(['kernel-conduct']);
+  src.applicability_records.push({
+    norm: { repository: 'kernel', path: 'standards/workspace/x.md' },
+    digest: sha256(SUP_TEXT), scope: 'universal', activation: 'always', source: 'kernel',
+    status: 'resolved', recorded_at: '2026-08-29',
+    supersedes: supPtr('keep-local', { path: 'standards/workspace/x.md' }),
+  });
+  src.norm_texts['kernel::standards/workspace/x.md'] = SUP_TEXT;
+  throws(() => resolveRules(supWi, src), /malformed applicability record/);
 });
 
 // ===========================================================================

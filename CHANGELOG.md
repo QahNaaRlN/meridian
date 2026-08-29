@@ -18,6 +18,39 @@ updated: 2026-08-29
 
 ### Added
 
+- **`registries/rule-resolution/applicability.schema.json` — an optional
+  `supersedes` pointer that gives two same-day applicability records of one
+  norm identity a truthful, explicit precedence (MERIDIAN-RULE-RESOLUTION —
+  same-day precedence).** Background: one textual norm can go through
+  instruction-intake twice on one date with different verdicts (e.g. `deferred`
+  and `adopt-edition`); §9 makes each a distinct applicability record, both may
+  be established or re-synced on the same day, and the resolver — which orders
+  a norm identity only by `recorded_at` — then fails closed on the tie. Rather
+  than an implicit tie-breaker (a synthetic date, YAML order, a hard-coded
+  `adopt-edition > deferred`), a record may now carry `supersedes`: an explicit
+  statement that it takes precedence over one earlier applicability record **of
+  the same norm identity and the same applicability `recorded_at`**.
+  - The pointer reuses the exact append-only record identity `instruction-intake.md`
+    defines and `rule-resolution.md` §9 names — `register` + artifact (`path`) +
+    region (`region`) + `recorded_at` + `verdict` (+ `revision` when the register
+    is revision-identified) — it invents no parallel identity and no free-text
+    ordering rule. `path`/`region` must equal the carrying record's own
+    `norm.path`/`norm.region`. Optional; `additionalProperties: false`.
+    **Forbidden when `source` is `kernel`** (no intake identity to point at, no
+    verdict multiplicity to disambiguate — the same reason `intake_record` is
+    forbidden there). `schema_version` stays `1`: this is a backward-compatible
+    optional field, every existing document remains valid and no Instance data
+    is migrated.
+  - Every declared `supersedes` relationship is data that is validated
+    fail-closed — a `supersedes` is never harmless stray data, including on a
+    record that is alone on its applicability date (it has no same-date target).
+    The greatest applicability `recorded_at` then decides which cohort is
+    authoritative.
+  - `resolver-output.schema.json` unchanged — the output shape does not change:
+    a resolved tie yields an ordinary `applicable_norms` / `unresolved_applicability`
+    entry for the head, an unresolvable tie still fails closed with exit 2.
+  - `VERSION` unchanged: this package is not a release.
+
 - **`verification/functional-parity/refactor-protocol.md` — the canonical
   REFACTOR execution protocol (PHASE E of `MERIDIAN-RULE-RESOLUTION-001`).**
   A `document_type: protocol` Kernel document in the functional-parity
@@ -54,6 +87,57 @@ updated: 2026-08-29
 
 ### Changed
 
+- **`scripts/rule-resolver.mjs` — `pickAuthoritative()` validates every declared
+  `supersedes` relationship, then selects by date (MERIDIAN-RULE-RESOLUTION —
+  same-day precedence).** Two steps, in order: **(1) validate.** The norm group
+  is split into applicability `recorded_at` cohorts and the `supersedes` graph
+  of **every** cohort — the current greatest-date one and every historical one —
+  is validated fail-closed; a `supersedes` on a record that is alone on its date
+  is validated too and fails closed, because it has no same-date target (it is
+  never treated as harmless stray data). **(2) select.** The greatest
+  applicability `recorded_at` picks the current cohort; `recorded_at` keeps its
+  meaning and is never a synthetic sequence. A unique record in that cohort is
+  authoritative. A tied current cohort is authoritative only through a valid
+  one-head `supersedes` graph; a tied cohort with no relationship still fails
+  closed. Fail-closed, each with its own diagnostic: a `supersedes` target that
+  resolves to no record, to a record on another applicability date, to more than
+  one record, to another norm identity, to the record itself, a cohort whose
+  edges form a cycle, or a cohort that declares ordering yet leaves more than
+  one un-superseded head. New helpers `resolveSupersedesEdge()`,
+  `validateCohortSupersedes()`, `matchesIntakePointer()`,
+  `assertNoSupersedesCycle()` (three-colour DFS per cohort). Existing provenance,
+  digest, `unresolved` status, scope, activation and **different-date**
+  precedence (with no `supersedes`) are unchanged; the intake verdict is never a
+  precedence key. Resolution stays byte-identical under input-record reordering.
+  - `standards/workspace/rule-resolution.md` §4 and §9 — the rule is stated
+    normatively. §4: every declared `supersedes` is validated before the
+    date-based selection, in the current and in every historical cohort; a
+    shared greatest `recorded_at` is `unresolved`/fail-closed unless an explicit
+    `supersedes` relationship among the same-date records resolves it; a
+    `supersedes` on a record alone on its date fails closed; `recorded_at` is
+    not a synthetic sequence and the intake verdict is not a precedence key. §9:
+    the `supersedes` field reuses the §9 record identity, orders only records of
+    one norm identity **and one applicability date**, and the resolver validates
+    the graph of every cohort fail-closed (no/other-date/ambiguous/cross-identity
+    /self target, cycle, multi-head cohort).
+  - `registries/rule-resolution/fixtures/rule-resolution.fixtures.json` — one
+    `valid` case (a same-day pair ordered by `supersedes`) and three `invalid`
+    cases (a pointer missing its `verdict`, a `supersedes` on a `kernel`-source
+    record, an unknown property in the pointer).
+  - `test/rule-resolver.test.mjs` — 19 same-day precedence regression tests
+    (70 → 89). The former "a unique greatest `recorded_at` … ignores a stray
+    `supersedes`" test is **replaced** with fail-closed coverage: a
+    dangling / cross-identity / self / other-date pointer on the unique latest
+    record; an invalid (cyclic, multi-head) relationship in a historical cohort
+    while a newer unique record exists; a valid historical same-day cohort
+    followed by a newer unique date (validates, then the newer date wins);
+    different-date records with no relationship keep the existing precedence; and
+    byte-identical output under reversed input for every successful case — plus
+    the retained valid-head, no-relationship, verdict-never-orders,
+    missing/ambiguous target, multiple-heads, and malformed / `kernel`-source
+    boundary cases.
+  - `registries/rule-resolution/resolver-output.schema.json` unchanged — the
+    output shape does not change. `VERSION` unchanged: not a release.
 - **`scripts/rule-resolver.mjs` — `REFACTOR` now routes its own protocol with
   provenance instead of returning `unresolved_applicability`.** The PHASE D
   evidence contract and the PHASE E execution protocol exist, so a `REFACTOR`

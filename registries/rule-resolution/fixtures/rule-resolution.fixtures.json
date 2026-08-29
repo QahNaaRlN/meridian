@@ -143,9 +143,50 @@
             { "norm": { "repository": "example-repo", "path": "rules/example.md", "region": "naming-rules" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "repository", "repository": "example-repo", "activation": "always", "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "keep-local" }, "status": "resolved", "recorded_at": "2026-08-27" }
           ]
         }
+      },
+      {
+        "note": "a same-date pair ordered by an explicit supersedes pointer that reuses the intake-pointer identity",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md", "region": "naming-rules" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "repository", "repository": "example-repo", "activation": "always", "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "deferred" }, "status": "unresolved", "resume_condition": "the topic core is extracted", "recorded_at": "2026-08-29" },
+            { "norm": { "repository": "example-repo", "path": "rules/example.md", "region": "naming-rules" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "repository", "repository": "example-repo", "activation": "always", "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "keep-local" }, "status": "resolved", "recorded_at": "2026-08-29", "supersedes": { "register": "instruction-intake/example-repo.yaml", "path": "rules/example.md", "region": "naming-rules", "recorded_at": "2026-08-20", "verdict": "deferred" } }
+          ]
+        }
       }
     ],
     "invalid": [
+      {
+        "note": "a supersedes pointer missing its verdict component is not an unambiguous identity",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "keep-local" }, "status": "resolved", "recorded_at": "2026-08-29", "supersedes": { "register": "instruction-intake/example-repo.yaml", "path": "rules/example.md", "recorded_at": "2026-08-20" } }
+          ]
+        }
+      },
+      {
+        "note": "a kernel-source record must not carry a supersedes pointer",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "kernel", "path": "standards/workspace/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "kernel", "status": "resolved", "recorded_at": "2026-08-29", "supersedes": { "register": "instruction-intake/example-repo.yaml", "path": "standards/workspace/example.md", "recorded_at": "2026-08-20", "verdict": "keep-local" } }
+          ]
+        }
+      },
+      {
+        "note": "a supersedes pointer carrying an unknown property",
+        "doc": {
+          "$schema": "./applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            { "norm": { "repository": "example-repo", "path": "rules/example.md" }, "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "scope": "universal", "activation": "always", "source": "repository", "intake_record": { "register": "instruction-intake/example-repo.yaml", "recorded_at": "2026-08-20", "verdict": "keep-local" }, "status": "resolved", "recorded_at": "2026-08-29", "supersedes": { "register": "instruction-intake/example-repo.yaml", "path": "rules/example.md", "recorded_at": "2026-08-20", "verdict": "deferred", "note": "stray" } }
+          ]
+        }
+      },
       {
         "note": "repository scope without a repository id",
         "doc": {

@@ -17,7 +17,7 @@
 //   3  "acceptance 3 — assessment skill + degraded-state norm, no false conflict"
 //   4  "acceptance 4a — layer-architecture unresolved before the new intake record"
 //      "acceptance 4b — layer-architecture repository-scoped once the new record exists"
-//   5  "acceptance 5 — REFACTOR yields unresolved_applicability, no protocol"
+//   5  "acceptance 5 — REFACTOR routes its own protocol with provenance"
 //   6  "acceptance 6 — defect in REFACTOR: separate BUGFIX child, original not reclassified"
 //   7  "acceptance 7 — initiative returns decomposition view and blockers"
 //      "acceptance 7b — a decomposed initiative reports no blocker"
@@ -222,17 +222,24 @@ check('acceptance 4b — layer-architecture repository-scoped once the new recor
   assert(hasNorm(out, 'module-boundary'), 'module-boundary should still be applicable');
 });
 
-// case 5 — a pure REFACTOR gets unresolved_applicability, not another class's
-// protocol, until PHASE D/E exist.
-check('acceptance 5 — REFACTOR yields unresolved_applicability, no protocol', () => {
+// case 5 — a pure REFACTOR now routes its own canonical protocol, with
+// source/scope/digest provenance, and no longer sits in unresolved_applicability
+// (the PHASE D evidence contract and the PHASE E execution protocol exist).
+check('acceptance 5 — REFACTOR routes its own protocol with provenance', () => {
   const out = resolveRules({
     repository_id: 'app-frontend', work_kind: 'change', change_class: 'REFACTOR',
     candidate_paths: ['packages/entities/order/model/mappers.ts'], changed_paths: [],
   }, assemble(STD));
-  const u = out.unresolved_applicability.find((x) => x.subject === 'REFACTOR');
-  assert(u && /PHASE D/.test(u.reason) && /PHASE E/.test(u.reason), 'REFACTOR reason must cite PHASE D and PHASE E');
-  assert(out.applicable_protocols.length === 0, 'REFACTOR must not route a protocol');
-  assert(!hasProtocol(out, 'bugfix-protocol') && !hasProtocol(out, 'test-planning'), 'no residual protocol for REFACTOR');
+  const se = [];
+  validate(out, OUTPUT_SCHEMA, OUTPUT_SCHEMA, '', se);
+  assert(se.length === 0, `output schema: ${se[0]}`);
+  const rp = out.applicable_protocols.find((e) => e.protocol === 'refactor-protocol');
+  assert(rp && rp.routed_from === 'REFACTOR' && rp.source === 'kernel' && rp.scope === 'universal',
+    'REFACTOR must route refactor-protocol from a kernel universal route');
+  assert((rp.digest && /^[0-9a-f]{64}$/.test(rp.digest)) || (rp.revision && /^[0-9a-f]{7,40}$/.test(rp.revision)),
+    'the refactor-protocol route must carry a digest or a revision');
+  assert(!out.unresolved_applicability.some((x) => x.subject === 'REFACTOR'), 'REFACTOR is no longer unresolved');
+  assert(!hasProtocol(out, 'bugfix-protocol') && !hasProtocol(out, 'test-planning'), 'no other class’s protocol for REFACTOR');
 });
 
 // case 6 — a defect found during a REFACTOR needs a separate BUGFIX child /
@@ -243,10 +250,11 @@ check('acceptance 6 — defect in REFACTOR: separate BUGFIX child, original not 
     repository_id: 'app-frontend', work_kind: 'change', change_class: 'REFACTOR',
     candidate_paths: ['packages/entities/order/model/mappers.ts'], changed_paths: [],
   }, src);
-  assert(parent.unresolved_applicability.some((u) => u.subject === 'REFACTOR'), 'REFACTOR still unresolved');
   const f = parent.unresolved_applicability.find((u) => u.subject === 'refactor-in-progress-finding');
   assert(f && /BUGFIX child work item/.test(f.reason) && /not reclassified/.test(f.reason), 'finding entry missing/weak');
-  assert(parent.applicable_protocols.length === 0, 'parent REFACTOR still routes no protocol');
+  assert(!parent.unresolved_applicability.some((u) => u.subject === 'REFACTOR'), 'the REFACTOR class itself is not unresolved');
+  const prp = parent.applicable_protocols.find((e) => e.protocol === 'refactor-protocol' && e.routed_from === 'REFACTOR');
+  assert(prp, 'the parent REFACTOR keeps its own protocol route alongside the finding');
   const child = resolveRules({
     repository_id: 'app-frontend', work_kind: 'change', change_class: 'BUGFIX',
     candidate_paths: ['packages/entities/order/model/mappers.ts'], changed_paths: [],

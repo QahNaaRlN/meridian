@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-28
-updated: 2026-08-28
+updated: 2026-08-29
 ---
 
 # Functional parity
@@ -15,7 +15,7 @@ how the observable behaviour of the system before an internal change is fixed,
 and how it is compared with the behaviour after it. A `REFACTOR` is defined by
 functional parity — observable behaviour unchanged, internal structure changed —
 so its acceptance needs a contract for what that proof must contain and when it
-is sufficient.
+is sufficient, and a protocol for the order that proof is produced in.
 
 ## Contents
 
@@ -25,6 +25,11 @@ is sufficient.
   kinds and the limitations of each, the public-contract snapshot as one kind
   among them, gaps and `UNVERIFIED`, the product/repository boundary, and the
   verdict rules.
+- [`refactor-protocol.md`](refactor-protocol.md) — the execution order for a
+  `REFACTOR` work item (`CLASSIFY → DEFINE PARITY → CAPTURE BASELINE → IMPLEMENT
+  → CAPTURE POST-CHANGE → COMPARE → REPORT`), referencing the contract above at
+  the capture and compare steps. It designs the order only; it defines no second
+  evidence contract.
 - [`functional-parity-evidence.schema.json`](./functional-parity-evidence.schema.json)
   — JSON Schema for one functional-parity evidence record.
 - [`fixtures/functional-parity-evidence.fixtures.json`](./fixtures/functional-parity-evidence.fixtures.json)
@@ -77,5 +82,7 @@ This unit is part of the [verification router](../README.md), beside the
 [regression route](../regression-testing/README.md) and the
 [smoke protocol](../smoke-protocol/README.md). It is reached from the VERIFY
 stage of the [standard task lifecycle](../../workflows/task-lifecycle.md) when
-the change under verification is a `REFACTOR`. It versions with the Kernel
-release unit; it has no separate `VERSION`.
+the change under verification is a `REFACTOR`; the
+[REFACTOR execution protocol](refactor-protocol.md) sets the order its steps run
+in, and the evidence contract is the authority on their sufficiency. It versions
+with the Kernel release unit; it has no separate `VERSION`.

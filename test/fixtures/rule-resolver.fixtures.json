@@ -230,7 +230,8 @@
     { "routed_from": "FEATURE", "protocol": "test-planning", "source": "repository", "scope": "repository", "repository": "app-frontend", "revision": "0abcdef", "mandatory": true },
     { "routed_from": "assessment", "protocol": "code-review", "source": "kernel", "scope": "universal", "digest": "2222222222222222222222222222222222222222222222222222222222222222", "mandatory": false },
     { "routed_from": "initiative", "protocol": "consolidation-decomposition", "source": "kernel", "scope": "universal", "digest": "3333333333333333333333333333333333333333333333333333333333333333", "mandatory": false },
-    { "routed_from": "BEHAVIOR_CHANGE", "protocol": "admin-domain-review", "source": "instance", "scope": "product-domain", "product_domain": "Admin", "digest": "5555555555555555555555555555555555555555555555555555555555555555", "mandatory": false }
+    { "routed_from": "BEHAVIOR_CHANGE", "protocol": "admin-domain-review", "source": "instance", "scope": "product-domain", "product_domain": "Admin", "digest": "5555555555555555555555555555555555555555555555555555555555555555", "mandatory": false },
+    { "routed_from": "REFACTOR", "protocol": "refactor-protocol", "source": "kernel", "scope": "universal", "digest": "6666666666666666666666666666666666666666666666666666666666666666", "mandatory": true }
   ],
   "protocol_routes_conflicting": [
     { "routed_from": "FEATURE", "protocol": "test-planning", "source": "kernel", "scope": "universal", "digest": "4444444444444444444444444444444444444444444444444444444444444444", "mandatory": true },

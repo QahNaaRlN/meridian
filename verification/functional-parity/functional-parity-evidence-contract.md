@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-28
-updated: 2026-08-28
+updated: 2026-08-29
 ---
 
 # Functional-parity evidence contract
@@ -16,8 +16,9 @@ an internal change (`change_class: REFACTOR` signature —
 `$MERIDIAN_INSTANCE/.agent/technical-specifications/active/rule-resolution-normative-model.md`
 §1.4). It says **what** must be recorded and compared and **what makes a
 comparison sufficient**; it does not design the order in which a `REFACTOR` is
-carried out. That execution protocol is a separate, later concern and is free to
-reference this contract as already-defined.
+carried out. That execution order is a separate concern — the
+[REFACTOR execution protocol](refactor-protocol.md) — which references this
+contract as already-defined and adds no second evidence contract.
 
 This document is Kernel: it carries only universal evidence kinds, the record
 form, the semantic requirements and the inference rules. Every product-specific
@@ -319,7 +320,9 @@ This contract sits in the [verification router](../README.md) beside the
 [smoke protocol](../smoke-protocol/smoke-protocol.md) as a portable verification
 unit. It is reached from the VERIFY stage of the
 [standard task lifecycle](../../workflows/task-lifecycle.md) when the change
-under verification is a `REFACTOR` and the claim to prove is functional parity.
-It adds no authority to enter another program phase, to change product code, or
-to run anything with a side effect; it only says what the evidence for a parity
-claim must contain and when that evidence is sufficient.
+under verification is a `REFACTOR` and the claim to prove is functional parity;
+the [REFACTOR execution protocol](refactor-protocol.md) is what runs the steps
+that produce this evidence in order. It adds no authority to enter another
+program phase, to change product code, or to run anything with a side effect; it
+only says what the evidence for a parity claim must contain and when that
+evidence is sufficient.

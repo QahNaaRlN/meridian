@@ -422,13 +422,19 @@ export function resolveRules(workItem, sources = {}) {
   }
 
   // --- protocol routing from work_kind / change_class ---
+  // REFACTOR is routed like any other class: the functional-parity evidence
+  // contract (PHASE D) and the REFACTOR execution protocol (PHASE E) now exist,
+  // so REFACTOR resolves to its own protocol with provenance, not to another
+  // class's protocol by residual match (rule-resolution.md §3.1, §7).
   const routeKey = isChange ? wi.change_class : wi.work_kind;
+  routeProtocols(routeKey, src, out, ctx);
+
+  // A behavior change found inside a REFACTOR work item does not silently become
+  // part of it: the original REFACTOR keeps its class and its protocol route,
+  // and a separate BUGFIX child work item is created or the owner decides
+  // (rule-resolution.md §3.2). This is surfaced as an unresolved item on the
+  // REFACTOR work item, alongside — not instead of — its resolved protocol.
   if (routeKey === 'REFACTOR') {
-    // REFACTOR gets no other class's protocol before PHASE D/E (rule-resolution.md §3.1).
-    out.unresolved_applicability.push({
-      subject: 'REFACTOR',
-      reason: 'the functional-parity evidence contract does not exist yet (PHASE D) and no REFACTOR execution protocol is designed yet (PHASE E); no protocol that fails to check contract-invariance covers REFACTOR, so it is not routed to another class’s protocol (rule-resolution.md §3.1)',
-    });
     const findings = asArr(src.prior_state?.refactor_findings);
     if (findings.length > 0) {
       out.unresolved_applicability.push({
@@ -436,8 +442,6 @@ export function resolveRules(workItem, sources = {}) {
         reason: 'a behavior change was found inside this REFACTOR work item; it is not fixed silently — a separate BUGFIX child work item must be created or the owner must decide, and the original REFACTOR work item is not reclassified (rule-resolution.md §3.2)',
       });
     }
-  } else {
-    routeProtocols(routeKey, src, out, ctx);
   }
 
   // --- norm applicability ---

@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-28
+updated: 2026-08-29
 ---
 
 # Changelog
@@ -18,7 +18,79 @@ updated: 2026-08-28
 
 ### Added
 
-- **`verification/functional-parity/` — portable functional-parity evidence
+- **`verification/functional-parity/refactor-protocol.md` — the canonical
+  REFACTOR execution protocol (PHASE E of `MERIDIAN-RULE-RESOLUTION-001`).**
+  A `document_type: protocol` Kernel document in the functional-parity
+  verification unit, beside the PHASE D evidence contract it executes against.
+  It designs the **order** a `REFACTOR` is carried out in —
+  `CLASSIFY → DEFINE PARITY → CAPTURE BASELINE → IMPLEMENT → CAPTURE POST-CHANGE
+  → COMPARE → REPORT` — and nothing else: it references the PHASE D contract as
+  already-defined at the capture and compare steps and introduces no second
+  evidence contract, no new evidence kind, and no new record field. It resolves
+  open decision §8.3 of the normative model (phase names and structure) in
+  favour of a structure oriented on the evidence contract rather than a
+  re-use of the bugfix phases.
+  - All four preserved-contract facets (`public_api`, `observable_io`,
+    `side_effects_and_interactions`, `user_visible_behavior`) are addressed at
+    DEFINE PARITY; per-assertion evidence selection from the contract's §5 set,
+    with no kind — snapshot included — mandatory, primary or default; honest
+    per-assertion `UNVERIFIED` recorded at COMPARE, with a record-scoped gap or
+    an unestablished baseline forcing every assertion and the overall
+    `UNVERIFIED`.
+  - The safe invariant for a defect found inside a `REFACTOR` (normative model
+    §1.4.1) is step COMPARE: the difference is not normalised into the baseline
+    or a snapshot, not fixed inside the `REFACTOR` work item; a separate
+    `BUGFIX` work item is created or the owner decides; the original `REFACTOR`
+    keeps its class and its protocol route and is paused only if the defect
+    blocks the parity proof. `git worktree` is named as one possible practice,
+    not a step. A file set that widens beyond the resolved `candidate_paths`
+    re-resolves before VERIFY.
+  - Linked from `verification/README.md` (strategy router and evidence
+    boundary), the VERIFY stage and authority invariants of
+    `workflows/task-lifecycle.md`, `verification/functional-parity/README.md`,
+    `standards/workspace/rule-resolution.md` (§3.1, §3.2, §7, §10) and
+    `functional-parity-evidence-contract.md` (intro and §12).
+  - `VERSION` unchanged: this package is not a release.
+
+### Changed
+
+- **`scripts/rule-resolver.mjs` — `REFACTOR` now routes its own protocol with
+  provenance instead of returning `unresolved_applicability`.** The PHASE D
+  evidence contract and the PHASE E execution protocol exist, so a `REFACTOR`
+  work item is routed through `routeProtocols()` like every other class and its
+  `applicable_protocols` entry carries `source`, `scope` and `digest`/`revision`
+  (`rule-resolution.md` §7). The stale `subject: "REFACTOR"` /
+  "does not exist yet (PHASE D) … not designed yet (PHASE E)" entry is removed
+  from the resolver and its tests. The defect-in-`REFACTOR` invariant is
+  unchanged: with a `prior_state.refactor_findings` entry the resolver still
+  emits `refactor-in-progress-finding` in `unresolved_applicability` — now
+  **alongside** the resolved protocol route, not instead of it — and the
+  `REFACTOR` class is never reclassified.
+  - `test/fixtures/rule-resolver.fixtures.json` — a Kernel-universal
+    `REFACTOR → refactor-protocol` route added to `protocol_routes`.
+  - `test/rule-resolver.test.mjs` — acceptance case 5 renamed and rewritten to
+    assert the provenance-carrying route and the absence of the `REFACTOR`
+    unresolved entry; case 6 rewritten to assert the finding entry sits beside
+    the parent's `refactor-protocol` route.
+  - `resolver-output.schema.json` unchanged — `routed_from` already admitted
+    `REFACTOR`.
+- **`standards/workspace/rule-resolution.md` §3.1, §3.2, §7, §10 — the "PHASE
+  D/E do not exist yet" language is removed.** §3.1 and §10 now state that both
+  artefacts exist and are authoritative and that the resolver routes `REFACTOR`
+  to the protocol with provenance; §3.2 points at the protocol's COMPARE step
+  for the safe invariant and records that the resolver returns the route and the
+  finding side by side; §7 lists `REFACTOR → refactor-protocol` as a
+  Kernel-universal route example. No new evidence contract is introduced and the
+  PHASE D contract is not weakened.
+- **`skills/bugfix-protocol/SKILL.md` step 0 — `REFACTOR` added as a fourth,
+  BUGFIX-incompatible change class.** The classifier now names all four classes
+  and routes `REFACTOR` out to
+  `$MERIDIAN_KERNEL/verification/functional-parity/refactor-protocol.md`, with a
+  note that a defect found during a `REFACTOR` is not fixed under this skill.
+  `skills/bugfix-protocol/PIN.yaml` — `sha256` re-pinned
+  (`269930b0…` → `67f55d7d…`), `pinned_at` set to `2026-08-29`, and a
+  `transformations` entry recording the Kernel-side step-0 extension;
+  `upstream.sha256` is untouched.
   contract for `REFACTOR` (PHASE D of `MERIDIAN-RULE-RESOLUTION-001`).** A new
   verification unit beside `regression-testing/` and `smoke-protocol/` in the
   verification router, answering one question: how the observable behaviour of

@@ -167,23 +167,149 @@ function normTextKey(rec) {
   return `${rec.norm.repository}::${rec.norm.path}${rec.norm.region ? `::${rec.norm.region}` : ''}`;
 }
 
-// The state of one norm identity is decided by its authoritative latest
-// append-only applicability record — the one with the greatest recorded_at
-// (rule-resolution.md §4). If two records of the same identity share that
-// greatest recorded_at, they cannot be ordered within the identity/date the
-// schema gives, so the norm is fail-closed rather than ordered by JSON lexical
-// order, which is not a meaningful tie-breaker (rule-resolution.md §9).
+// True when applicability record `rec` is the one a `supersedes` pointer `p`
+// names: the §9 record identity — register + artifact + region + recorded_at +
+// verdict (+ revision when the pointer carries it) — matched component by
+// component. A kernel-source record has no intake_record identity and matches
+// nothing.
+function matchesIntakePointer(rec, p) {
+  const ir = rec.intake_record;
+  if (!ir) return false;
+  if (ir.register !== p.register) return false;
+  if (ir.recorded_at !== p.recorded_at) return false;
+  if (ir.verdict !== p.verdict) return false;
+  if (rec.norm.path !== p.path) return false;
+  if ((rec.norm.region ?? null) !== (p.region ?? null)) return false;
+  if (p.revision != null && ir.revision !== p.revision) return false;
+  return true;
+}
+
+// Fail closed if the `supersedes` edges within one applicability recorded_at
+// cohort contain a cycle: an append-only supersession chain that loops back on
+// itself is contradictory data, not an ordering (rule-resolution.md §9).
+// Detection is a three-colour DFS and its verdict does not depend on node order
+// — a cycle is a cycle from whichever record the walk enters it.
+function assertNoSupersedesCycle(nodes, edges) {
+  const adj = new Map(nodes.map((n) => [n, []]));
+  for (const e of edges) adj.get(e.from).push(e.to);
+  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const colour = new Map(nodes.map((n) => [n, WHITE]));
+  const stack = [];
+  const visit = (u) => {
+    colour.set(u, GRAY);
+    stack.push(u);
+    for (const v of adj.get(u)) {
+      if (colour.get(v) === GRAY) {
+        const loop = stack.slice(stack.indexOf(v)).concat(v).map((n) => normId(n)).join(' → ');
+        throw new ResolverError(`the "supersedes" relationship among the applicability records sharing recorded_at ${nodes[0].recorded_at} forms a cycle (${loop}); an append-only supersession chain cannot be cyclic, so it is fail-closed (rule-resolution.md §9)`);
+      }
+      if (colour.get(v) === WHITE) visit(v);
+    }
+    colour.set(u, BLACK);
+    stack.pop();
+  };
+  for (const n of nodes) if (colour.get(n) === WHITE) visit(n);
+}
+
+// Resolve one record's `supersedes` pointer against its OWN applicability
+// recorded_at cohort, fail-closed on every ill-formed relationship. Returns the
+// target record, or null when `r` carries no `supersedes`.
+//   `cohort` — every record of the norm group sharing `r`'s applicability
+//              recorded_at (a superseded record must share the carrier's date,
+//              rule-resolution.md §9).
+//   `group`  — the whole norm group, used only to tell "names a record on
+//              another applicability date" apart from "names no record at all".
+function resolveSupersedesEdge(r, cohort, group) {
+  if (!r.supersedes) return null;
+  const p = r.supersedes;
+  if (p.path !== r.norm.path || (p.region ?? null) !== (r.norm.region ?? null)) {
+    throw new ResolverError(`applicability record "${normId(r)}" carries a "supersedes" pointer to ${p.path}${p.region ? `#${p.region}` : ''}, a different norm identity than its own ${r.norm.path}${r.norm.region ? `#${r.norm.region}` : ''}; supersession is only between records of one norm identity (rule-resolution.md §9)`);
+  }
+  const hits = cohort.filter((t) => matchesIntakePointer(t, p));
+  if (hits.length > 1) {
+    throw new ResolverError(`the "supersedes" pointer of "${normId(r)}" is ambiguous: ${hits.length} records sharing applicability recorded_at ${r.recorded_at} match register+path+region+recorded_at+verdict; fail-closed (rule-resolution.md §9)`);
+  }
+  const target = hits[0];
+  if (!target) {
+    if (group.some((t) => t !== r && matchesIntakePointer(t, p))) {
+      throw new ResolverError(`the "supersedes" pointer of "${normId(r)}" names a record that does not share this record's applicability recorded_at ${r.recorded_at}; a "supersedes" relationship orders only records of one applicability date, so it is fail-closed (rule-resolution.md §9)`);
+    }
+    throw new ResolverError(`the "supersedes" pointer of "${normId(r)}" resolves to no applicability record (register ${p.register}, ${p.path}${p.region ? `#${p.region}` : ''} @ ${p.recorded_at} → ${p.verdict}); fail-closed (rule-resolution.md §9)`);
+  }
+  if (target === r) {
+    throw new ResolverError(`applicability record "${normId(r)}" declares that it supersedes itself; a "supersedes" pointer must name a different record (rule-resolution.md §9)`);
+  }
+  return target;
+}
+
+// Validate the `supersedes` relationship graph of ONE applicability recorded_at
+// cohort of a norm group, fail-closed (rule-resolution.md §9). Every declared
+// relationship is data and is validated whether or not this cohort is the
+// authoritative one. Returns { declaresOrdering, head }: `head` is the single
+// un-superseded record when the cohort declares ordering, else null.
+function validateCohortSupersedes(cohort, group) {
+  const edges = [];
+  const supersededBy = new Map(); // superseded record -> a record that supersedes it
+  for (const r of cohort) {
+    const target = resolveSupersedesEdge(r, cohort, group);
+    if (!target) continue;
+    edges.push({ from: r, to: target });
+    supersededBy.set(target, r);
+  }
+  if (edges.length === 0) return { declaresOrdering: false, head: null };
+
+  assertNoSupersedesCycle(cohort, edges);
+  const heads = cohort.filter((rec) => !supersededBy.has(rec));
+  if (heads.length !== 1) {
+    throw new ResolverError(`norm "${normId(cohort[0])}" has ${cohort.length} applicability records sharing recorded_at ${cohort[0].recorded_at} and their "supersedes" relationship leaves ${heads.length} un-superseded head(s) (${heads.map((h) => normId(h)).sort().join(', ')}); a cohort that declares ordering must resolve to exactly one head, so it is fail-closed (rule-resolution.md §4, §9)`);
+  }
+  return { declaresOrdering: true, head: heads[0] };
+}
+
+// The state of one norm identity is decided by its authoritative append-only
+// applicability record. Two steps, in this order:
+//   1. VALIDATE every declared `supersedes` relationship. The norm group is
+//      split into applicability recorded_at cohorts, and the `supersedes` graph
+//      of EVERY cohort — current or historical — is validated fail-closed
+//      (rule-resolution.md §9): a pointer with no target, a target on another
+//      applicability date, an ambiguous target, a cross-identity target, a
+//      self-pointer, a cycle, or a cohort that declares ordering yet leaves more
+//      than one head all end resolution here. A `supersedes` on a record that is
+//      alone on its date has no same-date target and therefore fails closed — it
+//      is never treated as harmless stray data.
+//   2. SELECT by date. The greatest applicability recorded_at picks the current
+//      cohort. `recorded_at` keeps its meaning — establishment / last-sync date
+//      — and is never a synthetic sequence. A unique record in that cohort is
+//      authoritative. A tied cohort is authoritative only through a valid
+//      one-head `supersedes` graph (validated in step 1); a tied cohort with no
+//      such relationship is fail-closed. The intake verdict is never itself a
+//      precedence key.
+// The result does not depend on the input order of `recs`: cohort keys are
+// sorted, a unique latest record is the sole member of its cohort, and a valid
+// tied cohort yields exactly one head.
 function pickAuthoritative(recs) {
-  let latest = [recs[0]];
-  for (let i = 1; i < recs.length; i++) {
-    const c = String(recs[i].recorded_at ?? '').localeCompare(String(latest[0].recorded_at ?? ''));
-    if (c > 0) latest = [recs[i]];
-    else if (c === 0) latest.push(recs[i]);
+  const cohorts = new Map();
+  for (const r of recs) {
+    const k = String(r.recorded_at ?? '');
+    if (!cohorts.has(k)) cohorts.set(k, []);
+    cohorts.get(k).push(r);
   }
-  if (latest.length > 1) {
-    throw new ResolverError(`norm "${normId(latest[0])}" has ${latest.length} applicability records sharing the latest recorded_at ${latest[0].recorded_at}; append-only precedence cannot be decided deterministically within the available identity/date, so it is fail-closed — JSON order is not used as a tie-breaker (rule-resolution.md §9)`);
+  const dates = [...cohorts.keys()].sort();
+
+  // step 1 — validate every cohort's declared relationships
+  const validated = new Map();
+  for (const k of dates) validated.set(k, validateCohortSupersedes(cohorts.get(k), recs));
+
+  // step 2 — select by date
+  const latestKey = dates[dates.length - 1];
+  const latest = cohorts.get(latestKey);
+  if (latest.length === 1) return latest[0];
+
+  const v = validated.get(latestKey);
+  if (!v.declaresOrdering) {
+    throw new ResolverError(`norm "${normId(latest[0])}" has ${latest.length} applicability records sharing the latest recorded_at ${latestKey}; append-only precedence cannot be decided deterministically within the available identity/date, so it is fail-closed — no "supersedes" relationship orders them and JSON order is not a tie-breaker (rule-resolution.md §4, §9)`);
   }
-  return latest[0];
+  return v.head;
 }
 
 // The one intake record an applicability entry is synced to. Zero matches or

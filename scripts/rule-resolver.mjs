@@ -648,14 +648,20 @@ function routeProtocols(routeKey, src, out, ctx) {
   }
 }
 
-// Provenance of one matching applicability record, fail-closed (rule-resolution
-// .md §9): the norm text (or region text) must be supplied, its SHA-256 must
-// equal the digest the record carries, and for a non-kernel norm the exact
-// intake pointer must resolve to exactly one append-only intake record. This
-// runs for EVERY record that matches the work item on scope/path/task-class —
-// resolved, unresolved and activation-undetermined alike — not only for the one
-// that ends up in applicable_norms. A record that does not match on
-// scope/path/task-class is out of play and its text is never read.
+// Current-source provenance of ONE applicability record, fail-closed
+// (rule-resolution.md §9): the norm text (or region text) must be supplied, its
+// SHA-256 must equal the digest THIS record carries, and for a non-kernel norm
+// the exact intake pointer must resolve to exactly one append-only intake
+// record. resolveNorms calls this once per matching norm identity, for the
+// AUTHORITATIVE record only: the single current text the resolver is handed
+// describes the norm's current state, so it is compared against the digest of
+// the record that decides that state. A historical record's digest recorded a
+// since-superseded state; recomputing it against today's text would wrongly
+// block a newer authoritative record, so it is not done here. Every matching
+// non-kernel record — historical included — still has its intake pointer
+// resolved separately in resolveNorms; only the current-text comparison is
+// authoritative-only. A record that does not match on scope/path/task-class is
+// out of play and its text is never read.
 function verifyProvenance(rec, src) {
   const text = src.norm_texts?.[normTextKey(rec)];
   if (typeof text !== 'string') {
@@ -693,7 +699,9 @@ function resolveNorms(src, ctx, out) {
     // The authoritative record — greatest recorded_at across the whole
     // identity, ties fail-closed (rule-resolution.md §4, §9). Its own status and
     // classification decide the norm: a newer unresolved suppresses an older
-    // resolved, and a newer resolved suppresses an older unresolved.
+    // resolved, and a newer resolved suppresses an older unresolved. Because the
+    // register is append-only, that older record — and its now-historical digest
+    // — legitimately stays in the group.
     const authoritative = pickAuthoritative(recs);
     const at = tagged.find((t) => t.rec === authoritative);
 
@@ -702,13 +710,27 @@ function resolveNorms(src, ctx, out) {
     // record's text needs to be read (rule-resolution.md §4).
     if (at.cls === 'no-match') continue;
 
-    // Every record of this identity that matches the work item must have
-    // resolvable provenance, not only the authoritative one.
-    const deliveryByRec = new Map();
+    // (a) Intake-pointer provenance — fail-closed for EVERY matching non-kernel
+    //     record of this identity, historical and authoritative alike: a missing
+    //     or ambiguous `intake_record` pointer is never acceptable, and a newer
+    //     authoritative record does not excuse it (rule-resolution.md §9). A
+    //     kernel-source norm carries no pointer.
     for (const t of tagged) {
-      if (t.cls === 'applies' || t.cls === 'activation-undetermined') {
-        deliveryByRec.set(t.rec, verifyProvenance(t.rec, src));
+      if ((t.cls === 'applies' || t.cls === 'activation-undetermined') && t.rec.source !== 'kernel') {
+        resolveIntakePointer(t.rec, src);
       }
+    }
+
+    // (b) Current-text provenance — ONLY the authoritative record. The one
+    //     current text is hashed against the authoritative digest; a historical
+    //     record's recorded digest is its own past state and is not recomputed
+    //     against today's text (rule-resolution.md §9). A stale AUTHORITATIVE
+    //     digest is still an error. The delivery comes solely from the
+    //     authoritative record's own resolved intake pointer (kernel-doc for
+    //     source: kernel) — never a historical record's delivery or digest.
+    let authoritativeDelivery = null;
+    if (at.cls === 'applies' || at.cls === 'activation-undetermined') {
+      authoritativeDelivery = verifyProvenance(authoritative, src).delivery;
     }
 
     if (at.cls === 'applies' && authoritative.status === 'resolved') {
@@ -717,7 +739,7 @@ function resolveNorms(src, ctx, out) {
         activation_reason: authoritative.activation,
         source: authoritative.source,
         digest: authoritative.digest,
-        delivery: deliveryByRec.get(authoritative).delivery,
+        delivery: authoritativeDelivery,
       });
     } else if (at.cls === 'activation-undetermined') {
       out.unresolved_applicability.push({

@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-29
+updated: 2026-08-31
 ---
 
 # Changelog
@@ -17,6 +17,23 @@ updated: 2026-08-29
 ## [Unreleased]
 
 ### Added
+
+- **`registries/inventory/repositories.schema.json` — an optional
+  `repositories[].ownership` field, `own | foreign` (MERIDIAN-RULE-RESOLUTION —
+  authoritative provenance).** `own` — the workspace owner owns this
+  repository's norms; `foreign` — write access to the repository does not mean
+  ownership of its norms, and its text may not be adopted into the Kernel as the
+  owner's own norm. The field is **optional**: an absent value is read as legacy
+  `own`, because the inventory was written before the distinction existed and
+  every entry then was the owner's — a missing field is not a silent `foreign`
+  claim. `schema_version` stays `1` (backward-compatible optional field, no data
+  migration), `additionalProperties` stays `false`, `resolver-output.schema.json`
+  and `applicability.schema.json` are untouched. `VERSION` unchanged: not a
+  release.
+  - `test/kernel-validate.test.mjs` — an isolated regression (`t159a`–`t159e`,
+    159 → 164) against the real schema and the shared validation engine:
+    `ownership: own` and `ownership: foreign` accepted, any other value rejected,
+    an entry with no `ownership` still valid, `schema_version` still `const 1`.
 
 - **`registries/rule-resolution/applicability.schema.json` — an optional
   `supersedes` pointer that gives two same-day applicability records of one
@@ -86,6 +103,53 @@ updated: 2026-08-29
   - `VERSION` unchanged: this package is not a release.
 
 ### Changed
+
+- **`scripts/rule-resolver.mjs` — current-source provenance is verified against
+  the AUTHORITATIVE applicability record only; a superseded historical record's
+  now-stale digest no longer blocks a newer authoritative record
+  (MERIDIAN-RULE-RESOLUTION — authoritative provenance).** The applicability
+  register is append-only, so after a norm's text legitimately changes an older
+  record's `digest` necessarily differs from the single current text the
+  resolver is handed. `resolveNorms()` previously recomputed that current text
+  against **every** matching record's digest, so the older record failed closed
+  on "stale digest" and the newer authoritative record could never take effect.
+  What is unchanged and still fail-closed:
+  - schema-shape validation of every applicability record;
+  - `pickAuthoritative()` and the full `supersedes`-graph validation of **every**
+    cohort — current and historical alike (a dangling / other-date / ambiguous /
+    cross-identity / self pointer, a cycle, a multi-head cohort);
+  - the exact `intake_record` pointer of **every** matching non-kernel record
+    (historical included) resolving to exactly one append-only intake record —
+    a missing or ambiguous pointer is still fail-closed, and a newer
+    authoritative record does not excuse it;
+  - `verifyProvenance()` on the authoritative record: its current text must be
+    supplied and hash to **its** digest, a stale authoritative digest is still
+    an error, and its `delivery` comes only from its own resolved intake pointer
+    (`kernel-doc` for `source: kernel`) — never a historical record's delivery
+    or digest.
+  What changes: the current-text SHA-256 comparison runs for the authoritative
+  matching record only. A newer authoritative `resolved` legitimately supersedes
+  an older `unresolved` carrying an old digest; a newer authoritative
+  `unresolved` likewise suppresses an older `resolved`. Resolver output schema
+  and result shape are unchanged; resolution stays byte-identical under
+  input-record reordering. `VERSION` unchanged: not a release.
+  - `standards/workspace/rule-resolution.md` §9 — a new paragraph states the
+    model normatively: (1) schema + `supersedes` graph of every cohort stay
+    fail-closed and pick the authoritative cohort; (2) the `intake_record`
+    pointer of every matching non-kernel record still resolves fail-closed;
+    (3) the single current text is hashed only against the authoritative
+    record's `digest` — a historical digest records a since-superseded state and
+    is not recomputed against today's text, a stale authoritative digest stays
+    an error; (4) no fallback to a historical record's delivery / digest.
+  - `test/rule-resolver.test.mjs` — six regression tests (89 → 95): a newer
+    `resolved` supersedes an older `unresolved` whose digest is now stale (and
+    the reverse direction); a stale **authoritative** digest still fails closed;
+    a missing intake pointer on a matching **historical** record still fails
+    closed despite a newer authoritative record; the changed-text resolution is
+    byte-identical under reversed input order; and a dangling `supersedes` in a
+    historical cohort still fails closed under the authoritative-only text check.
+    The suite header comment (which claimed current-digest verification for
+    *every* matching record) is corrected.
 
 - **`scripts/rule-resolver.mjs` — `pickAuthoritative()` validates every declared
   `supersedes` relationship, then selects by date (MERIDIAN-RULE-RESOLUTION —

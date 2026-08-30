@@ -22,6 +22,8 @@ import crypto from 'node:crypto';
 import { spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { validate } from '../scripts/lib/json-schema.mjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const VALIDATOR = path.join(__dirname, '..', 'scripts', 'kernel-validate.mjs');
 
@@ -3085,6 +3087,34 @@ function fpBundleWith(where, doc) {
     expectExit: 1,
     mustMatch: [/functional-parity: a fixture that must satisfy the evidence inference rules did not/],
   });
+}
+
+// t159 — the inventory repository schema accepts the optional `ownership`
+// field (own | foreign), rejects any other value, and stays backward
+// compatible with entries that omit it. An isolated schema check against the
+// real registries/inventory/repositories.schema.json and the shared
+// validation engine — independent of any synthetic kernel.
+{
+  const invSchema = JSON.parse(fs.readFileSync(
+    path.join(__dirname, '..', 'registries', 'inventory', 'repositories.schema.json'), 'utf8'));
+  const baseRepo = {
+    id: 'demo', path: '/x', role: 'synthetic', profile: 'demo-runtime',
+    sources: { rules: ['/x/AGENTS.md'], manifests: ['/x/package.json'] },
+    vcs: { type: 'git', revision: '0'.repeat(40), ref: 'main', working_tree: 'clean', evidence_basis: 'revision' },
+    last_verified: '2026-01-01T00:00:00Z',
+  };
+  const doc = (extra) => ({ schema_version: 1, repositories: [{ ...baseRepo, ...extra }] });
+  const errsFor = (d) => { const e = []; validate(d, invSchema, invSchema, '', e); return e; };
+  const inv = (name, cond) => {
+    if (cond) { passed++; console.log(`ok    ${name}`); }
+    else { failed++; failures.push(`${name}: assertion failed`); console.log(`FAIL  ${name}`); }
+  };
+  inv('t159a inventory schema accepts ownership: own', errsFor(doc({ ownership: 'own' })).length === 0);
+  inv('t159b inventory schema accepts ownership: foreign', errsFor(doc({ ownership: 'foreign' })).length === 0);
+  inv('t159c inventory schema rejects an unknown ownership value', errsFor(doc({ ownership: 'borrowed' })).length > 0);
+  inv('t159d inventory schema still accepts an entry with no ownership field', errsFor(doc({})).length === 0);
+  inv('t159e inventory schema_version stays const 1', invSchema.properties.schema_version.const === 1
+    && invSchema.items === undefined && invSchema.properties.repositories.items.additionalProperties === false);
 }
 
 fs.rmSync(workRoot, { recursive: true, force: true });

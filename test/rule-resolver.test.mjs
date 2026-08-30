@@ -16,10 +16,16 @@
 // ambiguous / missing target, multiple incomparable heads, different-date
 // precedence unchanged, byte-identical output under reversed input for every
 // successful case, and the schema shape at the resolver boundary. Then
-// protocol-route scope isolation, provenance checks on unresolved and
-// undetermined records, strict work-item validation, container-region
-// fail-closed behaviour, the several/adjacent "**" glob cases, and negative
-// tests for every other fail-closed path and for stable ordering.
+// authoritative current-source provenance: the schema shape and the supersedes
+// graph of every cohort stay fail-closed, the exact intake pointer of EVERY
+// matching non-kernel record (historical included) still resolves fail-closed,
+// but the single current text is hashed only against the AUTHORITATIVE record's
+// digest — a legitimately changed text no longer lets an older record's now-stale
+// digest block a newer authoritative record, while a stale AUTHORITATIVE digest
+// is still fail-closed. Then protocol-route scope isolation, provenance of a lone
+// (authoritative) unresolved / undetermined record, strict work-item validation,
+// container-region fail-closed behaviour, the several/adjacent "**" glob cases,
+// and negative tests for every other fail-closed path and for stable ordering.
 // All fixture data is product-neutral: test/fixtures/rule-resolver.fixtures.json
 // names fictional repositories, norms and paths, and this file computes each
 // norm's SHA-256 from its text — a digest is never hard-coded.
@@ -445,6 +451,93 @@ check('precedence — records that cannot be ordered within identity/date are fa
 });
 
 // ===========================================================================
+// authoritative current-source provenance (rule-resolution.md §9):
+//   - the schema shape and the supersedes graph of every cohort are still
+//     validated fail-closed;
+//   - the exact intake pointer of EVERY matching non-kernel record still
+//     resolves fail-closed, historical records included;
+//   - the single current text is hashed only against the AUTHORITATIVE record's
+//     digest — a historical record's now-stale digest no longer blocks a newer
+//     authoritative record;
+//   - a stale AUTHORITATIVE digest is still fail-closed.
+// ===========================================================================
+// A pair of append-only applicability records for ONE norm identity whose text
+// legitimately changed between them: the older record's digest is of the old
+// text, the newer record's digest is of the new text, and the single supplied
+// current text is the NEW one. Each record carries its own distinct intake
+// pointer so a broken historical pointer can be exercised in isolation.
+const CHG_OLD_TEXT = '# Changed\n\nThe original text of an append-only norm.\n';
+const CHG_NEW_TEXT = '# Changed\n\nThe rewritten text after a legitimate edit.\n';
+const CHG_OLD_ID = 'instruction-intake/app-frontend.yaml#rules/changed.md@2026-08-01/keep-local';
+const CHG_NEW_ID = 'instruction-intake/app-frontend.yaml#rules/changed.md@2026-08-02/adopt-core';
+const chgWi = {
+  repository_id: 'app-frontend', work_kind: 'change', change_class: 'FEATURE',
+  candidate_paths: ['x'], changed_paths: [],
+};
+function changedTextPair(olderStatus, newerStatus, opts = {}) {
+  const { staleAuthoritative = false, breakHistoricalPointer = false, order = 'forward' } = opts;
+  const base = {
+    norm: { repository: 'app-frontend', path: 'rules/changed.md' },
+    scope: 'repository', repository: 'app-frontend',
+    activation: 'always', source: 'repository',
+  };
+  const older = {
+    ...base, digest: sha256(CHG_OLD_TEXT), status: olderStatus, recorded_at: '2026-08-10',
+    intake_record: { register: 'instruction-intake/app-frontend.yaml', recorded_at: '2026-08-01', verdict: 'keep-local' },
+  };
+  if (olderStatus === 'unresolved') older.resume_condition = 'resume when the 2026-08-10 record is revisited';
+  const newer = {
+    ...base,
+    digest: staleAuthoritative ? sha256('a text that is neither the old nor the new one\n') : sha256(CHG_NEW_TEXT),
+    status: newerStatus, recorded_at: '2026-08-20',
+    intake_record: { register: 'instruction-intake/app-frontend.yaml', recorded_at: '2026-08-02', verdict: 'adopt-core' },
+  };
+  if (newerStatus === 'unresolved') newer.resume_condition = 'resume when the 2026-08-20 record is revisited';
+  const src = assemble(['kernel-conduct']);
+  const pair = order === 'reversed' ? [newer, older] : [older, newer];
+  src.applicability_records.push(...pair);
+  src.norm_texts['app-frontend::rules/changed.md'] = CHG_NEW_TEXT;
+  src.intake_registers = [{
+    register: 'instruction-intake/app-frontend.yaml', repository: 'app-frontend',
+    records: [
+      ...(breakHistoricalPointer ? [] : [{ artifact: 'rules/changed.md', recorded_at: '2026-08-01', verdict: 'keep-local', delivery: 'cursor-rule' }]),
+      { artifact: 'rules/changed.md', recorded_at: '2026-08-02', verdict: 'adopt-core', delivery: 'agents-md-section' },
+    ],
+  }];
+  return src;
+}
+
+check('provenance — a newer resolved record supersedes an older unresolved of the same identity whose digest is now stale', () => {
+  const out = resolveRules(chgWi, changedTextPair('unresolved', 'resolved'));
+  assert(out.applicable_norms.some((e) => e.norm === CHG_NEW_ID), 'the newer resolved record must be authoritative and applicable');
+  const e = out.applicable_norms.find((x) => x.norm === CHG_NEW_ID);
+  assert(e.digest === sha256(CHG_NEW_TEXT) && e.delivery === 'agents-md-section', 'authoritative digest and delivery come from the newer record only');
+  assert(!out.applicable_norms.some((e2) => e2.norm === CHG_OLD_ID), 'the older record must not be applicable');
+  assert(!out.unresolved_applicability.some((u) => u.subject === CHG_OLD_ID || u.subject === CHG_NEW_ID), 'no unresolved entry — the stale historical digest is not recomputed against the current text');
+});
+
+check('provenance — a newer unresolved record suppresses an older resolved of the same identity, historical digest not recomputed', () => {
+  const out = resolveRules(chgWi, changedTextPair('resolved', 'unresolved'));
+  assert(!out.applicable_norms.some((e) => e.norm === CHG_OLD_ID), 'the older resolved record must not survive as applicable');
+  const u = out.unresolved_applicability.find((x) => x.subject === CHG_NEW_ID);
+  assert(u && /2026-08-20/.test(u.reason), 'the authoritative newer unresolved record sets the outcome and its own reason');
+});
+
+check('provenance — a stale AUTHORITATIVE digest is still fail-closed', () => {
+  throws(() => resolveRules(chgWi, changedTextPair('unresolved', 'resolved', { staleAuthoritative: true })), /stale digest/);
+});
+
+check('provenance — a missing intake pointer on a matching HISTORICAL record is fail-closed despite a newer authoritative record', () => {
+  throws(() => resolveRules(chgWi, changedTextPair('unresolved', 'resolved', { breakHistoricalPointer: true })), /resolves to no record in|not among the supplied intake registers/);
+});
+
+check('provenance — the changed-text resolution is byte-identical under reversed input order', () => {
+  const forward = JSON.stringify(resolveRules(chgWi, changedTextPair('unresolved', 'resolved', { order: 'forward' })));
+  const reversed = JSON.stringify(resolveRules(chgWi, changedTextPair('unresolved', 'resolved', { order: 'reversed' })));
+  assert(forward === reversed, `output differs under reordering:\n${forward}\n${reversed}`);
+});
+
+// ===========================================================================
 // same-day append-only precedence via an explicit `supersedes` relationship
 // (rule-resolution.md §4, §9; MERIDIAN-RULE-RESOLUTION — same-day precedence)
 // ===========================================================================
@@ -653,6 +746,20 @@ check('supersedes — a valid historical same-day cohort validates, then the new
   assert(JSON.stringify(out) === reversed, 'resolution must be byte-identical under reversed input order');
 });
 
+// 8c-bis — the relaxed current-text provenance check does NOT weaken supersedes
+//          validation: a dangling supersedes in a historical cohort still fails
+//          closed even though a newer unique record would be authoritative and
+//          its digest verifies.
+check('supersedes — a dangling supersedes in a historical cohort still fails closed under the authoritative-only text check', () => {
+  const specs = [
+    { verdict: 'deferred', status: 'unresolved', recorded_at: '2026-08-10' },
+    { verdict: 'keep-local', status: 'resolved', recorded_at: '2026-08-10', supersedes: supPtr('adopt-core') },
+    { verdict: 'adopt-edition', status: 'resolved', recorded_at: '2026-08-20' },
+  ];
+  throws(() => resolveRules(supWi, supersedeSet(specs)),
+    /resolves to no applicability record|does not share this record's applicability recorded_at|un-superseded head/);
+});
+
 // 8d — different-date records with no supersedes relation keep the existing
 //      precedence (a newer unresolved suppresses an older resolved), unchanged.
 check('supersedes — different-date records with no relationship keep existing precedence', () => {
@@ -723,8 +830,14 @@ check('route scope — a repository route with no repository selector is fail-cl
 });
 
 // ===========================================================================
-// provenance is checked for EVERY matching record — resolved, unresolved and
-// activation:undetermined alike (normative model §4; rule-resolution.md §9)
+// provenance of a lone (hence authoritative) matching record — resolved,
+// unresolved and activation:undetermined alike — is fail-closed on a stale
+// digest, on missing current text, and on an unresolvable intake pointer
+// (normative model §4; rule-resolution.md §9). When a norm identity carries
+// several append-only records the current-text check applies to the
+// authoritative record only, while every matching non-kernel record still has
+// its intake pointer resolved — see the "authoritative current-source
+// provenance" and "supersedes" blocks above.
 // ===========================================================================
 for (const [label, fxId, wi] of [
   ['a status:unresolved', 'layer-arch-profile', {

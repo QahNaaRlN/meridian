@@ -4,18 +4,15 @@
 #
 # This artifact is DERIVED, not a verbatim copy: the upstream file named the
 # current product and carried a product-specific conventions section. Both were
-# removed so the protocol can survive a change of product, and step 0 was later
-# extended with the REFACTOR class (PHASE E of MERIDIAN-RULE-RESOLUTION-001) so
-# the classifier names all four change classes and routes REFACTOR out to its
-# own protocol. The pin therefore records two digests, and neither is presented
-# as the other.
+# removed so the protocol can survive a change of product. The pin therefore
+# records two digests, and neither is presented as the other.
 schema_version: 1
 
 name: bugfix-protocol
 artifact: SKILL.md
-sha256: 67f55d7dd914c96937dc6012fefc8ee632724ca7ed9bd224d88cb9502b32a8f8
+sha256: 269930b06f9f1a17fe9cdb5851e7062b1697bb851cad2e01d699948cd1ac28f4
 state: vendored-derived
-pinned_at: '2026-08-29'
+pinned_at: '2026-08-18'
 pinned_by: workspace-owner
 
 # The derived skill is inapplicable without the Instance's product
@@ -35,11 +32,6 @@ upstream:
     - Moved the product-conventions section out to the Instance as
       skills/bugfix-protocol/context.md, replacing it with a pointer that treats
       a missing context file as a blocker rather than a licence to guess.
-    - Added REFACTOR to the step-0 classifier as a fourth, BUGFIX-incompatible
-      class, routing it to
-      verification/functional-parity/refactor-protocol.md (PHASE E,
-      2026-08-29). Kernel-side extension, not an upstream change; upstream.sha256
-      is untouched.
 
 notes: >
   Regression/bugfix methodology: REPRODUCE -> RED -> DIAGNOSE MISS -> FIX ->

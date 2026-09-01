@@ -149,44 +149,7 @@
         "recorded_at": {
           "type": "string",
           "format": "date",
-          "description": "When this applicability record was established or last synced to the norm it names. Distinct from intake_record.recorded_at, which dates the intake record this one points at. It is not a synthetic sequence number: two append-only records of one norm identity established or re-synced on the same day share this value, and the file order they happen to sit in does not order them (standards/workspace/rule-resolution.md §4)."
-        },
-        "supersedes": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["register", "path", "recorded_at", "verdict"],
-          "description": "Optional. An explicit statement that this append-only record takes precedence over one earlier applicability record OF THE SAME NORM IDENTITY established or last synced on the SAME applicability recorded_at as this one. It is the only sanctioned way to order two records of one norm identity that share an applicability recorded_at (standards/workspace/rule-resolution.md §4, §9): without it such a set is fail-closed, and the intake verdict is never itself a precedence key (there is no hard-coded adopt-edition > deferred). The pointer reuses the exact record identity instruction-intake.md defines and §9 names — register + artifact (norm.path) + region (norm.region) + recorded_at + verdict — it does not invent a parallel identity or a free-text ordering rule. path and region here MUST equal this record's own norm.path and norm.region: supersession is within one norm identity, never across identities. Forbidden when source is kernel, for the same reason intake_record is: a norm that never went through intake has no intake-record identity to point at, and no verdict multiplicity to disambiguate. Every declared supersedes relationship is validated by the resolver before an authoritative record is returned — in the current greatest-date cohort and in every historical cohort of the norm group alike; only the greatest applicability recorded_at then determines which cohort is authoritative. The resolver fails closed when this pointer resolves, within the carrier record's own applicability recorded_at cohort, to no record (including when the carrier is alone on its date — a supersedes is never harmless stray data), to more than one record, to a record of another norm identity, to a record on another applicability date, to itself, when the supersedes edges of a cohort form a cycle, or when a cohort that declares any ordering leaves more than one un-superseded head.",
-          "properties": {
-            "register": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Path to the instruction-intake/*.yaml register that carries the superseded record, relative to the Instance root. Same component as intake_record.register."
-            },
-            "path": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Artifact path of the superseded record. Must equal this record's own norm.path — supersession is only within one norm identity."
-            },
-            "region": {
-              "type": "string",
-              "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$",
-              "description": "Declared region of the superseded record, present only when this record's norm carries a region. Must equal this record's own norm.region."
-            },
-            "recorded_at": {
-              "type": "string",
-              "format": "date",
-              "description": "intake_record.recorded_at of the superseded record — one component of its intake-pointer identity, not the whole of it, and NOT the superseded record's applicability recorded_at. The resolver additionally requires the superseded record to share this record's own applicability recorded_at (§9); that is not restated here."
-            },
-            "verdict": {
-              "enum": ["adopt-core", "adopt-edition", "keep-local", "merge-into", "rename", "retire", "deferred"],
-              "description": "intake_record.verdict of the superseded record. It is a pointer component that picks one of possibly several same-date entries, not a precedence rank: the ordering comes from this supersedes statement, never from comparing verdicts."
-            },
-            "revision": {
-              "type": "string",
-              "pattern": "^[0-9a-f]{7,40}$",
-              "description": "intake_record.revision of the superseded record, for a register identified by revision rather than by recorded_at. When present the resolver requires it to match too."
-            }
-          }
+          "description": "When this applicability record was established or last synced to the norm it names. Distinct from intake_record.recorded_at, which dates the intake record this one points at."
         }
       },
       "allOf": [
@@ -237,10 +200,6 @@
         {
           "if": { "properties": { "source": { "not": { "const": "kernel" } } }, "required": ["source"] },
           "then": { "required": ["intake_record"] }
-        },
-        {
-          "if": { "properties": { "source": { "const": "kernel" } }, "required": ["source"] },
-          "then": { "not": { "required": ["supersedes"] } }
         },
         {
           "if": { "properties": { "status": { "const": "unresolved" } }, "required": ["status"] },

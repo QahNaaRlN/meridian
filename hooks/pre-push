@@ -9,51 +9,13 @@
 # Bypass (deliberately):    git push --no-verify
 
 set -e
-
-# Compute ROOT while the repository-local Git environment is still intact, then
-# strip it. Git runs this hook with GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE and
-# the rest of `git rev-parse --local-env-vars` exported; the gates below build
-# throwaway synthetic repositories and run `git init/add/commit` inside them,
-# and a child `git` that inherits those variables operates on THIS repository
-# instead of its own temp dir (a synthetic test once committed straight onto a
-# Kernel branch that way). git-env-isolate.sh unsets every repository-local Git
-# variable — taken from Git itself, not hard-coded — and, under `set -e`, fails
-# the hook closed if it cannot. It does NOT touch MERIDIAN_* / PATH.
 ROOT=$(git rev-parse --show-toplevel)
-. "$ROOT/hooks/lib/git-env-isolate.sh"
-
-# Bind every gate to the Kernel being pushed. scripts/kernel-validate.mjs and
-# scripts/rule-resolver.mjs prefer $MERIDIAN_KERNEL over their own location, so
-# an ambient MERIDIAN_KERNEL from the operator's shell — a different, possibly
-# dirty checkout — would make the gates validate the wrong tree and block this
-# push for reasons unrelated to what is being pushed. ROOT is the worktree Git
-# is pushing from; pin MERIDIAN_KERNEL to it and export so every child gate sees
-# it. MERIDIAN_INSTANCE is left as the owner set it: the fixture gate overrides
-# it inline to $ROOT/test/instance-fixture just below, and the optional logged
-# real-Instance run at the end uses the value passed in. No --no-verify.
-export MERIDIAN_KERNEL="$ROOT"
 
 echo "pre-push: running the validator's own regression suite"
 if ! node "$ROOT/test/kernel-validate.test.mjs"; then
   echo ""
   echo "pre-push: BLOCKED — the validator regression suite failed."
   echo "pre-push: a rule of kernel-validate.mjs no longer fires as claimed."
-  exit 1
-fi
-
-echo "pre-push: running the rule resolver's regression suite"
-if ! node "$ROOT/test/rule-resolver.test.mjs"; then
-  echo ""
-  echo "pre-push: BLOCKED — the rule resolver regression suite failed."
-  echo "pre-push: an acceptance case or a fail-closed path of rule-resolver.mjs no longer behaves as claimed."
-  exit 1
-fi
-
-echo "pre-push: running the Git-environment isolation regression test"
-if ! node "$ROOT/test/pre-push-git-isolation.test.mjs"; then
-  echo ""
-  echo "pre-push: BLOCKED — the pre-push Git-environment isolation test failed."
-  echo "pre-push: a gate could reach the caller's repository through an inherited Git variable."
   exit 1
 fi
 

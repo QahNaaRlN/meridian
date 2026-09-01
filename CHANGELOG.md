@@ -102,6 +102,40 @@ updated: 2026-08-31
     `functional-parity-evidence-contract.md` (intro and §12).
   - `VERSION` unchanged: this package is not a release.
 
+- **`AGENTS.md` §6 and `standards/workspace/version-control-flow.md` §5 / §9 —
+  support for an owner-managed Merge Request (MR) as the final step of feature
+  integration, when an accepted tracked protocol declares it.** The Git
+  integrator still runs independent review, prepares the accepted feature
+  package and its single package commit, prepares the branch for publication,
+  and — after the merge — verifies the resulting history and re-runs the gates;
+  but in this mode it does **not** advance the integration line by a local
+  `git merge`. The **owner** performs the merge in the platform's web interface
+  (GitLab, GitHub or another); publishing the branch and opening the MR are
+  external actions done on the owner's instruction or by the declaring
+  protocol, and if the integrator cannot do them it hands the owner the exact
+  command and source/target rather than working around the limit. The external
+  executor still performs no Git write of any kind.
+  - New `version-control-flow.md` §5.3 states the rule; §5 and §9 are made
+    consistent with it (the feature-branch merge is the integrator's step
+    *unless* a tracked protocol assigns it to the owner; publishing a branch
+    and opening an MR are external actions, not triggered by this standard).
+  - The MR is merged as an **ordinary merge commit that keeps the accepted
+    package commit** — squash, rebase and a fast-forward with no merge commit
+    are forbidden; the package commit must stay reachable from the integration
+    line and a distinct merge commit must appear. If the platform offers no
+    such method the owner reports a blocker instead of merging. Post-merge
+    verification checks: package commit reachable, distinct merge commit
+    present, package diff not rewritten, gates pass.
+  - Scoped to the declaring protocol only: Meridian's base
+    owner-plus-one-executor model and every other repository are unchanged, an
+    MR is **not** a universal Meridian requirement, and the promotion mode, the
+    stable line, the release flow and the non-fast-forward advancement-commit
+    rules are untouched — the MR concerns only the merge of a feature branch
+    into the integration line, and pushing a feature branch is not a push of
+    the integration line, the stable line, a release or a tag. No new schema or
+    machine field: a text rule suffices.
+  - `VERSION` unchanged: this package is not a release.
+
 ### Changed
 
 - **`scripts/rule-resolver.mjs` — current-source provenance is verified against

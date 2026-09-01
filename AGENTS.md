@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-27
-updated: 2026-09-01
+updated: 2026-08-27
 topic: agent-conduct
 profile: universal
 delivery: agents-md-section
@@ -100,12 +100,9 @@ external executor:**
 - automatically produce a correction instruction after review findings, without
   waiting for the owner to ask again;
 - independently perform review, gates, and Git integration. With an external
-  executor assigned, the Git integrator owns branch creation and switching,
-  staging, commit, tag, and post-merge verification; the executor performs none
-  of these Git operations. Advancing the integration line by merging the
-  accepted feature branch is the Git integrator's step **unless** an accepted
-  tracked protocol assigns that merge to the owner (owner-managed Merge Request,
-  below). To run gates that must see files not yet tracked, the Git
+  executor assigned, the Git integrator also owns branch creation and switching,
+  staging, commit, merge, and tag; the executor performs none of these Git
+  operations. To run gates that must see files not yet tracked, the Git
   integrator may temporarily stage a name-limited candidate package, reviewing
   the staged name list and staged diff first; temporary staging is not
   acceptance — a `CHANGES_REQUESTED` verdict unstages it with a path-limited
@@ -115,36 +112,6 @@ external executor:**
   and versioning rules themselves are
   `standards/workspace/version-control-flow.md` and
   `standards/workspace/release-versioning.md`.
-- **owner-managed Merge Request (MR).** When an accepted tracked protocol
-  declares it, the final merge of an accepted feature branch into the declared
-  integration line is performed by the **owner** through the platform's web
-  interface, not by the Git integrator locally. In that mode the Git integrator
-  still creates the branch, makes the single package commit, and prepares the
-  branch for publication, and after the owner's merge it verifies the actual
-  history and re-runs the gates; it does not run a local merge into the
-  integration line. Publishing the branch and opening the MR are external
-  actions, done on the owner's explicit instruction or by the tracked protocol
-  that assigns this order; if the Git integrator cannot publish the branch or
-  open the MR, it hands the owner the exact command and the source/target, it
-  does not work around the limit. The external executor receives no Git rights
-  at any point. "MR" is the platform-neutral term (equivalent to a pull
-  request); the platform may be GitLab, GitHub, or another. This is an
-  owner-chosen reinforcement for work on Meridian itself — it is not a universal
-  Meridian requirement, and it changes neither the promotion mode, the stable
-  line, the release flow, nor the non-fast-forward advancement-commit rules
-  (`standards/workspace/version-control-flow.md` §5.3).
-  - **The MR is merged as an ordinary merge commit that keeps the accepted
-    package commit in history.** Squash is forbidden, rebase is forbidden, and a
-    fast-forward with no merge commit is forbidden: the review verified that
-    exact commit, so the integration line must attach it, not replace it with a
-    squashed or rewritten commit. After the merge the accepted package commit
-    must stay reachable from the integration line and a distinct merge commit
-    must appear in its history. If the platform offers no such merge method, the
-    owner does not press merge and reports the blocker. The Git integrator's
-    post-merge verification then confirms: (1) the package commit is reachable
-    from the integration line; (2) a distinct merge commit was created;
-    (3) the accepted package diff was not rewritten; (4) the post-merge gates
-    pass.
 
 **If no separate reviewer is assigned:**
 

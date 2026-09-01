@@ -19,10 +19,6 @@
           "path": { "type": "string", "minLength": 1 },
           "role": { "type": "string", "minLength": 1 },
           "profile": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-          "ownership": {
-            "enum": ["own", "foreign"],
-            "description": "Whether the workspace owner owns the norms of this repository (\"own\") or merely holds write access to it (\"foreign\"). A foreign repository may be edited, but its text may not be adopted into the Kernel as the owner's own norm. Optional; an absent value is read as legacy \"own\", because the inventory was written before the distinction existed and every entry then was the owner's — a missing field is not a silent \"foreign\" claim no record made."
-          },
           "products": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
           "semantic_areas": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
           "sources": {

@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-29
+updated: 2026-08-20
 topic: unclassified
 unclassified_reason: >-
   документ описывает маршрут задачи целиком и склеивает несколько предметов —
@@ -80,12 +80,11 @@ Execute the previously selected evidence path in increasing scope:
 1. the smallest assertion or static check that directly observes the changed contract;
 2. the repository-relevant suite required by the nearest `AGENTS.md`;
 3. cross-repository integration checks only for boundaries the change actually affects;
-4. smoke verification only when observable runtime behavior is required and its environment, access, and side effects are authorized;
-5. a functional-parity evidence record when the change is a `REFACTOR` and its acceptance rests on the claim that observable behavior is unchanged, produced in the order the [REFACTOR execution protocol](../verification/functional-parity/refactor-protocol.md) sets and judged sufficient by the [functional-parity evidence contract](../verification/functional-parity/functional-parity-evidence-contract.md).
+4. smoke verification only when observable runtime behavior is required and its environment, access, and side effects are authorized.
 
 Do not silently expand to a full suite, another repository, a live environment, or a side-effecting action. If the selected proof cannot run, report the concrete blocker and the unverified claim; do not substitute unrelated passing checks.
 
-Regression evidence, smoke evidence and functional-parity evidence have different contracts and must be recorded separately as described by the [verification router](../verification/README.md). Only the current Agent Smoke Workflow §11 may assign a smoke verdict; a functional-parity claim is `VERIFIED` only per the evidence contract's verdict rules, and an unclosed gap leaves it `UNVERIFIED`.
+Regression evidence and smoke evidence have different contracts and must be recorded separately as described by the [verification router](../verification/README.md). Only the current Agent Smoke Workflow §11 may assign a smoke verdict.
 
 ## REPORT
 
@@ -110,5 +109,4 @@ If a Kernel rule, document, or gate check cost more than it should have during t
 - Repository manifests control executable command definitions.
 - The [regression route](../verification/regression-testing/README.md) points to the existing bugfix methodology instead of reproducing it.
 - The smoke protocol (`../verification/smoke-protocol/smoke-protocol.md`), as configured by the product smoke unit (`$MERIDIAN_INSTANCE/verification/smoke-testing/README.md`), controls smoke execution and verdicts.
-- The [functional-parity evidence contract](../verification/functional-parity/functional-parity-evidence-contract.md) controls what the evidence for a `REFACTOR` parity claim must contain and when it is sufficient; the [REFACTOR execution protocol](../verification/functional-parity/refactor-protocol.md) controls the order in which a `REFACTOR` is carried out to produce that evidence, and defines no second evidence contract.
 - This lifecycle never creates authority for a baseline task, product changes, live execution, acceptance experiments, or release/status transitions.

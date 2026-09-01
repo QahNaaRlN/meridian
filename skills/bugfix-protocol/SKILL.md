@@ -34,18 +34,7 @@ FEATURE         поведения раньше не было           → skil
 
 BEHAVIOR_CHANGE контракт меняется намеренно,
                 есть ссылка на решение             → skill test-planning
-
-REFACTOR        наблюдаемое поведение не меняется; меняется только
-                внутреннее устройство при неизменном контракте
-                → протокол REFACTOR, НЕ этот protocol:
-                  $MERIDIAN_KERNEL/verification/functional-parity/refactor-protocol.md
 ```
-
-REFACTOR — отдельный, несовместимый с BUGFIX класс: он ничего не восстанавливает
-и не оставляет regression assertion о неправильном поведении. Дефект, найденный
-в ходе REFACTOR, по этому skill не чинится — заводится отдельный BUGFIX work item
-либо запрашивается решение владельца (шаг COMPARE протокола REFACTOR); исходный
-REFACTOR класс не меняет.
 
 Выведи и включи в отчёт:
 

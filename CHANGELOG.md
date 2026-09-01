@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-31
+updated: 2026-09-01
 ---
 
 # Changelog
@@ -523,6 +523,43 @@ updated: 2026-08-31
   `instance-template/hooks/pre-push` is left untouched — it checks published
   Instance state, not Kernel unit tests. `VERSION` unchanged; no release, no
   tag.
+
+## [0.4.1] — 2026-09-01 (`draft`)
+
+### Fixed
+
+- **Восстановление стабильной линии после ошибочного слияния GitHub PR #1 в
+  `master`.** PR #1 (`feature/owner-merge-request-integration`) должен был идти
+  в интеграционную линию `develop`, но был направлен и слит в стабильную линию
+  `master` — merge-коммит `8c48d77`. Этим слиянием в стабильную ветку попали
+  **30 ещё не выпущенных путей из `develop`** (13 новых файлов и 17 изменённых,
+  включая resolver, его библиотеки и тесты, functional-parity контракт,
+  pre-push isolation и правку правила owner-managed MR) — состояние, которое
+  тег `v0.4.0` не покрывает.
+- **Что делает выпуск 0.4.1.** Все файлы, **кроме `VERSION` и `CHANGELOG.md`**,
+  возвращены **byte-for-byte** к выпущенному состоянию `v0.4.0` (коммит
+  `c875262`): 15 файлов восстановлены из `c875262`, `test/kernel-validate.test.mjs`
+  восстановлен из `c875262`, и 13 файлов, которых в `c875262` не было, удалены
+  из рабочего дерева. `VERSION` поднят `0.4.0` → `0.4.1`; настоящая запись —
+  единственное содержательное изменение `CHANGELOG.md`.
+- **Опубликованная история не переписывается.** Merge-коммит `8c48d77` и всё,
+  что до него, остаются в истории как есть. Восстановление оформляется новым
+  package-коммитом и отдельным release advancement merge-коммитом поверх
+  существующей истории; `reset`, `rebase` и force-push не используются
+  (`standards/workspace/version-control-flow.md` §8, §10).
+- **Совместимость Kernel ↔ Instance не меняется.** 0.4.1 не трогает ни один
+  контракт, на который вправе рассчитывать Instance; `COMPATIBILITY.md`
+  правки не требует и не изменялся.
+- **Принятое владельцем исключение: ветка восстановления не вливается целиком
+  обратно в `develop`.** Полное слияние `hotfix/stable-line-recovery` → `develop`
+  удалило бы из `develop` правильную незавершённую работу (те самые 30 путей,
+  которые в `develop` легитимны). Поэтому обратного слияния всей ветки нет.
+- **Синхронизация с `develop` — отдельными ограниченными пакетами.** Сведения о
+  выпуске 0.4.1 (`VERSION`, эта запись `CHANGELOG.md`) будут перенесены в
+  `develop` отдельным ограниченным пакетом. Правило **owner-managed MR**
+  (`AGENTS.md` §6, `version-control-flow.md` §5.3, коллаборационный протокол
+  Instance) будет доставлено в `develop` отдельно — правильным PR
+  `feature → develop`, а не через эту hotfix-ветку.
 
 ## [0.4.0] — 2026-08-27 (`draft`)
 

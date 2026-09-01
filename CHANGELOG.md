@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-27
+updated: 2026-08-31
 ---
 
 # Changelog
@@ -15,6 +15,514 @@ updated: 2026-08-27
 Линия версий Kernel независима от Instance и от продуктовых репозиториев.
 
 ## [Unreleased]
+
+### Added
+
+- **`registries/inventory/repositories.schema.json` — an optional
+  `repositories[].ownership` field, `own | foreign` (MERIDIAN-RULE-RESOLUTION —
+  authoritative provenance).** `own` — the workspace owner owns this
+  repository's norms; `foreign` — write access to the repository does not mean
+  ownership of its norms, and its text may not be adopted into the Kernel as the
+  owner's own norm. The field is **optional**: an absent value is read as legacy
+  `own`, because the inventory was written before the distinction existed and
+  every entry then was the owner's — a missing field is not a silent `foreign`
+  claim. `schema_version` stays `1` (backward-compatible optional field, no data
+  migration), `additionalProperties` stays `false`, `resolver-output.schema.json`
+  and `applicability.schema.json` are untouched. `VERSION` unchanged: not a
+  release.
+  - `test/kernel-validate.test.mjs` — an isolated regression (`t159a`–`t159e`,
+    159 → 164) against the real schema and the shared validation engine:
+    `ownership: own` and `ownership: foreign` accepted, any other value rejected,
+    an entry with no `ownership` still valid, `schema_version` still `const 1`.
+
+- **`registries/rule-resolution/applicability.schema.json` — an optional
+  `supersedes` pointer that gives two same-day applicability records of one
+  norm identity a truthful, explicit precedence (MERIDIAN-RULE-RESOLUTION —
+  same-day precedence).** Background: one textual norm can go through
+  instruction-intake twice on one date with different verdicts (e.g. `deferred`
+  and `adopt-edition`); §9 makes each a distinct applicability record, both may
+  be established or re-synced on the same day, and the resolver — which orders
+  a norm identity only by `recorded_at` — then fails closed on the tie. Rather
+  than an implicit tie-breaker (a synthetic date, YAML order, a hard-coded
+  `adopt-edition > deferred`), a record may now carry `supersedes`: an explicit
+  statement that it takes precedence over one earlier applicability record **of
+  the same norm identity and the same applicability `recorded_at`**.
+  - The pointer reuses the exact append-only record identity `instruction-intake.md`
+    defines and `rule-resolution.md` §9 names — `register` + artifact (`path`) +
+    region (`region`) + `recorded_at` + `verdict` (+ `revision` when the register
+    is revision-identified) — it invents no parallel identity and no free-text
+    ordering rule. `path`/`region` must equal the carrying record's own
+    `norm.path`/`norm.region`. Optional; `additionalProperties: false`.
+    **Forbidden when `source` is `kernel`** (no intake identity to point at, no
+    verdict multiplicity to disambiguate — the same reason `intake_record` is
+    forbidden there). `schema_version` stays `1`: this is a backward-compatible
+    optional field, every existing document remains valid and no Instance data
+    is migrated.
+  - Every declared `supersedes` relationship is data that is validated
+    fail-closed — a `supersedes` is never harmless stray data, including on a
+    record that is alone on its applicability date (it has no same-date target).
+    The greatest applicability `recorded_at` then decides which cohort is
+    authoritative.
+  - `resolver-output.schema.json` unchanged — the output shape does not change:
+    a resolved tie yields an ordinary `applicable_norms` / `unresolved_applicability`
+    entry for the head, an unresolvable tie still fails closed with exit 2.
+  - `VERSION` unchanged: this package is not a release.
+
+- **`verification/functional-parity/refactor-protocol.md` — the canonical
+  REFACTOR execution protocol (PHASE E of `MERIDIAN-RULE-RESOLUTION-001`).**
+  A `document_type: protocol` Kernel document in the functional-parity
+  verification unit, beside the PHASE D evidence contract it executes against.
+  It designs the **order** a `REFACTOR` is carried out in —
+  `CLASSIFY → DEFINE PARITY → CAPTURE BASELINE → IMPLEMENT → CAPTURE POST-CHANGE
+  → COMPARE → REPORT` — and nothing else: it references the PHASE D contract as
+  already-defined at the capture and compare steps and introduces no second
+  evidence contract, no new evidence kind, and no new record field. It resolves
+  open decision §8.3 of the normative model (phase names and structure) in
+  favour of a structure oriented on the evidence contract rather than a
+  re-use of the bugfix phases.
+  - All four preserved-contract facets (`public_api`, `observable_io`,
+    `side_effects_and_interactions`, `user_visible_behavior`) are addressed at
+    DEFINE PARITY; per-assertion evidence selection from the contract's §5 set,
+    with no kind — snapshot included — mandatory, primary or default; honest
+    per-assertion `UNVERIFIED` recorded at COMPARE, with a record-scoped gap or
+    an unestablished baseline forcing every assertion and the overall
+    `UNVERIFIED`.
+  - The safe invariant for a defect found inside a `REFACTOR` (normative model
+    §1.4.1) is step COMPARE: the difference is not normalised into the baseline
+    or a snapshot, not fixed inside the `REFACTOR` work item; a separate
+    `BUGFIX` work item is created or the owner decides; the original `REFACTOR`
+    keeps its class and its protocol route and is paused only if the defect
+    blocks the parity proof. `git worktree` is named as one possible practice,
+    not a step. A file set that widens beyond the resolved `candidate_paths`
+    re-resolves before VERIFY.
+  - Linked from `verification/README.md` (strategy router and evidence
+    boundary), the VERIFY stage and authority invariants of
+    `workflows/task-lifecycle.md`, `verification/functional-parity/README.md`,
+    `standards/workspace/rule-resolution.md` (§3.1, §3.2, §7, §10) and
+    `functional-parity-evidence-contract.md` (intro and §12).
+  - `VERSION` unchanged: this package is not a release.
+
+- **`AGENTS.md` §6 and `standards/workspace/version-control-flow.md` §5 / §9 —
+  support for an owner-managed Merge Request (MR) as the final step of feature
+  integration, when an accepted tracked protocol declares it.** The Git
+  integrator still runs independent review, prepares the accepted feature
+  package and its single package commit, prepares the branch for publication,
+  and — after the merge — verifies the resulting history and re-runs the gates;
+  but in this mode it does **not** advance the integration line by a local
+  `git merge`. The **owner** performs the merge in the platform's web interface
+  (GitLab, GitHub or another); publishing the branch and opening the MR are
+  external actions done on the owner's instruction or by the declaring
+  protocol, and if the integrator cannot do them it hands the owner the exact
+  command and source/target rather than working around the limit. The external
+  executor still performs no Git write of any kind.
+  - New `version-control-flow.md` §5.3 states the rule; §5 and §9 are made
+    consistent with it (the feature-branch merge is the integrator's step
+    *unless* a tracked protocol assigns it to the owner; publishing a branch
+    and opening an MR are external actions, not triggered by this standard).
+  - The MR is merged as an **ordinary merge commit that keeps the accepted
+    package commit** — squash, rebase and a fast-forward with no merge commit
+    are forbidden; the package commit must stay reachable from the integration
+    line and a distinct merge commit must appear. If the platform offers no
+    such method the owner reports a blocker instead of merging. Post-merge
+    verification checks: package commit reachable, distinct merge commit
+    present, package diff not rewritten, gates pass.
+  - Scoped to the declaring protocol only: Meridian's base
+    owner-plus-one-executor model and every other repository are unchanged, an
+    MR is **not** a universal Meridian requirement, and the promotion mode, the
+    stable line, the release flow and the non-fast-forward advancement-commit
+    rules are untouched — the MR concerns only the merge of a feature branch
+    into the integration line, and pushing a feature branch is not a push of
+    the integration line, the stable line, a release or a tag. No new schema or
+    machine field: a text rule suffices.
+  - `VERSION` unchanged: this package is not a release.
+
+### Changed
+
+- **`scripts/rule-resolver.mjs` — current-source provenance is verified against
+  the AUTHORITATIVE applicability record only; a superseded historical record's
+  now-stale digest no longer blocks a newer authoritative record
+  (MERIDIAN-RULE-RESOLUTION — authoritative provenance).** The applicability
+  register is append-only, so after a norm's text legitimately changes an older
+  record's `digest` necessarily differs from the single current text the
+  resolver is handed. `resolveNorms()` previously recomputed that current text
+  against **every** matching record's digest, so the older record failed closed
+  on "stale digest" and the newer authoritative record could never take effect.
+  What is unchanged and still fail-closed:
+  - schema-shape validation of every applicability record;
+  - `pickAuthoritative()` and the full `supersedes`-graph validation of **every**
+    cohort — current and historical alike (a dangling / other-date / ambiguous /
+    cross-identity / self pointer, a cycle, a multi-head cohort);
+  - the exact `intake_record` pointer of **every** matching non-kernel record
+    (historical included) resolving to exactly one append-only intake record —
+    a missing or ambiguous pointer is still fail-closed, and a newer
+    authoritative record does not excuse it;
+  - `verifyProvenance()` on the authoritative record: its current text must be
+    supplied and hash to **its** digest, a stale authoritative digest is still
+    an error, and its `delivery` comes only from its own resolved intake pointer
+    (`kernel-doc` for `source: kernel`) — never a historical record's delivery
+    or digest.
+  What changes: the current-text SHA-256 comparison runs for the authoritative
+  matching record only. A newer authoritative `resolved` legitimately supersedes
+  an older `unresolved` carrying an old digest; a newer authoritative
+  `unresolved` likewise suppresses an older `resolved`. Resolver output schema
+  and result shape are unchanged; resolution stays byte-identical under
+  input-record reordering. `VERSION` unchanged: not a release.
+  - `standards/workspace/rule-resolution.md` §9 — a new paragraph states the
+    model normatively: (1) schema + `supersedes` graph of every cohort stay
+    fail-closed and pick the authoritative cohort; (2) the `intake_record`
+    pointer of every matching non-kernel record still resolves fail-closed;
+    (3) the single current text is hashed only against the authoritative
+    record's `digest` — a historical digest records a since-superseded state and
+    is not recomputed against today's text, a stale authoritative digest stays
+    an error; (4) no fallback to a historical record's delivery / digest.
+  - `test/rule-resolver.test.mjs` — six regression tests (89 → 95): a newer
+    `resolved` supersedes an older `unresolved` whose digest is now stale (and
+    the reverse direction); a stale **authoritative** digest still fails closed;
+    a missing intake pointer on a matching **historical** record still fails
+    closed despite a newer authoritative record; the changed-text resolution is
+    byte-identical under reversed input order; and a dangling `supersedes` in a
+    historical cohort still fails closed under the authoritative-only text check.
+    The suite header comment (which claimed current-digest verification for
+    *every* matching record) is corrected.
+
+- **`scripts/rule-resolver.mjs` — `pickAuthoritative()` validates every declared
+  `supersedes` relationship, then selects by date (MERIDIAN-RULE-RESOLUTION —
+  same-day precedence).** Two steps, in order: **(1) validate.** The norm group
+  is split into applicability `recorded_at` cohorts and the `supersedes` graph
+  of **every** cohort — the current greatest-date one and every historical one —
+  is validated fail-closed; a `supersedes` on a record that is alone on its date
+  is validated too and fails closed, because it has no same-date target (it is
+  never treated as harmless stray data). **(2) select.** The greatest
+  applicability `recorded_at` picks the current cohort; `recorded_at` keeps its
+  meaning and is never a synthetic sequence. A unique record in that cohort is
+  authoritative. A tied current cohort is authoritative only through a valid
+  one-head `supersedes` graph; a tied cohort with no relationship still fails
+  closed. Fail-closed, each with its own diagnostic: a `supersedes` target that
+  resolves to no record, to a record on another applicability date, to more than
+  one record, to another norm identity, to the record itself, a cohort whose
+  edges form a cycle, or a cohort that declares ordering yet leaves more than
+  one un-superseded head. New helpers `resolveSupersedesEdge()`,
+  `validateCohortSupersedes()`, `matchesIntakePointer()`,
+  `assertNoSupersedesCycle()` (three-colour DFS per cohort). Existing provenance,
+  digest, `unresolved` status, scope, activation and **different-date**
+  precedence (with no `supersedes`) are unchanged; the intake verdict is never a
+  precedence key. Resolution stays byte-identical under input-record reordering.
+  - `standards/workspace/rule-resolution.md` §4 and §9 — the rule is stated
+    normatively. §4: every declared `supersedes` is validated before the
+    date-based selection, in the current and in every historical cohort; a
+    shared greatest `recorded_at` is `unresolved`/fail-closed unless an explicit
+    `supersedes` relationship among the same-date records resolves it; a
+    `supersedes` on a record alone on its date fails closed; `recorded_at` is
+    not a synthetic sequence and the intake verdict is not a precedence key. §9:
+    the `supersedes` field reuses the §9 record identity, orders only records of
+    one norm identity **and one applicability date**, and the resolver validates
+    the graph of every cohort fail-closed (no/other-date/ambiguous/cross-identity
+    /self target, cycle, multi-head cohort).
+  - `registries/rule-resolution/fixtures/rule-resolution.fixtures.json` — one
+    `valid` case (a same-day pair ordered by `supersedes`) and three `invalid`
+    cases (a pointer missing its `verdict`, a `supersedes` on a `kernel`-source
+    record, an unknown property in the pointer).
+  - `test/rule-resolver.test.mjs` — 19 same-day precedence regression tests
+    (70 → 89). The former "a unique greatest `recorded_at` … ignores a stray
+    `supersedes`" test is **replaced** with fail-closed coverage: a
+    dangling / cross-identity / self / other-date pointer on the unique latest
+    record; an invalid (cyclic, multi-head) relationship in a historical cohort
+    while a newer unique record exists; a valid historical same-day cohort
+    followed by a newer unique date (validates, then the newer date wins);
+    different-date records with no relationship keep the existing precedence; and
+    byte-identical output under reversed input for every successful case — plus
+    the retained valid-head, no-relationship, verdict-never-orders,
+    missing/ambiguous target, multiple-heads, and malformed / `kernel`-source
+    boundary cases.
+  - `registries/rule-resolution/resolver-output.schema.json` unchanged — the
+    output shape does not change. `VERSION` unchanged: not a release.
+- **`scripts/rule-resolver.mjs` — `REFACTOR` now routes its own protocol with
+  provenance instead of returning `unresolved_applicability`.** The PHASE D
+  evidence contract and the PHASE E execution protocol exist, so a `REFACTOR`
+  work item is routed through `routeProtocols()` like every other class and its
+  `applicable_protocols` entry carries `source`, `scope` and `digest`/`revision`
+  (`rule-resolution.md` §7). The stale `subject: "REFACTOR"` /
+  "does not exist yet (PHASE D) … not designed yet (PHASE E)" entry is removed
+  from the resolver and its tests. The defect-in-`REFACTOR` invariant is
+  unchanged: with a `prior_state.refactor_findings` entry the resolver still
+  emits `refactor-in-progress-finding` in `unresolved_applicability` — now
+  **alongside** the resolved protocol route, not instead of it — and the
+  `REFACTOR` class is never reclassified.
+  - `test/fixtures/rule-resolver.fixtures.json` — a Kernel-universal
+    `REFACTOR → refactor-protocol` route added to `protocol_routes`.
+  - `test/rule-resolver.test.mjs` — acceptance case 5 renamed and rewritten to
+    assert the provenance-carrying route and the absence of the `REFACTOR`
+    unresolved entry; case 6 rewritten to assert the finding entry sits beside
+    the parent's `refactor-protocol` route.
+  - `resolver-output.schema.json` unchanged — `routed_from` already admitted
+    `REFACTOR`.
+- **`standards/workspace/rule-resolution.md` §3.1, §3.2, §7, §10 — the "PHASE
+  D/E do not exist yet" language is removed.** §3.1 and §10 now state that both
+  artefacts exist and are authoritative and that the resolver routes `REFACTOR`
+  to the protocol with provenance; §3.2 points at the protocol's COMPARE step
+  for the safe invariant and records that the resolver returns the route and the
+  finding side by side; §7 lists `REFACTOR → refactor-protocol` as a
+  Kernel-universal route example. No new evidence contract is introduced and the
+  PHASE D contract is not weakened.
+- **`skills/bugfix-protocol/SKILL.md` step 0 — `REFACTOR` added as a fourth,
+  BUGFIX-incompatible change class.** The classifier now names all four classes
+  and routes `REFACTOR` out to
+  `$MERIDIAN_KERNEL/verification/functional-parity/refactor-protocol.md`, with a
+  note that a defect found during a `REFACTOR` is not fixed under this skill.
+  `skills/bugfix-protocol/PIN.yaml` — `sha256` re-pinned
+  (`269930b0…` → `67f55d7d…`), `pinned_at` set to `2026-08-29`, and a
+  `transformations` entry recording the Kernel-side step-0 extension;
+  `upstream.sha256` is untouched.
+  contract for `REFACTOR` (PHASE D of `MERIDIAN-RULE-RESOLUTION-001`).** A new
+  verification unit beside `regression-testing/` and `smoke-protocol/` in the
+  verification router, answering one question: how the observable behaviour of
+  the system before an internal change is fixed and compared with the behaviour
+  after it.
+  - `functional-parity-evidence-contract.md` (`document_type: standard`) — the
+    normative contract. The preserved observable contract across four facets
+    (`public_api`, `observable_io`, `side_effects_and_interactions`,
+    `user_visible_behavior`), with assertion ids unique across the whole record
+    and each under one owning facet; the baseline before the change (identifiable
+    source state, identified inputs and observation conditions, provenance, the
+    result actually observed); the post-change evidence (state after the change;
+    conditions that are either `same` — referencing every baseline condition id
+    and no others — or `explicitly-comparable` with a justification; the observed
+    result; contract links that resolve to a declared assertion's exact
+    `{facet, id}` pair); six neutral evidence kinds with the limitations of each;
+    the public-contract snapshot as **one** kind among them — permitted only with
+    an explicit applicability justification, never the primary or default proof,
+    its limits named; explicit gaps and `UNVERIFIED` — an incomplete baseline,
+    non-comparable conditions, a missing facet, incomplete post-change evidence
+    or an unjustified kind leave the affected assertion, or the whole claim,
+    `UNVERIFIED`, a narrow kind is not widened into a broader claim, a
+    per-assertion `VERIFIED` needs both a covering evidence entry and a resolving
+    link, and an unestablished baseline forces every assertion and the overall
+    `UNVERIFIED`; the product/repository boundary — concrete test runners,
+    snapshot frameworks, commands, configuration and test paths stay
+    Instance/repository data; and the per-assertion and overall verdict rules.
+    The contract defines requirements and form; it does not design the order in
+    which a `REFACTOR` is executed (that is PHASE E).
+  - `functional-parity-evidence.schema.json` — JSON Schema for one evidence
+    record, using only keyword and format subsets `scripts/kernel-validate.mjs`
+    implements. `records` is non-empty (`minItems: 1`). Every facet must be
+    addressed (an assertion or a stated not-applicable justification, never a
+    blank); each baseline condition carries a stable `id`; `relationship: same`
+    carries `baseline_condition_ids` and neither restated `items` nor a
+    justification, `explicitly-comparable` carries `items` and a comparability
+    justification and no id references; `contract_links` is always present and
+    may be empty; every evidence entry names at least one limitation; a
+    `public-contract-snapshot` entry requires an applicability justification; an
+    `UNVERIFIED` per-assertion state or overall verdict requires a reason;
+    `additionalProperties: false` throughout, so an unrecognised form extension
+    fails closed. No `kind` value and no required field names a product tool.
+  - `fixtures/functional-parity-evidence.fixtures.json` — product-neutral valid
+    and invalid fixtures (no real repository, path, URL, runner, framework or
+    command): 8 valid, 29 invalid. Valid records show a snapshot is not required
+    where other kinds cover the claim, that different single kinds each form a
+    valid record, that `explicitly-comparable` conditions with a justification
+    are accepted, a mixed record with one assertion `VERIFIED`-with-link and one
+    `UNVERIFIED`-without-link, that an incomplete or unestablished baseline
+    yields `UNVERIFIED` for every assertion, and an honest all-`UNVERIFIED`
+    record with an empty `contract_links` array. Invalid records cover an empty
+    record set, an absent baseline, absent or non-comparable post-change
+    evidence, a `same` relation that carries `items` / references a non-baseline
+    condition / reproduces only some conditions, a duplicate baseline condition
+    id, a blank facet, a snapshot with no applicability justification, an empty
+    limitations list, an unknown property, an empty observation, a missing
+    verdict reason, and — schema-clean but rejected by the inference rules — a
+    record-scoped gap under a `VERIFIED` overall, a record-scoped gap that leaves
+    an assertion `VERIFIED`, an `UNVERIFIED` assertion under a `VERIFIED`
+    overall, evidence covering an undeclared assertion, a declared assertion with
+    no verdict, a `VERIFIED` assertion no evidence covers, a `VERIFIED` assertion
+    with no resolving link, a contract link under the wrong facet, a duplicate
+    assertion id across facets, an unestablished baseline that still carries a
+    `VERIFIED` assertion, and identical baseline / post-change source states.
+  - `scripts/kernel-validate.mjs` — new check `functional-parity` (`6c` in the
+    header). The schema is parsed and walked for unsupported keywords; the
+    fixtures bundle is classified fail-closed on its own shape (a non-empty
+    array, exactly one group for the schema, non-empty `valid` and `invalid`),
+    exactly as the `rule-resolution` block is. Beyond the schema,
+    `functionalParityConsistency()` enforces the record-level inference rules
+    the draft-07 subset cannot state: the document carries at least one record;
+    assertion ids unique record-wide, each under one owning facet; every
+    per-assertion verdict names a declared assertion and every declared assertion
+    carries exactly one; every `covers` id resolves, and every `contract_links`
+    entry resolves to the exact `{facet, assertion_id}` pair; a `VERIFIED`
+    assertion has both a covering evidence entry and a resolving link (an empty
+    `contract_links` array is legal only when nothing is `VERIFIED`); any
+    `UNVERIFIED` per-assertion state forces an `UNVERIFIED` overall; a
+    record-scoped gap forces every declared per-assertion verdict and the overall
+    `UNVERIFIED`, an assertion-scoped gap only the assertions it names;
+    `relationship: same` references every baseline condition id and no others
+    with no duplicate baseline condition id; an unestablished baseline forces
+    every declared per-assertion verdict and the overall `UNVERIFIED`; the
+    baseline and post-change source states are a distinguishable
+    `{identifier_kind, identifier}` pair. `kernel-validate` remains the gate;
+    this is not a new script.
+  - `test/kernel-validate.test.mjs` — new adversarial cases (t126–t158) proving
+    the check goes red on a malformed schema, missing fixtures, a misclassified
+    fixture, an unsupported schema keyword, each fail-closed bundle-shape
+    violation, and each negative case of the contract (an empty record set, a
+    missing baseline, missing or non-comparable post-change evidence, a
+    mechanically-broken `same` relation, a duplicate baseline condition id, an
+    unclosed gap left `VERIFIED`, a record-scoped gap that still leaves an
+    assertion `VERIFIED`, identical before/after source states, a snapshot with
+    no applicability justification, a `VERIFIED` assertion with no resolving
+    link, a contract link under the wrong facet, a duplicate assertion id, an
+    unestablished baseline still carrying a `VERIFIED` assertion, an unknown form
+    extension), plus green cases proving a single non-snapshot kind, an
+    `explicitly-comparable`-with-justification record, the mixed
+    `VERIFIED`/`UNVERIFIED` record, the honest all-`UNVERIFIED` unestablished
+    baseline, an honest all-`UNVERIFIED` record with an empty `contract_links`
+    array, and the same identifier string under a different `identifier_kind` are
+    accepted. Existing PHASE B / PHASE C checks are unchanged and still pass.
+  - Linked from `verification/README.md` (strategy router and evidence
+    boundary), the VERIFY stage of `workflows/task-lifecycle.md`, the Kernel
+    file list in `standards/workspace/kernel-boundary.md`, and the structure
+    tree in `README.md`.
+  - `VERSION` unchanged: this package is not a release.
+
+### Fixed
+
+- **`hooks/pre-push` now binds its gates to the Kernel being pushed instead of
+  inheriting the caller's Git environment.** Two problems in the pre-push hook,
+  both of which made the gates read the wrong tree:
+  - Git runs the hook with `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE` and the
+    rest of `git rev-parse --local-env-vars` exported. The regression suites
+    build throwaway synthetic repositories and run `git init/add/commit` inside
+    them; those child `git` invocations were inheriting the caller's variables
+    and operating on the repository being pushed — a synthetic test had
+    committed straight onto a Kernel branch that way, and an ordinary push was
+    blocked as a side effect. The hook now computes `ROOT` while the Git
+    environment is still intact and then sources the new
+    `hooks/lib/git-env-isolate.sh`, which unsets every repository-local Git
+    variable (the list comes from `git rev-parse --local-env-vars`, not a
+    hard-coded copy) before any gate runs. The helper is fail-closed: it checks
+    the exit status of `git rev-parse --local-env-vars` explicitly instead of
+    swallowing a failure into a successful empty list, so on any non-zero exit
+    it prints a diagnostic and returns non-zero and the hook — under `set -e` —
+    exits before a single gate is started. The helper does not touch
+    `MERIDIAN_*` or `PATH`.
+  - `scripts/kernel-validate.mjs` and `scripts/rule-resolver.mjs` prefer
+    `$MERIDIAN_KERNEL` over their own location, so an ambient `MERIDIAN_KERNEL`
+    left in the operator's shell (a different, possibly dirty checkout) made the
+    gates validate that other tree and falsely block the push. After the scrub
+    the hook now pins `export MERIDIAN_KERNEL="$ROOT"` — the worktree Git is
+    pushing from — so every gate sees the pushed Kernel. `MERIDIAN_INSTANCE` is
+    left as the owner set it: the fixture gate still overrides it inline to
+    `$ROOT/test/instance-fixture`, and the optional logged real-Instance run
+    still uses the value passed in. No `--no-verify` is needed.
+
+  New regression test `test/pre-push-git-isolation.test.mjs` — wired into
+  `hooks/pre-push` and `.github/workflows/gate.yml` — runs the verbatim
+  production hook and helper against a synthetic Kernel repo with gate shims
+  that record what each gate received, and drives a normal `git push` to a
+  local bare remote with no `--no-verify`. It proves the Git environment is
+  scrubbed before the first gate and that every gate sees `MERIDIAN_KERNEL`
+  equal to the pushed root even when a stale ambient value is set; deleting the
+  isolation sourcing line or the `MERIDIAN_KERNEL` pin makes the push fail
+  closed and the test red; a failing `git rev-parse --local-env-vars` fails the
+  hook with no gate started; and the caller and real Kernel HEADs are unchanged
+  throughout. Nothing touches the network or any real repository.
+
+### Added
+
+- **Deterministic rule resolver (PHASE C of `MERIDIAN-RULE-RESOLUTION-001`).**
+  `scripts/rule-resolver.mjs` — a read-only Kernel mechanic beside
+  `kernel-validate.mjs`, not an extension of it; the validator stays the gate.
+  A pure core `resolveRules(workItem, sources)` plus a CLI wrapper: the work
+  item is exactly the §3.1 shape of the normative model, `sources` are
+  explicitly injected environmental data (repository inventory, PHASE B
+  applicability records, instruction-intake registers, and the not-yet-
+  standardised protocol/verification route records), and the same input on the
+  same source revision returns a byte-identical, identically ordered object
+  that satisfies `registries/rule-resolution/resolver-output.schema.json`.
+  Axes are checked separately and conjunctively; a technology profile never
+  yields an architecture profile; `architecture_profile` absence is not by
+  itself unresolved; a `deferred` intake verdict does not disable a norm.
+  Path-glob: every separate `**` is zero or more whole path segments, several
+  and adjacent `**` are supported (`**/**/x`, `a/**/**/b`) and collapse to one,
+  and any mask outside the declared grammar is refused, never approximated.
+  Protocol routes are filtered against the work context — the injected route
+  shape carries its own exact `repository` / `product_domain` selectors — before
+  any conflict is computed, so a repository route for one repository never
+  reaches another and a local/universal disagreement that survives scope
+  filtering is a `conflicts` entry, not a silent override. Provenance is
+  verified for every applicability record that matches the work item —
+  `status: resolved`, `status: unresolved` and `activation: undetermined`
+  alike: each must have a resolvable exact intake pointer and a supplied norm
+  text/region whose SHA-256 equals the recorded digest; records irrelevant on
+  scope/path/task-class need no text. Append-only precedence: the authoritative
+  latest applicability record decides one norm identity — a newer `unresolved`
+  suppresses an older `resolved` and a newer `resolved` suppresses an older
+  `unresolved`; records that cannot be ordered within the available
+  identity/date are fail-closed, never ordered by JSON lexical order. A
+  container norm's region is recomputed through the shared marked-region reader:
+  markers are located in the fenced-blanked buffer (a marker quoted in a fenced
+  example is not a declaration), but the text handed to the digest is the
+  region's verbatim source slice — `instructionRegions().regions[].sourceText`,
+  every character of the region between its markers intact, fenced code
+  included — never the space-blanked parser view; a named region that is
+  missing, duplicated or unclosed is fail-closed, never a fallback to the whole
+  file. The CLI's `--applicability` input is the whole PHASE B register
+  envelope: it is validated against
+  `registries/rule-resolution/applicability.schema.json` with the shared engine
+  before records are touched, so a bare `{}`, a missing `records`, a wrong
+  `schema_version`, an additional property, a non-array `records` or a
+  top-level raw array is fail-closed with exit 2 — `records` is never coerced
+  to `[]`. The pure core still takes an injected `applicability_records` array.
+  The work item is validated strictly against §3.1:
+  `candidate_paths` and `changed_paths` are mandatory string arrays and a
+  missing or non-array value is not coerced to `[]`, an unknown work-item field
+  and a malformed `declared_profiles` are rejected. Repository ids, intake
+  pointers and route keys match exactly, with no fuzzy/path/basename fallback;
+  `changed_paths` that widen the prior `candidate_paths` set
+  `requires_reresolution`; `REFACTOR` gets `unresolved_applicability`, never
+  another class's protocol, until PHASE D/E; a defect found inside a `REFACTOR`
+  needs a separate `BUGFIX` child or an owner decision and does not reclassify
+  the original work; an undecomposed `initiative` returns
+  `decomposition_required`, the declared decomposition protocol or `null`,
+  pre-decomposition norms and separate `unresolved_items`; a reviewer
+  assignment is not an input and does not change the result.
+
+- **Shared pure helpers under `scripts/lib/`.** The YAML subset reader
+  (`scripts/lib/yaml.mjs`), the JSON Schema subset engine
+  (`scripts/lib/json-schema.mjs`) and the marked-region reader
+  (`scripts/lib/regions.mjs` — `blankFencedBlocks`, `markedRegion`,
+  `instructionRegions`) moved verbatim out of `kernel-validate.mjs`, which now
+  imports them, so the validator and the resolver read YAML, validate against
+  JSON Schema and parse marked regions through one implementation each rather
+  than a second copy. The documented subsets, the supported keyword set, the
+  format checks, the region parsing rules and every throw are unchanged; the
+  validator's regression suite is unaffected. `instructionRegions()` additionally
+  exposes, per region, a `sourceText` (the verbatim slice of the original input
+  between the markers) beside the existing `text` (the fenced-blanked parser
+  view) — an additive field; the validator keeps reading `text`.
+
+- **Regression coverage for the resolver.** `test/rule-resolver.test.mjs` and
+  the product-neutral `test/fixtures/rule-resolver.fixtures.json`: one named
+  test per acceptance case of §4/§9 of the normative model (cases 9 and 10 are
+  separate tests), plus a genuine `status: unresolved` case surfaced under its
+  own resume condition; append-only precedence in both directions and its
+  unorderable-records fail-closed; cross-repository and product-domain protocol
+  route isolation; missing/duplicate/unclosed region, a fenced-example marker,
+  and a region whose `sourceText` keeps fenced code verbatim and hashes to the
+  same SHA-256 as the raw slice between its markers; a valid `--applicability`
+  envelope resolving via the CLI and malformed envelopes (no `records`, bare
+  `{}`, wrong `schema_version`, non-array `records`, an extra property, a raw
+  array) each fail-closed with exit 2;
+  missing/non-array/non-string `candidate_paths` and `changed_paths`;
+  negative tests for a stale digest, a missing text and an unresolvable intake
+  pointer on `unresolved` and `undetermined` records as well as `resolved`
+  ones; the new several/adjacent `**` glob cases; and the pre-existing
+  fail-closed paths (unknown repository id, `work_kind`/`change_class` pairing,
+  malformed applicability record, unsupported glob, incompatible mandatory
+  routes, missing mandatory source), stable ordering and output-schema
+  conformance. Wired into `.github/workflows/gate.yml` and `hooks/pre-push`;
+  `README.md` documents the CLI and the test command.
+  `instance-template/hooks/pre-push` is left untouched — it checks published
+  Instance state, not Kernel unit tests. `VERSION` unchanged; no release, no
+  tag.
 
 ## [0.4.0] — 2026-08-27 (`draft`)
 

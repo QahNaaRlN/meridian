@@ -17,6 +17,30 @@ terms:
     canonical_ru: Репозиторий
     canonical_en: Repository
     machine_names: [repository]
+  - id: built-in-methodology
+    canonical_ru: Встроенная методология
+    canonical_en: Built-in methodology
+    machine_names: [built_in_methodology]
+  - id: user-profile
+    canonical_ru: Профиль пользователя
+    canonical_en: User profile
+    machine_names: [user_profile]
+  - id: organization-profile
+    canonical_ru: Профиль организации
+    canonical_en: Organization profile
+    machine_names: [organization_profile]
+  - id: project-workspace
+    canonical_ru: Рабочее пространство проекта
+    canonical_en: Project workspace
+    machine_names: [project_workspace]
+  - id: repository-scope
+    canonical_ru: Локальная область репозитория
+    canonical_en: Repository scope
+    machine_names: [repository_scope]
+  - id: run-state
+    canonical_ru: Состояние запуска
+    canonical_en: Run state
+    machine_names: [run_state]
   - id: task
     canonical_ru: Задача
     canonical_en: Task

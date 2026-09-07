@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/scoped-record.schema.json",
+  "title": "Meridian scoped record envelope",
+  "description": "Storage-neutral identity, scope, origin and authority envelope for a Meridian record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "id", "title", "record_type", "scope", "origin", "authority", "payload"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/definitions/semantic_id" },
+    "title": { "type": "string", "minLength": 1 },
+    "record_type": { "$ref": "#/definitions/semantic_id" },
+    "scope": { "$ref": "#/definitions/scope_ref" },
+    "origin": { "$ref": "#/definitions/origin" },
+    "authority": { "$ref": "#/definitions/authority" },
+    "payload": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "scope": {
+            "type": "object",
+            "properties": { "type": { "const": "built-in-methodology" } },
+            "required": ["type"]
+          }
+        },
+        "required": ["scope"]
+      },
+      "then": {
+        "properties": {
+          "origin": {
+            "type": "object",
+            "properties": { "kind": { "const": "built-in" } },
+            "required": ["kind"]
+          },
+          "authority": {
+            "type": "object",
+            "properties": { "kind": { "const": "methodology-owner" } },
+            "required": ["kind"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "origin": {
+            "type": "object",
+            "properties": { "kind": { "const": "built-in" } },
+            "required": ["kind"]
+          }
+        },
+        "required": ["origin"]
+      },
+      "then": {
+        "properties": {
+          "scope": {
+            "type": "object",
+            "properties": { "type": { "const": "built-in-methodology" } },
+            "required": ["type"]
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "scope_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": {
+          "enum": [
+            "built-in-methodology",
+            "user-profile",
+            "organization-profile",
+            "project-workspace",
+            "repository-scope",
+            "run-state"
+          ]
+        },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "workspace_id": { "$ref": "#/definitions/semantic_id" },
+        "organization_profile_id": { "$ref": "#/definitions/semantic_id" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "built-in-methodology" } }, "required": ["type"] },
+          "then": { "properties": { "id": { "const": "built-in-methodology" } } }
+        },
+        {
+          "if": {
+            "properties": { "type": { "enum": ["repository-scope", "run-state"] } },
+            "required": ["type"]
+          },
+          "then": { "required": ["workspace_id"] },
+          "else": { "not": { "required": ["workspace_id"] } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "project-workspace" } }, "required": ["type"] },
+          "else": { "not": { "required": ["organization_profile_id"] } }
+        }
+      ]
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["built-in", "declared", "migrated", "imported", "derived"] },
+        "source_ref": { "$ref": "#/definitions/non_empty" }
+      },
+      "if": { "properties": { "kind": { "const": "built-in" } }, "required": ["kind"] },
+      "then": { "not": { "required": ["source_ref"] } },
+      "else": { "required": ["source_ref"] }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "authority_ref"],
+      "properties": {
+        "kind": {
+          "enum": ["methodology-owner", "user", "organization", "project-owner", "repository-maintainer", "delegated-run"]
+        },
+        "authority_ref": { "$ref": "#/definitions/non_empty" },
+        "decision_ref": { "$ref": "#/definitions/non_empty" }
+      }
+    }
+  }
+}

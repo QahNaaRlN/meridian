@@ -16,6 +16,71 @@ updated: 2026-09-07
 
 ## [Unreleased]
 
+### Changed
+
+- **`standards/workspace/version-control-flow.md` §13.2 — the enforcement
+  mechanism of the branch-name norm, not the norm's content.** The public
+  personal GitHub repository has no available metadata rule that forbids
+  *creating* a branch by a regular expression, so §13.2 no longer claims a
+  repository-wide platform restriction on branch creation ("набор Б —
+  ограничение имён ветвей"). It is reworked into an honest contract: a
+  machine check of the **merge request's source branch name** only.
+  - The **closed name template (§3, §3.1) and the branch topology are
+    unchanged**, and the canonical full expression
+    `^(?:main|dev|(?:(?:feature|bugfix|hotfix|promotion|chore|docs|refactor|test|ci|build)/[a-z0-9]+(?:-[a-z0-9]+)*|release/[0-9]+\.[0-9]+\.[0-9]+))$`
+    is unchanged. §3 and §3.1 stay the normative source of the template.
+  - **The global branch-creation restriction is replaced by a reachable
+    merge-request check.** Creating or pushing a branch with a disallowed
+    name stays technically possible; such a branch fails the mandatory
+    merge-request check and therefore cannot be merged into the protected
+    `main` or `dev`. That is the whole mechanical guarantee.
+  - **Link to set A.** The check is a step of the already-mandatory
+    `Kernel validate (synthetic instance)` job (§13.1), so a red result
+    blocks the merge into `main` / `dev`. No new required check and no new
+    job name are introduced; the exact existing name is kept.
+  - **Substantive review check kept.** English meaning, no transliteration
+    of Russian, a meaningful (non-generic) slug and a branch type that
+    matches the actual work stay a review responsibility (§3, §3.1, §2.7) —
+    a regular expression cannot prove them.
+  - §3.1, §10, §11 references that assumed a platform-level restriction on
+    creating all branches are corrected to point at the source-branch check.
+  - The historical `[0.5.0]` release entry, which describes set B as a
+    platform branch-name restriction, is left unchanged — it records what
+    that package declared.
+
+### Added
+
+- **`scripts/validate-branch-name.mjs` — a portable, dependency-free Node.js
+  branch-name syntax check.** A pure exported `isValidBranchName(name)` over
+  the canonical §13 expression plus a CLI that takes one branch name
+  explicitly: exit 0 for an allowed name, exit 1 for a disallowed name,
+  exit 2 for a missing argument. It makes no claim about English meaning or
+  transliteration.
+- **`test/branch-name-validation.test.mjs` — its regression suite.** Covers
+  the permanent lines `main` / `dev`, every allowed temporary-branch type,
+  `release/MAJOR.MINOR.PATCH`, uppercase, underscores, double and edge
+  dashes, a missing or unknown type, an extra `/` segment, Cyrillic and
+  spaces, a malformed version form, and the missing-CLI-argument path. It
+  also makes the mechanism boundary explicit with a live assertion: a
+  syntactically valid transliteration or generic slug passes the regex and
+  must still be rejected at review.
+- **`.github/workflows/gate.yml` — a source-branch step in the existing
+  `Kernel validate (synthetic instance)` job.** The job name is unchanged.
+  A separate step runs only for the `pull_request` event, checks
+  `github.head_ref`, passes the value through an environment variable and
+  quotes it in the command; for `push` and `workflow_dispatch` the step is
+  deliberately skipped so a missing `head_ref` never breaks those runs. The
+  new regression suite is wired into the same job.
+
+### Notes
+
+- **Version boundary.** This package stays in `[Unreleased]`; `VERSION`
+  stays `0.5.0`. It adds a check and changes the meaning of a norm's
+  enforcement mechanism, so a future release under `release-versioning.md`
+  §7.1 must be MINOR — but this package does not start or prepare a release.
+- **Repository-local Kernel amendment.** It does not start, extend or change
+  PHASE G or Concord.
+
 ## [0.5.0] — 2026-09-07 (`draft`)
 
 ### Added

@@ -49,6 +49,13 @@ if ! node "$ROOT/test/rule-resolver.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: verifying the workspace scope model"
+if ! node "$ROOT/test/workspace-scope-model.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the workspace scope model is inconsistent."
+  exit 1
+fi
+
 echo "pre-push: running the Git-environment isolation regression test"
 if ! node "$ROOT/test/pre-push-git-isolation.test.mjs"; then
   echo ""

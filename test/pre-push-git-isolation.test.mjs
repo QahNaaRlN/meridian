@@ -144,6 +144,7 @@ function buildSyntheticKernel(name, { dropSourcingLine = false, dropKernelPin = 
   for (const rel of [
     'test/kernel-validate.test.mjs',
     'test/rule-resolver.test.mjs',
+    'test/workspace-scope-model.test.mjs',
     'test/pre-push-git-isolation.test.mjs',
     'scripts/kernel-validate.mjs',
     'scripts/validate-and-log.mjs',

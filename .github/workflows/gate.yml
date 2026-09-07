@@ -25,6 +25,9 @@ jobs:
       - name: Regression-test the rule resolver
         run: node test/rule-resolver.test.mjs
 
+      - name: Verify the workspace scope model
+        run: node test/workspace-scope-model.test.mjs
+
       - name: Regression-test the pre-push Git-environment isolation
         run: node test/pre-push-git-isolation.test.mjs
 

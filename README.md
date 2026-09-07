@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-28
+updated: 2026-09-07
 ---
 
 # Meridian
@@ -171,9 +171,15 @@ Kernel — собственная релизная единица со свое�
 
 Поток веток и правило повышения версии описаны двумя стандартами:
 [`standards/workspace/version-control-flow.md`](standards/workspace/version-control-flow.md)
-— стабильная линия (для Kernel это `master`) и интеграционная `develop`, ветки
-`feature`/`release`/`hotfix`, запрет прямых package-коммитов в стабильную линию,
-перспективное применение; и
+— постоянные линии Kernel `main` / `dev` (универсальное имя по умолчанию для
+интеграционной линии остаётся `develop`; операционное переименование от
+физических `master` / `develop` — §10, §10.1; линии Instance и адаптеров этим
+пакетом не переименовываются), общий для репозиториев Meridian закрытый шаблон
+имён временных ветвей (обычные `feature` / `bugfix` / `chore` / `docs` /
+`refactor` / `test` / `ci` / `build`; специальные `release` / `hotfix` /
+`promotion`) и форма сообщений коммитов, запрет прямых package-коммитов в
+стабильную линию, репозиторий-локальные правила платформы Kernel для `main` /
+`dev` (защита + ограничение имён ветвей), перспективное применение; и
 [`standards/workspace/release-versioning.md`](standards/workspace/release-versioning.md)
 — источник версии `VERSION`, changelog по Keep a Changelog, повышение версии
 только в `release/<semver>` с аннотированным тегом `vX.Y.Z`, hotfix только для

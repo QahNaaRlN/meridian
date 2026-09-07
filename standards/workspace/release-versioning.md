@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-27
-updated: 2026-08-27
+updated: 2026-09-07
 topic: release-versioning
 profile: universal
 delivery: kernel-doc
@@ -89,13 +89,16 @@ Kernel как репозиторий работает в режиме `semver-re
 
 После приёмки `release/<semver>`-ветки:
 
-- **стабильная линия** (для Kernel — `master`; роль и имя — `version-control-flow.md`
-  §1) продвигается по first-parent **отдельным merge-коммитом** — release
-  advancement commit (`version-control-flow.md` §1.1, §2.2), без fast-forward;
-- **аннотированный тег** `vX.Y.Z` (с префиксом `v`) ставится на этот
-  merge-коммит и обозначает целостный snapshot итогового состояния;
-- то же состояние возвращается в интеграционную линию (`develop`)
-  (`version-control-flow.md` §2.2).
+- **стабильная линия** (для Kernel — `main`, до завершения миграции физически
+  `master`; роль и имя — `version-control-flow.md` §1, §10) продвигается по
+  first-parent **отдельным merge-коммитом** — release advancement commit
+  (`version-control-flow.md` §1.1, §2.2), без fast-forward;
+- **аннотированный тег** `vX.Y.Z` (с префиксом `v`) создаётся **только после**
+  подтверждённого слияния в стабильную линию и ставится на **фактический**
+  release advancement merge-коммит (`version-control-flow.md` §5.5), обозначая
+  целостный snapshot итогового состояния;
+- то же состояние возвращается в интеграционную линию (для Kernel — `dev`, до
+  завершения миграции физически `develop`) (`version-control-flow.md` §2.2).
 
 Отдельный package-коммит, вошедший в выпуск через merge ancestry, собственного
 номера версии и собственного тега не получает: на выпуск приходится один

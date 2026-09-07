@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-27
+updated: 2026-09-07
 ---
 
 # Meridian compatibility contract
@@ -33,6 +33,21 @@ Meridian состоит из независимо версионируемых �
 
 Пока Kernel в `0.x`, любой minor может сломать Instance. Instance пиннит точную
 версию Kernel до выхода `1.0.0`.
+
+**Ожидаемое влияние `0.5.x` (пакет `git-governance-migration`).** Выпуск
+`0.5.0` вводит общую для репозиториев Meridian норму: закрытый шаблон имён
+временных ветвей и форму сообщений коммитов
+(`standards/workspace/version-control-flow.md` §3.1, §12). Постоянные линии
+`main` / `dev` и их платформенная защита — репозиторий-локальны для Kernel и на
+Instance не распространяются; физические ветви Instance выпуском `0.5.0` не
+переименовываются. Существующий Instance не реконфигурируется автоматически:
+для принятия общей нормы конкретному Instance нужен отдельный
+репозиторий-локальный пакет. Ожидаемый Instance для `0.5.x`: то же, что для
+`0.4.x`, плюс — при переходе на `0.5.x` — имена его временных ветвей и сообщения
+его коммитов приведены к общей форме. **Окончательная строка `0.5.x` этой
+таблицы и раздел `CHANGELOG.md` `0.5.0 → Breaking` формируются в ветке
+`release/0.5.0`**, а не в этом пакете: здесь зафиксировано только ожидание, а не
+итоговое объявление совместимости.
 
 ## Ссылки Instance на пути внутри Kernel
 
@@ -76,7 +91,10 @@ Meridian состоит из независимо версионируемых �
   wiki. Версионирование Git-артефактов Kernel — отдельный предмет; он описан
   двумя стандартами:
   [`standards/workspace/version-control-flow.md`](standards/workspace/version-control-flow.md)
-  (поток веток: стабильная линия, `develop`, `feature`/`release`/`hotfix`) и
+  (поток веток: постоянные линии `main` / `dev` — до завершения миграции
+  физически `master` / `develop`; обычные ветки `feature` / `bugfix` / `chore` /
+  `docs` / `refactor` / `test` / `ci` / `build` и специальные `release` /
+  `hotfix` / `promotion`) и
   [`standards/workspace/release-versioning.md`](standards/workspace/release-versioning.md)
   (SemVer-линия Kernel, `VERSION`, Keep a Changelog, тег `vX.Y.Z`). Стандарты
   задают режим продвижения **репозитория**: `semver-release` (Kernel —

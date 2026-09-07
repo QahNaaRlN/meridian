@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-01
+updated: 2026-09-07
 ---
 
 # Changelog
@@ -17,6 +17,130 @@ updated: 2026-09-01
 ## [Unreleased]
 
 ### Added
+
+- **`standards/workspace/version-control-flow.md` — the `git-governance-migration`
+  package: permanent line names for Kernel, a shared Meridian temporary-branch
+  template and commit-message form, repository-local platform rules for Kernel's
+  `main` / `dev`, and an executable operational rename.** One cohesive governance
+  package. It does not touch a machine contract or a schema, but it **does change
+  a shared Meridian norm** (branch-name template, commit-message form) — see the
+  Instance-impact note below; it is not "Kernel-facing only".
+  - **Permanent line names — Kernel only (§1.1, §1.2, §1.3).** Kernel declares
+    its permanent stable line `main` and permanent integration line `dev`. The
+    universal default integration-line name stays `develop`; a repository
+    declares its own. Instance and delivery adapters keep the line names their
+    own tracked source declares — this package renames none of their branches
+    and does not require any `develop` → `dev` move. Until the migration
+    completes Kernel's lines are physically `master` / `develop`.
+  - **Shared temporary-branch template (§3, §3.1; Meridian-wide).** Ordinary
+    branches from the integration line and back — `feature/<slug>`,
+    `bugfix/<slug>`, `chore/<slug>`, `docs/<slug>`, `refactor/<slug>`,
+    `test/<slug>`, `ci/<slug>`, `build/<slug>`; special-lifecycle branches —
+    `release/<semver>`, `hotfix/<slug>`, `promotion/<slug>` (the last only in
+    `revision-promotion`). `<slug>` is English, lowercase kebab-case, names the
+    result, no transliteration, no empty/generic/process names (`test`, `temp`,
+    `changes`, `new-branch`, `my-feature`). A whole-name check expression is
+    given; it checks **syntax only** and cannot prove the slug is English words
+    and not transliteration — that stays a substantive review check. Meridian
+    extensions are separated from classic Git Flow explicitly (§2.5–§2.7):
+    `feature` / `release` / `hotfix` keep their original topology; `bugfix` is
+    an ordinary fix of not-yet-released state (integration line and back);
+    `chore` / `docs` / `refactor` / `test` / `ci` / `build` are ordinary package
+    types; `hotfix` is only an urgent fix of already-released state; a branch
+    type does not replace work classification or applicable-norm resolution.
+  - **Commit-message form (§12; Meridian-wide, not Kernel-local).** First line by
+    commit type: `<type>(<scope>): <краткое действие на русском>` for a package
+    commit (`<type>` from `feat`, `fix`, `docs`, `chore`, `refactor`, `test`,
+    `ci`, `build`, `perf`, `revert`; `<type>`/`<scope>` English lowercase, the
+    meaning in Russian, naming the package result, infinitive preferred; one
+    commit, one package); `merge(<target>): принять <source> — …` for the
+    acceptance merge commit; `release(kernel): выпустить <semver>` for the
+    release advancement commit; `promotion(<target>): принять <source> — …` for
+    the promotion advancement commit (for a `revision-promotion` repository);
+    `hotfix(<target>): исправить <source> — …` for the hotfix advancement commit
+    (this form was previously missing). **Advancement commit vs back-merge:** a
+    `release` / `promotion` / `hotfix` first line marks **only** the merge of
+    that branch into the stable line (release / promotion / hotfix advancement
+    commit); the **second MR of the same branch into the integration line is
+    not an advancement commit** and takes `merge(<integration-target>): принять
+    <source> — …`, like an ordinary `feature` acceptance. The SemVer tag is put
+    **only** on the stable-line advancement merge commit; the back-merge commit
+    into `dev` gets no tag. The mandatory body — `Что изменено` / `Зачем` /
+    `Проверки` / `Связано` (the last `нет` when empty) — applies to **all** of
+    these commit types, **both** merge-commit kinds included, not only the
+    package commit. A platform-generated English merge message is not sufficient:
+    the title and body are brought to this form before the merge. §7 and §11 now
+    point to §12.
+  - **Repository-local platform rules for Kernel (§13), two independent sets.**
+    Set A — protection of `main` and `dev`: mandatory merge request as the only
+    change path; empty bypass list; direct and force pushes forbidden for
+    everyone including the administrator; deletion forbidden; a distinct merge
+    commit mandatory (squash / rebase / fast-forward-without-merge-commit
+    forbidden); linear history off (incompatible with the mandatory merge
+    commits); required status check named exactly `Kernel validate (synthetic
+    instance)` (the existing `.github/workflows/gate.yml` job). Set B — a
+    branch-name restriction that takes effect **after the migration completes**,
+    applies to all branches, and admits `main`, `dev` and the permitted
+    temporary branches; full expression
+    `^(?:main|dev|(?:(?:feature|bugfix|hotfix|promotion|chore|docs|refactor|test|ci|build)/[a-z0-9]+(?:-[a-z0-9]+)*|release/[0-9]+\.[0-9]+\.[0-9]+))$`.
+    The platform configuration is execution of the tracked norm, not its
+    replacement.
+  - **Merge flow aligned with the protected lines (§5.5), Kernel-local.** Once
+    protection is active every change to `main` or `dev` is a merge request — no
+    path needs a direct push. Kernel is `semver-release`, so the Kernel-local
+    path table has **no `promotion/<slug>` row** (`promotion` is a
+    `revision-promotion` path, §2.3): `feature` / `bugfix` / `chore` / `docs` /
+    `refactor` / `test` / `ci` / `build` → `dev`; `release/<semver>` → `main`
+    (release advancement commit), then a separate MR → `dev` (back-merge);
+    `hotfix/<slug>` → `main` (hotfix advancement commit), then a separate MR →
+    `dev` (back-merge). For each MR the owner performs the web merge; a distinct
+    merge commit is used; the reviewed source commit stays reachable; squash,
+    rebase and fast-forward-without-merge-commit are forbidden; the Git
+    integrator runs the post-merge verification; the mandatory body is carried
+    by both the advancement commit and the back-merge; the external executor
+    gets no Git write on any path. The annotated tag `vX.Y.Z` is created only
+    after the confirmed `release/<semver>` → `main` merge, is put **only** on
+    the release advancement merge commit in `main`, and never on the back-merge
+    into `dev`. §5.3, §9 updated to match; owner-managed MR now covers all these
+    paths, not only `feature` → integration.
+  - **Executable operational rename (§10, §10.1).** Named
+    "create → protect → verify → delete old name", not a platform in-place
+    rename (a GitHub in-place rename does not keep the old name available for
+    later verification). Order: (1) the package is accepted into the current
+    `develop` without a `VERSION` change; (2) **Kernel 0.5.0** is prepared and
+    released under the existing `semver-release` model (`release/0.5.0`, MINOR —
+    a new norm); (3) the Git integrator records the exact SHAs of the released
+    `master` and `develop`; (4) new refs `main` (verified `master` SHA) and
+    `dev` (verified `develop` SHA) are created, old refs kept for now; (5)
+    active protection rules are created for `main` and `dev`; (6) **a distinct
+    step sets `main` as the repository default branch and points the remote
+    `HEAD` at `main`**; (7) a following step runs the final checks — SHA
+    equality, release reachability, the required check present, protection
+    applicability, default branch `main`, remote `HEAD` → `main`; (8) only after
+    the final checks pass are `master` and `develop` deleted; (9) local refs and
+    worktree tracking move to `main` / `dev`; (10) history and commits are not
+    rewritten. The new requirements take effect only after the migration
+    completes; the existing published history is not declared a violation; the
+    `feature/git-governance-migration` branch is valid under the branch-name
+    norm in force when it was created.
+  - **Instance impact.** `main` / `dev` and their protection are Kernel's own.
+    The shared temporary-branch template (§3.1) and commit-message form (§12)
+    change the **shared Meridian norm**. An existing Instance is **not** renamed
+    or reconfigured automatically; for a specific Instance to adopt the new norm
+    a separate repository-local package is needed there. The compatibility
+    statement for this is prepared for the **Kernel 0.5.0** release: the final
+    `0.5.x` row of `COMPATIBILITY.md` is written in `release/0.5.0`, and
+    `COMPATIBILITY.md` here records that expectation rather than claiming no
+    impact.
+  - **Current (not historical) references updated.**
+    `standards/workspace/release-versioning.md` §6, `README.md` §6 and
+    `COMPATIBILITY.md` now name Kernel's permanent lines `main` / `dev` with the
+    physical `master` / `develop` transitional note; historical entries in this
+    `CHANGELOG.md` that describe past events with `master` / `develop` are left
+    unchanged.
+  - No new schema, scenario, Git handler or CI file is added. `VERSION`
+    unchanged in this package: it is accepted into the integration line, and the
+    norm reaches the stable line only with the `release/0.5.0` release.
 
 - **`registries/inventory/repositories.schema.json` — an optional
   `repositories[].ownership` field, `own | foreign` (MERIDIAN-RULE-RESOLUTION —

@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-07
+updated: 2026-09-08
 ---
 
 # Changelog
@@ -50,6 +50,23 @@ updated: 2026-09-07
 
 ### Added
 
+- **Фундамент операционной модели (`meridian-operating-foundation`).** Добавлены
+  канонический глоссарий, реестр универсальных принципов и их общая машинная
+  половина `standards/workspace/operating-foundation.yaml` со схемой
+  `registries/operating-model/foundation.schema.json`. Термины различают
+  задачу, единицу работы, постановку, запуск, норму, протокол, рабочий процесс,
+  способ выполнения, средство, доказательство, роль, надзор и контекст.
+- **Проверка согласованности основания.** `kernel-validate.mjs` сверяет
+  идентификаторы и двуязычные названия YAML с отмеченными таблицами
+  `operating-glossary.md` и `operating-principles.md`, падает при отсутствующей
+  половине, рассинхронизации, дублировании, пустом определении или обязательном
+  следствии, неоднозначном машинном имени либо повреждённой разметке; набор
+  регрессии покрывает эти пути.
+- **Правило идентичности управляющих сущностей.** Каждая такая сущность имеет
+  стабильный смысловой `id` и понятное человеку `title`, которые показываются
+  вместе; номер дорожной карты, статус, версия, дата, участник, средство и
+  модель ИИ идентичностью не являются.
+
 - **`scripts/validate-branch-name.mjs` — a portable, dependency-free Node.js
   branch-name syntax check.** A pure exported `isValidBranchName(name)` over
   the canonical §13 expression plus a CLI that takes one branch name
@@ -73,6 +90,12 @@ updated: 2026-09-07
   new regression suite is wired into the same job.
 
 ### Notes
+
+- **Граница программы.** Пакет реализует только
+  `meridian-operating-foundation`. Схемы типов задач, постановки, состояния,
+  управления человеком, контекста и передачи остаются следующими отдельными
+  пакетами. `VERSION` остаётся `0.5.0`; выпуск не начинается, Concord не
+  возобновляется.
 
 - **Version boundary.** This package stays in `[Unreleased]`; `VERSION`
   stays `0.5.0`. It adds a check and changes the meaning of a norm's

@@ -38,6 +38,8 @@
 //   9. inventory-git     — recorded revision/ref/dirty state is compared with
 //                          the repository's actual current state.
 //  10. instruction-topics — the two halves of the topic pool agree.
+//  10a. operating-foundation — machine identities and human signatures of
+//                          universal terms and principles agree.
 //  10b. stack-profiles  — the two halves of the stack profile pool agree, and
 //                          every inventoried repository declares a profile from
 //                          the pool that its own manifest supports.
@@ -1215,6 +1217,106 @@ if (topicsYamlRaw === null || topicsMdRaw === null) {
     } else {
       TOPIC_POOL = declared;
       ok(`instruction-topics: ${declared.size} topics; names and signatures agree`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// operating foundation: one machine pool, two human-readable signature sets
+// ---------------------------------------------------------------------------
+// The data supplies stable identities and bilingual names. The documents
+// supply definitions and normative consequences. Neither half is accepted on
+// its own: a machine-only term is not understandable to the owner, while a
+// prose-only term cannot be referenced deterministically by a schema or run.
+const foundationYamlRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'operating-foundation.yaml'));
+const glossaryMdRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'operating-glossary.md'));
+const principlesMdRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'operating-principles.md'));
+let foundationFailures = 0;
+const foundationFail = (message) => { foundationFailures++; fail(message); };
+
+if (foundationYamlRaw === null || glossaryMdRaw === null || principlesMdRaw === null) {
+  const missing = [
+    foundationYamlRaw === null ? 'standards/workspace/operating-foundation.yaml' : null,
+    glossaryMdRaw === null ? 'standards/workspace/operating-glossary.md' : null,
+    principlesMdRaw === null ? 'standards/workspace/operating-principles.md' : null,
+  ].filter(Boolean);
+  foundationFail(`operating-foundation: the canonical pool is incomplete (${missing.join(', ')}); machine identities and human signatures are one contract`);
+} else {
+  let foundation = null;
+  try { foundation = yamlParse(foundationYamlRaw); }
+  catch (e) { foundationFail(`operating-foundation: ${e.message}`); }
+
+  const readRows = (raw, regionId, label, bodyLabel) => {
+    const region = markedRegion(raw, regionId);
+    if (region.error) {
+      foundationFail(`operating-foundation: the ${label} region is not readable — ${region.error}`);
+      return [];
+    }
+    const rows = [...region.text.matchAll(/^\|\s*`([a-z][a-z0-9]*(?:-[a-z0-9]+)*)`\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|/gm)]
+      .map((match) => ({ id: match[1], ru: match[2].trim(), en: match[3].trim(), body: match[4].trim() }));
+    const emptyBodies = rows.filter((row) => !row.body).map((row) => row.id);
+    if (emptyBodies.length) {
+      foundationFail(`operating-foundation: ${label} rows without ${bodyLabel}: ${emptyBodies.join(', ')}`);
+    }
+    return rows;
+  };
+
+  const comparePool = (entries, rows, label, ruField, enField, machineNamesField = null) => {
+    if (!Array.isArray(entries)) {
+      foundationFail(`operating-foundation: ${label} is not an array`);
+      return;
+    }
+    const duplicateData = entries.map((entry) => String(entry?.id ?? ''))
+      .filter((id, index, all) => id && all.indexOf(id) !== index);
+    const duplicateDocs = rows.map((row) => row.id)
+      .filter((id, index, all) => all.indexOf(id) !== index);
+    if (duplicateData.length) foundationFail(`operating-foundation: duplicate ${label} id in data: ${[...new Set(duplicateData)].join(', ')}`);
+    if (duplicateDocs.length) foundationFail(`operating-foundation: duplicate ${label} id in documentation: ${[...new Set(duplicateDocs)].join(', ')}`);
+
+    if (machineNamesField) {
+      const owners = new Map();
+      const collisions = new Set();
+      for (const entry of entries) {
+        for (const name of Array.isArray(entry?.[machineNamesField]) ? entry[machineNamesField] : []) {
+          const priorOwner = owners.get(name);
+          if (priorOwner && priorOwner !== entry.id) collisions.add(name);
+          else owners.set(name, entry.id);
+        }
+      }
+      if (collisions.size) {
+        foundationFail(`operating-foundation: machine names assigned to more than one ${label}: ${[...collisions].join(', ')}`);
+      }
+    }
+
+    const data = new Map(entries.map((entry) => [String(entry?.id ?? ''), entry]));
+    const docs = new Map(rows.map((row) => [row.id, row]));
+    const undocumented = [...data.keys()].filter((id) => id && !docs.has(id));
+    const unlisted = [...docs.keys()].filter((id) => !data.has(id));
+    if (undocumented.length || unlisted.length) {
+      const parts = [];
+      if (undocumented.length) parts.push(`named in data but absent from documentation: ${undocumented.join(', ')}`);
+      if (unlisted.length) parts.push(`documented but absent from data: ${unlisted.join(', ')}`);
+      foundationFail(`operating-foundation: ${label} halves disagree — ${parts.join('; ')}`);
+    }
+
+    for (const [id, entry] of data) {
+      const row = docs.get(id);
+      if (!row) continue;
+      const expectedRu = String(entry?.[ruField] ?? '');
+      const expectedEn = String(entry?.[enField] ?? '');
+      if (row.ru !== expectedRu || row.en !== expectedEn) {
+        foundationFail(`operating-foundation: ${label} "${id}" has different bilingual names in data and documentation`);
+      }
+    }
+  };
+
+  if (foundation) {
+    const termRows = readRows(glossaryMdRaw, 'operating-term-pool', 'term-pool', 'a definition');
+    const principleRows = readRows(principlesMdRaw, 'operating-principle-pool', 'principle-pool', 'a mandatory consequence');
+    comparePool(foundation.terms, termRows, 'term', 'canonical_ru', 'canonical_en', 'machine_names');
+    comparePool(foundation.principles, principleRows, 'principle', 'title_ru', 'title_en');
+    if (foundationFailures === 0) {
+      ok(`operating-foundation: ${foundation.terms.length} terms and ${foundation.principles.length} principles; data and signatures agree`);
     }
   }
 }

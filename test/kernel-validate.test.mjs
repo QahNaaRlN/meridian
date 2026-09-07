@@ -87,6 +87,42 @@ function writeTopicPool(root, { names = ['naming'], documented = ['naming'], out
       : ''));
 }
 
+// The operating foundation is also split deliberately: stable identities and
+// bilingual names are machine-readable, while definitions and consequences
+// stay readable to a person. Every synthetic Kernel carries a minimal complete
+// pair so unrelated tests do not pass against a missing foundation.
+function writeOperatingFoundation(root, {
+  terms = [{ id: 'work-item', ru: 'Единица работы', en: 'Work item' }],
+  principles = [{ id: 'explicit-unknown', ru: 'Неизвестное обозначается явно', en: 'Unknown is explicit' }],
+  documentedTerms = null,
+  documentedPrinciples = null,
+} = {}) {
+  const yaml = ['schema_version: 1', 'terms:'];
+  for (const term of terms) {
+    yaml.push(`  - id: ${term.id}`, `    canonical_ru: ${term.ru}`, `    canonical_en: ${term.en}`);
+    if (term.machineNames) yaml.push(`    machine_names: [${term.machineNames.join(', ')}]`);
+  }
+  yaml.push('principles:');
+  for (const principle of principles) {
+    yaml.push(`  - id: ${principle.id}`, `    title_ru: ${principle.ru}`, `    title_en: ${principle.en}`);
+  }
+  write(root, 'standards/workspace/operating-foundation.yaml', `${yaml.join('\n')}\n`);
+
+  const termRows = documentedTerms ?? terms;
+  write(root, 'standards/workspace/operating-glossary.md',
+    `${fm('Synthetic operating glossary', 'reference')}\n# Synthetic operating glossary\n\n`
+    + '<!-- meridian:begin operating-term-pool -->\n\n| Идентификатор | Русский термин | English term | Определение |\n|---|---|---|---|\n'
+    + termRows.map((term) => `| \`${term.id}\` | ${term.ru} | ${term.en} | synthetic |\n`).join('')
+    + '\n<!-- meridian:end operating-term-pool -->\n');
+
+  const principleRows = documentedPrinciples ?? principles;
+  write(root, 'standards/workspace/operating-principles.md',
+    `${fm('Synthetic operating principles', 'standard')}\n# Synthetic operating principles\n\n`
+    + '<!-- meridian:begin operating-principle-pool -->\n\n| Идентификатор | Русское название | English title | Следствие |\n|---|---|---|---|\n'
+    + principleRows.map((principle) => `| \`${principle.id}\` | ${principle.ru} | ${principle.en} | synthetic |\n`).join('')
+    + '\n<!-- meridian:end operating-principle-pool -->\n');
+}
+
 // The stack profile pool, like the topic pool, is split between data and prose
 // and is fail-closed when absent. The synthetic kernel therefore carries a
 // miniature of both halves; without them every later case would run against an
@@ -162,6 +198,7 @@ function plantProfiledRepo(instance, repoRoot, {
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
+  writeOperatingFoundation(root);
   writeStackProfilePool(root);
   write(root, 'docs/note.md', `${fm('A note', 'reference')}\n# A note\n\nA note.\n`);
   const skill = '# Demo skill\n\nA fictional vendored skill used only by this suite.\n';
@@ -3115,6 +3152,100 @@ function fpBundleWith(where, doc) {
   inv('t159d inventory schema still accepts an entry with no ownership field', errsFor(doc({})).length === 0);
   inv('t159e inventory schema_version stays const 1', invSchema.properties.schema_version.const === 1
     && invSchema.items === undefined && invSchema.properties.repositories.items.additionalProperties === false);
+}
+
+// t160 — a term present only in machine data is not a complete canonical term.
+{
+  const { kernel, instance } = freshPair('t160');
+  const terms = [
+    { id: 'work-item', ru: 'Единица работы', en: 'Work item' },
+    { id: 'orphan-term', ru: 'Термин без определения', en: 'Orphan term' },
+  ];
+  writeOperatingFoundation(kernel, { terms, documentedTerms: terms.slice(0, 1) });
+  commitAll(kernel);
+  check('t160 machine-only operating term is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: term halves disagree .*orphan-term/],
+  });
+}
+
+// t161 — bilingual names are contract data, not display text free to drift.
+{
+  const { kernel, instance } = freshPair('t161');
+  writeOperatingFoundation(kernel, {
+    documentedPrinciples: [{
+      id: 'explicit-unknown',
+      ru: 'Неизвестное скрывается',
+      en: 'Unknown is explicit',
+    }],
+  });
+  commitAll(kernel);
+  check('t161 operating principle name drift is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: principle "explicit-unknown" has different bilingual names/],
+  });
+}
+
+// t162 — one absent half fails closed; no pool can be inferred from neighbours.
+{
+  const { kernel, instance } = freshPair('t162');
+  fs.rmSync(path.join(kernel, 'standards', 'workspace', 'operating-glossary.md'));
+  commitAll(kernel);
+  check('t162 incomplete operating foundation fails closed', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: the canonical pool is incomplete .*operating-glossary\.md/],
+  });
+}
+
+// t163 — the marked region, not any signature-looking table, defines the pool.
+{
+  const { kernel, instance } = freshPair('t163');
+  const p = path.join(kernel, 'standards', 'workspace', 'operating-principles.md');
+  fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('<!-- meridian:end operating-principle-pool -->', ''));
+  commitAll(kernel);
+  check('t163 unclosed operating principle region fails closed', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: the principle-pool region is not readable/],
+  });
+}
+
+// t164 — a name-only glossary row is not a human-readable definition.
+{
+  const { kernel, instance } = freshPair('t164');
+  const p = path.join(kernel, 'standards', 'workspace', 'operating-glossary.md');
+  fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('| synthetic |', '| |'));
+  commitAll(kernel);
+  check('t164 operating term without a definition is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: term-pool rows without a definition: work-item/],
+  });
+}
+
+// t165 — a principle without its consequence is only a label, not a norm.
+{
+  const { kernel, instance } = freshPair('t165');
+  const p = path.join(kernel, 'standards', 'workspace', 'operating-principles.md');
+  fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('| synthetic |', '| |'));
+  commitAll(kernel);
+  check('t165 operating principle without a consequence is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: principle-pool rows without a mandatory consequence: explicit-unknown/],
+  });
+}
+
+// t166 — one machine field cannot identify two different canonical terms.
+{
+  const { kernel, instance } = freshPair('t166');
+  const terms = [
+    { id: 'work-item', ru: 'Единица работы', en: 'Work item', machineNames: ['work_item'] },
+    { id: 'task-specification', ru: 'Постановка задачи', en: 'Task specification', machineNames: ['work_item'] },
+  ];
+  writeOperatingFoundation(kernel, { terms });
+  commitAll(kernel);
+  check('t166 ambiguous operating machine name is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: machine names assigned to more than one term: work_item/],
+  });
 }
 
 fs.rmSync(workRoot, { recursive: true, force: true });

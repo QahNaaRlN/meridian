@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-29
+updated: 2026-09-08
 ---
 
 # Kernel / Instance boundary
@@ -29,6 +29,11 @@ updated: 2026-08-29
 Всё перечисленное лежит в репозитории Meridian:
 
 - `standards/` целиком: workspace precedence, tooling axes (`workspace/tooling-axes.md`), document lifecycle, статусная модель, document quality, writers, шаблоны (`templates/`: платформенно-нейтральный `template-contract.md`, локальные Markdown-шаблоны и профили платформ в `templates/profiles/<платформа>/` — контракт формы, не product-данные), этот файл, а также `workspace/agent-memory.md` — описание жизненного цикла рабочей памяти (сама память — Instance).
+- `standards/workspace/operating-foundation.yaml`, `operating-glossary.md` и
+  `operating-principles.md` — универсальные идентификаторы, понятия и принципы
+  операционной модели. Схема машинной половины находится в
+  `registries/operating-model/foundation.schema.json`; продуктовые постановки
+  и состояния запусков остаются Instance data.
 - `workflows/task-lifecycle.md`, `workflows/README.md`.
 - `verification/README.md`, `verification/regression-testing/README.md`, `verification/smoke-protocol/` — переносимое ядро smoke-методологии (Test Contract, Execution Context, §11 verdict matrix, side-effect tiers, шаблон acceptance gate). Продуктовый smoke-unit остаётся Instance и лишь конформирует этому протоколу.
 - `verification/functional-parity/` — переносимый контракт доказательства функционального паритета для `REFACTOR` (сохраняемый наблюдаемый контракт, baseline, post-change evidence, нейтральные виды evidence и их ограничения, gaps и `UNVERIFIED`, JSON Schema записи и product-neutral fixtures) и канонический протокол исполнения `REFACTOR` (`refactor-protocol.md`: порядок `CLASSIFY → DEFINE PARITY → CAPTURE BASELINE → IMPLEMENT → CAPTURE POST-CHANGE → COMPARE → REPORT`, ссылающийся на контракт, без второго контракта evidence). Универсальны здесь только виды, форма, семантические требования, правила вывода и порядок исполнения; конкретные test runners, snapshot-фреймворки, команды и пути тестов — Instance/repository data. Продуктовое применение контракта — PHASE F программы rule resolution, не часть этого пакета.

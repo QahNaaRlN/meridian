@@ -1,0 +1,164 @@
+$schema: ../../registries/operating-model/foundation.schema.json
+schema_version: 1
+
+terms:
+  - id: meridian
+    canonical_ru: Meridian
+    canonical_en: Meridian
+  - id: kernel
+    canonical_ru: Ядро
+    canonical_en: Kernel
+    machine_names: [kernel]
+  - id: instance
+    canonical_ru: Экземпляр
+    canonical_en: Instance
+    machine_names: [instance]
+  - id: repository
+    canonical_ru: Репозиторий
+    canonical_en: Repository
+    machine_names: [repository]
+  - id: task
+    canonical_ru: Задача
+    canonical_en: Task
+  - id: initiative
+    canonical_ru: Инициатива
+    canonical_en: Initiative
+    machine_names: [initiative]
+  - id: work-item
+    canonical_ru: Единица работы
+    canonical_en: Work item
+    machine_names: [work_item]
+  - id: work-kind
+    canonical_ru: Вид работы
+    canonical_en: Work kind
+    machine_names: [work_kind]
+  - id: change-class
+    canonical_ru: Класс изменения
+    canonical_en: Change class
+    machine_names: [change_class]
+  - id: task-pattern
+    canonical_ru: Шаблон типа задачи
+    canonical_en: Task pattern
+    machine_names: [task_pattern]
+  - id: task-specification
+    canonical_ru: Постановка задачи
+    canonical_en: Task specification
+    machine_names: [task_specification]
+  - id: execution-run
+    canonical_ru: Запуск
+    canonical_en: Execution run
+    machine_names: [execution_run]
+  - id: lifecycle-stage
+    canonical_ru: Этап жизненного цикла
+    canonical_en: Lifecycle stage
+    machine_names: [lifecycle_stage]
+  - id: work-status
+    canonical_ru: Рабочее состояние
+    canonical_en: Work status
+    machine_names: [work_status]
+  - id: norm
+    canonical_ru: Норма
+    canonical_en: Norm
+    machine_names: [norm]
+  - id: protocol
+    canonical_ru: Протокол
+    canonical_en: Protocol
+    machine_names: [protocol]
+  - id: workflow
+    canonical_ru: Рабочий процесс
+    canonical_en: Workflow
+    machine_names: [workflow]
+  - id: skill
+    canonical_ru: Способ выполнения
+    canonical_en: Skill
+    machine_names: [skill]
+  - id: tool
+    canonical_ru: Средство
+    canonical_en: Tool
+    machine_names: [tool]
+  - id: gate
+    canonical_ru: Проверочный рубеж
+    canonical_en: Gate
+    machine_names: [gate]
+  - id: evidence
+    canonical_ru: Доказательство
+    canonical_en: Evidence
+    machine_names: [evidence]
+  - id: acceptance-criterion
+    canonical_ru: Критерий приёмки
+    canonical_en: Acceptance criterion
+    machine_names: [acceptance_criterion]
+  - id: owner-decision
+    canonical_ru: Решение владельца
+    canonical_en: Owner decision
+    machine_names: [owner_decision]
+  - id: blocker
+    canonical_ru: Препятствие
+    canonical_en: Blocker
+    machine_names: [blocker]
+  - id: handoff
+    canonical_ru: Передача
+    canonical_en: Handoff
+    machine_names: [handoff]
+  - id: actor
+    canonical_ru: Участник
+    canonical_en: Actor
+    machine_names: [actor]
+  - id: role
+    canonical_ru: Роль
+    canonical_en: Role
+    machine_names: [role]
+  - id: human-authority
+    canonical_ru: Полномочия человека
+    canonical_en: Human authority
+    machine_names: [human_authority]
+  - id: supervision-mode
+    canonical_ru: Режим надзора
+    canonical_en: Supervision mode
+    machine_names: [supervision_mode]
+  - id: communication-mode
+    canonical_ru: Способ связи
+    canonical_en: Communication mode
+    machine_names: [communication_mode]
+  - id: context-manifest
+    canonical_ru: Манифест контекста
+    canonical_en: Context manifest
+    machine_names: [context_manifest]
+
+principles:
+  - id: human-agent-readable
+    title_ru: Понятно человеку и агенту
+    title_en: Human-agent readable
+  - id: authoritative-source-over-chat
+    title_ru: Авторитетный источник важнее истории чата
+    title_en: Authoritative source over chat history
+  - id: evidence-before-status
+    title_ru: Доказательство прежде статуса
+    title_en: Evidence before status
+  - id: explicit-unknown
+    title_ru: Неизвестное обозначается явно
+    title_en: Unknown is explicit
+  - id: role-tool-independent
+    title_ru: Роль не зависит от средства или модели
+    title_en: Role is tool-independent
+  - id: bounded-resumable-context
+    title_ru: Контекст ограничен и возобновляем
+    title_en: Context is bounded and resumable
+  - id: no-hidden-fallback
+    title_ru: Скрытое запасное поведение запрещено
+    title_en: No hidden fallback
+  - id: reversible-by-default
+    title_ru: Обратимость по умолчанию
+    title_en: Reversible by default
+  - id: human-in-command
+    title_ru: Человек сохраняет командование
+    title_en: Human in command
+  - id: independent-state-axes
+    title_ru: Оси состояния независимы
+    title_en: State axes are independent
+  - id: product-neutral-kernel
+    title_ru: Ядро независимо от продукта
+    title_en: Product-neutral Kernel
+  - id: fail-closed-ambiguity
+    title_ru: Неоднозначность останавливает работу
+    title_en: Ambiguity fails closed

@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-07
+updated: 2026-09-08
 ---
 
 # Meridian
@@ -146,6 +146,22 @@ node scripts/rule-resolver.mjs \
   ссылаются записи применимости. Вывод — JSON в stdout. Отсутствие
   обязательного источника — fail-closed: ясная диагностика в stderr и
   ненулевой код возврата. Скрипт ничего не изменяет.
+
+## 4b. Фундамент операционной модели
+
+Единый словарь Meridian находится в
+[`operating-glossary.md`](standards/workspace/operating-glossary.md), а
+универсальные принципы — в
+[`operating-principles.md`](standards/workspace/operating-principles.md).
+Машинные идентификаторы и двуязычные названия обеих частей собраны в
+[`operating-foundation.yaml`](standards/workspace/operating-foundation.yaml)
+и проверяются по схеме
+[`foundation.schema.json`](registries/operating-model/foundation.schema.json).
+
+Гейт сверяет YAML с отмеченными таблицами двух документов. Термин или принцип,
+добавленный только в машинную либо только в человекочитаемую половину, делает
+проверку красной. Следующие пакеты расширяют это основание схемами типов задач,
+постановки и состояния; настоящий пакет их не вводит заранее.
 
 Валидатор устроен по правилу «проверка, которую нельзя выполнить, сообщает
 UNVERIFIED, а не OK». Зелёный прогон означает «проверено», а не «не смотрели».

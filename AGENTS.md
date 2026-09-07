@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-27
-updated: 2026-09-01
+updated: 2026-09-07
 topic: agent-conduct
 profile: universal
 delivery: agents-md-section
@@ -115,6 +115,12 @@ external executor:**
   and versioning rules themselves are
   `standards/workspace/version-control-flow.md` and
   `standards/workspace/release-versioning.md`.
+- the lifecycle of a temporary Git worktree the integrator creates for a task —
+  allowed reasons for creating one, reuse across a `CHANGES_REQUESTED` cycle,
+  the clean-`git status --porcelain` and `remove` → `prune` → `list` teardown,
+  and the `not_created` / `removed` / `retained` closing states — is
+  `standards/workspace/version-control-flow.md` §5.4; this file does not restate
+  it.
 - **owner-managed Merge Request (MR).** When an accepted tracked protocol
   declares it, the final merge of an accepted feature branch into the declared
   integration line is performed by the **owner** through the platform's web

@@ -136,6 +136,41 @@ updated: 2026-09-01
     machine field: a text rule suffices.
   - `VERSION` unchanged: this package is not a release.
 
+- **`standards/workspace/version-control-flow.md` §5.4 and `AGENTS.md` §6 — the
+  lifecycle of a temporary Git worktree used for one task.** New
+  `version-control-flow.md` §5.4 makes the Git integrator the owner of a
+  temporary worktree's creation, accounting and cleanup — for the executor
+  `git worktree add` / `remove` are Git writes it does not perform — and states
+  a closed set of rules for it:
+  - **Creation is allowed only** for one of four reasons: parallel work,
+    someone else's unfinished working-directory state, an independent source
+    revision, or a tool's technical requirement. Creating a worktree merely for
+    a checkpoint, a result handoff, documentation, or a short isolated step is
+    forbidden.
+  - A `CHANGES_REQUESTED` cycle **reuses the same worktree**; a new verdict does
+    not spawn a new one.
+  - After `ACCEPTED` the result is **first fixed by a branch on the accepted
+    commit**, and only then is the worktree removed. Removal requires a clean
+    (empty) `git status --porcelain` and runs the fixed sequence
+    `git worktree remove` → `git worktree prune` → `git worktree list`.
+    `--force`, manual directory deletion, and removing an unknown / foreign /
+    unfinished worktree are forbidden. Removing a worktree does **not** delete
+    its branch.
+  - A task closes in only one of three worktree states — `not_created`,
+    `removed`, or `retained`; `retained` requires a reason, a responsible
+    owner, and a verifiable future-cleanup condition. At task close the Git
+    integrator reviews the repository's worktree register (`git worktree list`)
+    and removes the clean temporary worktrees of finished tasks not moved to
+    `retained`.
+  - The norm does **not** auto-remove an existing permanent worktree created as
+    part of a separate migration or data-provenance mechanism; such a tree may
+    remain only as `retained` with a reason, a responsible owner, and a cleanup
+    condition. No new schema, machine field, task-type model, or handoff schema
+    is introduced.
+  - `AGENTS.md` §6 adds only a short pointer to §5.4 from the Git integrator's
+    role behavior; the normative text is not duplicated.
+  - `VERSION` unchanged: this package is not a release.
+
 ### Changed
 
 - **`scripts/rule-resolver.mjs` — current-source provenance is verified against

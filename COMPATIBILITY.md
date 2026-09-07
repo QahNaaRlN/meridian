@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-27
+updated: 2026-09-07
 ---
 
 # Meridian compatibility contract
@@ -30,6 +30,7 @@ Meridian состоит из независимо версионируемых �
 | `0.1.x` | `schema_version: 1` в `product.yaml` | не объявлены; `0.x` не даёт гарантий стабильности |
 | `0.2.x` | `schema_version: 1` в `product.yaml`; action-профили `environments/access.yaml` используют generic-enum или `x-*`-префикс для продуктовых действий | относительно `0.1.x`: enum действий сужен, продуктовые значения без префикса `x-*` не проходят schema-gate — Instance требует миграции (см. `CHANGELOG.md` 0.2.0 → Breaking) |
 | `0.4.x` | то же, что `0.2.x`; плюс: рабочие заметки Instance, ссылающиеся на слой шаблонов, указывают на `standards/templates/template-contract.md` и `standards/templates/profiles/<платформа>/<тип>-body.md`; плюс: каждая запись `inventory/repositories.yaml` несёт `profile`, значение которого названо из закрытого пула Kernel stack profiles и подтверждается манифестом соответствующего репозитория | относительно `0.3.x`: слой шаблонов разделён на контракт и профиль, после чего всё дерево приведено к единому правилу имён (`standards/workspace/document-identity.md`). Переименовано шестнадцать файлов, в том числе `CONFLUENCE.md` → `profiles/confluence/confluence-profile.md`, восемь `*.confluence-template.md` → `profiles/confluence/*-body.md`, `PROTOCOL.md` → `smoke-protocol.md`, `ACCEPTANCE-GATE.template.md` → `acceptance-gate-template.md`, `BOOTSTRAP.md` → `instance-bootstrap.md`. Ломает текстовые ссылки Instance, и гейт этого не видит — см. следующий раздел. Плюс относительно `0.3.x`: `registries/inventory/repositories.schema.json` сделал `repositories[].profile` обязательным; отсутствие `profile`, имя вне закрытого пула Kernel stack profiles или объявление, противоречащее манифесту репозитория, даёт FAIL валидатора и требует миграции Instance |
+| `0.5.x` | сохраняет все требования `0.4.x`; плюс, при переходе на Kernel `0.5.x`: временные ветви Instance соответствуют закрытому шаблону имён временных ветвей (`standards/workspace/version-control-flow.md` §3, §3.1); сообщения новых коммитов Instance используют форму сообщений коммитов Meridian — типизированный заголовок и четыре раздела тела (§12); принятие этих общих норм конкретным Instance оформляется отдельным репозиторий-локальным пакетом Instance. Instance **не обязан** переименовывать свои стабильную и интеграционную линии в `main` / `dev` и **сохраняет имена своих линий из собственного tracked-источника** (§1.2): постоянные линии `main` / `dev`, их защита и операционное переименование `master` → `main` / `develop` → `dev` относятся только к репозиторию Kernel | относительно `0.4.x` (пакет `git-governance-migration`, см. `CHANGELOG.md` 0.5.0 → Breaking): временная ветвь вне разрешённого закрытого набора норме больше не соответствует; неанглийское имя, транслитерация, верхний регистр и неправильный kebab-case норме не соответствуют; новые коммиты обязаны использовать установленный заголовок и четыре раздела тела; переход конкретного Instance требует отдельного репозиторий-локального пакета, но **не** переписывания и не переименования его существующей истории и ветвей |
 
 Пока Kernel в `0.x`, любой minor может сломать Instance. Instance пиннит точную
 версию Kernel до выхода `1.0.0`.
@@ -76,7 +77,10 @@ Meridian состоит из независимо версионируемых �
   wiki. Версионирование Git-артефактов Kernel — отдельный предмет; он описан
   двумя стандартами:
   [`standards/workspace/version-control-flow.md`](standards/workspace/version-control-flow.md)
-  (поток веток: стабильная линия, `develop`, `feature`/`release`/`hotfix`) и
+  (поток веток: постоянные линии `main` / `dev` — до завершения миграции
+  физически `master` / `develop`; обычные ветки `feature` / `bugfix` / `chore` /
+  `docs` / `refactor` / `test` / `ci` / `build` и специальные `release` /
+  `hotfix` / `promotion`) и
   [`standards/workspace/release-versioning.md`](standards/workspace/release-versioning.md)
   (SemVer-линия Kernel, `VERSION`, Keep a Changelog, тег `vX.Y.Z`). Стандарты
   задают режим продвижения **репозитория**: `semver-release` (Kernel —

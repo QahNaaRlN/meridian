@@ -1,0 +1,246 @@
+{
+  "note": "Product-neutral fixtures for scripts/rule-resolver.mjs and test/rule-resolver.test.mjs. No product, company, application or person name appears here — the repositories, norms and paths are fictional placeholders. The test computes every norm's SHA-256 from its `text` and assembles the `sources` object; a digest is never written in this file.",
+  "repository_inventory": [
+    { "id": "app-frontend", "profile": "spa-runtime", "semantic_areas": ["Storefront", "Admin"] },
+    { "id": "app-legacy", "profile": "spa-runtime", "semantic_areas": ["Storefront"] },
+    { "id": "app-shared", "profile": "spa-runtime", "semantic_areas": ["Storefront"] }
+  ],
+  "norms": [
+    {
+      "id": "naming",
+      "repository": "app-frontend",
+      "path": "rules/naming.md",
+      "text": "# Naming\n\nComposable files use the useXxx form. Directories are kebab-case.\n",
+      "scope": "universal",
+      "activation": "always",
+      "source": "repository",
+      "status": "resolved",
+      "recorded_at": "2026-08-27",
+      "intake": {
+        "register": "instruction-intake/app-frontend.yaml",
+        "recorded_at": "2026-08-20",
+        "verdict": "deferred",
+        "delivery": "cursor-rule",
+        "topic": "naming",
+        "resume_condition": "the naming topic core is extracted"
+      }
+    },
+    {
+      "id": "frag-naming",
+      "repository": "app-frontend",
+      "path": "rules/data-access.md",
+      "region": "naming-fragment",
+      "text": "A query composable is named useGetXxxQuery.\n",
+      "scope": "repository",
+      "repository_scope": "app-frontend",
+      "activation": "path-glob",
+      "globs": ["packages/**/api/*.ts"],
+      "source": "repository",
+      "status": "resolved",
+      "recorded_at": "2026-08-27",
+      "intake": {
+        "register": "instruction-intake/app-frontend.yaml",
+        "recorded_at": "2026-08-21",
+        "verdict": "deferred",
+        "delivery": "cursor-rule",
+        "topic": "naming",
+        "resume_condition": "the fragment is split from the container"
+      }
+    },
+    {
+      "id": "frag-layer",
+      "repository": "app-frontend",
+      "path": "rules/data-access.md",
+      "region": "layer-fragment",
+      "text": "A query composable lives in the api segment of its package.\n",
+      "scope": "repository",
+      "repository_scope": "app-frontend",
+      "activation": "path-glob",
+      "globs": ["packages/**/api/*.ts"],
+      "source": "repository",
+      "status": "resolved",
+      "recorded_at": "2026-08-27",
+      "intake": {
+        "register": "instruction-intake/app-frontend.yaml",
+        "recorded_at": "2026-08-21",
+        "verdict": "deferred",
+        "delivery": "cursor-rule",
+        "topic": "layer-architecture",
+        "resume_condition": "the fragment is split from the container"
+      }
+    },
+    {
+      "id": "mod-query",
+      "repository": "app-frontend",
+      "path": "rules/query-lib.md",
+      "text": "# Query library\n\nUse the shared client. Do not instantiate a second cache.\n",
+      "scope": "repository",
+      "repository_scope": "app-frontend",
+      "activation": "path-glob",
+      "globs": ["packages/**/api/*.ts"],
+      "source": "repository",
+      "status": "resolved",
+      "recorded_at": "2026-08-27",
+      "intake": {
+        "register": "instruction-intake/app-frontend.yaml",
+        "recorded_at": "2026-08-22",
+        "verdict": "keep-local",
+        "delivery": "cursor-rule",
+        "topic": "state-management",
+        "resume_condition": "n/a"
+      }
+    },
+    {
+      "id": "state-review",
+      "repository": "app-frontend",
+      "path": ".tooling/skills/state-review/SKILL.md",
+      "text": "# State review\n\nCheck pending, error and empty branches of every async view.\n",
+      "scope": "universal",
+      "activation": "task-class",
+      "task_class": { "work_kind": ["assessment", "change"] },
+      "source": "repository",
+      "status": "resolved",
+      "recorded_at": "2026-08-27",
+      "intake": {
+        "register": "instruction-intake/app-frontend.yaml",
+        "recorded_at": "2026-08-22",
+        "verdict": "keep-local",
+        "delivery": "skill-package",
+        "topic": "code-review",
+        "resume_condition": "n/a"
+      }
+    },
+    {
+      "id": "degraded-state",
+      "repository": "app-frontend",
+      "path": "rules/degraded-state.md",
+      "text": "# Degraded state\n\nRender partial data with a visible notice; never a blank screen.\n",
+      "scope": "universal",
+      "activation": "path-glob",
+      "globs": ["**/ui/*.vue"],
+      "source": "repository",
+      "status": "resolved",
+      "recorded_at": "2026-08-27",
+      "intake": {
+        "register": "instruction-intake/app-frontend.yaml",
+        "recorded_at": "2026-08-22",
+        "verdict": "deferred",
+        "delivery": "cursor-rule",
+        "topic": "error-handling",
+        "resume_condition": "the error-handling topic core is extracted"
+      }
+    },
+    {
+      "id": "module-boundary",
+      "repository": "app-frontend",
+      "path": "rules/module-boundary.md",
+      "text": "# Module boundary\n\nA package imports another package only through its public entry.\n",
+      "scope": "universal",
+      "activation": "path-glob",
+      "globs": ["packages/**/*.ts"],
+      "source": "repository",
+      "status": "resolved",
+      "recorded_at": "2026-08-27",
+      "intake": {
+        "register": "instruction-intake/app-frontend.yaml",
+        "recorded_at": "2026-08-22",
+        "verdict": "deferred",
+        "delivery": "cursor-rule",
+        "topic": "module-boundary",
+        "resume_condition": "the module-boundary topic core is extracted"
+      }
+    },
+    {
+      "id": "layer-arch-profile",
+      "repository": "app-frontend",
+      "path": "rules/layer-architecture.md",
+      "text": "# Layer architecture\n\nSeven layers. The unit is a package, not an application directory.\n",
+      "scope": "profile",
+      "technology_profile": "spa-runtime",
+      "activation": "path-glob",
+      "globs": ["packages/**/*.ts"],
+      "source": "repository",
+      "status": "unresolved",
+      "resume_condition": "a new append-only repository-scope intake record for rules/layer-architecture.md is added for app-frontend; the recorded scope is profile and the owner-decided target scope is repository",
+      "recorded_at": "2026-08-27",
+      "intake": {
+        "register": "instruction-intake/app-frontend.yaml",
+        "recorded_at": "2026-08-19",
+        "verdict": "deferred",
+        "delivery": "cursor-rule",
+        "topic": "layer-architecture",
+        "resume_condition": "a second independent edition of the topic appears under this profile"
+      }
+    },
+    {
+      "id": "layer-arch-repository",
+      "repository": "app-frontend",
+      "path": "rules/layer-architecture.md",
+      "text": "# Layer architecture\n\nSeven layers. The unit is a package, not an application directory.\n",
+      "scope": "repository",
+      "repository_scope": "app-frontend",
+      "activation": "path-glob",
+      "globs": ["packages/**/*.ts"],
+      "source": "repository",
+      "status": "resolved",
+      "recorded_at": "2026-08-29",
+      "intake": {
+        "register": "instruction-intake/app-frontend.yaml",
+        "recorded_at": "2026-08-29",
+        "verdict": "keep-local",
+        "delivery": "cursor-rule",
+        "topic": "layer-architecture",
+        "resume_condition": "n/a"
+      }
+    },
+    {
+      "id": "activation-undetermined",
+      "repository": "app-legacy",
+      "path": "rules/legacy.md",
+      "text": "# Legacy\n\nHistorical rule; how it reaches the agent today is not established.\n",
+      "scope": "repository",
+      "repository_scope": "app-legacy",
+      "activation": "undetermined",
+      "source": "repository",
+      "status": "resolved",
+      "recorded_at": "2026-08-27",
+      "intake": {
+        "register": "instruction-intake/app-legacy.yaml",
+        "recorded_at": "2026-08-20",
+        "verdict": "deferred",
+        "delivery": "cursor-rule",
+        "topic": "documentation-comments",
+        "resume_condition": "the delivery mechanism is established"
+      }
+    },
+    {
+      "id": "kernel-conduct",
+      "repository": "kernel",
+      "path": "standards/workspace/example-conduct.md",
+      "text": "# Conduct\n\nRead the active plan before proposing work.\n",
+      "scope": "universal",
+      "activation": "always",
+      "source": "kernel",
+      "status": "resolved",
+      "recorded_at": "2026-08-27"
+    }
+  ],
+  "protocol_routes": [
+    { "routed_from": "BUGFIX", "protocol": "bugfix-protocol", "source": "kernel", "scope": "universal", "digest": "1111111111111111111111111111111111111111111111111111111111111111", "mandatory": true },
+    { "routed_from": "FEATURE", "protocol": "test-planning", "source": "repository", "scope": "repository", "repository": "app-frontend", "revision": "0abcdef", "mandatory": true },
+    { "routed_from": "assessment", "protocol": "code-review", "source": "kernel", "scope": "universal", "digest": "2222222222222222222222222222222222222222222222222222222222222222", "mandatory": false },
+    { "routed_from": "initiative", "protocol": "consolidation-decomposition", "source": "kernel", "scope": "universal", "digest": "3333333333333333333333333333333333333333333333333333333333333333", "mandatory": false },
+    { "routed_from": "BEHAVIOR_CHANGE", "protocol": "admin-domain-review", "source": "instance", "scope": "product-domain", "product_domain": "Admin", "digest": "5555555555555555555555555555555555555555555555555555555555555555", "mandatory": false },
+    { "routed_from": "REFACTOR", "protocol": "refactor-protocol", "source": "kernel", "scope": "universal", "digest": "6666666666666666666666666666666666666666666666666666666666666666", "mandatory": true }
+  ],
+  "protocol_routes_conflicting": [
+    { "routed_from": "FEATURE", "protocol": "test-planning", "source": "kernel", "scope": "universal", "digest": "4444444444444444444444444444444444444444444444444444444444444444", "mandatory": true },
+    { "routed_from": "FEATURE", "protocol": "local-feature-flow", "source": "repository", "scope": "repository", "repository": "app-frontend", "revision": "1beef22", "mandatory": true }
+  ],
+  "verification_routes": [
+    { "applies_to_norm_id": "naming", "path": "lint:naming" },
+    { "applies_to_norm_id": "state-review", "path": "verification/smoke-protocol/smoke-protocol.md" }
+  ],
+  "initiative_protocol": "consolidation-decomposition",
+  "pre_decomposition_norms": ["parity-registry-required", "consolidation-inventory-required"]
+}

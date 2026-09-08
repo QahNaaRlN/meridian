@@ -70,6 +70,13 @@ if ! node "$ROOT/test/instruction-source-registry.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: verifying the task specification contract"
+if ! node "$ROOT/test/task-specification.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the task specification contract is inconsistent."
+  exit 1
+fi
+
 echo "pre-push: running the Git-environment isolation regression test"
 if ! node "$ROOT/test/pre-push-git-isolation.test.mjs"; then
   echo ""

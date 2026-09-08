@@ -94,6 +94,7 @@ import {
   WORK_KINDS as TPR_WORK_KINDS, CHANGE_CLASSES as TPR_CHANGE_CLASSES,
 } from './lib/task-pattern-registry.mjs';
 import { evaluateInstructionSourceRegistry } from './lib/instruction-source-registry.mjs';
+import { evaluateTaskSpecification } from './lib/task-specification.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1137,6 +1138,119 @@ function functionalParityConsistency(rec) {
     if (isrOk && isrCoverage) {
       ok('instruction-source-registry: the source-registry schema parsed and keyword-checked; '
        + `${isrSatisfied} representative fixture(s) satisfied the composition (record envelope, source snapshot, location confinement, revision and digest, read channel and divergence) and ${isrRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// task-specification-contract: the portable statement of one concrete work item (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/task-specification.schema.json is the specialised
+// payload schema for one task specification (record_type: task-specification) —
+// a portable human- and machine-readable statement of one concrete piece of
+// work: goal, an explicit initial state, an explicit target model, a reference
+// to one existing task pattern, a non-empty constraints list and a non-empty
+// list of verifiable acceptance criteria. Its envelope is validated against the
+// existing scoped-record.schema.json (composition, not a second envelope). The
+// task specification states the REQUIRED CONTENT of the work; run state belongs
+// to execution-state-model. Specification DATA is Instance, like the intake
+// register: the Kernel ships the schema, the product-neutral fixtures and one
+// checkable implementation (scripts/lib/task-specification.mjs), not a canonical
+// data file. The contract is a MANDATORY part of this Kernel: a missing schema,
+// a missing task-pattern catalogue (the reference target) or missing fixtures
+// is a FAIL, not an informational skip. The generic $schema pass never reaches
+// a JSON Schema file or a .json fixtures bundle, so — as with the
+// task-pattern-registry and instruction-source-registry blocks — the schema is
+// parsed, walked for unsupported keywords, and exercised against its bundled
+// fixtures here, fail-closed on the bundle's own shape.
+{
+  const tscDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const tscSchemaName = 'task-specification.schema.json';
+  const tscSchemaRaw = readIfExists(path.join(tscDir, tscSchemaName));
+  if (tscSchemaRaw === null) {
+    fail(`task-specification-contract: registries/operating-model/${tscSchemaName} is missing; the task specification contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let tscOk = true;
+    let tscSchema = null;
+    let tscEnv = null;
+    try { tscSchema = JSON.parse(tscSchemaRaw); }
+    catch (e) { fail(`task-specification-contract: ${tscSchemaName} is not valid JSON: ${e.message}`); tscOk = false; }
+
+    const tscEnvRaw = readIfExists(path.join(tscDir, 'scoped-record.schema.json'));
+    if (tscEnvRaw === null) {
+      fail('task-specification-contract: registries/operating-model/scoped-record.schema.json is missing; the specification composes with the record envelope and cannot be checked without it');
+      tscOk = false;
+    } else {
+      try { tscEnv = JSON.parse(tscEnvRaw); }
+      catch (e) { fail(`task-specification-contract: scoped-record.schema.json is not valid JSON: ${e.message}`); tscOk = false; }
+    }
+
+    if (tscSchema) {
+      try { assertSupportedDeep(tscSchema, tscSchemaName); }
+      catch (e) { fail(`task-specification-contract: the schema uses a construct this validator cannot check: ${e.message}`); tscOk = false; }
+    }
+
+    // The task_pattern reference is resolved against the built-in catalogue, so
+    // the catalogue must be readable here too.
+    let tscPatterns = null;
+    const tscTprRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'task-pattern-registry.yaml'));
+    if (tscTprRaw === null) {
+      fail('task-specification-contract: standards/workspace/task-pattern-registry.yaml is missing; the specification\'s task-pattern reference cannot be resolved without the catalogue');
+      tscOk = false;
+    } else {
+      try {
+        const tprDoc = yamlParse(tscTprRaw);
+        tscPatterns = (Array.isArray(tprDoc && tprDoc.task_patterns) ? tprDoc.task_patterns : []).map((p) => ({
+          id: p && p.id,
+          work_kind: p && p.payload && p.payload.work_kind,
+          change_class: (p && p.payload && p.payload.change_class) ?? null,
+        }));
+      } catch (e) { fail(`task-specification-contract: cannot parse task-pattern-registry.yaml: ${e.message}`); tscOk = false; }
+    }
+
+    let tscSatisfied = 0;
+    let tscRejected = 0;
+    let tscCoverage = false;
+    const fxRaw = readIfExists(path.join(tscDir, 'fixtures', 'task-specification.fixtures.json'));
+    if (fxRaw === null) {
+      fail('task-specification-contract: the schema carries no fixtures (registries/operating-model/fixtures/task-specification.fixtures.json); a schema no run exercises is not one this gate has reached');
+      tscOk = false;
+    } else if (tscOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(fxRaw); }
+      catch (e) { bundleOk = false; fail(`task-specification-contract: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('task-specification-contract: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`task-specification-contract: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        tscOk = false;
+      } else {
+        const opts = { recordSchema: tscSchema, envelopeSchema: tscEnv, taskPatterns: tscPatterns };
+        for (const c of bundle.valid) {
+          const p = evaluateTaskSpecification(c && c.spec, opts);
+          if (p.length) { fail(`task-specification-contract: a fixture that must be a valid specification was rejected (${c && c.note}): ${p[0]}`); tscOk = false; }
+          else tscSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateTaskSpecification(c && c.spec, opts);
+          if (p.length === 0) { fail(`task-specification-contract: a fixture that must be rejected validated clean (${c && c.note})`); tscOk = false; }
+          else tscRejected++;
+        }
+        tscCoverage = tscOk;
+      }
+    }
+
+    if (tscOk && tscCoverage) {
+      ok('task-specification-contract: the task-specification schema parsed and keyword-checked; '
+       + `${tscSatisfied} representative fixture(s) satisfied the composition (record envelope, goal, initial state, target model, task-pattern resolution, constraints and verifiable acceptance criteria) and ${tscRejected} were rejected as declared`);
     }
   }
 }

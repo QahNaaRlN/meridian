@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/task-specification.schema.json",
+  "title": "Meridian task specification",
+  "description": "The complete schema for one task specification (record_type: task-specification): a portable, human- and machine-readable statement of one concrete piece of work. A record declares THIS schema in its $schema, so a consumer that follows the declaration validates the whole record — the record envelope AND the specialised body — in one pass, and never accepts a record that is missing goal, initial_state, target_model or the other body fields. The record envelope is the SAME contract as registries/operating-model/scoped-record.schema.json (identity, scope, origin, authority): scripts/lib/task-specification.mjs validates every record against scoped-record.schema.json directly as well, so the canonical envelope check is reused and separately performed, never silently dropped. This schema narrows only what a task specification narrows: scope is restricted to the two workspace-scope-model areas a project task specification may occupy — project-workspace and repository-scope (user-profile and organization-profile hold rules and settings; run-state holds one execution run's episodic state, while a specification exists before any run and may drive several; built-in-methodology is Kernel methodology). It also adds the payload body: goal, an explicit initial_state, an explicit target_model, a reference to exactly one existing pattern in task-pattern-registry, a non-empty constraints list and a non-empty acceptance_criteria list whose items each carry a stable id, a statement and a structured verification (method plus expected_result) so that a free phrase with no checkable condition cannot satisfy a criterion. A task specification states the REQUIRED CONTENT of the work; it never carries run state (lifecycle stage, work status, current actor, transition history, next step) — that belongs to execution-state-model, a separate package. The rules this JSON Schema subset cannot state live in scripts/lib/task-specification.mjs: the declared $schema is RESOLVED as a LOGICAL address within the Meridian namespace, from the canonical logical base CANONICAL_RECORD_BASE (the logical address records/task-specification — not a filesystem directory, a repository or a storage mechanism; a storage adapter maps it onto an actual resource, and moving a record between storage mechanisms changes neither its id, scope, origin, authority nor the meaning of its $schema), and must resolve to exactly this file's logical address — not merely carry the right basename, and not the bare scoped-record envelope; task-pattern resolution against the built-in catalogue; work_kind / change_class agreement; portability of the body strings AND of the envelope reference strings (origin.source_ref, authority.authority_ref, authority.decision_ref) — no rooted machine path whatever separator precedes it and with no allow-list on the first segment (/@scope, /$private, /~service, an emoji, Cyrillic or CJK all count as rooted), while ordinary relative paths with scoped or $-prefixed segments are not flagged; no home-directory reference, no drive-letter path, no backslash path, no file URL; non-empty and non-duplicate criteria; run-state rejection; the Russian name. The contract is a mandatory part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/task-specification.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "id", "title", "record_type", "scope", "origin", "authority", "payload"],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/definitions/semantic_id" },
+    "title": { "type": "string", "minLength": 1 },
+    "record_type": { "const": "task-specification" },
+    "scope": { "$ref": "#/definitions/scope_ref" },
+    "origin": { "$ref": "#/definitions/origin" },
+    "authority": { "$ref": "#/definitions/authority" },
+    "payload": { "$ref": "#/definitions/payload" }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "nonempty_text_list": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "scope_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "description": "The task specification's area. Only project-workspace and repository-scope are accepted; every other area of the workspace scope model is rejected here (and in scripts/lib/task-specification.mjs with the rationale). The envelope shape mirrors scoped-record.schema.json's scope_ref: repository-scope requires workspace_id, and organization_profile_id is accepted only on project-workspace.",
+      "properties": {
+        "type": { "enum": ["project-workspace", "repository-scope"] },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "workspace_id": { "$ref": "#/definitions/semantic_id" },
+        "organization_profile_id": { "$ref": "#/definitions/semantic_id" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "repository-scope" } }, "required": ["type"] },
+          "then": { "required": ["workspace_id"] },
+          "else": { "not": { "required": ["workspace_id"] } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "project-workspace" } }, "required": ["type"] },
+          "else": { "not": { "required": ["organization_profile_id"] } }
+        }
+      ]
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "description": "Same contract as scoped-record.schema.json's origin. A concrete specification is authored in a workspace, so kind 'built-in' is additionally rejected by scripts/lib/task-specification.mjs.",
+      "properties": {
+        "kind": { "enum": ["built-in", "declared", "migrated", "imported", "derived"] },
+        "source_ref": { "$ref": "#/definitions/non_empty" }
+      },
+      "if": { "properties": { "kind": { "const": "built-in" } }, "required": ["kind"] },
+      "then": { "not": { "required": ["source_ref"] } },
+      "else": { "required": ["source_ref"] }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "authority_ref"],
+      "description": "Same contract as scoped-record.schema.json's authority.",
+      "properties": {
+        "kind": {
+          "enum": ["methodology-owner", "user", "organization", "project-owner", "repository-maintainer", "delegated-run"]
+        },
+        "authority_ref": { "$ref": "#/definitions/non_empty" },
+        "decision_ref": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "task_pattern_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "description": "A reference to exactly one pattern in task-pattern-registry. id is resolved against the built-in catalogue by scripts/lib/task-specification.mjs and fails on an unknown or ambiguous id. work_kind and change_class are optional; when present they must equal the resolved pattern's own classifier pair.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "work_kind": { "enum": ["assessment", "operation", "initiative", "change"] },
+        "change_class": { "enum": ["BUGFIX", "FEATURE", "BEHAVIOR_CHANGE", "REFACTOR"] }
+      }
+    },
+    "acceptance_criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "verification"],
+      "description": "One acceptance criterion. id is a stable semantic identifier, unique within the specification. statement is what must hold. verification is structured, not a free phrase: a method and the observable expected_result that counts as a pass.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "statement": { "$ref": "#/definitions/non_empty" },
+        "verification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["method", "expected_result"],
+          "properties": {
+            "method": { "$ref": "#/definitions/non_empty" },
+            "expected_result": { "$ref": "#/definitions/non_empty" }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["goal", "initial_state", "target_model", "task_pattern", "constraints", "acceptance_criteria"],
+      "description": "The body of one task specification. Closed: every field is required and no other field is accepted, so run-state fields (lifecycle_stage, work_status, current_actor, transition_history, next_action, …) are rejected here by construction.",
+      "properties": {
+        "goal": { "$ref": "#/definitions/non_empty" },
+        "initial_state": { "$ref": "#/definitions/non_empty" },
+        "target_model": { "$ref": "#/definitions/non_empty" },
+        "task_pattern": { "$ref": "#/definitions/task_pattern_ref" },
+        "constraints": { "$ref": "#/definitions/nonempty_text_list" },
+        "acceptance_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/acceptance_criterion" }
+        }
+      }
+    }
+  }
+}

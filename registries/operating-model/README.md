@@ -31,3 +31,25 @@ Meridian. Данные конкретного продукта здесь не �
 записи с отдельными областью, происхождением и полномочием. Их нормативный
 смысл и переход от отдельного Экземпляра описаны в
 `standards/workspace/workspace-scope-model.md`.
+
+`task-pattern-registry.schema.json` проверяет **обязательный** каталог
+универсальных шаблонов типов задач из
+`standards/workspace/task-pattern-registry.yaml`: контейнер и тело шаблона в
+`payload` каждой записи (виды работы, класс изменения только при
+`work_kind: change`, инварианты, обязательные входы, требуемые доказательства,
+условия остановки и три раздельные оси ссылок — `applicable_protocols`,
+`applicable_skills`, `applicable_evidence_contracts`). Это специализированная
+схема **содержимого**: общий конверт каждой записи по-прежнему проверяется
+`scoped-record.schema.json`, а не переопределяется здесь. Межзаписные правила
+(ровно семь классификационных пар, разделение осей — способ выполнения не
+кладётся в массив протоколов и наоборот, принадлежность каждой `present`-ссылки
+отслеживаемому набору файлов Ядра после разрешения симлинков, маршруты
+`REFACTOR` и `BUGFIX`, а также текстовая защита от возврата формулировки
+`BUGFIX → bugfix-protocol` в `standards/workspace/rule-resolution.md` §7) и
+продуктово-нейтральные фикстуры из
+`fixtures/task-pattern-registry.fixtures.json` живут в одной функции
+`scripts/lib/task-pattern-registry.mjs`, которую вызывают и участок
+`task-pattern-registry` в `scripts/kernel-validate.mjs`, и набор
+`test/task-pattern-registry.test.mjs`. Отсутствие каталога, схемы или фикстур —
+ошибка проверки Ядра. Нормативный смысл каталога — в
+`standards/workspace/task-pattern-registry.md`.

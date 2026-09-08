@@ -28,6 +28,9 @@ jobs:
       - name: Verify the workspace scope model
         run: node test/workspace-scope-model.test.mjs
 
+      - name: Verify the task pattern registry
+        run: node test/task-pattern-registry.test.mjs
+
       - name: Regression-test the pre-push Git-environment isolation
         run: node test/pre-push-git-isolation.test.mjs
 

@@ -83,6 +83,10 @@ import { fileURLToPath } from 'node:url';
 // sit inline here.
 import { yamlParse } from './lib/yaml.mjs';
 import { validate, assertSupportedDeep } from './lib/json-schema.mjs';
+import {
+  evaluateTaskPatternRegistry, checkRuleResolutionBugfixConsistency,
+  WORK_KINDS as TPR_WORK_KINDS, CHANGE_CLASSES as TPR_CHANGE_CLASSES,
+} from './lib/task-pattern-registry.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -906,6 +910,134 @@ function functionalParityConsistency(rec) {
     if (fpOk && coverageComplete) {
       ok('functional-parity: the PHASE D evidence schema parsed and keyword-checked; '
        + `${satisfied} representative fixture(s) satisfied it and its inference rules, and ${rejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// task-pattern-registry: the built-in universal task-type catalog (MANDATORY)
+// ---------------------------------------------------------------------------
+// standards/workspace/task-pattern-registry.yaml is a required part of this
+// Kernel: its absence, or a missing schema or fixtures beside it, is a FAIL,
+// not an informational skip. Its container shape and the pattern body in each
+// entry's payload are validated against task-pattern-registry.schema.json; the
+// record ENVELOPE (identity, scope, origin, authority) is validated against the
+// existing scoped-record.schema.json — composition, not a second envelope
+// schema. The cross-record rules the draft-07 subset cannot state, and the
+// path-confinement rule for every `status: present` canonical link, live in
+// scripts/lib/task-pattern-registry.mjs so the gate and the standalone set
+// (test/task-pattern-registry.test.mjs) call one implementation. Protocols,
+// ways of carrying work out (skills) and evidence contracts are three separate
+// axes; a skill package may sit only in applicable_skills. The bundled
+// product-neutral fixtures are classified the same way. A text guard also
+// keeps rule-resolution.md from re-asserting that BUGFIX routes to a Kernel
+// *protocol* — bugfix-protocol is a skill, and no BUGFIX protocol exists.
+{
+  const TPR_YAML_REL = 'standards/workspace/task-pattern-registry.yaml';
+  const TPR_REG_SCHEMA_REL = 'registries/operating-model/task-pattern-registry.schema.json';
+  const TPR_ENV_SCHEMA_REL = 'registries/operating-model/scoped-record.schema.json';
+  const TPR_FX_REL = 'registries/operating-model/fixtures/task-pattern-registry.fixtures.json';
+  const tprTracked = new Set(relKernelFiles);
+  const isTracked = (rel) => tprTracked.has(rel);
+
+  const tprYamlRaw = readIfExists(path.join(KERNEL_ROOT, TPR_YAML_REL));
+  if (tprYamlRaw === null) {
+    fail(`task-pattern-registry: ${TPR_YAML_REL} is missing; the built-in task-type catalog is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let tprOk = true;
+    const schemas = {};
+    for (const [id, rel] of [['registry', TPR_REG_SCHEMA_REL], ['envelope', TPR_ENV_SCHEMA_REL]]) {
+      const raw = readIfExists(path.join(KERNEL_ROOT, rel));
+      if (raw === null) { fail(`task-pattern-registry: ${rel} is missing; the mandatory catalog cannot be checked without its ${id} schema`); tprOk = false; continue; }
+      try { schemas[id] = JSON.parse(raw); }
+      catch (e) { fail(`task-pattern-registry: ${rel} is not valid JSON: ${e.message}`); tprOk = false; continue; }
+      try { assertSupportedDeep(schemas[id], id); }
+      catch (e) { fail(`task-pattern-registry: the ${id} schema uses a construct this validator cannot check: ${e.message}`); tprOk = false; }
+    }
+
+    if (tprOk) {
+      // The catalog reuses the existing work_kind / change_class pools; it must
+      // not quietly grow a second vocabulary (rule-resolution.md §2–§3).
+      const wkEnum = schemas.registry?.definitions?.payload?.properties?.work_kind?.enum;
+      const ccEnum = schemas.registry?.definitions?.payload?.properties?.change_class?.enum;
+      if (JSON.stringify(wkEnum) !== JSON.stringify(TPR_WORK_KINDS)) {
+        fail(`task-pattern-registry: the schema's work_kind pool ${JSON.stringify(wkEnum)} diverges from the canonical four (rule-resolution.md §2)`);
+        tprOk = false;
+      }
+      if (JSON.stringify(ccEnum) !== JSON.stringify(TPR_CHANGE_CLASSES)) {
+        fail(`task-pattern-registry: the schema's change_class pool ${JSON.stringify(ccEnum)} diverges from the canonical four (rule-resolution.md §3)`);
+        tprOk = false;
+      }
+    }
+
+    const evalOpts = () => ({
+      registrySchema: schemas.registry, envelopeSchema: schemas.envelope,
+      kernelRoot: KERNEL_ROOT, isTracked,
+    });
+
+    let tprDoc = null;
+    if (tprOk) {
+      try { tprDoc = yamlParse(tprYamlRaw); }
+      catch (e) { fail(`task-pattern-registry: cannot parse ${TPR_YAML_REL}: ${e.message}`); tprOk = false; }
+    }
+    if (tprOk && tprDoc) {
+      const problems = evaluateTaskPatternRegistry(tprDoc, evalOpts());
+      if (problems.length) {
+        problems.slice(0, 10).forEach((p) => fail(`task-pattern-registry: ${p}`));
+        tprOk = false;
+      }
+    }
+
+    // The catalog treats skills/bugfix-protocol/SKILL.md as a `skill` and
+    // records that no separate BUGFIX `protocol` document exists (owner
+    // decision). rule-resolution.md must not, at the same time, still call
+    // `BUGFIX → bugfix-protocol` a route to a Kernel protocol.
+    const rrRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'rule-resolution.md'));
+    if (rrRaw !== null) {
+      for (const p of checkRuleResolutionBugfixConsistency(rrRaw)) {
+        fail(`task-pattern-registry: ${p}`);
+        tprOk = false;
+      }
+    }
+
+    let tprSatisfied = 0;
+    let tprRejected = 0;
+    let tprCoverage = false;
+    const tprFxRaw = readIfExists(path.join(KERNEL_ROOT, TPR_FX_REL));
+    if (tprFxRaw === null) {
+      fail(`task-pattern-registry: the mandatory catalog carries no fixtures (${TPR_FX_REL}); a schema no run exercises is not one this gate has reached`);
+      tprOk = false;
+    } else if (tprOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(tprFxRaw); }
+      catch (e) { bundleOk = false; fail(`task-pattern-registry: the fixtures file is not valid JSON: ${e.message}`); }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle?.[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`task-pattern-registry: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        tprOk = false;
+      } else {
+        for (const c of bundle.valid) {
+          const p = evaluateTaskPatternRegistry(c && c.registry, evalOpts());
+          if (p.length) { fail(`task-pattern-registry: a fixture that must be a valid catalog was rejected (${c && c.note}): ${p[0]}`); tprOk = false; }
+          else tprSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateTaskPatternRegistry(c && c.registry, evalOpts());
+          if (p.length === 0) { fail(`task-pattern-registry: a fixture that must be rejected validated clean (${c && c.note})`); tprOk = false; }
+          else tprRejected++;
+        }
+        tprCoverage = tprOk;
+      }
+    }
+
+    if (tprOk && tprCoverage) {
+      ok('task-pattern-registry: the mandatory catalog and its specialised schema parsed and keyword-checked; '
+       + `seven built-in patterns validated against the envelope, the pattern-body contract and link confinement, and ${tprSatisfied} representative fixture(s) satisfied the composition while ${tprRejected} were rejected as declared`);
     }
   }
 }

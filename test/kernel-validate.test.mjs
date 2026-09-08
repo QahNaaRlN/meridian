@@ -23,6 +23,7 @@ import { spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { validate } from '../scripts/lib/json-schema.mjs';
+import { yamlParse } from '../scripts/lib/yaml.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const VALIDATOR = path.join(__dirname, '..', 'scripts', 'kernel-validate.mjs');
@@ -195,6 +196,87 @@ function plantProfiledRepo(instance, repoRoot, {
   ].join('\n'));
 }
 
+const TPR_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const TPR_STD = path.join(__dirname, '..', 'standards', 'workspace');
+// The BUGFIX task pattern links to this skill package; a synthetic kernel plants
+// it, and every intake register over the kernel tree records it (plantIntake).
+const BUGFIX_SKILL_STUB = '# Bugfix\n\nStub bugfix skill for the validator test suite.\n';
+
+// The real catalog, parsed once. A synthetic kernel plants THIS (small) as its
+// mandatory catalog data plus a COMPACT fixtures bundle — not the 1.1 MB /
+// 15 446-line negative bundle, which was being copied into every buildKernel.
+// The full negative bundle is exercised by the standalone set
+// (test/task-pattern-registry.test.mjs) and by one dedicated case here (t180)
+// and by the real `node scripts/kernel-validate.mjs` run.
+const TPR_REAL_CATALOG = (() => {
+  const doc = yamlParse(fs.readFileSync(path.join(TPR_STD, 'task-pattern-registry.yaml'), 'utf8'));
+  delete doc.$schema;
+  return doc;
+})();
+const tprClone = (x) => JSON.parse(JSON.stringify(x));
+const tprFindPattern = (doc, id) => doc.task_patterns.find((p) => p.id === id);
+// A minimal-but-correct fixtures bundle: one valid catalog and three
+// representative rejections (a classification error, an axis-mixing error, a
+// link-confinement error). Enough to keep the gate's fixture-classification
+// path exercised without copying the full negative set.
+function tprCompactBundle() {
+  const good = tprClone(TPR_REAL_CATALOG);
+  const badWorkKind = tprClone(TPR_REAL_CATALOG);
+  tprFindPattern(badWorkKind, 'assess-existing-state').payload.work_kind = 'inspection';
+  const skillInProtocols = tprClone(TPR_REAL_CATALOG);
+  tprFindPattern(skillInProtocols, 'fix-defect').payload.applicable_protocols =
+    [{ status: 'present', id: 'x', path: 'skills/bugfix-protocol/SKILL.md' }];
+  const absoluteLink = tprClone(TPR_REAL_CATALOG);
+  tprFindPattern(absoluteLink, 'assess-existing-state').payload.applicable_protocols =
+    [{ status: 'present', id: 'x', path: '/etc/task-lifecycle.md' }];
+  return {
+    valid: [{ note: 'minimal valid catalog', registry: good }],
+    invalid: [
+      { note: 'unknown work_kind', registry: badWorkKind },
+      { note: 'skill in the protocol axis', registry: skillInProtocols },
+      { note: 'absolute link path', registry: absoluteLink },
+    ],
+  };
+}
+
+// The task-pattern catalog is a MANDATORY part of the Kernel, so a synthetic
+// kernel's normal state carries it: the real catalog data, its specialised
+// schema, the reused envelope schema, a COMPACT fixtures bundle, and a stub
+// file at every path the catalog links to as `status: present`. `bundle`
+// accepts 'compact' (default), 'real' (the full 34-negative file) or an object.
+// Other overrides plant a broken schema / yaml, or omit fixtures.
+function writeTaskPatternCatalog(root, { schema = null, yaml = null, bundle = 'compact', omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/scoped-record.schema.json',
+    fs.readFileSync(path.join(TPR_OM, 'scoped-record.schema.json'), 'utf8'));
+  write(root, 'registries/operating-model/task-pattern-registry.schema.json',
+    schema ?? fs.readFileSync(path.join(TPR_OM, 'task-pattern-registry.schema.json'), 'utf8'));
+  write(root, 'standards/workspace/task-pattern-registry.yaml',
+    yaml ?? fs.readFileSync(path.join(TPR_STD, 'task-pattern-registry.yaml'), 'utf8'));
+  if (!omitFixtures) {
+    let bundleText;
+    if (bundle === 'real') bundleText = fs.readFileSync(path.join(TPR_OM, 'fixtures', 'task-pattern-registry.fixtures.json'), 'utf8');
+    else if (bundle === 'compact') bundleText = JSON.stringify(tprCompactBundle());
+    else bundleText = JSON.stringify(bundle);
+    write(root, 'registries/operating-model/fixtures/task-pattern-registry.fixtures.json', bundleText);
+  }
+  // rule-resolution.md is scanned by the catalog section's text guard; the
+  // synthetic kernel carries a minimal copy that keeps that guard green.
+  write(root, 'standards/workspace/rule-resolution.md',
+    `${fm('Rule resolution', 'standard')}\n# Rule resolution\n\n`
+    + 'Для `BUGFIX` каноническим носителем порядка является способ выполнения '
+    + '`bugfix-protocol` (`skill`, не `protocol`); отдельного протокола BUGFIX нет.\n');
+  write(root, 'workflows/task-lifecycle.md', `${fm('Task lifecycle', 'protocol')}\n# Task lifecycle\n\nStub.\n`);
+  write(root, 'verification/regression-testing/README.md', `${fm('Regression testing', 'readme')}\n# Regression testing\n\nStub.\n`);
+  write(root, 'verification/functional-parity/refactor-protocol.md', `${fm('REFACTOR execution protocol', 'protocol')}\n# REFACTOR execution protocol\n\nStub.\n`);
+  write(root, 'verification/functional-parity/functional-parity-evidence-contract.md', `${fm('Functional-parity evidence contract', 'contract')}\n# Functional-parity evidence contract\n\nStub.\n`);
+  write(root, 'skills/bugfix-protocol/SKILL.md', BUGFIX_SKILL_STUB);
+  write(root, 'skills/bugfix-protocol/PIN.yaml', [
+    'schema_version: 1', 'name: bugfix-protocol', 'artifact: SKILL.md',
+    `sha256: ${sha256(BUGFIX_SKILL_STUB)}`, 'state: vendored',
+    "pinned_at: '2026-01-01'", 'pinned_by: test-suite', '',
+  ].join('\n'));
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -213,6 +295,8 @@ function buildKernel(root) {
     'pinned_by: test-suite',
     '',
   ].join('\n'));
+  // The mandatory task-pattern catalog is part of a well-formed Kernel.
+  writeTaskPatternCatalog(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -578,14 +662,24 @@ function plantIntake(kernel, instance, { records, repoPath }) {
     "    last_verified: '2026-01-01'",
     '',
   ].join('\n'));
+  // The synthetic kernel carries the mandatory task-pattern catalog, which
+  // links to skills/bugfix-protocol/SKILL.md. That file matches the intake
+  // SKILL mask, so every register over the kernel tree records it — otherwise
+  // completeness would fail for a reason unrelated to the case under test.
   write(instance, 'instruction-intake/synthetic.yaml', [
     '$schema: ./intake.schema.json',
     'schema_version: 1',
     'repository: synthetic',
     'records:',
     ...records,
+    ...bugfixSkillRecordLines(),
     '',
   ].join('\n'));
+}
+
+// Appended after each case's own records so their indices are unchanged.
+function bugfixSkillRecordLines() {
+  return intakeRecord('skills/bugfix-protocol/SKILL.md', sha256(BUGFIX_SKILL_STUB), { delivery: 'skill-package' });
 }
 
 function intakeRecord(artifact, digest, { verdict = 'keep-local', topic = 'naming', delivery = 'cursor-rule', extra = [], recordedAt = '2026-01-01' } = {}) {
@@ -1335,7 +1429,7 @@ function regionRecord(id, opts = {}) {
   sh('git', ['mv', 'instruction-intake/synthetic.yaml', 'instruction-intake/renamed.yaml'], instance);
   fs.writeFileSync(path.join(instance, 'instruction-intake', 'renamed.yaml'), [
     '$schema: ./intake.schema.json', 'schema_version: 1', 'repository: synthetic', 'records:',
-    ...intakeRecord('skills/demo/SKILL.md', sha256('a')), '',
+    ...intakeRecord('skills/demo/SKILL.md', sha256('a')), ...bugfixSkillRecordLines(), '',
   ].join('\n'));
   commitAll(instance);
   check('t61 a record dropped under a rename detected', run(kernel, instance), {
@@ -1488,7 +1582,7 @@ function regionRecord(id, opts = {}) {
   sh('git', ['mv', 'instruction-intake/synthetic.yaml', 'instruction-intake/renamed.yaml'], instance);
   fs.writeFileSync(path.join(instance, 'instruction-intake', 'renamed.yaml'), [
     '$schema: ./intake.schema.json', 'schema_version: 1', 'repository: synthetic', 'records:',
-    ...intakeRecord('skills/demo/SKILL.md', sha256('a')), '',
+    ...intakeRecord('skills/demo/SKILL.md', sha256('a')), ...bugfixSkillRecordLines(), '',
   ].join('\n'));
   sh('git', ['add', '-A'], instance);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '--amend', '-m', 'renamed and rewritten'], instance);
@@ -3245,6 +3339,234 @@ function fpBundleWith(where, doc) {
   check('t166 ambiguous operating machine name is rejected', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/operating-foundation: machine names assigned to more than one term: work_item/],
+  });
+}
+
+// ===========================================================================
+// task-pattern-registry — the built-in universal task-type catalog is reached
+// ===========================================================================
+// These cases exercise the gate's `task-pattern-registry` section: the
+// container/payload schema parses and uses only implemented keywords, the
+// record envelope is validated against the existing scoped-record schema, the
+// cross-record rules JSON Schema cannot state are enforced, and the bundled
+// product-neutral fixtures are classified — every valid one accepted, every
+// invalid one rejected. A negative case plants a catalog or a schema the
+// section must refuse; a positive case plants one it must accept.
+
+const TPR_OK_LINE = /task-pattern-registry: the mandatory catalog and its specialised schema parsed and keyword-checked; seven built-in patterns validated against the envelope, the pattern-body contract and link confinement, and \d+ representative fixture\(s\) satisfied the composition while \d+ were rejected/;
+
+// A synthetic kernel already carries the mandatory catalog with a COMPACT
+// fixtures bundle (buildKernel → writeTaskPatternCatalog). A case that needs a
+// planted document appends it to the compact bundle — topologically complete,
+// so only the planted document can decide the run. The full 34-negative bundle
+// is used by t180 alone here (and by the standalone set).
+function tprBundleWith(where, note, registry) {
+  const b = tprCompactBundle();
+  b[where] = [...b[where], { note, registry }];
+  return b;
+}
+const tprBaseRegistry = () => tprClone(TPR_REAL_CATALOG);
+
+// t167 — the mandatory catalog and its fixtures are reached and classified in
+// an otherwise ordinary synthetic kernel.
+{
+  const { kernel, instance } = freshPair('t167');
+  check('t167 the mandatory task-pattern catalog is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [TPR_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t168 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t168');
+  const s = JSON.parse(fs.readFileSync(path.join(TPR_OM, 'task-pattern-registry.schema.json'), 'utf8'));
+  s.definitions.payload.minProperties = 1;
+  writeTaskPatternCatalog(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t168 an unsupported keyword in the catalog schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: the registry schema uses a construct this validator cannot check/],
+  });
+}
+
+// t169 — the catalog schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t169');
+  writeTaskPatternCatalog(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t169 a malformed catalog schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: .*task-pattern-registry\.schema\.json is not valid JSON/],
+  });
+}
+
+// t170 — the mandatory catalog with no fixtures beside it is a gap.
+{
+  const { kernel, instance } = freshPair('t170');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'fixtures', 'task-pattern-registry.fixtures.json'));
+  commitAll(kernel);
+  check('t170 the catalog without fixtures is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: the mandatory catalog carries no fixtures/],
+  });
+}
+
+// t171 — a fixture declared invalid that the composition accepts clean is a
+// red run: a rejection that no longer fires is a defect in the check.
+{
+  const { kernel, instance } = freshPair('t171');
+  writeTaskPatternCatalog(kernel, { bundle: tprBundleWith('invalid', 'planted clean catalog', tprBaseRegistry()) });
+  commitAll(kernel);
+  check('t171 an invalid fixture that validates clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: a fixture that must be rejected validated clean \(planted clean catalog\)/],
+  });
+}
+
+// t172 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t172');
+  const broken = tprBaseRegistry();
+  broken.task_patterns.find((p) => p.id === 'fix-defect').payload.change_class = 'PATCH';
+  writeTaskPatternCatalog(kernel, { bundle: tprBundleWith('valid', 'planted broken catalog', broken) });
+  commitAll(kernel);
+  check('t172 a valid fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: a fixture that must be a valid catalog was rejected \(planted broken catalog\)/],
+  });
+}
+
+// t173 — the schema's work_kind pool cannot silently grow a second vocabulary.
+{
+  const { kernel, instance } = freshPair('t173');
+  const s = JSON.parse(fs.readFileSync(path.join(TPR_OM, 'task-pattern-registry.schema.json'), 'utf8'));
+  s.definitions.payload.properties.work_kind.enum = ['assessment', 'operation', 'initiative', 'change', 'chore'];
+  writeTaskPatternCatalog(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t173 a diverged work_kind pool is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: the schema's work_kind pool .* diverges from the canonical four/],
+  });
+}
+
+// t174 — a real defect in the catalog itself (a missing classifier pair) is a
+// red run, named by the cross-record rule.
+{
+  const { kernel, instance } = freshPair('t174');
+  const y = fs.readFileSync(path.join(TPR_STD, 'task-pattern-registry.yaml'), 'utf8')
+    .replace('      change_class: BEHAVIOR_CHANGE', '      change_class: REFACTOR');
+  writeTaskPatternCatalog(kernel, { yaml: y });
+  commitAll(kernel);
+  check('t174 a missing classifier pair in the catalog is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: (no pattern for classification pair \(change, BEHAVIOR_CHANGE\)|classification pair \(change, REFACTOR\) is declared 2 times)/],
+  });
+}
+
+// t175 — the catalog is MANDATORY: removing standards/workspace/task-pattern-registry.yaml
+// is a red run, not an informational "nothing to check".
+{
+  const { kernel, instance } = freshPair('t175');
+  fs.rmSync(path.join(kernel, 'standards', 'workspace', 'task-pattern-registry.yaml'));
+  commitAll(kernel);
+  check('t175 a Kernel with no task-pattern catalog is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: standards\/workspace\/task-pattern-registry\.yaml is missing; the built-in task-type catalog is a mandatory part of this Kernel/],
+    mustNotMatch: [/task-pattern-registry: no catalog in this Kernel/],
+  });
+}
+
+// t176 — the specialised schema is mandatory too: removing it is a red run.
+{
+  const { kernel, instance } = freshPair('t176');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'task-pattern-registry.schema.json'));
+  commitAll(kernel);
+  check('t176 a Kernel with the catalog but no schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: registries\/operating-model\/task-pattern-registry\.schema\.json is missing; the mandatory catalog cannot be checked without its registry schema/],
+  });
+}
+
+// t177 — a way of carrying work out (skill package) placed in applicable_protocols
+// reaches the gate and is rejected: the three reference axes are different
+// entities.
+{
+  const { kernel, instance } = freshPair('t177');
+  const mixed = tprBaseRegistry();
+  mixed.task_patterns.find((p) => p.id === 'fix-defect').payload.applicable_protocols =
+    [{ status: 'present', id: 'bugfix-protocol', path: 'skills/bugfix-protocol/SKILL.md' }];
+  writeTaskPatternCatalog(kernel, { bundle: tprBundleWith('valid', 'planted skill-in-protocols catalog', mixed) });
+  commitAll(kernel);
+  check('t177 a skill package in applicable_protocols is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: a fixture that must be a valid catalog was rejected \(planted skill-in-protocols catalog\): .*points at a skill package/],
+  });
+}
+
+// t178 — a present canonical link that escapes the Kernel by an absolute path
+// reaches the gate and is rejected on Kernel membership, not on file absence.
+{
+  const { kernel, instance } = freshPair('t178');
+  const escaped = tprBaseRegistry();
+  escaped.task_patterns.find((p) => p.id === 'assess-existing-state').payload.applicable_protocols =
+    [{ status: 'present', id: 'abs', path: '/etc/task-lifecycle.md' }];
+  writeTaskPatternCatalog(kernel, { bundle: tprBundleWith('valid', 'planted absolute-link catalog', escaped) });
+  commitAll(kernel);
+  check('t178 an absolute canonical link path is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: a fixture that must be a valid catalog was rejected \(planted absolute-link catalog\): .*the path is absolute/],
+  });
+}
+
+// t179 — a present canonical link to a real file that is NOT tracked by the
+// Kernel is a red run: membership is proven, not assumed.
+{
+  const { kernel, instance } = freshPair('t179');
+  const untrackedTarget = tprBaseRegistry();
+  untrackedTarget.task_patterns.find((p) => p.id === 'assess-existing-state').payload.applicable_protocols =
+    [{ status: 'present', id: 'loose', path: 'docs/loose-note.md' }];
+  writeTaskPatternCatalog(kernel, { bundle: tprBundleWith('valid', 'untracked target', untrackedTarget) });
+  // docs/loose-note.md exists on disk but is never `git add`ed.
+  fs.writeFileSync(path.join(kernel, 'docs', 'loose-note.md'), `${fm('Loose note', 'reference')}\n# Loose\n\nUntracked.\n`);
+  sh('git', ['add', 'registries', 'standards', 'workflows', 'verification', 'skills'], kernel);
+  sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'planted (loose note left untracked)'], kernel);
+  check('t179 a canonical link to an untracked file is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: a fixture that must be a valid catalog was rejected \(untracked target\): .*not in the Kernel's tracked file set/],
+  });
+}
+
+// t180 — the full 34-negative fixtures file, planted for this one case only, is
+// classified by the gate: every valid one accepted, all 34 rejected. This is
+// the integration proof that the shipped bundle's negatives all still fire; the
+// other synthetic cases use the compact bundle so buildKernel stays fast.
+{
+  const { kernel, instance } = freshPair('t180');
+  writeTaskPatternCatalog(kernel, { bundle: 'real' });
+  commitAll(kernel);
+  check('t180 the full shipped fixtures bundle is classified (34 rejected)', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [/task-pattern-registry: .*1 representative fixture\(s\) satisfied the composition while 34 were rejected as declared/],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t181 — the text guard: if rule-resolution.md re-introduces the wording that
+// BUGFIX routes to a Kernel *protocol*, the catalog section goes red. This is
+// the machine-checkable defence against that one normative divergence
+// reappearing.
+{
+  const { kernel, instance } = freshPair('t181');
+  write(kernel, 'standards/workspace/rule-resolution.md',
+    `${fm('Rule resolution', 'standard')}\n# Rule resolution\n\n`
+    + '- Kernel хранит универсальные маршруты (класс работы → протокол ядра): '
+    + '`BUGFIX → bugfix-protocol` и `REFACTOR → refactor-protocol`;\n');
+  commitAll(kernel);
+  check('t181 rule-resolution.md calling BUGFIX a protocol route is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: rule-resolution\.md still routes "BUGFIX → bugfix-protocol" as a protocol route/],
   });
 }
 

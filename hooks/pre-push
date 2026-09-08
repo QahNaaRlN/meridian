@@ -63,6 +63,13 @@ if ! node "$ROOT/test/task-pattern-registry.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: verifying the instruction source registry"
+if ! node "$ROOT/test/instruction-source-registry.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the instruction source registry contract is inconsistent."
+  exit 1
+fi
+
 echo "pre-push: running the Git-environment isolation regression test"
 if ! node "$ROOT/test/pre-push-git-isolation.test.mjs"; then
   echo ""

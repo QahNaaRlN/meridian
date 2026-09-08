@@ -32,6 +32,12 @@
 //                          the record-level inference rules JSON Schema cannot
 //                          express — classifies its product-neutral fixtures:
 //                          every valid one satisfied, every invalid one rejected.
+//   6d. instruction-source-registry — the source-snapshot schema parses, uses
+//                          only implemented keywords, and — with the divergence,
+//                          temporal-state and location rules JSON Schema cannot
+//                          state — classifies its product-neutral fixtures. Schema
+//                          is Kernel, data is Instance. MANDATORY: a missing
+//                          schema or missing fixtures is a FAIL, not a skip.
 //   7. sha-provenance    — installed skill matches its pinned SHA-256.
 //   8. ext-dependencies  — declared external dependencies are resolvable, or
 //                          are explicitly and legibly unresolved.
@@ -87,6 +93,7 @@ import {
   evaluateTaskPatternRegistry, checkRuleResolutionBugfixConsistency,
   WORK_KINDS as TPR_WORK_KINDS, CHANGE_CLASSES as TPR_CHANGE_CLASSES,
 } from './lib/task-pattern-registry.mjs';
+import { evaluateInstructionSourceRegistry } from './lib/instruction-source-registry.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1038,6 +1045,98 @@ function functionalParityConsistency(rec) {
     if (tprOk && tprCoverage) {
       ok('task-pattern-registry: the mandatory catalog and its specialised schema parsed and keyword-checked; '
        + `seven built-in patterns validated against the envelope, the pattern-body contract and link confinement, and ${tprSatisfied} representative fixture(s) satisfied the composition while ${tprRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// instruction-source-registry: the portable source-snapshot contract (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/instruction-source-registry.schema.json is the
+// specialised payload schema for a registered instruction source — a bearer of
+// agent instructions with a verifiable identity, scope, location, revision,
+// SHA-256 digest, format, read channel and divergence state. Registering a
+// source grants its text no norm authority. Registry DATA is Instance, like the
+// intake register: the Kernel ships the schema, the product-neutral fixtures
+// and one checkable implementation (scripts/lib/instruction-source-registry.mjs),
+// not a canonical data file. The contract is a MANDATORY part of this Kernel:
+// a missing schema or missing fixtures is a FAIL, not an informational skip.
+// The generic $schema pass never reaches a JSON Schema file or a .json fixtures
+// bundle, so — as with the task-pattern-registry block — the schema is parsed,
+// walked for unsupported keywords, and exercised against its bundled fixtures
+// here. Fail-closed on the bundle's own shape: the success line prints only when
+// the bundle is an object with a non-empty `valid` and `invalid`, and every
+// fixture behaved as declared.
+{
+  const isrDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const isrSchemaName = 'instruction-source-registry.schema.json';
+  const isrSchemaRaw = readIfExists(path.join(isrDir, isrSchemaName));
+  if (isrSchemaRaw === null) {
+    fail(`instruction-source-registry: registries/operating-model/${isrSchemaName} is missing; the instruction source registry contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let isrOk = true;
+    let isrSchema = null;
+    let isrEnv = null;
+    try { isrSchema = JSON.parse(isrSchemaRaw); }
+    catch (e) { fail(`instruction-source-registry: ${isrSchemaName} is not valid JSON: ${e.message}`); isrOk = false; }
+
+    const isrEnvRaw = readIfExists(path.join(isrDir, 'scoped-record.schema.json'));
+    if (isrEnvRaw === null) {
+      fail('instruction-source-registry: registries/operating-model/scoped-record.schema.json is missing; the source snapshot composes with the record envelope and cannot be checked without it');
+      isrOk = false;
+    } else {
+      try { isrEnv = JSON.parse(isrEnvRaw); }
+      catch (e) { fail(`instruction-source-registry: scoped-record.schema.json is not valid JSON: ${e.message}`); isrOk = false; }
+    }
+
+    if (isrSchema) {
+      try { assertSupportedDeep(isrSchema, isrSchemaName); }
+      catch (e) { fail(`instruction-source-registry: the schema uses a construct this validator cannot check: ${e.message}`); isrOk = false; }
+    }
+
+    let isrSatisfied = 0;
+    let isrRejected = 0;
+    let isrCoverage = false;
+    const fxRaw = readIfExists(path.join(isrDir, 'fixtures', 'instruction-source-registry.fixtures.json'));
+    if (fxRaw === null) {
+      fail('instruction-source-registry: the schema carries no fixtures (registries/operating-model/fixtures/instruction-source-registry.fixtures.json); a schema no run exercises is not one this gate has reached');
+      isrOk = false;
+    } else if (isrOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(fxRaw); }
+      catch (e) { bundleOk = false; fail(`instruction-source-registry: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('instruction-source-registry: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`instruction-source-registry: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        isrOk = false;
+      } else {
+        const opts = { registrySchema: isrSchema, envelopeSchema: isrEnv };
+        for (const c of bundle.valid) {
+          const p = evaluateInstructionSourceRegistry(c && c.registry, opts);
+          if (p.length) { fail(`instruction-source-registry: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); isrOk = false; }
+          else isrSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateInstructionSourceRegistry(c && c.registry, opts);
+          if (p.length === 0) { fail(`instruction-source-registry: a fixture that must be rejected validated clean (${c && c.note})`); isrOk = false; }
+          else isrRejected++;
+        }
+        isrCoverage = isrOk;
+      }
+    }
+
+    if (isrOk && isrCoverage) {
+      ok('instruction-source-registry: the source-registry schema parsed and keyword-checked; '
+       + `${isrSatisfied} representative fixture(s) satisfied the composition (record envelope, source snapshot, location confinement, revision and digest, read channel and divergence) and ${isrRejected} were rejected as declared`);
     }
   }
 }

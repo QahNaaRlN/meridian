@@ -148,6 +148,10 @@ terms:
     canonical_ru: Манифест контекста
     canonical_en: Context manifest
     machine_names: [context_manifest]
+  - id: instruction-source
+    canonical_ru: Источник инструкций
+    canonical_en: Instruction source
+    machine_names: [instruction_source]
 
 principles:
   - id: human-agent-readable

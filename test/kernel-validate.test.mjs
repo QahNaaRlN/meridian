@@ -277,6 +277,26 @@ function writeTaskPatternCatalog(root, { schema = null, yaml = null, bundle = 'c
   ].join('\n'));
 }
 
+// instruction-source-registry helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const ISR_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const ISR_OK_LINE = /instruction-source-registry: the source-registry schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const isrRealBundle = () => JSON.parse(fs.readFileSync(path.join(ISR_OM, 'fixtures', 'instruction-source-registry.fixtures.json'), 'utf8'));
+function writeInstructionSourceRegistry(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/instruction-source-registry.schema.json',
+    schema ?? fs.readFileSync(path.join(ISR_OM, 'instruction-source-registry.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/instruction-source-registry.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/instruction-source-registry.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(ISR_OM, 'fixtures', 'instruction-source-registry.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -297,6 +317,8 @@ function buildKernel(root) {
   ].join('\n'));
   // The mandatory task-pattern catalog is part of a well-formed Kernel.
   writeTaskPatternCatalog(root);
+  // The mandatory instruction-source-registry contract, likewise.
+  writeInstructionSourceRegistry(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -3567,6 +3589,272 @@ const tprBaseRegistry = () => tprClone(TPR_REAL_CATALOG);
   check('t181 rule-resolution.md calling BUGFIX a protocol route is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/task-pattern-registry: rule-resolution\.md still routes "BUGFIX → bugfix-protocol" as a protocol route/],
+  });
+}
+
+// ===========================================================================
+// instruction-source-registry — the portable source-snapshot contract is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// registry data is Instance. Removing the schema or its fixtures is a FAIL;
+// a present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. The helpers
+// (ISR_OM, ISR_OK_LINE, isrRealBundle, writeInstructionSourceRegistry) are
+// defined next to the task-pattern-catalog helpers so buildKernel can call them.
+// ===========================================================================
+
+// t182 — an ordinary synthetic kernel already carries the mandatory contract
+// (buildKernel → writeInstructionSourceRegistry): the section is reached and
+// every fixture is classified as declared.
+{
+  const { kernel, instance } = freshPair('t182');
+  check('t182 the mandatory source-registry contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [ISR_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t183 — the contract is MANDATORY: removing the schema is a red run, not a
+// skip (Codex CHANGES_REQUESTED item 5).
+{
+  const { kernel, instance } = freshPair('t183');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'instruction-source-registry.schema.json'));
+  commitAll(kernel);
+  check('t183 removing the mandatory source-registry schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: registries\/operating-model\/instruction-source-registry\.schema\.json is missing; the instruction source registry contract is a mandatory part of this Kernel/],
+    mustNotMatch: [/instruction-source-registry: no source-registry schema in this Kernel/],
+  });
+}
+
+// t184 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t184');
+  const s = JSON.parse(fs.readFileSync(path.join(ISR_OM, 'instruction-source-registry.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeInstructionSourceRegistry(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t184 an unsupported schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t185 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t185');
+  writeInstructionSourceRegistry(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t185 a non-JSON source-registry schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: instruction-source-registry\.schema\.json is not valid JSON/],
+  });
+}
+
+// t186 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t186');
+  writeInstructionSourceRegistry(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t186 a schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: the schema carries no fixtures/],
+  });
+}
+
+// t187 — the fixtures bundle is the wrong shape (an array): fail-closed.
+{
+  const { kernel, instance } = freshPair('t187');
+  writeInstructionSourceRegistry(kernel, { bundle: [] });
+  commitAll(kernel);
+  check('t187 a wrong-shaped fixtures bundle is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: the fixtures file must be an object with non-empty "valid" and "invalid" arrays/],
+  });
+}
+
+// t188 — a fixtures bundle with an empty "invalid" array: fail-closed.
+{
+  const { kernel, instance } = freshPair('t188');
+  const b = isrRealBundle();
+  b.invalid = [];
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t188 an empty "invalid" array is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: the fixtures file has no non-empty "invalid" array/],
+  });
+}
+
+// t189 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t189');
+  const b = isrRealBundle();
+  const broken = JSON.parse(JSON.stringify(b.valid[1]));
+  broken.note = 'planted broken source';
+  broken.registry.instruction_sources[0].payload.location.path = '/etc/agents.md';
+  b.valid.push(broken);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t189 a valid-declared fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted broken source\)/],
+  });
+}
+
+// t190 — a fixture declared invalid that the composition accepts clean is a
+// red run.
+{
+  const { kernel, instance } = freshPair('t190');
+  const b = isrRealBundle();
+  b.invalid.push({ note: 'planted clean source', registry: JSON.parse(JSON.stringify(b.valid[1].registry)) });
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t190 an invalid-declared fixture that passes clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be rejected validated clean \(planted clean source\)/],
+  });
+}
+
+// t191–t194 — the four records the earlier revision let through. Each is
+// planted as a valid-declared fixture the composition must now reject; the
+// assertion names the exact rejection (Codex CHANGES_REQUESTED regression set).
+const isrOrdinary = () => JSON.parse(JSON.stringify(isrRealBundle().valid[1]));
+
+// t191 — a file source with no container_ref.
+{
+  const { kernel, instance } = freshPair('t191');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted file without container_ref';
+  delete f.registry.instruction_sources[0].payload.location.container_ref;
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t191 a file source without container_ref is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted file without container_ref\):.*container_ref/],
+  });
+}
+
+// t192 — two verified states, different revision, same digest, declared unchanged.
+{
+  const { kernel, instance } = freshPair('t192');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted revision-only change as unchanged';
+  f.registry.instruction_sources[0].payload.divergence.previous_state.revision = 'rev-000000';
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t192 different revision, same digest, declared unchanged is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted revision-only change as unchanged\):.*the revision differs while the SHA-256 digest is unchanged/],
+  });
+}
+
+// t193 — status unknown with two complete verified states.
+{
+  const { kernel, instance } = freshPair('t193');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted unknown with two full states';
+  f.registry.instruction_sources[0].payload.divergence.status = 'unknown';
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t193 unknown with two complete verified states is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted unknown with two full states\):.*"unknown" is declared with two complete verified states/],
+  });
+}
+
+// t194 — recorded_state contradicting divergence.current_state.
+{
+  const { kernel, instance } = freshPair('t194');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted recorded_state vs current_state contradiction';
+  const p = f.registry.instruction_sources[0].payload;
+  p.divergence.status = 'changed';
+  p.divergence.previous_state.revision = 'rev-000001';
+  p.divergence.current_state.revision = 'rev-000002';
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t194 recorded_state contradicting current_state is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted recorded_state vs current_state contradiction\):.*contradicts recorded_state\.revision/],
+  });
+}
+
+// t195–t198 — the four records the second review round names. Each planted as a
+// valid-declared fixture the composition must reject.
+const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); // the external-service fixture
+
+// t195 — a file source carrying resource_ref (the two location forms are exclusive).
+{
+  const { kernel, instance } = freshPair('t195');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted file with resource_ref';
+  f.registry.instruction_sources[0].payload.location.resource_ref = 'spaces/eng/pages/x';
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t195 a file source carrying resource_ref is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted file with resource_ref\)/],
+  });
+}
+
+// t196 — an external-service source carrying container_ref.
+{
+  const { kernel, instance } = freshPair('t196');
+  const b = isrRealBundle();
+  const f = isrExternal();
+  f.note = 'planted external-service with container_ref';
+  f.registry.instruction_sources[0].payload.location.container_ref = 'sample-repository';
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t196 an external-service source carrying container_ref is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted external-service with container_ref\)/],
+  });
+}
+
+// t197 — mismatched verification of one present observation.
+{
+  const { kernel, instance } = freshPair('t197');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted mismatched verified flags';
+  f.registry.instruction_sources[0].payload.divergence.current_state.verified = false;
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t197 mismatched verified flags of one present observation is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted mismatched verified flags\):.*current_state\.verified is false but recorded_state\.revision_verified is true/],
+  });
+}
+
+// t198 — source-missing with recorded_state contradicting previous_state.
+{
+  const { kernel, instance } = freshPair('t198');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted source-missing with drifted last-known state';
+  const p = f.registry.instruction_sources[0].payload;
+  p.recorded_state = { revision: 'rev-000002', digest: { algorithm: 'sha-256', value: '2'.repeat(64) }, revision_verified: true, currency: 'stale' };
+  p.divergence = { status: 'source-missing', previous_state: { revision: 'rev-000001', digest: { algorithm: 'sha-256', value: '1'.repeat(64) }, verified: true } };
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t198 source-missing with recorded_state contradicting previous_state is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted source-missing with drifted last-known state\):.*"source-missing" with a previous_state whose revision "rev-000001" contradicts recorded_state\.revision "rev-000002"/],
   });
 }
 

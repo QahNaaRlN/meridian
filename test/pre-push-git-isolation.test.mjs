@@ -147,6 +147,7 @@ function buildSyntheticKernel(name, { dropSourcingLine = false, dropKernelPin = 
     'test/workspace-scope-model.test.mjs',
     'test/task-pattern-registry.test.mjs',
     'test/instruction-source-registry.test.mjs',
+    'test/task-specification.test.mjs',
     'test/pre-push-git-isolation.test.mjs',
     'scripts/kernel-validate.mjs',
     'scripts/validate-and-log.mjs',

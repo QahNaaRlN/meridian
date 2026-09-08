@@ -75,16 +75,17 @@ meridian/
 ├── standards/          методология, lifecycle, статусная модель, writers, шаблоны
 │   └── workspace/workspace-scope-model.md ← шесть логических областей
 │       workspace/task-pattern-registry.md ← семь универсальных типов задач
+│       workspace/task-specification.md ← контракт постановки задачи
 │       workspace/instruction-source-registry.md ← снимок источника инструкций
 ├── workflows/          жизненный цикл задачи
 ├── verification/       verification router, regression-правила, smoke-protocol, functional-parity
 ├── skills/             завендоренные skill-пакеты с SHA-пинами
 ├── registries/         правила и JSON Schema реестров (не данные)
-│   ├── operating-model/ схемы областей, конверта записи, каталога типов задач и реестра источников
+│   ├── operating-model/ схемы областей, конверта записи, каталога типов задач, постановки задачи и реестра источников
 │   └── rule-resolution/ схемы применимости норм и вывода резолвера (PHASE B)
 ├── instance-template/  bootstrap-каркас нового Instance (первый день на продукте)
 ├── scripts/            kernel-validate.mjs, preflight.mjs, rule-resolver.mjs, validate-branch-name.mjs
-│   └── lib/            общие чистые helpers (YAML-subset, JSON-Schema-subset, marked-region reader, task-pattern-catalog, instruction-source-registry)
+│   └── lib/            общие чистые helpers (YAML-subset, JSON-Schema-subset, marked-region reader, task-pattern-catalog, instruction-source-registry, task-specification)
 ├── test/               instance-fixture/ и регрессионные наборы валидатора, резолвера и проверки имени ветви
 ├── hooks/              pre-push: тесты валидатора + прогон против fixture
 └── .github/workflows/gate.yml
@@ -101,6 +102,7 @@ node test/kernel-validate.test.mjs                    # правила вали�
 node test/workspace-scope-model.test.mjs              # шесть областей и конверт записи согласованы
 node test/task-pattern-registry.test.mjs             # семь встроенных шаблонов типов задач согласованы
 node test/instruction-source-registry.test.mjs       # контракт снимка источника инструкций согласован
+node test/task-specification.test.mjs                # контракт постановки задачи согласован
 ```
 
 Preflight — первый шаг любой агентной сессии: он громко падает, если сессия

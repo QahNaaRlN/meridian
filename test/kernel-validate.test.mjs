@@ -297,6 +297,27 @@ function writeInstructionSourceRegistry(root, { schema = null, bundle = null, om
   }
 }
 
+// task-specification-contract helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog, and
+// the task-pattern catalogue it resolves against is planted too.
+const TSC_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const TSC_OK_LINE = /task-specification-contract: the task-specification schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const tscRealBundle = () => JSON.parse(fs.readFileSync(path.join(TSC_OM, 'fixtures', 'task-specification.fixtures.json'), 'utf8'));
+function writeTaskSpecificationContract(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/task-specification.schema.json',
+    schema ?? fs.readFileSync(path.join(TSC_OM, 'task-specification.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/task-specification.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/task-specification.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(TSC_OM, 'fixtures', 'task-specification.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -319,6 +340,8 @@ function buildKernel(root) {
   writeTaskPatternCatalog(root);
   // The mandatory instruction-source-registry contract, likewise.
   writeInstructionSourceRegistry(root);
+  // The mandatory task-specification contract, likewise.
+  writeTaskSpecificationContract(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -3855,6 +3878,115 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t198 source-missing with recorded_state contradicting previous_state is rejected', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted source-missing with drifted last-known state\):.*"source-missing" with a previous_state whose revision "rev-000001" contradicts recorded_state\.revision "rev-000002"/],
+  });
+}
+
+// ===========================================================================
+// task-specification-contract — the portable statement of one concrete work
+// item is a MANDATORY part of the Kernel (buildKernel plants it). Schema is
+// Kernel, specification data is Instance. Removing the schema, the task-pattern
+// catalogue it resolves against, or the fixtures is a FAIL; a present schema is
+// parsed, keyword-checked and exercised against its product-neutral fixtures,
+// fail-closed on the bundle's own shape. Helpers (TSC_OM, TSC_OK_LINE,
+// tscRealBundle, writeTaskSpecificationContract) sit next to the other
+// operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t199 — an ordinary synthetic kernel already carries the mandatory contract
+// (buildKernel → writeTaskSpecificationContract): the section is reached and
+// every fixture is classified as declared.
+{
+  const { kernel, instance } = freshPair('t199');
+  check('t199 the mandatory task-specification contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [TSC_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t200 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t200');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'task-specification.schema.json'));
+  commitAll(kernel);
+  check('t200 removing the mandatory task-specification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: registries\/operating-model\/task-specification\.schema\.json is missing; the task specification contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t201 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t201');
+  const s = JSON.parse(fs.readFileSync(path.join(TSC_OM, 'task-specification.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeTaskSpecificationContract(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t201 an unsupported schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t202 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t202');
+  writeTaskSpecificationContract(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t202 a non-JSON task-specification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: task-specification\.schema\.json is not valid JSON/],
+  });
+}
+
+// t203 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t203');
+  writeTaskSpecificationContract(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t203 a task-specification schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: the schema carries no fixtures/],
+  });
+}
+
+// t204 — the task-pattern catalogue is the reference target; without it the
+// specification's task_pattern reference cannot be resolved: a red run.
+{
+  const { kernel, instance } = freshPair('t204');
+  fs.rmSync(path.join(kernel, 'standards', 'workspace', 'task-pattern-registry.yaml'));
+  commitAll(kernel);
+  check('t204 a missing task-pattern catalogue is a red run for the specification contract', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: standards\/workspace\/task-pattern-registry\.yaml is missing; the specification's task-pattern reference cannot be resolved without the catalogue/],
+  });
+}
+
+// t205 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t205');
+  const b = tscRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.valid[0].spec));
+  delete spec.payload.goal;
+  b.valid.push({ note: 'planted spec with no goal', spec });
+  writeTaskSpecificationContract(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t205 a valid fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: a fixture that must be a valid specification was rejected \(planted spec with no goal\)/],
+  });
+}
+
+// t206 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t206');
+  const b = tscRealBundle();
+  b.invalid.push({ note: 'planted well-formed spec in the invalid array', spec: JSON.parse(JSON.stringify(b.valid[0].spec)) });
+  writeTaskSpecificationContract(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t206 an invalid fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: a fixture that must be rejected validated clean \(planted well-formed spec in the invalid array\)/],
   });
 }
 

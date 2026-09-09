@@ -98,6 +98,7 @@ import { evaluateTaskSpecification } from './lib/task-specification.mjs';
 import { evaluateExecutionState } from './lib/execution-state.mjs';
 import { evaluateRoleRegistry, evaluateHumanControl } from './lib/role-and-human-control.mjs';
 import { evaluateContextManifest, makeRecordResolver } from './lib/context-manifest.mjs';
+import { evaluateEvidenceAndHandoff } from './lib/evidence-and-handoff.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1593,6 +1594,120 @@ function functionalParityConsistency(rec) {
     if (cmOk && cmCoverage) {
       ok('bounded-context-manifest: the context-manifest schema parsed and keyword-checked; '
        + `${cmSatisfied} representative fixture(s) satisfied the composition (record envelope, run-state scope, the deterministic single-run link via closed structured pinned references, the closed exact-revision rule for pinned references / applicable norms / mutable sources, separate decision / question / action / check / gap / blocker lists, and the run_state_checkpoint resolved through the external boundary and checked against the actual execution-run record's own state) and ${cmRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// evidence-and-handoff-contract: the state and result handoff of one run (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/evidence-and-handoff.schema.json is the specialised
+// schema for the portable handoff of the STATE and RESULT of ONE execution run
+// (record_type: evidence-and-handoff) — what result is claimed, which assertions
+// are actually verified and by which pinned+resolved evidence, which mandatory
+// checks passed / failed / could-not-run and with what result evidence, which
+// acceptance criteria of the resolved task specification are covered, the pinned
+// source and result revisions (same repository set), the changes and external
+// effects, the remaining deviations, the required owner decisions, the closing
+// state of the temporary Git worktree, and the next step. Its envelope is
+// validated against the existing scoped-record.schema.json (composition, not a
+// second envelope). The handoff carries PORTABLE PINNED references to the task
+// specification, the execution run, the human-control record and the context
+// manifest and never embeds their bodies; claimed results, verifiable assertions
+// and evidence are separate id-linked lists so a narrow evidence entry is not
+// widened and an unverified assertion stays unverified; the four pinned records
+// AND every evidence entry are RESOLVED through a boundary external to the
+// handoff (the fixtures' companion "resolution" set), and the handoff's axes —
+// the verified assertions, the mandatory-check verdicts, the acceptance-criteria
+// coverage and the "complete" outcome — are checked against the actual
+// execution-run / task-specification / evidence-result records' own state; an
+// unbounded material dump, a full specialised-evidence body and a
+// field-evaluation field are rejected. Handoff DATA is Instance, like the task specification and the
+// context manifest: the Kernel ships the schema, the product-neutral fixtures
+// and one checkable implementation (scripts/lib/evidence-and-handoff.mjs), not a
+// canonical data file. The contract is a MANDATORY part of this Kernel: a
+// missing schema or missing fixtures is a FAIL, not an informational skip. As
+// with the bounded-context-manifest block, the schema is parsed, walked for
+// unsupported keywords, and exercised against its bundled fixtures here,
+// fail-closed on the bundle's own shape.
+{
+  const ehDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const ehSchemaName = 'evidence-and-handoff.schema.json';
+  const ehSchemaRaw = readIfExists(path.join(ehDir, ehSchemaName));
+  if (ehSchemaRaw === null) {
+    fail(`evidence-and-handoff-contract: registries/operating-model/${ehSchemaName} is missing; the evidence and handoff contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let ehOk = true;
+    let ehSchema = null;
+    let ehEnv = null;
+    try { ehSchema = JSON.parse(ehSchemaRaw); }
+    catch (e) { fail(`evidence-and-handoff-contract: ${ehSchemaName} is not valid JSON: ${e.message}`); ehOk = false; }
+
+    const ehEnvRaw = readIfExists(path.join(ehDir, 'scoped-record.schema.json'));
+    if (ehEnvRaw === null) {
+      fail('evidence-and-handoff-contract: registries/operating-model/scoped-record.schema.json is missing; the handoff record composes with the record envelope and cannot be checked without it');
+      ehOk = false;
+    } else {
+      try { ehEnv = JSON.parse(ehEnvRaw); }
+      catch (e) { fail(`evidence-and-handoff-contract: scoped-record.schema.json is not valid JSON: ${e.message}`); ehOk = false; }
+    }
+
+    if (ehSchema) {
+      try { assertSupportedDeep(ehSchema, ehSchemaName); }
+      catch (e) { fail(`evidence-and-handoff-contract: the schema uses a construct this validator cannot check: ${e.message}`); ehOk = false; }
+    }
+
+    let ehSatisfied = 0;
+    let ehRejected = 0;
+    let ehCoverage = false;
+    const ehFxRaw = readIfExists(path.join(ehDir, 'fixtures', 'evidence-and-handoff.fixtures.json'));
+    if (ehFxRaw === null) {
+      fail('evidence-and-handoff-contract: the schema carries no fixtures (registries/operating-model/fixtures/evidence-and-handoff.fixtures.json); a schema no run exercises is not one this gate has reached');
+      ehOk = false;
+    } else if (ehOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(ehFxRaw); }
+      catch (e) { bundleOk = false; fail(`evidence-and-handoff-contract: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('evidence-and-handoff-contract: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`evidence-and-handoff-contract: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (bundleOk && (typeof bundle.resolution !== 'object' || bundle.resolution === null || Array.isArray(bundle.resolution))) {
+        bundleOk = false;
+        fail('evidence-and-handoff-contract: the fixtures file carries no "resolution" object; the pinned execution-run, task-specification, run-human-control and context-manifest records AND every evidence entry are resolved OUTSIDE the handoff, and a bundle that resolves nothing cannot exercise the handoff against its actual run and evidence');
+      }
+      if (!bundleOk) {
+        ehOk = false;
+      } else {
+        const ehOpts = {
+          recordSchema: ehSchema,
+          envelopeSchema: ehEnv,
+          resolveRecords: makeRecordResolver(bundle.resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateEvidenceAndHandoff(c && c.spec, ehOpts);
+          if (p.length) { fail(`evidence-and-handoff-contract: a fixture that must be a valid handoff was rejected (${c && c.note}): ${p[0]}`); ehOk = false; }
+          else ehSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateEvidenceAndHandoff(c && c.spec, ehOpts);
+          if (p.length === 0) { fail(`evidence-and-handoff-contract: a fixture that must be rejected validated clean (${c && c.note})`); ehOk = false; }
+          else ehRejected++;
+        }
+        ehCoverage = ehOk;
+      }
+    }
+
+    if (ehOk && ehCoverage) {
+      ok('evidence-and-handoff-contract: the evidence-and-handoff schema parsed and keyword-checked; '
+       + `${ehSatisfied} representative fixture(s) satisfied the composition (record envelope, run-state scope, the deterministic single-run link via four closed structured pinned references, the reused closed exact-revision rule for pinned references / repository states / evidence entries, claimed results / verifiable assertions / evidence as separate id-linked lists where a verified assertion needs a resolved confirming evidence entry whose transformer-confirmed covers binds it and a claimed result's status is two-sided, acceptance-criteria coverage closed against the resolved task specification's NON-EMPTY criterion set, the FULL mandatory_checks set closed against the specification's own minimal machine list, the three distinct mandatory-check statuses each backed by resolved result evidence that records THAT check's check_ref, completed_checks confirming the fact a passed OR failed check ran, source and result states pinning the same repository set, the closed worktree-disposition set, outcome.status "complete" as the whole run finished, and the four pinned records plus every evidence entry resolved through the external boundary and checked against the actual execution-run record's own state) and ${ehRejected} were rejected as declared`);
     }
   }
 }

@@ -101,6 +101,19 @@ Report:
 
 A passing targeted check proves only its stated invariant. Do not claim a broader repository, runtime, or release outcome from narrower evidence.
 
+When a run is handed off — to another participant, role, or session — the report
+is expressed as an `evidence-and-handoff` record under the
+[evidence and handoff contract](../standards/workspace/evidence-and-handoff-contract.md):
+what result is claimed, which assertions are actually verified and by which
+evidence, which mandatory checks passed / failed / could not run, the pinned
+source and result revisions, the changes and external effects, the remaining
+deviations, the required owner decisions, the closing state of any temporary Git
+worktree (`not_created` / `removed` / `retained`), and the next allowed step. The
+handoff records a specialised evidence contract's verdict; it does not re-derive
+or override it. It is a separate record from the
+[bounded context manifest](../standards/workspace/bounded-context-manifest.md),
+which answers what bounded context is needed to continue, not what happened.
+
 If a Kernel rule, document, or gate check cost more than it should have during this task, append one entry to `$MERIDIAN_INSTANCE/.agent/feedback/friction-log.md` per [`feedback-and-metrics.md`](../standards/workspace/feedback-and-metrics.md). Skip this when nothing fought back; a quiet task produces no entry.
 
 ## Authority and scope invariants

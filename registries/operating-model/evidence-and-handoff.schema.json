@@ -1,0 +1,355 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/evidence-and-handoff.schema.json",
+  "title": "Meridian evidence and handoff",
+  "description": "The complete schema for the portable, storage-independent, machine-checkable handoff of the STATE and RESULT of ONE execution run (record_type: evidence-and-handoff). A record declares THIS schema in its $schema, so a consumer that follows the declaration validates the whole record — the reused scoped-record envelope AND the specialised body — in one pass. The envelope is the SAME contract as registries/operating-model/scoped-record.schema.json; scripts/lib/evidence-and-handoff.mjs validates every record against scoped-record.schema.json directly as well, so the canonical envelope check is reused and separately performed. The handoff belongs to EXACTLY ONE run and lives ONLY in scope.type run-state (scope.id identifies the run, scope.workspace_id is mandatory); every other area, and origin.kind built-in, are rejected. Its link to the one run is DETERMINISTIC, not a substring heuristic: execution_run_ref, task_specification_ref, human_control_ref and context_manifest_ref are CLOSED structured pinned references — each carries a record_type, an id, a portable storage-neutral reference and a pin (an exact revision or a SHA-256 digest) — never a plain string and never an embedded record body. scope.id equals execution_run_ref.id exactly; human_control_ref and context_manifest_ref carry run_id equal to execution_run_ref.id; task_specification_ref carries no run_id. The closed exact-revision rule (a full Git SHA, a strict v?X.Y.Z SemVer tag, or a SHA-256 digest; a branch or channel reference is floating whatever digits it carries) is REUSED from scripts/lib/context-manifest.mjs (classifyRevision) and applied to every pinned reference and to source_state / result_state repository revisions. Claimed results, verifiable assertions and evidence are SEPARATE lists linked by stable id, never by text match: every verifiable_assertion names its claimed_result_id, every evidence entry names the assertion ids it covers. Every evidence entry is itself PINNED by an exact revision or a SHA-256 digest and RESOLVED through the external boundary to a closed 'evidence-result' transformer response carrying observed_result (confirmed / contradicted / inconclusive); an assertion is verified ONLY when a covering evidence entry resolves, its pin matches and observed_result is 'confirmed'. For a specialised-evidence-record entry the resolved evidence-result must confirm both the specialised contract identity and its recorded verdict by exact match — the handoff's own words are not proof — and no full specialised body is embedded. An unverified assertion stays explicitly unverified; a claimed result's status is derived, not asserted — established iff it carries at least one assertion and every linked assertion is verified, not_established otherwise, and a not_established status over a fully verified assertion set is rejected. Passed, failed and unable mandatory checks are three distinct statuses; passed and failed each name a result-evidence entry whose resolved evidence-result confirms the successful ('confirmed') or failing ('contradicted') outcome AND records THAT check's check_ref (a result is not moved between checks), unable forbids result evidence and requires a verifiable reason, and a self-selected empty mandatory_checks list does not discharge the specification. The resolved execution-run record's completed_checks confirms the FACT a check RAN, not the verdict: a passed OR a failed check's check_ref appears there, only an unable one is absent. The closed task-specification transformer response confirms the acceptance-criterion identifiers (a NON-EMPTY set — a canonical specification requires one) AND a minimal machine list of the mandatory-check references, WITHOUT the spec body: every criterion is addressed by at least one verifiable assertion or explicitly uncovered with a reason, the FULL mandatory_checks set is closed against that list so dropping any one is rejected, and an unknown, duplicate or missing identifier is rejected. Every evidence entry's resolved evidence-result also confirms the SUBJECT observed_result is about — covers (the assertion ids it bears on) and/or check_ref — so a covers link cannot be transferred to a foreign assertion. Source and final states are pinned by exact revisions per repository, and source_state and result_state pin the SAME set of repositories; a floating branch is not an exact revision. Changed paths, external effects, deviations, open gaps, required owner decisions and blockers are separate required lists — an omitted key is an error, and an empty list is an explicit assertion of no such event, never a silent stand-in for an unknown one. The temporary Git worktree disposition uses the accepted closed set not_created / removed / retained (retained requires a reason, a responsible party and a verifiable cleanup condition), aligned with version-control-flow.md §5.4. outcome.status 'complete' means the whole run is finished: the resolved execution-run record's work_status is 'completed', next_step.action and next_step.gate are null, open_gaps is empty, and every acceptance criterion is covered by a verified assertion. This general contract does NOT duplicate, re-derive or override the specialised bugfix / smoke / functional-parity evidence contracts: it references them and records their verdict through evidence of kind specialised-evidence-record whose identity and verdict the external boundary confirms, and their own contracts keep authority over that verdict. The handoff is not the context manifest: it pins the manifest by reference, never embeds it, and never becomes an unbounded command log, transcript or file dump. The rules this JSON Schema subset cannot state live in scripts/lib/evidence-and-handoff.mjs (the declared $schema resolves as a LOGICAL address within the Meridian namespace to this file — resolveSchemaRef / nonPortableReason reused from scripts/lib/task-specification.mjs via scripts/lib/context-manifest.mjs, no divergent copy; the deterministic single-run link; the closed exact-revision rule; the claim / assertion / evidence linkage; the established / verified inference; the three check statuses; the distinguishable source / result states with a pin that changes where a path changed; the closed worktree-disposition set; the external resolution of the four pinned records and the cross-checks against the actual execution-run record's own state; no duplicate id in any list; portability of every reference and prose string; the Russian name). The contract is a MANDATORY part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/evidence-and-handoff-contract.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "id", "title", "record_type", "scope", "origin", "authority", "payload"],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/definitions/semantic_id" },
+    "title": { "type": "string", "minLength": 1 },
+    "record_type": { "const": "evidence-and-handoff" },
+    "scope": { "$ref": "#/definitions/scope_ref" },
+    "origin": { "$ref": "#/definitions/origin" },
+    "authority": { "$ref": "#/definitions/authority" },
+    "payload": { "$ref": "#/definitions/payload" }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "portable_ref": { "type": "string", "minLength": 1 },
+    "next_step_value": {
+      "description": "An executable value (a non-empty string) or an explicit null where there is no continuation. The key is always required, so an absent axis is never read as null.",
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$"
+    },
+    "pinned_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_type", "id", "reference"],
+      "description": "A closed, structured, pinned reference to exactly one record. record_type names which kind of record it is; id is the record's own stable semantic identifier — the identity is this exact string, never a substring of another. reference is a portable, storage-neutral reference. run_id, when present, names the execution run this record belongs to (required for run-human-control and context-manifest, forbidden for task-specification, and for execution-run it equals id). revision and/or sha256 pin the exact edition: at least one must be present, and revision — when it is the only pin — must be a full Git SHA, a strict v?X.Y.Z SemVer tag or a SHA-256 digest (checked in scripts/lib/evidence-and-handoff.mjs). No record body is embedded: the object is closed to these fields only.",
+      "properties": {
+        "record_type": { "enum": ["execution-run", "task-specification", "run-human-control", "context-manifest"] },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "run_id": { "$ref": "#/definitions/semantic_id" },
+        "reference": { "$ref": "#/definitions/portable_ref" },
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "scope_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "workspace_id"],
+      "description": "An evidence-and-handoff record's area. Only run-state is accepted; every other area of the workspace scope model is rejected here (and in scripts/lib/evidence-and-handoff.mjs with the rationale). scope.id identifies the run the handoff belongs to and must equal execution_run_ref.id exactly; workspace_id ties the run to its project workspace (workspace-scope-model.md §1).",
+      "properties": {
+        "type": { "enum": ["run-state"] },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "workspace_id": { "$ref": "#/definitions/semantic_id" }
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "description": "Same contract as scoped-record.schema.json's origin. A handoff is written in a workspace, so kind 'built-in' is additionally rejected by scripts/lib/evidence-and-handoff.mjs.",
+      "properties": {
+        "kind": { "enum": ["built-in", "declared", "migrated", "imported", "derived"] },
+        "source_ref": { "$ref": "#/definitions/non_empty" }
+      },
+      "if": { "properties": { "kind": { "const": "built-in" } }, "required": ["kind"] },
+      "then": { "not": { "required": ["source_ref"] } },
+      "else": { "required": ["source_ref"] }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "authority_ref"],
+      "description": "Same contract as scoped-record.schema.json's authority.",
+      "properties": {
+        "kind": {
+          "enum": ["methodology-owner", "user", "organization", "project-owner", "repository-maintainer", "delegated-run"]
+        },
+        "authority_ref": { "$ref": "#/definitions/non_empty" },
+        "decision_ref": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "claimed_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "status"],
+      "description": "One result the run claims to have produced. id is a stable semantic identifier, unique within the handoff. statement is the claimed outcome. status is 'established' only when at least one verifiable_assertion links to this result and every one of them is verified; otherwise 'not_established' (checked in scripts/lib/evidence-and-handoff.mjs). A claimed result and the assertions that support it are separate lists.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "statement": { "$ref": "#/definitions/non_empty" },
+        "status": { "enum": ["established", "not_established"] }
+      }
+    },
+    "verifiable_assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "claimed_result_id", "status"],
+      "description": "One checkable statement about what is actually established, tied by claimed_result_id to exactly one declared claimed_result. status 'verified' requires at least one evidence entry whose covers list resolves to this assertion; 'unverified' requires an unverified_reason and forbids a verified status regardless of prose similarity. A narrow evidence entry is never silently widened into a broader assertion (checked in scripts/lib/evidence-and-handoff.mjs).",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "statement": { "$ref": "#/definitions/non_empty" },
+        "claimed_result_id": { "$ref": "#/definitions/semantic_id" },
+        "status": { "enum": ["verified", "unverified"] },
+        "unverified_reason": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "evidence_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "reference", "summary", "covers", "limitations"],
+      "description": "One piece of evidence. id is a stable semantic identifier, unique within the handoff. kind is one of a closed set. reference is a portable, storage-neutral pointer to the evidence, PINNED by an exact revision and/or a SHA-256 digest under the same closed rule the pinned references use (checked in scripts/lib/evidence-and-handoff.mjs). summary states what was observed. covers is the set of assertion ids this evidence bears on — every id must resolve to a declared verifiable_assertion AND be confirmed by the resolved evidence-result's own covers set; a covers link is never transferred to a foreign assertion by the handoff's say-so. limitations names what this evidence does not establish (may be empty). Every evidence entry is RESOLVED through the external boundary to a closed 'evidence-result' transformer response carrying observed_result (confirmed / contradicted / inconclusive) AND the subject it confirms — covers (the assertion ids it bears on) and/or check_ref (the mandatory check it is the recorded result of). An evidence entry makes an assertion verified ONLY when it resolves cleanly, its pin matches, observed_result is 'confirmed' and the transformer confirms it covers that assertion; it confirms a mandatory check's result ONLY when observed_result matches the check's expected result AND the resolved evidence-result records THAT check's check_ref. For kind 'specialised-evidence-record' the entry additionally carries specialised_contract (the named contract, e.g. functional-parity-evidence-contract, smoke-protocol, regression-route) and recorded_verdict (that contract's own verdict, quoted); the resolved evidence-result must confirm BOTH by exact match — the handoff's own words are not proof — and this general contract records the verdict, it does not re-derive or override it. For every other kind those two fields are forbidden.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "kind": {
+          "enum": ["check-run", "observation", "artifact-inspection", "external-confirmation", "specialised-evidence-record"]
+        },
+        "reference": { "$ref": "#/definitions/portable_ref" },
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "$ref": "#/definitions/sha256" },
+        "summary": { "$ref": "#/definitions/non_empty" },
+        "covers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/semantic_id" }
+        },
+        "limitations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/non_empty" }
+        },
+        "specialised_contract": { "$ref": "#/definitions/non_empty" },
+        "recorded_verdict": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "acceptance_criterion_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "addressed_by"],
+      "description": "How ONE acceptance criterion of the resolved task specification is discharged. id must be one of the criterion identifiers the resolved task-specification transformer response confirms — an unknown, duplicate or missing id is rejected, and the resolved specification's acceptance_criteria set must itself be NON-EMPTY (a canonical task specification requires one). status 'covered' requires addressed_by to name at least one declared verifiable_assertion and forbids uncovered_reason; status 'uncovered' forbids addressed_by entries and requires uncovered_reason. outcome.status 'complete' additionally requires every criterion 'covered' and every assertion in its addressed_by verified.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "status": { "enum": ["covered", "uncovered"] },
+        "addressed_by": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/semantic_id" }
+        },
+        "uncovered_reason": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "mandatory_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "check_ref", "status"],
+      "description": "One mandatory check and how it ended. id is a stable semantic identifier, unique within the handoff. name is human-readable. check_ref is a portable, storage-neutral reference, unique within the handoff; the FULL set of check_ref values is closed against the mandatory_checks the resolved task-specification transformer response declares — an unknown, duplicate or MISSING one is rejected, so dropping a mandatory check cannot pass. status is exactly one of passed / failed / unable — three distinct states: unable (the check was not run) is never a pass. status 'passed' and 'failed' each require result_evidence_id naming a declared evidence entry whose resolved evidence-result confirms the successful ('confirmed') or failing ('contradicted') result AND records THAT check's check_ref (a result is not moved between checks); status 'unable' forbids result_evidence_id and requires a verifiable reason. The resolved execution-run record's completed_checks confirms the FACT a check RAN — not the verdict: a passed OR a failed check's check_ref must appear there, only an unable one must not (checked in scripts/lib/evidence-and-handoff.mjs).",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "name": { "$ref": "#/definitions/non_empty" },
+        "check_ref": { "$ref": "#/definitions/portable_ref" },
+        "status": { "enum": ["passed", "failed", "unable"] },
+        "result_evidence_id": { "$ref": "#/definitions/semantic_id" },
+        "reason": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "repository_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_ref"],
+      "description": "One repository's pinned state. repository_ref is a portable, storage-neutral reference, unique within its list. revision and/or sha256 pin the exact state by the SAME closed rule the pinned references use: a floating branch or channel reference is not an exact revision. source_state and result_state must pin the SAME set of repository_ref values (checked in scripts/lib/evidence-and-handoff.mjs).",
+      "properties": {
+        "repository_ref": { "$ref": "#/definitions/portable_ref" },
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "changed_path": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repository_ref", "path", "change_kind"],
+      "description": "One changed path. id is a stable semantic identifier, unique within the handoff. repository_ref is the repository it lives in; path is a portable relative path; change_kind is one of added / modified / removed / renamed. No (repository_ref, path) pair repeats. Every repository_ref named here must appear in both source_state and result_state, and its pin must differ between them: a change produced a new state (checked in scripts/lib/evidence-and-handoff.mjs).",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "repository_ref": { "$ref": "#/definitions/portable_ref" },
+        "path": { "$ref": "#/definitions/portable_ref" },
+        "change_kind": { "enum": ["added", "modified", "removed", "renamed"] }
+      }
+    },
+    "external_effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "reversible"],
+      "description": "One outward effect the run caused. id is a stable semantic identifier, unique within the handoff. description states the effect. reversible records whether it can be undone without a further authorised action (operating-principles.md reversible-by-default). An empty external_effects list asserts there were none; genuine uncertainty is recorded as an open_gap, never as an empty list.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "description": { "$ref": "#/definitions/non_empty" },
+        "reversible": { "type": "boolean" }
+      }
+    },
+    "deviation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "severity", "disposition"],
+      "description": "One remaining divergence from the norm, the plan or the expected result. id is a stable semantic identifier, unique within the handoff. description states the divergence. severity is 'blocking' or 'non_blocking'; a blocking deviation forces outcome.status 'blocked'. disposition states how it is being handled. A deviation (a known remaining divergence) and an open_gap (an acknowledged incompleteness of THIS handoff's knowledge) are different axes.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "description": { "$ref": "#/definitions/non_empty" },
+        "severity": { "enum": ["blocking", "non_blocking"] },
+        "disposition": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "open_gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description"],
+      "description": "One acknowledged incompleteness of this handoff's own knowledge or coverage. id is a stable semantic identifier, unique within the handoff. description states the gap.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "description": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "required_owner_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "question", "blocking"],
+      "description": "One decision only the owner may take (operating-glossary.md owner-decision). id is a stable semantic identifier, unique within the handoff. question states what the owner must decide. blocking records whether the next step cannot proceed until it is taken.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "question": { "$ref": "#/definitions/non_empty" },
+        "blocking": { "type": "boolean" }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "resumption_condition"],
+      "description": "One structured blocker, in the SAME shape the execution state model uses. id is a stable semantic identifier, unique within the handoff. description states the condition. resumption_condition is the observable condition under which continuation becomes possible again — not a free phrase. The set of blocker ids must equal the resolved execution-run record's blocker_ids (checked in scripts/lib/evidence-and-handoff.mjs).",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "description": { "$ref": "#/definitions/non_empty" },
+        "resumption_condition": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "worktree_disposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "description": "The closing state of the temporary Git worktree, using the accepted closed set of version-control-flow.md §5.4 and NO second set. not_created: no worktree was created for this run. removed: it was created and taken down by the standard sequence after a clean git status. retained: it was deliberately kept — and then reason, responsible and cleanup_condition (a verifiable future-cleanup condition) are ALL mandatory. For not_created and removed those three fields are forbidden (checked in scripts/lib/evidence-and-handoff.mjs).",
+      "properties": {
+        "state": { "enum": ["not_created", "removed", "retained"] },
+        "reason": { "$ref": "#/definitions/non_empty" },
+        "responsible": { "$ref": "#/definitions/non_empty" },
+        "cleanup_condition": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "next_step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "gate", "actor_ref"],
+      "description": "What the next participant must do. action and gate are an executable value or an explicit null (a terminal run carries null for both, and both must match the resolved execution-run record's next_action / next_gate). actor_ref is a portable opaque reference to the next actor, or null. Every key is required, so an absent axis is never read as null.",
+      "properties": {
+        "action": { "$ref": "#/definitions/next_step_value" },
+        "gate": { "$ref": "#/definitions/next_step_value" },
+        "actor_ref": { "$ref": "#/definitions/next_step_value" }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "status"],
+      "description": "The run's overall outcome — the whole run, not a part of it. statement is the claimed result in one line. status is one of: 'complete' (the whole run is finished: the resolved execution-run record's work_status is 'completed', next_step.action and next_step.gate are null, every claimed_result is established, every acceptance criterion is covered by a verified assertion, every mandatory_check passed, open_gaps is empty, and there is no blocker, blocking deviation or blocking owner decision), 'blocked' (at least one blocker, a failed or unable mandatory check, or a blocking deviation) or 'handed_off_incomplete' (the run is deliberately handed off before completion and is not blocked). A non-empty blocker set forces 'blocked' (checked in scripts/lib/evidence-and-handoff.mjs).",
+      "properties": {
+        "statement": { "$ref": "#/definitions/non_empty" },
+        "status": { "enum": ["complete", "blocked", "handed_off_incomplete"] }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_run_ref", "task_specification_ref", "human_control_ref", "context_manifest_ref",
+        "outcome", "claimed_results", "verifiable_assertions", "evidence", "mandatory_checks",
+        "acceptance_criteria", "source_state", "result_state", "changed_paths", "external_effects",
+        "deviations", "open_gaps", "required_owner_decisions", "blockers", "worktree_disposition", "next_step"
+      ],
+      "description": "The bounded body of one run's evidence-and-handoff, as a CLOSED object. It carries closed structured pinned references to the run, the task specification, the human-control record and the context manifest (never their bodies); the overall outcome; the claimed results, the verifiable assertions and the pinned, externally-resolved evidence as three separate id-linked lists; the mandatory checks, each backed by a resolved result-evidence entry, with their three distinct statuses; the acceptance-criteria coverage against the resolved task specification; the pinned source and result states per repository (same repository set on both sides); and the separate required lists of changed paths, external effects, deviations, open gaps, required owner decisions and blockers; the worktree disposition; and the next step. An unbounded material dump, a full specialised-evidence body or the body of a referenced record is rejected by construction.",
+      "properties": {
+        "execution_run_ref": { "$ref": "#/definitions/pinned_ref" },
+        "task_specification_ref": { "$ref": "#/definitions/pinned_ref" },
+        "human_control_ref": { "$ref": "#/definitions/pinned_ref" },
+        "context_manifest_ref": { "$ref": "#/definitions/pinned_ref" },
+        "outcome": { "$ref": "#/definitions/outcome" },
+        "claimed_results": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/claimed_result" }
+        },
+        "verifiable_assertions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/verifiable_assertion" }
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/evidence_entry" }
+        },
+        "mandatory_checks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/mandatory_check" }
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/acceptance_criterion_coverage" }
+        },
+        "source_state": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/repository_state" }
+        },
+        "result_state": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/repository_state" }
+        },
+        "changed_paths": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/changed_path" }
+        },
+        "external_effects": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/external_effect" }
+        },
+        "deviations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/deviation" }
+        },
+        "open_gaps": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/open_gap" }
+        },
+        "required_owner_decisions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/required_owner_decision" }
+        },
+        "blockers": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/blocker" }
+        },
+        "worktree_disposition": { "$ref": "#/definitions/worktree_disposition" },
+        "next_step": { "$ref": "#/definitions/next_step" }
+      }
+    }
+  }
+}

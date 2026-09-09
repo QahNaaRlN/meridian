@@ -388,6 +388,26 @@ function writeContextManifest(root, { schema = null, bundle = null, omitFixtures
   }
 }
 
+// evidence-and-handoff-contract helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const EH_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const EH_OK_LINE = /evidence-and-handoff-contract: the evidence-and-handoff schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const ehRealBundle = () => JSON.parse(fs.readFileSync(path.join(EH_OM, 'fixtures', 'evidence-and-handoff.fixtures.json'), 'utf8'));
+function writeEvidenceAndHandoff(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/evidence-and-handoff.schema.json',
+    schema ?? fs.readFileSync(path.join(EH_OM, 'evidence-and-handoff.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/evidence-and-handoff.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/evidence-and-handoff.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(EH_OM, 'fixtures', 'evidence-and-handoff.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -418,6 +438,8 @@ function buildKernel(root) {
   writeRoleAndHumanControl(root);
   // The mandatory bounded-context-manifest contract, likewise.
   writeContextManifest(root);
+  // The mandatory evidence-and-handoff contract, likewise.
+  writeEvidenceAndHandoff(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -4346,6 +4368,100 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t227 an invalid context-manifest fixture the composition accepts clean is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/bounded-context-manifest: a fixture that must be rejected validated clean \(planted well-formed manifest in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// evidence-and-handoff-contract — the state and result handoff of one run is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// handoff data is Instance. Removing the schema or the fixtures is a FAIL; a
+// present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. Helpers
+// (EH_OM, EH_OK_LINE, ehRealBundle, writeEvidenceAndHandoff) sit next to the
+// other operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t228 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t228');
+  check('t228 the mandatory evidence-and-handoff contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [EH_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t229 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t229');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'evidence-and-handoff.schema.json'));
+  commitAll(kernel);
+  check('t229 removing the mandatory evidence-and-handoff schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: registries\/operating-model\/evidence-and-handoff\.schema\.json is missing; the evidence and handoff contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t230 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t230');
+  const s = JSON.parse(fs.readFileSync(path.join(EH_OM, 'evidence-and-handoff.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeEvidenceAndHandoff(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t230 an unsupported evidence-and-handoff schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t231 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t231');
+  writeEvidenceAndHandoff(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t231 a non-JSON evidence-and-handoff schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: evidence-and-handoff\.schema\.json is not valid JSON/],
+  });
+}
+
+// t232 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t232');
+  writeEvidenceAndHandoff(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t232 an evidence-and-handoff schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: the schema carries no fixtures/],
+  });
+}
+
+// t233 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t233');
+  const b = ehRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.valid[0].spec));
+  delete spec.payload.worktree_disposition;
+  b.valid.push({ note: 'planted handoff with no worktree_disposition', spec });
+  writeEvidenceAndHandoff(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t233 a valid evidence-and-handoff fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: a fixture that must be a valid handoff was rejected \(planted handoff with no worktree_disposition\)/],
+  });
+}
+
+// t234 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t234');
+  const b = ehRealBundle();
+  b.invalid.push({ note: 'planted well-formed handoff in the invalid array', spec: JSON.parse(JSON.stringify(b.valid[0].spec)) });
+  writeEvidenceAndHandoff(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t234 an invalid evidence-and-handoff fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: a fixture that must be rejected validated clean \(planted well-formed handoff in the invalid array\)/],
   });
 }
 

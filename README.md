@@ -79,16 +79,17 @@ meridian/
 │       workspace/execution-state-model.md ← состояние выполнения одного запуска
 │       workspace/role-and-human-control.md ← универсальные роли и управление человеком
 │       workspace/bounded-context-manifest.md ← ограниченный возобновляемый манифест контекста
+│       workspace/evidence-and-handoff-contract.md ← передача состояния и результата одного запуска
 │       workspace/instruction-source-registry.md ← снимок источника инструкций
 ├── workflows/          жизненный цикл задачи
 ├── verification/       verification router, regression-правила, smoke-protocol, functional-parity
 ├── skills/             завендоренные skill-пакеты с SHA-пинами
 ├── registries/         правила и JSON Schema реестров (не данные)
-│   ├── operating-model/ схемы областей, конверта записи, каталога типов задач, постановки задачи, состояния выполнения, ролей и управления человеком, манифеста контекста, реестра источников
+│   ├── operating-model/ схемы областей, конверта записи, каталога типов задач, постановки задачи, состояния выполнения, ролей и управления человеком, манифеста контекста, доказательств и передачи, реестра источников
 │   └── rule-resolution/ схемы применимости норм и вывода резолвера (PHASE B)
 ├── instance-template/  bootstrap-каркас нового Instance (первый день на продукте)
 ├── scripts/            kernel-validate.mjs, preflight.mjs, rule-resolver.mjs, validate-branch-name.mjs
-│   └── lib/            общие чистые helpers (YAML-subset, JSON-Schema-subset, marked-region reader, task-pattern-catalog, instruction-source-registry, task-specification, execution-state, role-and-human-control, context-manifest)
+│   └── lib/            общие чистые helpers (YAML-subset, JSON-Schema-subset, marked-region reader, task-pattern-catalog, instruction-source-registry, task-specification, execution-state, role-and-human-control, context-manifest, evidence-and-handoff)
 ├── test/               instance-fixture/ и регрессионные наборы валидатора, резолвера и проверки имени ветви
 ├── hooks/              pre-push: тесты валидатора + прогон против fixture
 └── .github/workflows/gate.yml
@@ -109,6 +110,7 @@ node test/task-specification.test.mjs                # контракт пост
 node test/execution-state.test.mjs                   # модель состояния выполнения согласована
 node test/role-and-human-control.test.mjs            # роли и управление человеком согласованы
 node test/context-manifest.test.mjs                  # ограниченный манифест контекста согласован
+node test/evidence-and-handoff.test.mjs              # контракт доказательств и передачи согласован
 ```
 
 Preflight — первый шаг любой агентной сессии: он громко падает, если сессия

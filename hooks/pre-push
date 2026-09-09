@@ -84,6 +84,13 @@ if ! node "$ROOT/test/execution-state.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: verifying the role and human control contract"
+if ! node "$ROOT/test/role-and-human-control.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the role and human control contract is inconsistent."
+  exit 1
+fi
+
 echo "pre-push: running the Git-environment isolation regression test"
 if ! node "$ROOT/test/pre-push-git-isolation.test.mjs"; then
   echo ""

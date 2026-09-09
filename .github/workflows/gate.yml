@@ -40,6 +40,9 @@ jobs:
       - name: Verify the execution state model
         run: node test/execution-state.test.mjs
 
+      - name: Verify the role and human control contract
+        run: node test/role-and-human-control.test.mjs
+
       - name: Regression-test the pre-push Git-environment isolation
         run: node test/pre-push-git-isolation.test.mjs
 

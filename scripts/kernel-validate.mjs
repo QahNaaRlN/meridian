@@ -95,6 +95,7 @@ import {
 } from './lib/task-pattern-registry.mjs';
 import { evaluateInstructionSourceRegistry } from './lib/instruction-source-registry.mjs';
 import { evaluateTaskSpecification } from './lib/task-specification.mjs';
+import { evaluateExecutionState } from './lib/execution-state.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1251,6 +1252,103 @@ function functionalParityConsistency(rec) {
     if (tscOk && tscCoverage) {
       ok('task-specification-contract: the task-specification schema parsed and keyword-checked; '
        + `${tscSatisfied} representative fixture(s) satisfied the composition (record envelope, goal, initial state, target model, task-pattern resolution, constraints and verifiable acceptance criteria) and ${tscRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// execution-state-model: the portable state of one execution run (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/execution-state.schema.json is the specialised
+// schema for the state of ONE execution run (record_type: execution-run) — a
+// portable, storage-independent snapshot of one attempt to carry out a task
+// specification: the independent axes (lifecycle_stage, work_status,
+// scope_revision, current_actor, resolved_norms, completed_checks, blockers,
+// next_action, next_gate) and an ordered transition_history. Its envelope is
+// validated against the existing scoped-record.schema.json (composition, not a
+// second envelope). The run references EXACTLY ONE task specification by a
+// portable task_specification_ref and never embeds it; a role, a supervision
+// mode, a communication mode, a full context manifest or a full evidence /
+// handoff contract belong to later packages, not here. Run-state DATA is
+// Instance, like the task specification: the Kernel ships the schema, the
+// product-neutral fixtures and one checkable implementation
+// (scripts/lib/execution-state.mjs), not a canonical data file. The contract is
+// a MANDATORY part of this Kernel: a missing schema or missing fixtures is a
+// FAIL, not an informational skip. The generic $schema pass never reaches a
+// JSON Schema file or a .json fixtures bundle, so — as with the
+// task-specification-contract block — the schema is parsed, walked for
+// unsupported keywords, and exercised against its bundled fixtures here,
+// fail-closed on the bundle's own shape.
+{
+  const esmDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const esmSchemaName = 'execution-state.schema.json';
+  const esmSchemaRaw = readIfExists(path.join(esmDir, esmSchemaName));
+  if (esmSchemaRaw === null) {
+    fail(`execution-state-model: registries/operating-model/${esmSchemaName} is missing; the execution state model contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let esmOk = true;
+    let esmSchema = null;
+    let esmEnv = null;
+    try { esmSchema = JSON.parse(esmSchemaRaw); }
+    catch (e) { fail(`execution-state-model: ${esmSchemaName} is not valid JSON: ${e.message}`); esmOk = false; }
+
+    const esmEnvRaw = readIfExists(path.join(esmDir, 'scoped-record.schema.json'));
+    if (esmEnvRaw === null) {
+      fail('execution-state-model: registries/operating-model/scoped-record.schema.json is missing; the run record composes with the record envelope and cannot be checked without it');
+      esmOk = false;
+    } else {
+      try { esmEnv = JSON.parse(esmEnvRaw); }
+      catch (e) { fail(`execution-state-model: scoped-record.schema.json is not valid JSON: ${e.message}`); esmOk = false; }
+    }
+
+    if (esmSchema) {
+      try { assertSupportedDeep(esmSchema, esmSchemaName); }
+      catch (e) { fail(`execution-state-model: the schema uses a construct this validator cannot check: ${e.message}`); esmOk = false; }
+    }
+
+    let esmSatisfied = 0;
+    let esmRejected = 0;
+    let esmCoverage = false;
+    const fxRaw = readIfExists(path.join(esmDir, 'fixtures', 'execution-state.fixtures.json'));
+    if (fxRaw === null) {
+      fail('execution-state-model: the schema carries no fixtures (registries/operating-model/fixtures/execution-state.fixtures.json); a schema no run exercises is not one this gate has reached');
+      esmOk = false;
+    } else if (esmOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(fxRaw); }
+      catch (e) { bundleOk = false; fail(`execution-state-model: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('execution-state-model: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`execution-state-model: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        esmOk = false;
+      } else {
+        const esmOpts = { recordSchema: esmSchema, envelopeSchema: esmEnv };
+        for (const c of bundle.valid) {
+          const p = evaluateExecutionState(c && c.spec, esmOpts);
+          if (p.length) { fail(`execution-state-model: a fixture that must be a valid run record was rejected (${c && c.note}): ${p[0]}`); esmOk = false; }
+          else esmSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateExecutionState(c && c.spec, esmOpts);
+          if (p.length === 0) { fail(`execution-state-model: a fixture that must be rejected validated clean (${c && c.note})`); esmOk = false; }
+          else esmRejected++;
+        }
+        esmCoverage = esmOk;
+      }
+    }
+
+    if (esmOk && esmCoverage) {
+      ok('execution-state-model: the execution-state schema parsed and keyword-checked; '
+       + `${esmSatisfied} representative fixture(s) satisfied the composition (record envelope, run identity, run-state scope, task-specification reference, independent axes and ordered transition history) and ${esmRejected} were rejected as declared`);
     }
   }
 }

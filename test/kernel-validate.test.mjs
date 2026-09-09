@@ -318,6 +318,26 @@ function writeTaskSpecificationContract(root, { schema = null, bundle = null, om
   }
 }
 
+// execution-state-model helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const ESM_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const ESM_OK_LINE = /execution-state-model: the execution-state schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const esmRealBundle = () => JSON.parse(fs.readFileSync(path.join(ESM_OM, 'fixtures', 'execution-state.fixtures.json'), 'utf8'));
+function writeExecutionStateModel(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/execution-state.schema.json',
+    schema ?? fs.readFileSync(path.join(ESM_OM, 'execution-state.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/execution-state.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/execution-state.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(ESM_OM, 'fixtures', 'execution-state.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -342,6 +362,8 @@ function buildKernel(root) {
   writeInstructionSourceRegistry(root);
   // The mandatory task-specification contract, likewise.
   writeTaskSpecificationContract(root);
+  // The mandatory execution-state-model contract, likewise.
+  writeExecutionStateModel(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -3987,6 +4009,101 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t206 an invalid fixture the composition accepts clean is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/task-specification-contract: a fixture that must be rejected validated clean \(planted well-formed spec in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// execution-state-model — the portable state of one execution run is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// run-state data is Instance. Removing the schema or the fixtures is a FAIL; a
+// present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. Helpers
+// (ESM_OM, ESM_OK_LINE, esmRealBundle, writeExecutionStateModel) sit next to
+// the other operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t207 — an ordinary synthetic kernel already carries the mandatory contract:
+// the section is reached and every fixture is classified as declared.
+{
+  const { kernel, instance } = freshPair('t207');
+  check('t207 the mandatory execution-state-model contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [ESM_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t208 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t208');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'execution-state.schema.json'));
+  commitAll(kernel);
+  check('t208 removing the mandatory execution-state schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: registries\/operating-model\/execution-state\.schema\.json is missing; the execution state model contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t209 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t209');
+  const s = JSON.parse(fs.readFileSync(path.join(ESM_OM, 'execution-state.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeExecutionStateModel(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t209 an unsupported schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t210 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t210');
+  writeExecutionStateModel(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t210 a non-JSON execution-state schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: execution-state\.schema\.json is not valid JSON/],
+  });
+}
+
+// t211 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t211');
+  writeExecutionStateModel(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t211 an execution-state schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: the schema carries no fixtures/],
+  });
+}
+
+// t212 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t212');
+  const b = esmRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.valid[0].spec));
+  delete spec.payload.transition_history;
+  b.valid.push({ note: 'planted run with no transition history', spec });
+  writeExecutionStateModel(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t212 a valid fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: a fixture that must be a valid run record was rejected \(planted run with no transition history\)/],
+  });
+}
+
+// t213 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t213');
+  const b = esmRealBundle();
+  b.invalid.push({ note: 'planted well-formed run in the invalid array', spec: JSON.parse(JSON.stringify(b.valid[0].spec)) });
+  writeExecutionStateModel(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t213 an invalid fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: a fixture that must be rejected validated clean \(planted well-formed run in the invalid array\)/],
   });
 }
 

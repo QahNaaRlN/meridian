@@ -43,6 +43,9 @@ jobs:
       - name: Verify the role and human control contract
         run: node test/role-and-human-control.test.mjs
 
+      - name: Verify the bounded context manifest contract
+        run: node test/context-manifest.test.mjs
+
       - name: Regression-test the pre-push Git-environment isolation
         run: node test/pre-push-git-isolation.test.mjs
 

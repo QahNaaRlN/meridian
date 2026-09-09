@@ -97,6 +97,7 @@ import { evaluateInstructionSourceRegistry } from './lib/instruction-source-regi
 import { evaluateTaskSpecification } from './lib/task-specification.mjs';
 import { evaluateExecutionState } from './lib/execution-state.mjs';
 import { evaluateRoleRegistry, evaluateHumanControl } from './lib/role-and-human-control.mjs';
+import { evaluateContextManifest, makeRecordResolver } from './lib/context-manifest.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1482,6 +1483,116 @@ function functionalParityConsistency(rec) {
     if (rhcOk && rhcCoverage) {
       ok('role-and-human-control: the role-registry and human-control schemas parsed and keyword-checked; '
        + `the built-in catalogue carries the seven universal roles; ${rhcRegistrySatisfied} role-registry fixture(s) satisfied the composition and ${rhcRegistryRejected} were rejected as declared; ${rhcControlSatisfied} human-control fixture(s) satisfied it (permanent human-in-command, switchable HITL/HOTL, role assignments with combined roles, optional independent review and the ordered switch history) and ${rhcControlRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// bounded-context-manifest: the bounded, resumable context of one run (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/context-manifest.schema.json is the specialised
+// schema for the bounded context manifest of ONE execution run
+// (record_type: context-manifest) — the portable, storage-independent list of
+// authoritative inputs and run state that is enough to resume that same run
+// after a pause, a session change, a participant change or a role change
+// without rebuilding authoritative state from chat history. Its envelope is
+// validated against the existing scoped-record.schema.json (composition, not a
+// second envelope). The manifest carries PORTABLE REFERENCES to the task
+// specification, the execution run and the human-control record and never
+// embeds their bodies or a second role model; every mutable source is pinned by
+// an exact revision, a SHA-256 digest or both; the run_state_checkpoint is
+// RESOLVED through a boundary external to the manifest (the fixtures' companion
+// "resolution" set) and its axes checked against the actual execution-run
+// record's own state — not against a second in-document copy; an unbounded
+// material dump and the full evidence /
+// handoff contract that belongs to a later package are rejected. Manifest DATA
+// is Instance, like the task specification and the human-control record: the
+// Kernel ships the schema, the product-neutral fixtures and one checkable
+// implementation (scripts/lib/context-manifest.mjs), not a canonical data file.
+// The contract is a MANDATORY part of this Kernel: a missing schema or missing
+// fixtures is a FAIL, not an informational skip. The generic $schema pass never
+// reaches a JSON Schema file or a .json fixtures bundle, so — as with the
+// execution-state-model block — the schema is parsed, walked for unsupported
+// keywords, and exercised against its bundled fixtures here, fail-closed on the
+// bundle's own shape.
+{
+  const cmDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const cmSchemaName = 'context-manifest.schema.json';
+  const cmSchemaRaw = readIfExists(path.join(cmDir, cmSchemaName));
+  if (cmSchemaRaw === null) {
+    fail(`bounded-context-manifest: registries/operating-model/${cmSchemaName} is missing; the bounded context manifest contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let cmOk = true;
+    let cmSchema = null;
+    let cmEnv = null;
+    try { cmSchema = JSON.parse(cmSchemaRaw); }
+    catch (e) { fail(`bounded-context-manifest: ${cmSchemaName} is not valid JSON: ${e.message}`); cmOk = false; }
+
+    const cmEnvRaw = readIfExists(path.join(cmDir, 'scoped-record.schema.json'));
+    if (cmEnvRaw === null) {
+      fail('bounded-context-manifest: registries/operating-model/scoped-record.schema.json is missing; the manifest record composes with the record envelope and cannot be checked without it');
+      cmOk = false;
+    } else {
+      try { cmEnv = JSON.parse(cmEnvRaw); }
+      catch (e) { fail(`bounded-context-manifest: scoped-record.schema.json is not valid JSON: ${e.message}`); cmOk = false; }
+    }
+
+    if (cmSchema) {
+      try { assertSupportedDeep(cmSchema, cmSchemaName); }
+      catch (e) { fail(`bounded-context-manifest: the schema uses a construct this validator cannot check: ${e.message}`); cmOk = false; }
+    }
+
+    let cmSatisfied = 0;
+    let cmRejected = 0;
+    let cmCoverage = false;
+    const fxRaw = readIfExists(path.join(cmDir, 'fixtures', 'context-manifest.fixtures.json'));
+    if (fxRaw === null) {
+      fail('bounded-context-manifest: the schema carries no fixtures (registries/operating-model/fixtures/context-manifest.fixtures.json); a schema no run exercises is not one this gate has reached');
+      cmOk = false;
+    } else if (cmOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(fxRaw); }
+      catch (e) { bundleOk = false; fail(`bounded-context-manifest: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('bounded-context-manifest: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`bounded-context-manifest: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (bundleOk && (typeof bundle.resolution !== 'object' || bundle.resolution === null || Array.isArray(bundle.resolution))) {
+        bundleOk = false;
+        fail('bounded-context-manifest: the fixtures file carries no "resolution" object; the pinned execution-run, task-specification and run-human-control records are resolved OUTSIDE the manifest, and a bundle that resolves nothing cannot exercise the checkpoint against its actual run');
+      }
+      if (!bundleOk) {
+        cmOk = false;
+      } else {
+        const cmOpts = {
+          recordSchema: cmSchema,
+          envelopeSchema: cmEnv,
+          resolveRecords: makeRecordResolver(bundle.resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateContextManifest(c && c.spec, cmOpts);
+          if (p.length) { fail(`bounded-context-manifest: a fixture that must be a valid context manifest was rejected (${c && c.note}): ${p[0]}`); cmOk = false; }
+          else cmSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateContextManifest(c && c.spec, cmOpts);
+          if (p.length === 0) { fail(`bounded-context-manifest: a fixture that must be rejected validated clean (${c && c.note})`); cmOk = false; }
+          else cmRejected++;
+        }
+        cmCoverage = cmOk;
+      }
+    }
+
+    if (cmOk && cmCoverage) {
+      ok('bounded-context-manifest: the context-manifest schema parsed and keyword-checked; '
+       + `${cmSatisfied} representative fixture(s) satisfied the composition (record envelope, run-state scope, the deterministic single-run link via closed structured pinned references, the closed exact-revision rule for pinned references / applicable norms / mutable sources, separate decision / question / action / check / gap / blocker lists, and the run_state_checkpoint resolved through the external boundary and checked against the actual execution-run record's own state) and ${cmRejected} were rejected as declared`);
     }
   }
 }

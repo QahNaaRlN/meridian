@@ -368,6 +368,26 @@ function writeRoleAndHumanControl(root, { registrySchema = null, controlSchema =
   }
 }
 
+// bounded-context-manifest helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const CM_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const CM_OK_LINE = /bounded-context-manifest: the context-manifest schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const cmRealBundle = () => JSON.parse(fs.readFileSync(path.join(CM_OM, 'fixtures', 'context-manifest.fixtures.json'), 'utf8'));
+function writeContextManifest(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/context-manifest.schema.json',
+    schema ?? fs.readFileSync(path.join(CM_OM, 'context-manifest.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/context-manifest.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/context-manifest.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(CM_OM, 'fixtures', 'context-manifest.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -396,6 +416,8 @@ function buildKernel(root) {
   writeExecutionStateModel(root);
   // The mandatory role-and-human-control contract, likewise.
   writeRoleAndHumanControl(root);
+  // The mandatory bounded-context-manifest contract, likewise.
+  writeContextManifest(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -4230,6 +4252,100 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t220 an invalid role-and-human-control fixture the composition accepts clean is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/role-and-human-control: a role registry fixture that must be rejected validated clean \(planted well-formed catalogue in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// bounded-context-manifest — the bounded, resumable context of one run is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// manifest data is Instance. Removing the schema or the fixtures is a FAIL; a
+// present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. Helpers
+// (CM_OM, CM_OK_LINE, cmRealBundle, writeContextManifest) sit next to the other
+// operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t221 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t221');
+  check('t221 the mandatory bounded-context-manifest contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [CM_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t222 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t222');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'context-manifest.schema.json'));
+  commitAll(kernel);
+  check('t222 removing the mandatory context-manifest schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: registries\/operating-model\/context-manifest\.schema\.json is missing; the bounded context manifest contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t223 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t223');
+  const s = JSON.parse(fs.readFileSync(path.join(CM_OM, 'context-manifest.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeContextManifest(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t223 an unsupported context-manifest schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t224 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t224');
+  writeContextManifest(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t224 a non-JSON context-manifest schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: context-manifest\.schema\.json is not valid JSON/],
+  });
+}
+
+// t225 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t225');
+  writeContextManifest(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t225 a context-manifest schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: the schema carries no fixtures/],
+  });
+}
+
+// t226 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t226');
+  const b = cmRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.valid[0].spec));
+  delete spec.payload.run_state_checkpoint;
+  b.valid.push({ note: 'planted manifest with no run_state_checkpoint', spec });
+  writeContextManifest(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t226 a valid context-manifest fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: a fixture that must be a valid context manifest was rejected \(planted manifest with no run_state_checkpoint\)/],
+  });
+}
+
+// t227 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t227');
+  const b = cmRealBundle();
+  b.invalid.push({ note: 'planted well-formed manifest in the invalid array', spec: JSON.parse(JSON.stringify(b.valid[0].spec)) });
+  writeContextManifest(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t227 an invalid context-manifest fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: a fixture that must be rejected validated clean \(planted well-formed manifest in the invalid array\)/],
   });
 }
 

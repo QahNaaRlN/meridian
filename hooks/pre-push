@@ -91,6 +91,13 @@ if ! node "$ROOT/test/role-and-human-control.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: verifying the bounded context manifest contract"
+if ! node "$ROOT/test/context-manifest.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the bounded context manifest contract is inconsistent."
+  exit 1
+fi
+
 echo "pre-push: running the Git-environment isolation regression test"
 if ! node "$ROOT/test/pre-push-git-isolation.test.mjs"; then
   echo ""

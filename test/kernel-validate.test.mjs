@@ -338,6 +338,36 @@ function writeExecutionStateModel(root, { schema = null, bundle = null, omitFixt
   }
 }
 
+// role-and-human-control helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants both real schemas, the real catalogue and real
+// fixtures beside them; scoped-record.schema.json is already planted by
+// writeTaskPatternCatalog.
+const RHC_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const RHC_OK_LINE = /role-and-human-control: the role-registry and human-control schemas parsed and keyword-checked; the built-in catalogue carries the seven universal roles; \d+ role-registry fixture\(s\) satisfied the composition and \d+ were rejected as declared; \d+ human-control fixture\(s\) satisfied it .* and \d+ were rejected as declared/;
+const rhcRealBundle = () => JSON.parse(fs.readFileSync(path.join(RHC_OM, 'fixtures', 'role-and-human-control.fixtures.json'), 'utf8'));
+function writeRoleAndHumanControl(root, { registrySchema = null, controlSchema = null, catalogue = null, bundle = null, omitFixtures = false, omitCatalogue = false } = {}) {
+  write(root, 'registries/operating-model/role-registry.schema.json',
+    registrySchema ?? fs.readFileSync(path.join(RHC_OM, 'role-registry.schema.json'), 'utf8'));
+  write(root, 'registries/operating-model/human-control.schema.json',
+    controlSchema ?? fs.readFileSync(path.join(RHC_OM, 'human-control.schema.json'), 'utf8'));
+  const catPath = path.join(root, 'standards/workspace/role-registry.yaml');
+  if (omitCatalogue) {
+    fs.rmSync(catPath, { force: true });
+  } else {
+    write(root, 'standards/workspace/role-registry.yaml',
+      catalogue ?? fs.readFileSync(path.join(__dirname, '..', 'standards', 'workspace', 'role-registry.yaml'), 'utf8'));
+  }
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/role-and-human-control.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/role-and-human-control.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(RHC_OM, 'fixtures', 'role-and-human-control.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -364,6 +394,8 @@ function buildKernel(root) {
   writeTaskSpecificationContract(root);
   // The mandatory execution-state-model contract, likewise.
   writeExecutionStateModel(root);
+  // The mandatory role-and-human-control contract, likewise.
+  writeRoleAndHumanControl(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -4104,6 +4136,100 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t213 an invalid fixture the composition accepts clean is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/execution-state-model: a fixture that must be rejected validated clean \(planted well-formed run in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// role-and-human-control — the universal role catalogue and one run's
+// human-control state are a MANDATORY part of the Kernel (buildKernel plants
+// both schemas, the catalogue and the fixtures). Schemas and catalogue are
+// Kernel; concrete control records are Instance. Removing the schema, the
+// catalogue or the fixtures is a FAIL; a present schema is parsed,
+// keyword-checked and exercised against its product-neutral fixtures,
+// fail-closed on the two-group bundle's own shape.
+// ===========================================================================
+
+// t214 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t214');
+  check('t214 the mandatory role-and-human-control contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [RHC_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t215 — the contract is MANDATORY: removing a schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t215');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'human-control.schema.json'));
+  commitAll(kernel);
+  check('t215 removing a mandatory role-and-human-control schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: registries\/operating-model\/human-control\.schema\.json is missing; the role and human control contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t216 — removing the built-in role catalogue is a red run.
+{
+  const { kernel, instance } = freshPair('t216');
+  writeRoleAndHumanControl(kernel, { omitCatalogue: true });
+  commitAll(kernel);
+  check('t216 removing the built-in role catalogue is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: standards\/workspace\/role-registry\.yaml is missing; the built-in universal-role catalogue is a mandatory part of this Kernel/],
+  });
+}
+
+// t217 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t217');
+  const s = JSON.parse(fs.readFileSync(path.join(RHC_OM, 'human-control.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeRoleAndHumanControl(kernel, { controlSchema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t217 an unsupported role-and-human-control schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t218 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t218');
+  writeRoleAndHumanControl(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t218 role-and-human-control schemas with no fixtures beside them is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: the schemas carry no fixtures/],
+  });
+}
+
+// t219 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t219');
+  const b = rhcRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.control.valid[0].spec));
+  delete spec.payload.human_authority;
+  b.control.valid.push({ note: 'planted control record with no human authority', spec });
+  writeRoleAndHumanControl(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t219 a valid role-and-human-control fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: a fixture that must be a valid human-control record was rejected \(planted control record with no human authority\)/],
+  });
+}
+
+// t220 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t220');
+  const b = rhcRealBundle();
+  b.registry.invalid.push({ note: 'planted well-formed catalogue in the invalid array', spec: JSON.parse(JSON.stringify(b.registry.valid[0].spec)) });
+  writeRoleAndHumanControl(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t220 an invalid role-and-human-control fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: a role registry fixture that must be rejected validated clean \(planted well-formed catalogue in the invalid array\)/],
   });
 }
 

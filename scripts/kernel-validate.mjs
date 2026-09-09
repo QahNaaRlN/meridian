@@ -96,6 +96,7 @@ import {
 import { evaluateInstructionSourceRegistry } from './lib/instruction-source-registry.mjs';
 import { evaluateTaskSpecification } from './lib/task-specification.mjs';
 import { evaluateExecutionState } from './lib/execution-state.mjs';
+import { evaluateRoleRegistry, evaluateHumanControl } from './lib/role-and-human-control.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1349,6 +1350,138 @@ function functionalParityConsistency(rec) {
     if (esmOk && esmCoverage) {
       ok('execution-state-model: the execution-state schema parsed and keyword-checked; '
        + `${esmSatisfied} representative fixture(s) satisfied the composition (record envelope, run identity, run-state scope, task-specification reference, independent axes and ordered transition history) and ${esmRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// role-and-human-control: universal roles and human control of one run (MANDATORY)
+// ---------------------------------------------------------------------------
+// Two product-neutral Kernel contracts checked by one implementation
+// (scripts/lib/role-and-human-control.mjs), exactly as the execution-state-model
+// block above: the generic $schema pass never reaches a JSON Schema file or a
+// .json fixtures bundle, so both schemas are parsed, walked for unsupported
+// keywords, and exercised against their bundled product-neutral fixtures here,
+// fail-closed on the bundle's own shape.
+//   1. role-registry.schema.json — the built-in catalogue of the seven
+//      universal roles (owner, operator, executor, reviewer, verifier,
+//      git_integrator, deployer). It lives ONLY in built-in-methodology; a
+//      concrete run's assignments are a different record. The catalogue itself
+//      is standards/workspace/role-registry.yaml (validated by the generic
+//      $schema pass and again here).
+//   2. human-control.schema.json — one execution run's human-control state in
+//      run-state: role assignments, the permanent human-in-command posture, the
+//      switchable supervision mode (human-in-the-loop / human-on-the-loop), the
+//      communication mode, an optional independent-review requirement and the
+//      ordered switch history. Concrete records are Instance data; the Kernel
+//      ships the schema, the fixtures and the checkable implementation.
+// A missing schema, catalogue or fixtures is a FAIL, not an informational skip.
+{
+  const rhcDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const rhcRegistrySchemaName = 'role-registry.schema.json';
+  const rhcControlSchemaName = 'human-control.schema.json';
+  const rhcRegistrySchemaRaw = readIfExists(path.join(rhcDir, rhcRegistrySchemaName));
+  const rhcControlSchemaRaw = readIfExists(path.join(rhcDir, rhcControlSchemaName));
+  const rhcCatalogueRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'role-registry.yaml'));
+  if (rhcRegistrySchemaRaw === null || rhcControlSchemaRaw === null) {
+    fail(`role-and-human-control: registries/operating-model/${rhcRegistrySchemaRaw === null ? rhcRegistrySchemaName : rhcControlSchemaName} is missing; the role and human control contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else if (rhcCatalogueRaw === null) {
+    fail('role-and-human-control: standards/workspace/role-registry.yaml is missing; the built-in universal-role catalogue is a mandatory part of this Kernel');
+  } else {
+    let rhcOk = true;
+    let rhcRegistrySchema = null;
+    let rhcControlSchema = null;
+    let rhcEnv = null;
+    let rhcCatalogue = null;
+    try { rhcRegistrySchema = JSON.parse(rhcRegistrySchemaRaw); }
+    catch (e) { fail(`role-and-human-control: ${rhcRegistrySchemaName} is not valid JSON: ${e.message}`); rhcOk = false; }
+    try { rhcControlSchema = JSON.parse(rhcControlSchemaRaw); }
+    catch (e) { fail(`role-and-human-control: ${rhcControlSchemaName} is not valid JSON: ${e.message}`); rhcOk = false; }
+    try { rhcCatalogue = yamlParse(rhcCatalogueRaw); }
+    catch (e) { fail(`role-and-human-control: cannot parse role-registry.yaml: ${e.message}`); rhcOk = false; }
+
+    const rhcEnvRaw = readIfExists(path.join(rhcDir, 'scoped-record.schema.json'));
+    if (rhcEnvRaw === null) {
+      fail('role-and-human-control: registries/operating-model/scoped-record.schema.json is missing; each record composes with the record envelope and cannot be checked without it');
+      rhcOk = false;
+    } else {
+      try { rhcEnv = JSON.parse(rhcEnvRaw); }
+      catch (e) { fail(`role-and-human-control: scoped-record.schema.json is not valid JSON: ${e.message}`); rhcOk = false; }
+    }
+
+    for (const [s, name] of [[rhcRegistrySchema, rhcRegistrySchemaName], [rhcControlSchema, rhcControlSchemaName]]) {
+      if (!s) continue;
+      try { assertSupportedDeep(s, name); }
+      catch (e) { fail(`role-and-human-control: the schema uses a construct this validator cannot check: ${e.message}`); rhcOk = false; }
+    }
+
+    let rhcRegistrySatisfied = 0;
+    let rhcRegistryRejected = 0;
+    let rhcControlSatisfied = 0;
+    let rhcControlRejected = 0;
+    let rhcCoverage = false;
+    const rhcFxRaw = readIfExists(path.join(rhcDir, 'fixtures', 'role-and-human-control.fixtures.json'));
+    if (rhcFxRaw === null) {
+      fail('role-and-human-control: the schemas carry no fixtures (registries/operating-model/fixtures/role-and-human-control.fixtures.json); a schema no run exercises is not one this gate has reached');
+      rhcOk = false;
+    } else if (rhcOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(rhcFxRaw); }
+      catch (e) { bundleOk = false; fail(`role-and-human-control: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('role-and-human-control: the fixtures file must be an object carrying "registry" and "control" groups, each with non-empty "valid" and "invalid" arrays');
+      }
+      for (const group of ['registry', 'control']) {
+        if (bundleOk && (typeof bundle[group] !== 'object' || bundle[group] === null)) {
+          bundleOk = false;
+          fail(`role-and-human-control: the fixtures file has no "${group}" group`);
+        }
+        for (const key of ['valid', 'invalid']) {
+          if (bundleOk && !(Array.isArray(bundle[group][key]) && bundle[group][key].length > 0)) {
+            bundleOk = false;
+            fail(`role-and-human-control: the fixtures "${group}" group has no non-empty "${key}" array`);
+          }
+        }
+      }
+      if (!bundleOk) {
+        rhcOk = false;
+      } else {
+        const regOpts = { registrySchema: rhcRegistrySchema, envelopeSchema: rhcEnv };
+        for (const c of bundle.registry.valid) {
+          const p = evaluateRoleRegistry(c && c.spec, regOpts);
+          if (p.length) { fail(`role-and-human-control: a fixture that must be a valid role registry was rejected (${c && c.note}): ${p[0]}`); rhcOk = false; }
+          else rhcRegistrySatisfied++;
+        }
+        for (const c of bundle.registry.invalid) {
+          const p = evaluateRoleRegistry(c && c.spec, regOpts);
+          if (p.length === 0) { fail(`role-and-human-control: a role registry fixture that must be rejected validated clean (${c && c.note})`); rhcOk = false; }
+          else rhcRegistryRejected++;
+        }
+        const ctlOpts = { recordSchema: rhcControlSchema, envelopeSchema: rhcEnv };
+        for (const c of bundle.control.valid) {
+          const p = evaluateHumanControl(c && c.spec, ctlOpts);
+          if (p.length) { fail(`role-and-human-control: a fixture that must be a valid human-control record was rejected (${c && c.note}): ${p[0]}`); rhcOk = false; }
+          else rhcControlSatisfied++;
+        }
+        for (const c of bundle.control.invalid) {
+          const p = evaluateHumanControl(c && c.spec, ctlOpts);
+          if (p.length === 0) { fail(`role-and-human-control: a human-control fixture that must be rejected validated clean (${c && c.note})`); rhcOk = false; }
+          else rhcControlRejected++;
+        }
+        // the shipped catalogue itself is the canonical valid role registry.
+        if (rhcOk) {
+          const p = evaluateRoleRegistry(rhcCatalogue, regOpts);
+          if (p.length) { fail(`role-and-human-control: standards/workspace/role-registry.yaml is not a valid role registry: ${p[0]}`); rhcOk = false; }
+        }
+        rhcCoverage = rhcOk;
+      }
+    }
+
+    if (rhcOk && rhcCoverage) {
+      ok('role-and-human-control: the role-registry and human-control schemas parsed and keyword-checked; '
+       + `the built-in catalogue carries the seven universal roles; ${rhcRegistrySatisfied} role-registry fixture(s) satisfied the composition and ${rhcRegistryRejected} were rejected as declared; ${rhcControlSatisfied} human-control fixture(s) satisfied it (permanent human-in-command, switchable HITL/HOTL, role assignments with combined roles, optional independent review and the ordered switch history) and ${rhcControlRejected} were rejected as declared`);
     }
   }
 }

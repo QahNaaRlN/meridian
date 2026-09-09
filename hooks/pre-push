@@ -77,6 +77,13 @@ if ! node "$ROOT/test/task-specification.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: verifying the execution state model"
+if ! node "$ROOT/test/execution-state.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the execution state model contract is inconsistent."
+  exit 1
+fi
+
 echo "pre-push: running the Git-environment isolation regression test"
 if ! node "$ROOT/test/pre-push-git-isolation.test.mjs"; then
   echo ""

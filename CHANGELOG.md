@@ -18,6 +18,67 @@ updated: 2026-09-08
 
 ### Added
 
+- **Модель состояния выполнения (`execution-state-model`) — обязательный участок
+  проверки.** Переносимый, независимый от способа хранения снимок состояния
+  одного **запуска** (`execution-run`). Новые артефакты Ядра:
+  `standards/workspace/execution-state-model.md`,
+  `registries/operating-model/execution-state.schema.json`,
+  `registries/operating-model/fixtures/execution-state.fixtures.json`,
+  `scripts/lib/execution-state.mjs`, `test/execution-state.test.mjs`.
+  - **Управляемая сущность — запуск, а не разговорная «задача».** Одна
+    постановка может иметь несколько запусков; каждый несёт свой `id`, русское
+    `title` и **ровно одну** переносимую ссылку `task_specification_ref` —
+    постановка не встраивается и не дублируется в `payload`.
+  - **Одна объявленная схема.** Запись объявляет в `$schema` **полную**
+    `execution-state.schema.json` переносимой относительной ссылкой;
+    специализированная схема композирует общий конверт `scoped-record` с телом,
+    а `scripts/lib/execution-state.mjs` дополнительно прогоняет запись против
+    канонической `scoped-record.schema.json`. Значение `$schema` **разрешается**
+    в логическом пространстве имён Meridian: функции разрешения ссылки и правил
+    корневых путей (`resolveSchemaRef`, `nonPortableReason`) **переиспользуются**
+    из `scripts/lib/task-specification.mjs` — расходящейся копии этих правил
+    пакет не вводит. Разрешение не обращается к файловой системе и не зависит от
+    `process.cwd()`; проверочный адаптер отображает логический адрес на файл
+    схемы Ядра.
+  - **Область — только `run-state`** (`scope.id` идентифицирует запуск,
+    `scope.workspace_id` обязателен). `project-workspace`, `repository-scope`,
+    `built-in-methodology`, `user-profile`, `organization-profile` и
+    `origin.kind: built-in` отклоняются.
+  - **Независимые оси.** `payload` закрыт и требует
+    `lifecycle_stage` (закрытый упорядоченный пул `intake` → `classification` →
+    `norm_resolution` → `planning` → `execution` → `verification` → `acceptance`
+    → `integration` → `deployment` → `observation` → `completion`),
+    `work_status` (закрытый пул `planned`, `ready`, `active`, `waiting_human`,
+    `blocked`, `failed`, `completed`, `cancelled`), `scope_revision`,
+    `current_actor` (непрозрачная переносимая ссылка без роли и полномочия),
+    `resolved_norms`, `completed_checks` (уникальные переносимые ссылки),
+    `blockers`, `next_action`, `next_gate` (исполнимое значение либо явный
+    `null`) и `transition_history`. Одно универсальное поле `status` и
+    преждевременные поля роли, режима надзора (`HIC`/`HITL`/`HOTL`), способа
+    связи, независимости проверяющего, манифеста контекста, доказательств,
+    передачи и полевой оценки отклоняются по построению.
+  - **Согласованность осей.** Непустой `blockers` ⇔ `work_status: blocked`;
+    `blocked` без препятствия отклоняется; `waiting_human` обязан называть
+    конкретное действие в `next_action`; `completed`/`cancelled` обязаны нести
+    `next_action` и `next_gate` равными `null`; препятствие несёт устойчивый
+    `id`, `description` и проверяемое `resumption_condition`.
+  - **История переходов.** Обязательна и упорядочена строго возрастающим
+    `sequence` (не порядком файлов и не временем изменения); первая запись
+    задаёт исходное состояние (`from_stage`/`from_status` равны `null`); каждая
+    следующая продолжает предыдущую без разрыва; последняя совпадает с текущими
+    `lifecycle_stage`, `work_status` и `scope_revision`; `scope_revision` в
+    записях не убывает; переход назад требует `backward_rationale`, пропуск
+    этапа — перечисления промежуточных этапов в `skipped_stages` с обоснованием,
+    переход после `completed`/`cancelled` — `reopen_rationale`; `reason`
+    обязателен; журнал команд и переписка в записи перехода отклоняются.
+  - Схема — Ядро, записи запусков — Экземпляр; в этот пакет реальная запись в
+    Экземпляр не добавляется. Рубеж подключён к `scripts/kernel-validate.mjs`,
+    `hooks/pre-push`, `.github/workflows/gate.yml` и общей проверке изоляции Git
+    (`test/pre-push-git-isolation.test.mjs`). Отсутствие схемы или фикстур —
+    `FAIL`, не пропуск. `VERSION` не меняется. Пакеты ролей и управления
+    человеком, ограниченного контекста, доказательств и передачи, полевой
+    оценки и хранилища этим пакетом не начинаются.
+
 - **Контракт постановки задачи (`task-specification`) — обязательный участок
   проверки.** Переносимая человеко- и машиночитаемая форма конкретной единицы
   работы. Новые артефакты Ядра: `standards/workspace/task-specification.md`,

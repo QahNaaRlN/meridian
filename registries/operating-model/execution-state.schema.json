@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/execution-state.schema.json",
+  "title": "Meridian execution run state",
+  "description": "The complete schema for the state of ONE execution run (record_type: execution-run): a portable, storage-independent, human- and machine-readable snapshot of one actual attempt to carry out a task specification. A record declares THIS schema in its $schema, so a consumer that follows the declaration validates the whole record — the record envelope AND the specialised body — in one pass, and never accepts a body without id, scope, origin and authority. The record envelope is the SAME contract as registries/operating-model/scoped-record.schema.json (identity, scope, origin, authority): scripts/lib/execution-state.mjs validates every record against scoped-record.schema.json directly as well, so the canonical envelope check is reused and separately performed, never silently dropped. The managed entity is the RUN, not the conversational \"task\": one task specification may drive several runs, each with its own stable id and its own Russian title, and each references EXACTLY ONE task specification by a portable task_specification_ref — the specification is never absorbed or duplicated inside the payload. This schema narrows scope to the one workspace-scope-model area a run record may occupy — run-state (scope.id identifies the run, scope.workspace_id is mandatory); project-workspace, repository-scope, built-in-methodology, user-profile and organization-profile are rejected. The physical directory, the Instance repository and the storage mechanism are not the area. The payload carries the independent axes of the minimal current state — lifecycle_stage, work_status, scope_revision, current_actor, resolved_norms, completed_checks, blockers, next_action, next_gate and an ordered transition_history — as a CLOSED object, so one universal \"status\" field standing in for several axes is rejected by construction, and so is a leaked role, supervision mode, communication mode, context manifest or full evidence/handoff field that belongs to a later package. lifecycle_stage is the closed ordered pool intake → classification → norm_resolution → planning → execution → verification → acceptance → integration → deployment → observation → completion; work_status is the closed pool planned, ready, active, waiting_human, blocked, failed, completed, cancelled. next_action and next_gate are stated explicitly: a non-empty string, or an explicit null where there is no continuation — never a missing key. The rules this JSON Schema subset cannot state live in scripts/lib/execution-state.mjs: the declared $schema is RESOLVED as a LOGICAL address within the Meridian namespace and must resolve to exactly this file's logical address — not merely carry the right basename, and not the bare scoped-record envelope (resolution and the rooted-path rules are REUSED from scripts/lib/task-specification.mjs, no divergent copy); a non-empty blockers list agrees with work_status blocked and vice versa; waiting_human names a concrete next action; a completed or cancelled run carries no executable next step; blockers carry a stable id, a description and a verifiable resumption condition; resolved_norms and completed_checks are unique portable references; the transition history is ordered by an explicit strictly-increasing sequence whose ordinal never repeats or decreases, its first record states the initial state (from_stage and from_status null), each later record continues the previous state with no break, the last record matches the current lifecycle_stage, work_status and scope_revision, the per-transition scope_revision never decreases, a backward lifecycle move needs a backward_rationale, a skipped stage needs an explicit inapplicability basis, a transition after a terminal state needs a reopen_rationale, and every transition states a reason; portability of every reference string; the Russian name. The contract is a mandatory part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/execution-state-model.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "id", "title", "record_type", "scope", "origin", "authority", "payload"],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/definitions/semantic_id" },
+    "title": { "type": "string", "minLength": 1 },
+    "record_type": { "const": "execution-run" },
+    "scope": { "$ref": "#/definitions/scope_ref" },
+    "origin": { "$ref": "#/definitions/origin" },
+    "authority": { "$ref": "#/definitions/authority" },
+    "payload": { "$ref": "#/definitions/payload" }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "portable_ref": { "type": "string", "minLength": 1 },
+    "next_step": {
+      "description": "An executable value (a non-empty string) or an explicit null where there is no continuation. The key is always required, so an absent axis is never read as null.",
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "lifecycle_stage": {
+      "type": "string",
+      "enum": [
+        "intake", "classification", "norm_resolution", "planning", "execution",
+        "verification", "acceptance", "integration", "deployment", "observation",
+        "completion"
+      ]
+    },
+    "lifecycle_stage_or_null": {
+      "type": ["string", "null"],
+      "enum": [
+        "intake", "classification", "norm_resolution", "planning", "execution",
+        "verification", "acceptance", "integration", "deployment", "observation",
+        "completion", null
+      ]
+    },
+    "work_status": {
+      "type": "string",
+      "enum": ["planned", "ready", "active", "waiting_human", "blocked", "failed", "completed", "cancelled"]
+    },
+    "work_status_or_null": {
+      "type": ["string", "null"],
+      "enum": ["planned", "ready", "active", "waiting_human", "blocked", "failed", "completed", "cancelled", null]
+    },
+    "scope_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "workspace_id"],
+      "description": "A run record's area. Only run-state is accepted; every other area of the workspace scope model is rejected here (and in scripts/lib/execution-state.mjs with the rationale). scope.id identifies the run; workspace_id ties the run to its project workspace (workspace-scope-model.md §1).",
+      "properties": {
+        "type": { "enum": ["run-state"] },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "workspace_id": { "$ref": "#/definitions/semantic_id" }
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "description": "Same contract as scoped-record.schema.json's origin. A run is started in a workspace, so kind 'built-in' is additionally rejected by scripts/lib/execution-state.mjs.",
+      "properties": {
+        "kind": { "enum": ["built-in", "declared", "migrated", "imported", "derived"] },
+        "source_ref": { "$ref": "#/definitions/non_empty" }
+      },
+      "if": { "properties": { "kind": { "const": "built-in" } }, "required": ["kind"] },
+      "then": { "not": { "required": ["source_ref"] } },
+      "else": { "required": ["source_ref"] }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "authority_ref"],
+      "description": "Same contract as scoped-record.schema.json's authority.",
+      "properties": {
+        "kind": {
+          "enum": ["methodology-owner", "user", "organization", "project-owner", "repository-maintainer", "delegated-run"]
+        },
+        "authority_ref": { "$ref": "#/definitions/non_empty" },
+        "decision_ref": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "resumption_condition"],
+      "description": "One structured blocker. id is a stable semantic identifier, unique within the run. description states the condition. resumption_condition is the observable condition under which continuation becomes possible again — not a free phrase. A non-empty blockers list agrees with work_status 'blocked' (checked in scripts/lib/execution-state.mjs); 'blocked' and 'waiting_human' are not interchangeable.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "description": { "$ref": "#/definitions/non_empty" },
+        "resumption_condition": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "stage_skip": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "rationale"],
+      "description": "An explicit statement that a lifecycle stage does not apply and is deliberately not passed through. A transition that jumps over a stage without a matching stage_skip is rejected as a silent skip.",
+      "properties": {
+        "stage": { "$ref": "#/definitions/lifecycle_stage" },
+        "rationale": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "to_stage", "to_status", "scope_revision", "reason"],
+      "description": "One entry in the ordered transition history. sequence is the explicit ordinal (strictly increasing, never repeated or decreasing); it is the ordering, not object or file order. The first entry states the initial state: from_stage and from_status are null. Every later entry continues the previous entry's to_stage / to_status with no break, and the last entry matches the run's current lifecycle_stage, work_status and scope_revision. reason is mandatory. backward_rationale is required for a move to an earlier stage; skipped_stages is required to jump over a stage; reopen_rationale is required for any entry after a completed or cancelled state. The history stores run state, not a full command log or transcript.",
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 1 },
+        "from_stage": { "$ref": "#/definitions/lifecycle_stage_or_null" },
+        "to_stage": { "$ref": "#/definitions/lifecycle_stage" },
+        "from_status": { "$ref": "#/definitions/work_status_or_null" },
+        "to_status": { "$ref": "#/definitions/work_status" },
+        "scope_revision": { "type": "integer", "minimum": 1 },
+        "reason": { "$ref": "#/definitions/non_empty" },
+        "skipped_stages": { "type": "array", "items": { "$ref": "#/definitions/stage_skip" } },
+        "backward_rationale": { "$ref": "#/definitions/non_empty" },
+        "reopen_rationale": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_specification_ref", "lifecycle_stage", "work_status", "scope_revision",
+        "current_actor", "resolved_norms", "completed_checks", "blockers",
+        "next_action", "next_gate", "transition_history"
+      ],
+      "description": "The independent axes of one run's minimal current state, as a CLOSED object. Every axis is required and no other field is accepted, so a single universal 'status' field, and role / supervision-mode / communication-mode / context-manifest / full-evidence fields that belong to later packages, are rejected by construction. next_action and next_gate are next_step: an action string or an explicit null.",
+      "properties": {
+        "task_specification_ref": { "$ref": "#/definitions/portable_ref" },
+        "lifecycle_stage": { "$ref": "#/definitions/lifecycle_stage" },
+        "work_status": { "$ref": "#/definitions/work_status" },
+        "scope_revision": { "type": "integer", "minimum": 1 },
+        "current_actor": { "$ref": "#/definitions/portable_ref" },
+        "resolved_norms": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/definitions/portable_ref" } },
+        "completed_checks": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/definitions/portable_ref" } },
+        "blockers": { "type": "array", "items": { "$ref": "#/definitions/blocker" } },
+        "next_action": { "$ref": "#/definitions/next_step" },
+        "next_gate": { "$ref": "#/definitions/next_step" },
+        "transition_history": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/transition" } }
+      }
+    }
+  }
+}

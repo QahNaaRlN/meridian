@@ -1,0 +1,1886 @@
+{
+  "note": "Product-neutral fixtures for registries/operating-model/execution-state.schema.json and scripts/lib/execution-state.mjs. Every `valid` record must pass evaluateExecutionState with no problem; every `invalid` record must produce at least one. One model everywhere: each record declares $schema = ../../registries/operating-model/execution-state.schema.json — a portable relative reference that, resolved INSIDE THE MERIDIAN NAMESPACE, lands exactly on the specialised schema's logical address (the complete schema that composes the reused scoped-record envelope with the body). Resolution and the rooted-path rules are REUSED from scripts/lib/task-specification.mjs — a bare basename, a reference into a namespace segment that is not there, a right-basename/wrong-segment reference and a reference that climbs out of the namespace all resolve elsewhere and are rejected. The managed entity is the execution RUN: one task specification (referenced by a portable task_specification_ref, never embedded) may drive several runs, each with its own id and Russian title. scope is run-state only, with scope.id identifying the run and scope.workspace_id mandatory. The payload carries the independent axes (no single universal status, no leaked role / supervision-mode / communication-mode / context-manifest / evidence / handoff field) and an ordered transition_history whose first record states the initial state, whose ordinal strictly increases, that never breaks the from/to chain, whose last record matches the current axes, and where a backward move, a skipped stage and a transition after a terminal state each carry an explicit basis. No rooted machine path, no file:// and no product literals anywhere.",
+  "valid": [
+    {
+      "note": "reference run — mid-execution, active, portable throughout",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-clarify-null-handling-001",
+        "title": "Запуск постановки об обработке пустого значения — попытка 1",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-001", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-start-run-001" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner", "decision_ref": "owner-decision:example-start-run-001" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-clarify-null-handling",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 2,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-regression-route", "norm:example-config-parser-locality"],
+          "completed_checks": ["check:example-red-repro"],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята в работу; зарегистрирован запуск." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Начата классификация единицы работы." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Классификация завершена; начато разрешение применимых норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Нормы разрешены; начато планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 2, "reason": "План принят; разрешённая область расширена до редакции 2; начато исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "walkthrough to completion — covers every lifecycle stage as a to_stage and the terminal completed status",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-walkthrough-001",
+        "title": "Сквозной запуск через все этапы до завершения",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-walkthrough", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-start-walkthrough" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-add-export-endpoint",
+          "lifecycle_stage": "completion",
+          "work_status": "completed",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-endpoint-contract"],
+          "completed_checks": ["check:example-endpoint-shape", "check:example-post-merge-gate"],
+          "blockers": [],
+          "next_action": null,
+          "next_gate": null,
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята в работу." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Начата классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Начато разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Начато планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Начато исполнение." },
+            { "sequence": 6, "from_stage": "execution", "from_status": "active", "to_stage": "verification", "to_status": "active", "scope_revision": 1, "reason": "Изменение готово; начата проверка." },
+            { "sequence": 7, "from_stage": "verification", "from_status": "active", "to_stage": "acceptance", "to_status": "active", "scope_revision": 1, "reason": "Проверки пройдены; начата приёмка." },
+            { "sequence": 8, "from_stage": "acceptance", "from_status": "active", "to_stage": "integration", "to_status": "active", "scope_revision": 1, "reason": "Результат принят; начата интеграция." },
+            { "sequence": 9, "from_stage": "integration", "from_status": "active", "to_stage": "deployment", "to_status": "active", "scope_revision": 1, "reason": "Интеграция завершена; начато развёртывание." },
+            { "sequence": 10, "from_stage": "deployment", "from_status": "active", "to_stage": "observation", "to_status": "active", "scope_revision": 1, "reason": "Развёрнуто; начато наблюдение." },
+            { "sequence": 11, "from_stage": "observation", "from_status": "active", "to_stage": "completion", "to_status": "completed", "scope_revision": 1, "reason": "Окно наблюдения закрыто без отклонений; запуск завершён." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "waiting_human — a specific human action is known; distinct from blocked; covers the ready status",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-await-owner-decision-001",
+        "title": "Запуск ожидает решения владельца об изменении поведения",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-await-owner", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-start-await-owner" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-change-rounding-rule",
+          "lifecycle_stage": "verification",
+          "work_status": "waiting_human",
+          "scope_revision": 2,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-behavior-change-route"],
+          "completed_checks": ["check:example-boundary-rounding"],
+          "blockers": [],
+          "next_action": "owner-approves-observed-behaviour-change",
+          "next_gate": "acceptance",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята в работу." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "intake", "to_status": "ready", "scope_revision": 1, "reason": "Входные данные полны; запуск готов к классификации." },
+            { "sequence": 3, "from_stage": "intake", "from_status": "ready", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Начата классификация." },
+            { "sequence": 4, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Начато разрешение норм." },
+            { "sequence": 5, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Начато планирование." },
+            { "sequence": 6, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Начато исполнение." },
+            { "sequence": 7, "from_stage": "execution", "from_status": "active", "to_stage": "verification", "to_status": "active", "scope_revision": 2, "reason": "Изменение готово; область уточнена до редакции 2; начата проверка." },
+            { "sequence": 8, "from_stage": "verification", "from_status": "active", "to_stage": "verification", "to_status": "waiting_human", "scope_revision": 2, "reason": "Проверка показала намеренное изменение поведения; требуется решение владельца." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "blocked — a non-empty blocker with a verifiable resumption condition; agrees with work_status blocked",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-blocked-upstream-001",
+        "title": "Запуск заблокирован из-за отсутствующей вышестоящей фикстуры",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-blocked-upstream", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-start-blocked-upstream" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-clarify-null-handling",
+          "lifecycle_stage": "execution",
+          "work_status": "blocked",
+          "scope_revision": 2,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-regression-route"],
+          "completed_checks": [],
+          "blockers": [
+            { "id": "awaiting-upstream-fixture", "description": "Вышестоящая команда ещё не опубликовала обновлённую фикстуру разбора конфигурации.", "resumption_condition": "Обновлённая фикстура опубликована и запись проверки становится воспроизводимой при её прогоне." }
+          ],
+          "next_action": null,
+          "next_gate": null,
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята в работу." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Начата классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Начато разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Начато планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 2, "reason": "Начато исполнение утверждённого среза." },
+            { "sequence": 6, "from_stage": "execution", "from_status": "active", "to_stage": "execution", "to_status": "blocked", "scope_revision": 2, "reason": "Отсутствует вышестоящая фикстура; продолжение невозможно." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "cancelled — terminal, no executable next step",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-cancelled-001",
+        "title": "Запуск отменён владельцем на этапе планирования",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-cancelled", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-start-cancelled" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner", "decision_ref": "owner-decision:example-cancel-run" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-split-monolith-reporting",
+          "lifecycle_stage": "planning",
+          "work_status": "cancelled",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": [],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": null,
+          "next_gate": null,
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята в работу." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Начата классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Начато разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Начато планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "planning", "to_status": "cancelled", "scope_revision": 1, "reason": "Владелец отменил инициативу; запуск закрыт." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "failed — not a terminal status; carries a next executable step",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-failed-verification-001",
+        "title": "Запуск: проверка не пройдена, назначена повторная попытка",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-failed-verification", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-start-failed-verification" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-extract-parser-module",
+          "lifecycle_stage": "verification",
+          "work_status": "failed",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-refactor-parity-route"],
+          "completed_checks": ["check:example-baseline-run"],
+          "blockers": [],
+          "next_action": "diagnose-failed-verification-and-retry",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята в работу." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Начата классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Начато разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Начато планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Начато исполнение." },
+            { "sequence": 6, "from_stage": "execution", "from_status": "active", "to_stage": "verification", "to_status": "active", "scope_revision": 1, "reason": "Изменение готово; начата проверка паритета." },
+            { "sequence": 7, "from_stage": "verification", "from_status": "active", "to_stage": "verification", "to_status": "failed", "scope_revision": 1, "reason": "Прогон паритета разошёлся; проверка не пройдена." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "explicit inapplicable stages — a docs-only run skips integration and deployment with a stated basis for each",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-docs-only-001",
+        "title": "Запуск документальной синхронизации без интеграции и развёртывания",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-docs-only", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-start-docs-only" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-assess-logging-coverage",
+          "lifecycle_stage": "observation",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-assessment-route"],
+          "completed_checks": ["check:example-logging-enumeration"],
+          "blockers": [],
+          "next_action": "record-observation-window-result",
+          "next_gate": "completion",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята в работу." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Начата классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Начато разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Начато планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Начато исполнение оценки." },
+            { "sequence": 6, "from_stage": "execution", "from_status": "active", "to_stage": "verification", "to_status": "active", "scope_revision": 1, "reason": "Перечень точек журналирования готов; начата проверка." },
+            { "sequence": 7, "from_stage": "verification", "from_status": "active", "to_stage": "acceptance", "to_status": "active", "scope_revision": 1, "reason": "Проверка пройдена; начата приёмка." },
+            { "sequence": 8, "from_stage": "acceptance", "from_status": "active", "to_stage": "observation", "to_status": "active", "scope_revision": 1, "reason": "Оценка принята; интеграция и развёртывание неприменимы, переход к наблюдению.", "skipped_stages": [ { "stage": "integration", "rationale": "Оценка не производит изменения кода, интегрировать нечего." }, { "stage": "deployment", "rationale": "Нет артефакта для развёртывания." } ] }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a second run of the SAME task specification as the reference run — a different id and scope.id, one shared task_specification_ref",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-clarify-null-handling-002",
+        "title": "Запуск постановки об обработке пустого значения — попытка 2",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-002", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-start-run-002" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-clarify-null-handling",
+          "lifecycle_stage": "planning",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-second-executor-agent",
+          "resolved_norms": ["norm:example-regression-route"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "finish-plan-for-approved-scope",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Та же постановка перезапущена после первой попытки." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Начата классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Начато разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Начато планирование." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "ordinary relative paths in transition reasons are portable and not flagged",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-relative-paths-001",
+        "title": "Запуск с относительными путями в тексте причин переходов",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-relative-paths", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-start-relative-paths" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-clarify-null-handling",
+          "lifecycle_stage": "classification",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-config-parser-locality"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "continue-classification",
+          "next_gate": "planning",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка о модуле src/config/parser принята в работу." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация: изменение затрагивает только packages/@scope/module и relative/$private/file." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a backward lifecycle move carried out with an explicit backward_rationale is accepted",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-replan-001",
+        "title": "Запуск с санкционированным возвратом к планированию",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-replan", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-start-replan" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-add-export-endpoint",
+          "lifecycle_stage": "planning",
+          "work_status": "active",
+          "scope_revision": 2,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-endpoint-contract"],
+          "completed_checks": ["check:example-endpoint-shape"],
+          "blockers": [],
+          "next_action": "revise-plan-for-observed-gap",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята в работу." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Начата классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Начато разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Начато планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 2, "reason": "Начато исполнение." },
+            { "sequence": 6, "from_stage": "execution", "from_status": "active", "to_stage": "verification", "to_status": "active", "scope_revision": 2, "reason": "Начата проверка." },
+            { "sequence": 7, "from_stage": "verification", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 2, "reason": "Проверка выявила пробел в плане.", "backward_rationale": "Владелец санкционировал возврат к планированию для устранения пробела (owner-decision:example-replan-approve)." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a transition after a completed state carried out with an explicit reopen_rationale (and backward_rationale for the earlier stage) is accepted",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-reopened-001",
+        "title": "Запуск, повторно открытый владельцем для дополнительного наблюдения",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-reopened", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-start-reopened" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner", "decision_ref": "owner-decision:example-reopen-run" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-add-export-endpoint",
+          "lifecycle_stage": "observation",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-endpoint-contract"],
+          "completed_checks": ["check:example-endpoint-shape", "check:example-post-merge-gate"],
+          "blockers": [],
+          "next_action": "run-additional-observation-window",
+          "next_gate": "completion",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята в работу." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Начата классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Начато разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Начато планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Начато исполнение." },
+            { "sequence": 6, "from_stage": "execution", "from_status": "active", "to_stage": "verification", "to_status": "active", "scope_revision": 1, "reason": "Начата проверка." },
+            { "sequence": 7, "from_stage": "verification", "from_status": "active", "to_stage": "acceptance", "to_status": "active", "scope_revision": 1, "reason": "Начата приёмка." },
+            { "sequence": 8, "from_stage": "acceptance", "from_status": "active", "to_stage": "integration", "to_status": "active", "scope_revision": 1, "reason": "Начата интеграция." },
+            { "sequence": 9, "from_stage": "integration", "from_status": "active", "to_stage": "deployment", "to_status": "active", "scope_revision": 1, "reason": "Начато развёртывание." },
+            { "sequence": 10, "from_stage": "deployment", "from_status": "active", "to_stage": "observation", "to_status": "active", "scope_revision": 1, "reason": "Начато наблюдение." },
+            { "sequence": 11, "from_stage": "observation", "from_status": "active", "to_stage": "completion", "to_status": "completed", "scope_revision": 1, "reason": "Запуск завершён." },
+            { "sequence": 12, "from_stage": "completion", "from_status": "completed", "to_stage": "observation", "to_status": "active", "scope_revision": 1, "reason": "Открыто дополнительное окно наблюдения.", "reopen_rationale": "Владелец повторно открыл запуск решением owner-decision:example-reopen-run.", "backward_rationale": "Возврат к наблюдению санкционирован тем же решением владельца." }
+          ]
+        }
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "note": "$schema is absent — a consumer would not reach the specialised contract",
+      "spec": {
+        "schema_version": 1,
+        "id": "example-run-no-schema",
+        "title": "Запуск без объявленной схемы",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-no-schema", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-no-schema" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "$schema resolves to a different schema (right directory, wrong file)",
+      "spec": {
+        "$schema": "../../registries/operating-model/some-other.schema.json",
+        "schema_version": 1,
+        "id": "example-run-schema-wrong-file",
+        "title": "Запуск с неверной объявленной схемой",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-schema-wrong-file", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-schema-wrong-file" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "$schema given as a bare basename (no relative path) does not resolve",
+      "spec": {
+        "$schema": "execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-schema-basename",
+        "title": "Запуск со схемой по одному базовому имени",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-schema-basename", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-schema-basename" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "$schema points only at the record envelope, so the body would not be checked",
+      "spec": {
+        "$schema": "../../registries/operating-model/scoped-record.schema.json",
+        "schema_version": 1,
+        "id": "example-run-schema-envelope-only",
+        "title": "Запуск со схемой только конверта записи",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-schema-envelope-only", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-schema-envelope-only" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "$schema climbs out of the Meridian namespace root",
+      "spec": {
+        "$schema": "../../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-schema-out-of-namespace",
+        "title": "Запуск со схемой за пределами пространства имён",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-schema-oon", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-schema-oon" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "wrong record_type on the envelope",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-wrong-record-type",
+        "title": "Запуск с неверным типом записи",
+        "record_type": "task-specification",
+        "scope": { "type": "run-state", "id": "example-run-wrong-record-type", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-wrong-record-type" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "scope is project-workspace, not run-state",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-scope-project-workspace",
+        "title": "Запуск в области рабочего пространства проекта",
+        "record_type": "execution-run",
+        "scope": { "type": "project-workspace", "id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-project-workspace" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "scope is repository-scope, not run-state",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-scope-repository",
+        "title": "Запуск в локальной области репозитория",
+        "record_type": "execution-run",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-repository" },
+        "authority": { "kind": "repository-maintainer", "authority_ref": "example-repository-maintainer" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "scope is built-in-methodology, not run-state",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-scope-builtin",
+        "title": "Запуск в области встроенной методологии",
+        "record_type": "execution-run",
+        "scope": { "type": "built-in-methodology", "id": "built-in-methodology" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-builtin" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "scope is user-profile, not run-state",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-scope-user-profile",
+        "title": "Запуск в области профиля пользователя",
+        "record_type": "execution-run",
+        "scope": { "type": "user-profile", "id": "example-user" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-user-profile" },
+        "authority": { "kind": "user", "authority_ref": "example-user" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "scope is organization-profile, not run-state",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-scope-organization-profile",
+        "title": "Запуск в области профиля организации",
+        "record_type": "execution-run",
+        "scope": { "type": "organization-profile", "id": "example-organization" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-organization-profile" },
+        "authority": { "kind": "organization", "authority_ref": "example-organization" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "run-state scope without workspace_id",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-no-workspace-id",
+        "title": "Запуск в области состояния запуска без идентификатора рабочего пространства",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-no-workspace-id" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-no-workspace-id" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "origin.kind is built-in — a run is started in a workspace, not shipped with the methodology",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-builtin-origin",
+        "title": "Запуск со встроенным происхождением",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-builtin-origin", "workspace_id": "example-workspace" },
+        "origin": { "kind": "built-in" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "no task_specification_ref — the run references no specification",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-no-spec-ref",
+        "title": "Запуск без ссылки на постановку задачи",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-no-spec-ref", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-no-spec-ref" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "one universal status field instead of the independent axes",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-single-status",
+        "title": "Запуск с единым полем состояния",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-single-status", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-single-status" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "status": "in_progress",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "unknown lifecycle_stage",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-unknown-stage",
+        "title": "Запуск с неизвестным этапом жизненного цикла",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-unknown-stage", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-unknown-stage" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "deploying",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "unknown work_status",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-unknown-status",
+        "title": "Запуск с неизвестным рабочим состоянием",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-unknown-status", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-unknown-status" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "in_progress",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "in_progress", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a required axis is missing (next_gate)",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-missing-axis",
+        "title": "Запуск без обязательной оси next_gate",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-missing-axis", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-missing-axis" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "transition_history axis is missing entirely",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-missing-history",
+        "title": "Запуск без оси истории переходов",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-missing-history", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-missing-history" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification"
+        }
+      }
+    },
+    {
+      "note": "scope_revision is zero",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-scope-revision-zero",
+        "title": "Запуск с нулевой редакцией области",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-scope-revision-zero", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-revision-zero" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 0,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "scope_revision is negative",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-scope-revision-negative",
+        "title": "Запуск с отрицательной редакцией области",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-scope-revision-negative", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-revision-negative" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": -1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "scope_revision is fractional",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-scope-revision-fraction",
+        "title": "Запуск с дробной редакцией области",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-scope-revision-fraction", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-revision-fraction" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1.5,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "scope_revision decreases across the transition history",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-scope-revision-decreasing",
+        "title": "Запуск с убывающей редакцией области в истории",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-scope-revision-decreasing", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-revision-decreasing" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 2, "reason": "Область расширена до редакции 2." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 2, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение при редакции 1." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "transition_history is empty",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-empty-history",
+        "title": "Запуск с пустой историей переходов",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-empty-history", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-empty-history" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": []
+        }
+      }
+    },
+    {
+      "note": "a repeated transition ordinal",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-repeated-ordinal",
+        "title": "Запуск с повторяющимся номером перехода",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-repeated-ordinal", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-repeated-ordinal" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 2, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a break in the from/to chain of the transition history",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-chain-break",
+        "title": "Запуск с разрывом цепочки переходов",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-chain-break", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-chain-break" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "planning", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрыв: предыдущий этап был classification." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "the last transition does not match the current work_status",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-last-mismatch",
+        "title": "Запуск: последний переход не совпадает с текущим состоянием",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-last-mismatch", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-last-mismatch" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "waiting_human",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "owner-approves-something-concrete",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a silently skipped lifecycle stage — planning jumps to acceptance with no skipped_stages basis",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-silent-skip",
+        "title": "Запуск с молчаливым пропуском этапа",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-silent-skip", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-silent-skip" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "acceptance",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "continue-acceptance",
+          "next_gate": "integration",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "acceptance", "to_status": "active", "scope_revision": 1, "reason": "Пропуск исполнения и проверки без основания." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a backward lifecycle move with no backward_rationale",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-silent-backward",
+        "title": "Запуск с молчаливым возвратом по жизненному циклу",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-silent-backward", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-silent-backward" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "planning",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "revise-plan",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." },
+            { "sequence": 6, "from_stage": "execution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Возврат к планированию без зафиксированного основания." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a new transition after a completed state with no reopen_rationale",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-after-terminal",
+        "title": "Запуск с переходом после завершённого состояния без основания",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-after-terminal", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-after-terminal" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "failed",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "diagnose-and-retry",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." },
+            { "sequence": 6, "from_stage": "execution", "from_status": "active", "to_stage": "execution", "to_status": "completed", "scope_revision": 1, "reason": "Запуск помечен завершённым." },
+            { "sequence": 7, "from_stage": "execution", "from_status": "completed", "to_stage": "execution", "to_status": "failed", "scope_revision": 1, "reason": "Работа продолжена после завершения без разрешённого механизма." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "work_status is blocked with an empty blockers list",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-blocked-no-blocker",
+        "title": "Запуск заблокирован без препятствия",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-blocked-no-blocker", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-blocked-no-blocker" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "blocked",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": null,
+          "next_gate": null,
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "blocked", "scope_revision": 1, "reason": "Помечено заблокированным без препятствия." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a blocker is present while work_status is not blocked",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-blocker-not-blocked",
+        "title": "Запуск с препятствием при состоянии active",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-blocker-not-blocked", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-blocker-not-blocked" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [
+            { "id": "awaiting-input", "description": "Ожидается вход от вышестоящей команды.", "resumption_condition": "Вход получен и проверен." }
+          ],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "work_status is waiting_human but next_action names no concrete action",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-waiting-no-action",
+        "title": "Запуск ожидает человека без конкретного следующего действия",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-waiting-no-action", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-waiting-no-action" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "verification",
+          "work_status": "waiting_human",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": null,
+          "next_gate": "acceptance",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." },
+            { "sequence": 6, "from_stage": "execution", "from_status": "active", "to_stage": "verification", "to_status": "waiting_human", "scope_revision": 1, "reason": "Ожидание человека без указания требуемого действия." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a completed run that still carries an executable next_action",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-completed-with-next-action",
+        "title": "Завершённый запуск с исполнимым следующим действием",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-completed-with-next-action", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-completed-with-next-action" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "completed",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "do-more-work",
+          "next_gate": null,
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "completed", "scope_revision": 1, "reason": "Запуск завершён." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "resolved_norms repeats a reference",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-duplicate-norm",
+        "title": "Запуск с повторяющейся ссылкой на норму",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-duplicate-norm", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-duplicate-norm" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a", "norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "two blockers share the same id",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-duplicate-blocker-id",
+        "title": "Запуск с повторяющимся идентификатором препятствия",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-duplicate-blocker-id", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-duplicate-blocker-id" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "blocked",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [
+            { "id": "same-blocker", "description": "Первое препятствие.", "resumption_condition": "Первое условие возобновления выполнено." },
+            { "id": "same-blocker", "description": "Второе препятствие.", "resumption_condition": "Второе условие возобновления выполнено." }
+          ],
+          "next_action": null,
+          "next_gate": null,
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "blocked", "scope_revision": 1, "reason": "Заблокировано." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a blocker with no resumption condition",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-blocker-no-condition",
+        "title": "Запуск с препятствием без условия возобновления",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-blocker-no-condition", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-blocker-no-condition" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "blocked",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [
+            { "id": "no-condition", "description": "Препятствие без проверяемого условия возобновления." }
+          ],
+          "next_action": null,
+          "next_gate": null,
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "blocked", "scope_revision": 1, "reason": "Заблокировано." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "task_specification_ref is an absolute machine path",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-absolute-spec-ref",
+        "title": "Запуск с абсолютным машинным путём в ссылке на постановку",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-absolute-spec-ref", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-absolute-spec-ref" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "/opt/specs/example-clarify-null-handling",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a rooted machine path in a transition reason",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-rooted-path-reason",
+        "title": "Запуск с корневым путём в причине перехода",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-rooted-path-reason", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-path-reason" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Норма прочитана из /etc/example/policy и заблокировала шаг." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a file:// URL in current_actor",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-file-url-actor",
+        "title": "Запуск со ссылкой file:// в участнике",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-file-url-actor", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-file-url-actor" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "file:///actors/example-executor",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a role field prematurely added to the payload",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-role-leak",
+        "title": "Запуск с преждевременным полем роли",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-role-leak", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-role-leak" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "role": "reviewer",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a supervision_mode field prematurely added to the payload",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-supervision-leak",
+        "title": "Запуск с преждевременным полем режима надзора",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-supervision-leak", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-supervision-leak" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "supervision_mode": "hitl",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a context_manifest field prematurely added to the payload",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-context-manifest-leak",
+        "title": "Запуск с преждевременным полем манифеста контекста",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-context-manifest-leak", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-context-manifest-leak" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "context_manifest": { "sources": [] },
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a full handoff contract field prematurely added to the payload",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-handoff-leak",
+        "title": "Запуск с преждевременным полем передачи",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-handoff-leak", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-handoff-leak" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "handoff": { "snapshot": "x" },
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "an unknown additional field in the payload",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-unknown-field",
+        "title": "Запуск с неизвестным дополнительным полем",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-unknown-field", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-unknown-field" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "unexpected_field": "value",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a transition carrying a full command log — the history stores run state, not a command journal",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-transition-command-log",
+        "title": "Запуск с журналом команд внутри перехода",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-transition-command-log", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-transition-command-log" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": null, "from_status": null, "to_stage": "intake", "to_status": "planned", "scope_revision": 1, "reason": "Постановка принята." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "planned", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация.", "command_log": ["ls", "cat file"] },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    },
+    {
+      "note": "the first transition names a prior from_stage / from_status instead of stating the initial state",
+      "spec": {
+        "$schema": "../../registries/operating-model/execution-state.schema.json",
+        "schema_version": 1,
+        "id": "example-run-first-not-initial",
+        "title": "Запуск, первая запись которого не задаёт исходное состояние",
+        "record_type": "execution-run",
+        "scope": { "type": "run-state", "id": "example-run-first-not-initial", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-first-not-initial" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "task_specification_ref": "task-specification:example-a",
+          "lifecycle_stage": "execution",
+          "work_status": "active",
+          "scope_revision": 1,
+          "current_actor": "actor:example-executor-agent",
+          "resolved_norms": ["norm:example-a"],
+          "completed_checks": [],
+          "blockers": [],
+          "next_action": "implement-approved-slice",
+          "next_gate": "verification",
+          "transition_history": [
+            { "sequence": 1, "from_stage": "intake", "from_status": "planned", "to_stage": "intake", "to_status": "ready", "scope_revision": 1, "reason": "Первая запись ссылается на предшествующее состояние." },
+            { "sequence": 2, "from_stage": "intake", "from_status": "ready", "to_stage": "classification", "to_status": "active", "scope_revision": 1, "reason": "Классификация." },
+            { "sequence": 3, "from_stage": "classification", "from_status": "active", "to_stage": "norm_resolution", "to_status": "active", "scope_revision": 1, "reason": "Разрешение норм." },
+            { "sequence": 4, "from_stage": "norm_resolution", "from_status": "active", "to_stage": "planning", "to_status": "active", "scope_revision": 1, "reason": "Планирование." },
+            { "sequence": 5, "from_stage": "planning", "from_status": "active", "to_stage": "execution", "to_status": "active", "scope_revision": 1, "reason": "Исполнение." }
+          ]
+        }
+      }
+    }
+  ]
+}

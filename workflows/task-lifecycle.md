@@ -116,6 +116,16 @@ which answers what bounded context is needed to continue, not what happened.
 
 If a Kernel rule, document, or gate check cost more than it should have during this task, append one entry to `$MERIDIAN_INSTANCE/.agent/feedback/friction-log.md` per [`feedback-and-metrics.md`](../standards/workspace/feedback-and-metrics.md). Skip this when nothing fought back; a quiet task produces no entry.
 
+A friction-log entry and the gate-run log (`validate-log.jsonl`) are not
+practical-evaluation observations. Recording a `field-evaluation-observation`
+against one of the eight characteristics of
+[meridian-field-evaluation.md](../standards/workspace/meridian-field-evaluation.md)
+— mechanism correctness, context-entry time, rework returns, correct/false
+stops, missed norms, resumption success, owner cost, post-acceptance defects —
+is a separate, explicitly decided act, grounded by its own pinned and
+externally-resolved evidence; it is never inferred automatically from this
+task's report, its friction-log entry, or its gate run.
+
 ## Authority and scope invariants
 
 - Current user request controls the authorized outcome and mutations.

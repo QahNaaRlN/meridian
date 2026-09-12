@@ -105,6 +105,13 @@ if ! node "$ROOT/test/evidence-and-handoff.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: verifying the field-evaluation contract"
+if ! node "$ROOT/test/field-evaluation.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the field-evaluation contract is inconsistent."
+  exit 1
+fi
+
 echo "pre-push: running the Git-environment isolation regression test"
 if ! node "$ROOT/test/pre-push-git-isolation.test.mjs"; then
   echo ""

@@ -49,6 +49,9 @@ jobs:
       - name: Verify the evidence and handoff contract
         run: node test/evidence-and-handoff.test.mjs
 
+      - name: Verify the field-evaluation contract
+        run: node test/field-evaluation.test.mjs
+
       - name: Regression-test the pre-push Git-environment isolation
         run: node test/pre-push-git-isolation.test.mjs
 

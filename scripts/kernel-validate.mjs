@@ -99,6 +99,7 @@ import { evaluateExecutionState } from './lib/execution-state.mjs';
 import { evaluateRoleRegistry, evaluateHumanControl } from './lib/role-and-human-control.mjs';
 import { evaluateContextManifest, makeRecordResolver } from './lib/context-manifest.mjs';
 import { evaluateEvidenceAndHandoff } from './lib/evidence-and-handoff.mjs';
+import { evaluateFieldEvaluation } from './lib/field-evaluation.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1708,6 +1709,115 @@ function functionalParityConsistency(rec) {
     if (ehOk && ehCoverage) {
       ok('evidence-and-handoff-contract: the evidence-and-handoff schema parsed and keyword-checked; '
        + `${ehSatisfied} representative fixture(s) satisfied the composition (record envelope, run-state scope, the deterministic single-run link via four closed structured pinned references, the reused closed exact-revision rule for pinned references / repository states / evidence entries, claimed results / verifiable assertions / evidence as separate id-linked lists where a verified assertion needs a resolved confirming evidence entry whose transformer-confirmed covers binds it and a claimed result's status is two-sided, acceptance-criteria coverage closed against the resolved task specification's NON-EMPTY criterion set, the FULL mandatory_checks set closed against the specification's own minimal machine list, the three distinct mandatory-check statuses each backed by resolved result evidence that records THAT check's check_ref, completed_checks confirming the fact a passed OR failed check ran, source and result states pinning the same repository set, the closed worktree-disposition set, outcome.status "complete" as the whole run finished, and the four pinned records plus every evidence entry resolved through the external boundary and checked against the actual execution-run record's own state) and ${ehRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// meridian-field-evaluation: practical evaluation of Meridian's own mechanisms (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/field-evaluation.schema.json is the specialised
+// schema for TWO record types — field-evaluation-observation (one measured
+// data point about ONE of the eight characteristics of
+// meridian-operating-upgrade-plan.md §10 for ONE execution run, run-state
+// scoped, pinned to that run) and field-evaluation-report (a deterministic
+// aggregation over a pinned, externally-resolved set of observations,
+// project-workspace scoped, never one rolled-up score). Which body applies is
+// selected by record_type inside the one schema file, not by a second schema.
+// Its envelope is validated against the existing scoped-record.schema.json.
+// An observation's measurement kind and (for classification) outcome pool are
+// fixed per metric_id; status "observed" requires pinned evidence RESOLVED
+// through a boundary external to the record to a closed evidence-result
+// confirming observed_result "confirmed" AND a metric_ref naming this
+// observation's own metric. A report's included/excluded observations are
+// resolved the same way, checked for the same workspace and the same
+// reporting period, checked for no double counting (a repeated id, or a
+// superseded+superseding pair both included), required to represent all
+// eight metrics exactly once, and — the central check — each per_metric
+// aggregate is RECOMPUTED from the resolved, named sample and compared
+// EXACTLY against the report's own stated aggregate. The contract is a
+// MANDATORY part of this Kernel: a missing schema or missing fixtures is a
+// FAIL, not an informational skip. As with the other operating-model blocks,
+// the schema is parsed, walked for unsupported keywords, and exercised
+// against its bundled fixtures here, fail-closed on the bundle's own shape.
+{
+  const feDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const feSchemaName = 'field-evaluation.schema.json';
+  const feSchemaRaw = readIfExists(path.join(feDir, feSchemaName));
+  if (feSchemaRaw === null) {
+    fail(`meridian-field-evaluation: registries/operating-model/${feSchemaName} is missing; the field-evaluation contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let feOk = true;
+    let feSchema = null;
+    let feEnv = null;
+    try { feSchema = JSON.parse(feSchemaRaw); }
+    catch (e) { fail(`meridian-field-evaluation: ${feSchemaName} is not valid JSON: ${e.message}`); feOk = false; }
+
+    const feEnvRaw = readIfExists(path.join(feDir, 'scoped-record.schema.json'));
+    if (feEnvRaw === null) {
+      fail('meridian-field-evaluation: registries/operating-model/scoped-record.schema.json is missing; the observation and report records compose with the record envelope and cannot be checked without it');
+      feOk = false;
+    } else {
+      try { feEnv = JSON.parse(feEnvRaw); }
+      catch (e) { fail(`meridian-field-evaluation: scoped-record.schema.json is not valid JSON: ${e.message}`); feOk = false; }
+    }
+
+    if (feSchema) {
+      try { assertSupportedDeep(feSchema, feSchemaName); }
+      catch (e) { fail(`meridian-field-evaluation: the schema uses a construct this validator cannot check: ${e.message}`); feOk = false; }
+    }
+
+    let feSatisfied = 0;
+    let feRejected = 0;
+    let feCoverage = false;
+    const feFxRaw = readIfExists(path.join(feDir, 'fixtures', 'field-evaluation.fixtures.json'));
+    if (feFxRaw === null) {
+      fail('meridian-field-evaluation: the schema carries no fixtures (registries/operating-model/fixtures/field-evaluation.fixtures.json); a schema no run exercises is not one this gate has reached');
+      feOk = false;
+    } else if (feOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(feFxRaw); }
+      catch (e) { bundleOk = false; fail(`meridian-field-evaluation: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('meridian-field-evaluation: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`meridian-field-evaluation: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (bundleOk && (typeof bundle.resolution !== 'object' || bundle.resolution === null || Array.isArray(bundle.resolution))) {
+        bundleOk = false;
+        fail('meridian-field-evaluation: the fixtures file carries no "resolution" object; the pinned execution-run / observation records AND every evidence entry are resolved OUTSIDE the record, and a bundle that resolves nothing cannot exercise the contract against its actual runs and evidence');
+      }
+      if (!bundleOk) {
+        feOk = false;
+      } else {
+        const feOpts = {
+          recordSchema: feSchema,
+          envelopeSchema: feEnv,
+          resolveRecords: makeRecordResolver(bundle.resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateFieldEvaluation(c && c.spec, feOpts);
+          if (p.length) { fail(`meridian-field-evaluation: a fixture that must be valid was rejected (${c && c.note}): ${p[0]}`); feOk = false; }
+          else feSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateFieldEvaluation(c && c.spec, feOpts);
+          if (p.length === 0) { fail(`meridian-field-evaluation: a fixture that must be rejected validated clean (${c && c.note})`); feOk = false; }
+          else feRejected++;
+        }
+        feCoverage = feOk;
+      }
+    }
+
+    if (feOk && feCoverage) {
+      ok('meridian-field-evaluation: the field-evaluation schema parsed and keyword-checked; '
+       + `${feSatisfied} representative fixture(s) satisfied the composition (record envelope, record_type-selected observation/report body, the eight characteristics each with a metric-fixed measurement kind and — for classification — a metric-closed outcome pool, the four distinct observation statuses each but "observed" carrying a reason and forbidding a measurement, pinned evidence resolved through the external boundary to a closed evidence-result confirming observed_result AND a metric_ref naming the observation's own metric, the supersedes/correction_reason correction pair, and for a report the resolved same-workspace/same-period comparability rules, the rejection of double counting including a superseded+superseding pair, eight-of-eight per_metric completeness, and the exact recomputation of every aggregate from the resolved, named sample) and ${feRejected} were rejected as declared`);
     }
   }
 }

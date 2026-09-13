@@ -101,6 +101,7 @@ import { evaluateContextManifest, makeRecordResolver } from './lib/context-manif
 import { evaluateEvidenceAndHandoff } from './lib/evidence-and-handoff.mjs';
 import { evaluateFieldEvaluation } from './lib/field-evaluation.mjs';
 import { evaluateControlledRuleIntake } from './lib/controlled-rule-intake.mjs';
+import { evaluateExistingProjectCompatibilityMode } from './lib/existing-project-compatibility-mode.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1941,6 +1942,150 @@ function functionalParityConsistency(rec) {
     if (criOk && criCoverage) {
       ok('controlled-rule-intake: the rule-intake schema parsed and keyword-checked; '
        + `${criSatisfied} representative fixture(s) satisfied the composition (record envelope, pinned source_ref resolved through the external boundary and checked against the instruction source's own recorded_state INCLUDING currency and a minimal read_channel projection, origin.kind/origin.source_ref naming the same source as payload.source_ref, boundary provenance, explicit semantic-key clustering with consistent classification and decision across origins, a symmetric order-independent conflict graph, the closed candidate / accepted / not-applicable applicability state with an evidenced reason, and accepted/not-applicable decided only by the scope's own human owner authority) and ${criRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// existing-project-compatibility-mode: bounded discovery plan → registered
+// source → rule candidate, zero writes to the connected project (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/existing-project-compatibility-mode.schema.json
+// is the specialised payload schema for a workspace connection scan
+// (record_type: workspace-connection-scan). Its envelope is validated against
+// the existing scoped-record.schema.json (composition, not a second envelope).
+// Discovery is bounded to an explicit discovery_plan — never a recursive
+// guess over a project's tree — and every discovered/missing/unreadable
+// record and location-bearing finding traces back to one plan slot's stable
+// id; every declared slot carries EXACTLY ONE outcome across the three
+// arrays (an omitted, duplicated or overlapping outcome is rejected). The
+// registry, envelope, source-registry and rule-intake schemas are all
+// mandatory composition dependencies regardless of the document's own
+// content — an absent or inapplicable one fails the whole evaluation closed,
+// even when discovered_sources or rule_candidates are empty. A discovered
+// source is a FULL instruction-source-registry entry,
+// checked here by calling the REAL evaluateInstructionSourceRegistry against
+// the REAL instruction-source-registry.schema.json (never a second competing
+// source format); a rule candidate is a FULL controlled-rule-intake record,
+// checked by calling the REAL evaluateControlledRuleIntake against the REAL
+// controlled-rule-intake.schema.json, resolved through a boundary this
+// module builds from the SAME scan's own discovered sources. Discovery mints
+// no decision: a candidate first found by THIS scan (discovery_status "new")
+// must stay "candidate"; only a "carried-over" candidate may hold a decided
+// applicability_state, and even then it is independently re-checked by the
+// composed controlled-rule-intake evaluation. A source found changed,
+// missing or unreadable relative to a prior scan must carry a matching
+// finding — never a silent overwrite of an earlier snapshot or decision.
+// next_step is computed by one closed priority: a blocking "conflict"
+// finding, else a blocking "ambiguous-scope" finding, else any other
+// blocking finding, else nothing blocking — the same findings set, in any
+// order, always computes the same value. connection_mode defaults to
+// "compatibility"; "managed" never activates
+// automatically and requires a separate, verifiable managed_mode_decision.
+// Scan DATA is Instance, like the source registry and the intake register:
+// the Kernel ships the schema, the product-neutral fixtures and one
+// checkable implementation
+// (scripts/lib/existing-project-compatibility-mode.mjs), not a canonical
+// data file. The contract is a MANDATORY part of this Kernel: a missing
+// schema or missing fixtures is a FAIL, not an informational skip. As with
+// the other operating-model contracts, the schema is parsed, walked for
+// unsupported keywords, and exercised against its bundled fixtures here,
+// fail-closed on the bundle's own shape.
+{
+  const epcmDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const epcmSchemaName = 'existing-project-compatibility-mode.schema.json';
+  const epcmSchemaRaw = readIfExists(path.join(epcmDir, epcmSchemaName));
+  if (epcmSchemaRaw === null) {
+    fail(`existing-project-compatibility-mode: registries/operating-model/${epcmSchemaName} is missing; the existing-project compatibility mode contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let epcmOk = true;
+    let epcmSchema = null;
+    let epcmEnv = null;
+    let epcmSourceSchema = null;
+    let epcmRuleIntakeSchema = null;
+    try { epcmSchema = JSON.parse(epcmSchemaRaw); }
+    catch (e) { fail(`existing-project-compatibility-mode: ${epcmSchemaName} is not valid JSON: ${e.message}`); epcmOk = false; }
+
+    const epcmEnvRaw = readIfExists(path.join(epcmDir, 'scoped-record.schema.json'));
+    if (epcmEnvRaw === null) {
+      fail('existing-project-compatibility-mode: registries/operating-model/scoped-record.schema.json is missing; the scan record composes with the record envelope and cannot be checked without it');
+      epcmOk = false;
+    } else {
+      try { epcmEnv = JSON.parse(epcmEnvRaw); }
+      catch (e) { fail(`existing-project-compatibility-mode: scoped-record.schema.json is not valid JSON: ${e.message}`); epcmOk = false; }
+    }
+
+    const epcmSourceRaw = readIfExists(path.join(epcmDir, 'instruction-source-registry.schema.json'));
+    if (epcmSourceRaw === null) {
+      fail('existing-project-compatibility-mode: registries/operating-model/instruction-source-registry.schema.json is missing; discovered sources compose with that contract and cannot be checked without it');
+      epcmOk = false;
+    } else {
+      try { epcmSourceSchema = JSON.parse(epcmSourceRaw); }
+      catch (e) { fail(`existing-project-compatibility-mode: instruction-source-registry.schema.json is not valid JSON: ${e.message}`); epcmOk = false; }
+    }
+
+    const epcmRuleIntakeRaw = readIfExists(path.join(epcmDir, 'controlled-rule-intake.schema.json'));
+    if (epcmRuleIntakeRaw === null) {
+      fail('existing-project-compatibility-mode: registries/operating-model/controlled-rule-intake.schema.json is missing; rule candidates compose with that contract and cannot be checked without it');
+      epcmOk = false;
+    } else {
+      try { epcmRuleIntakeSchema = JSON.parse(epcmRuleIntakeRaw); }
+      catch (e) { fail(`existing-project-compatibility-mode: controlled-rule-intake.schema.json is not valid JSON: ${e.message}`); epcmOk = false; }
+    }
+
+    if (epcmSchema) {
+      try { assertSupportedDeep(epcmSchema, epcmSchemaName); }
+      catch (e) { fail(`existing-project-compatibility-mode: the schema uses a construct this validator cannot check: ${e.message}`); epcmOk = false; }
+    }
+
+    let epcmSatisfied = 0;
+    let epcmRejected = 0;
+    let epcmCoverage = false;
+    const epcmFxRaw = readIfExists(path.join(epcmDir, 'fixtures', 'existing-project-compatibility-mode.fixtures.json'));
+    if (epcmFxRaw === null) {
+      fail('existing-project-compatibility-mode: the schema carries no fixtures (registries/operating-model/fixtures/existing-project-compatibility-mode.fixtures.json); a schema no run exercises is not one this gate has reached');
+      epcmOk = false;
+    } else if (epcmOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(epcmFxRaw); }
+      catch (e) { bundleOk = false; fail(`existing-project-compatibility-mode: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('existing-project-compatibility-mode: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`existing-project-compatibility-mode: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        epcmOk = false;
+      } else {
+        const epcmOpts = {
+          registrySchema: epcmSchema,
+          envelopeSchema: epcmEnv,
+          sourceRegistrySchema: epcmSourceSchema,
+          ruleIntakeSchema: epcmRuleIntakeSchema,
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateExistingProjectCompatibilityMode(c && c.registry, epcmOpts);
+          if (p.length) { fail(`existing-project-compatibility-mode: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); epcmOk = false; }
+          else epcmSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateExistingProjectCompatibilityMode(c && c.registry, epcmOpts);
+          if (p.length === 0) { fail(`existing-project-compatibility-mode: a fixture that must be rejected validated clean (${c && c.note})`); epcmOk = false; }
+          else epcmRejected++;
+        }
+        epcmCoverage = epcmOk;
+      }
+    }
+
+    if (epcmOk && epcmCoverage) {
+      ok('existing-project-compatibility-mode: the compatibility-mode schema parsed and keyword-checked; '
+       + `${epcmSatisfied} representative fixture(s) satisfied the composition (record envelope, mandatory registry/envelope/source-registry/rule-intake schemas required regardless of document content, a bounded discovery plan whose slots trace every discovered/missing/unreadable record and location-bearing finding by a stable id and carry EXACTLY ONE outcome each — never omitted, duplicated or overlapping, discovered sources resolved through the REAL instruction-source-registry composition, rule candidates resolved through the REAL controlled-rule-intake composition against a resolver built from this scan's own discovered sources, a newly discovered candidate barred from any decided applicability_state, a required finding for every changed, previously-known-missing or unreadable source, and a next_step computed by the one closed priority — blocking conflict, else blocking ambiguous-scope, else any other blocking finding, else continue) and ${epcmRejected} were rejected as declared`);
     }
   }
 }

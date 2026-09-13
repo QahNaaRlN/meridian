@@ -1,0 +1,2672 @@
+{
+  "valid": [
+    {
+      "note": "пустой проект без обнаруженных источников",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Пример: пустой проект",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-empty-scan",
+            "title": "Сканирование пустого проекта",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-empty-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-empty-workspace"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-empty-repository",
+                "workspace_id": "sample-empty-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [],
+              "discovered_sources": [],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "первоначальное чтение одного meridian-observed источника",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Пример: первоначальное чтение",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-initial-scan",
+            "title": "Первоначальное сканирование sample-repository",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md корня репозитория",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "unknown"
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "agent-native источник с partial-видимостью",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Пример: agent-native источник",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-agent-native-scan",
+            "title": "Сканирование с agent-native источником",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-claude-md",
+                  "medium": "file",
+                  "path": "CLAUDE.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-claude-md",
+                  "title": "CLAUDE.md корня репозитория",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-claude-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "CLAUDE.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-b1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "claude-md",
+                    "read_channel": {
+                      "kind": "agent-native",
+                      "meridian_visibility": "partial",
+                      "agent_auto_read": true
+                    },
+                    "divergence": {
+                      "status": "unknown"
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "неизменившееся повторное сканирование",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Пример: неизменившийся rescan",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-unchanged-rescan",
+            "title": "Повторное сканирование без изменений",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "rescan",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md корня репозитория",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "unchanged",
+                      "previous_state": {
+                        "revision": "content-a1",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": true
+                      },
+                      "current_state": {
+                        "revision": "content-a1",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "изменившаяся редакция",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Пример: изменившаяся редакция",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-revision-changed-rescan",
+            "title": "Повторное сканирование с изменённой редакцией",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "rescan",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md корня репозитория",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a2",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "changed",
+                      "previous_state": {
+                        "revision": "content-a1",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": true
+                      },
+                      "current_state": {
+                        "revision": "content-a2",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [
+                {
+                  "id": "finding-revision-changed",
+                  "kind": "source-changed",
+                  "detail": "revision изменилась при неизменном дайджесте",
+                  "plan_id": "root-agents-md",
+                  "blocking": false
+                }
+              ],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "изменившийся дайджест",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Пример: изменившийся дайджест",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-digest-changed-rescan",
+            "title": "Повторное сканирование с изменённым дайджестом",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "rescan",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md корня репозитория",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "changed",
+                      "previous_state": {
+                        "revision": "content-a1",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": true
+                      },
+                      "current_state": {
+                        "revision": "content-a1",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333"
+                        },
+                        "verified": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [
+                {
+                  "id": "finding-digest-changed",
+                  "kind": "source-changed",
+                  "detail": "дайджест изменился при неизменной редакции",
+                  "plan_id": "root-agents-md",
+                  "blocking": false
+                }
+              ],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "пропавший источник",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Пример: пропавший источник",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-missing-rescan",
+            "title": "Повторное сканирование с пропавшим источником",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "rescan",
+              "discovery_plan": [
+                {
+                  "id": "root-claude-md",
+                  "medium": "file",
+                  "path": "CLAUDE.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [],
+              "missing_sources": [
+                {
+                  "plan_id": "root-claude-md",
+                  "previously_known": true,
+                  "id": "root-claude-md"
+                }
+              ],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [
+                {
+                  "id": "finding-source-missing",
+                  "kind": "source-missing",
+                  "detail": "CLAUDE.md больше не найден по объявленному пути",
+                  "plan_id": "root-claude-md",
+                  "blocking": true
+                }
+              ],
+              "next_step": "await-owner-decision"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "нечитаемый источник",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Пример: нечитаемый источник",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-unreadable-scan",
+            "title": "Сканирование с нечитаемым источником",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-cursor-rule",
+                  "medium": "file",
+                  "path": ".cursor/rules/sample.mdc",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [],
+              "missing_sources": [],
+              "unreadable_sources": [
+                {
+                  "plan_id": "root-cursor-rule",
+                  "reason": "permission denied reading file",
+                  "previously_known": false
+                }
+              ],
+              "rule_candidates": [],
+              "findings": [
+                {
+                  "id": "finding-source-unreadable",
+                  "kind": "source-unreadable",
+                  "detail": "правило Cursor обнаружено, но не читается",
+                  "plan_id": "root-cursor-rule",
+                  "blocking": false
+                }
+              ],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "несколько одинаковых кандидатов с сохранённым происхождением",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Пример: кандидаты-дубли",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-duplicate-candidates-scan",
+            "title": "Сканирование с дублирующимися кандидатами",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md корня репозитория",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "unknown"
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [
+                {
+                  "discovery_status": "new",
+                  "candidate": {
+                    "$schema": "../scoped-record.schema.json",
+                    "schema_version": 1,
+                    "id": "sample-duplicate-candidate-one",
+                    "title": "Кандидат: правило именования веток (участок 1)",
+                    "record_type": "rule-candidate",
+                    "scope": {
+                      "type": "repository-scope",
+                      "id": "sample-repository",
+                      "workspace_id": "sample-workspace"
+                    },
+                    "origin": {
+                      "kind": "derived",
+                      "source_ref": "instruction-source:root-agents-md"
+                    },
+                    "authority": {
+                      "kind": "delegated-run",
+                      "authority_ref": "controlled-rule-intake-run:sample-pass-1"
+                    },
+                    "payload": {
+                      "source_ref": {
+                        "record_type": "instruction-source",
+                        "id": "root-agents-md",
+                        "reference": "instruction-source-registry:root-agents-md@content-a1",
+                        "revision": "content-a1",
+                        "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "boundary": {
+                        "unit": "agents-md-section",
+                        "region": "branch-naming-primary"
+                      },
+                      "raw_excerpt": "Branches follow feature/<slug>.",
+                      "normalized_text": "branches follow feature slug",
+                      "semantic_key": "branch-naming-feature-slug",
+                      "classification_basis": "участок объявлен для всего репозитория",
+                      "applicability_state": "candidate"
+                    }
+                  }
+                },
+                {
+                  "discovery_status": "new",
+                  "candidate": {
+                    "$schema": "../scoped-record.schema.json",
+                    "schema_version": 1,
+                    "id": "sample-duplicate-candidate-two",
+                    "title": "Кандидат: правило именования веток (участок 2)",
+                    "record_type": "rule-candidate",
+                    "scope": {
+                      "type": "repository-scope",
+                      "id": "sample-repository",
+                      "workspace_id": "sample-workspace"
+                    },
+                    "origin": {
+                      "kind": "derived",
+                      "source_ref": "instruction-source:root-agents-md"
+                    },
+                    "authority": {
+                      "kind": "delegated-run",
+                      "authority_ref": "controlled-rule-intake-run:sample-pass-1"
+                    },
+                    "payload": {
+                      "source_ref": {
+                        "record_type": "instruction-source",
+                        "id": "root-agents-md",
+                        "reference": "instruction-source-registry:root-agents-md@content-a1",
+                        "revision": "content-a1",
+                        "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "boundary": {
+                        "unit": "agents-md-section",
+                        "region": "branch-naming-appendix"
+                      },
+                      "raw_excerpt": "See branch naming: feature/<slug>.",
+                      "normalized_text": "branches follow feature slug",
+                      "semantic_key": "branch-naming-feature-slug",
+                      "classification_basis": "участок объявлен для всего репозитория",
+                      "applicability_state": "candidate"
+                    }
+                  }
+                }
+              ],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "разрешённый владельцем кандидат без автоматической записи в проект",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Пример: перенесённое решение владельца",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-carried-over-scan",
+            "title": "Сканирование с перенесённым решением владельца",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md корня репозитория",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "unknown"
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [
+                {
+                  "discovery_status": "carried-over",
+                  "candidate": {
+                    "$schema": "../scoped-record.schema.json",
+                    "schema_version": 1,
+                    "id": "sample-carried-over-candidate",
+                    "title": "Кандидат: уже принятое правило именования веток",
+                    "record_type": "rule-candidate",
+                    "scope": {
+                      "type": "repository-scope",
+                      "id": "sample-repository",
+                      "workspace_id": "sample-workspace"
+                    },
+                    "origin": {
+                      "kind": "derived",
+                      "source_ref": "instruction-source:root-agents-md"
+                    },
+                    "authority": {
+                      "kind": "repository-maintainer",
+                      "authority_ref": "sample-repository-maintainer",
+                      "decision_ref": "owner-decision:branch-naming"
+                    },
+                    "payload": {
+                      "source_ref": {
+                        "record_type": "instruction-source",
+                        "id": "root-agents-md",
+                        "reference": "instruction-source-registry:root-agents-md@content-a1",
+                        "revision": "content-a1",
+                        "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "boundary": {
+                        "unit": "agents-md-section",
+                        "region": "branch-naming"
+                      },
+                      "raw_excerpt": "Branches follow feature/<slug>.",
+                      "normalized_text": "branches follow feature slug",
+                      "semantic_key": "branch-naming-feature-slug",
+                      "classification_basis": "участок объявлен для всего репозитория",
+                      "applicability_state": "accepted",
+                      "owner_decision": {
+                        "decision_ref": "owner-decision:branch-naming",
+                        "decided_at": "2026-09-01",
+                        "reason": "уже принято владельцем до этого сканирования"
+                      }
+                    }
+                  }
+                }
+              ],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "note": "абсолютный путь",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: абсолютный путь",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "/etc/passwd",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "выход через ..",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: выход через ..",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "../../etc/passwd",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "неизвестный носитель",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: неизвестный носитель",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "ftp",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "запись или генерация файла в compatibility-режиме",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: запись в проект",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode",
+              "project_file_writes": [
+                {
+                  "path": "AGENTS.md",
+                  "content": "generated"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "автоматический managed-режим",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: автоматический managed",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "managed",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "changed, объявленный при одинаковых снимках",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: ложный changed",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "rescan",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "changed",
+                      "previous_state": {
+                        "revision": "content-a1",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": true
+                      },
+                      "current_state": {
+                        "revision": "content-a1",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [
+                {
+                  "id": "finding-false-changed",
+                  "kind": "source-changed",
+                  "detail": "x",
+                  "plan_id": "root-agents-md",
+                  "blocking": false
+                }
+              ],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "unchanged при различии редакции или дайджеста",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: ложный unchanged",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "rescan",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a2",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "unchanged",
+                      "previous_state": {
+                        "revision": "content-a1",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": true
+                      },
+                      "current_state": {
+                        "revision": "content-a2",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "неизвестное состояние расхождения",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: неизвестный статус расхождения",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "invented-status"
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "accepted без полномочия владельца",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: accepted без владельца",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "unknown"
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [
+                {
+                  "discovery_status": "carried-over",
+                  "candidate": {
+                    "$schema": "../scoped-record.schema.json",
+                    "schema_version": 1,
+                    "id": "sample-no-authority-candidate",
+                    "title": "Кандидат без полномочия владельца",
+                    "record_type": "rule-candidate",
+                    "scope": {
+                      "type": "repository-scope",
+                      "id": "sample-repository",
+                      "workspace_id": "sample-workspace"
+                    },
+                    "origin": {
+                      "kind": "derived",
+                      "source_ref": "instruction-source:root-agents-md"
+                    },
+                    "authority": {
+                      "kind": "delegated-run",
+                      "authority_ref": "controlled-rule-intake-run:x",
+                      "decision_ref": "owner-decision:x"
+                    },
+                    "payload": {
+                      "source_ref": {
+                        "record_type": "instruction-source",
+                        "id": "root-agents-md",
+                        "reference": "instruction-source-registry:root-agents-md@content-a1",
+                        "revision": "content-a1",
+                        "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "boundary": {
+                        "unit": "agents-md-section",
+                        "region": "branch-naming"
+                      },
+                      "raw_excerpt": "Branches follow feature/<slug>.",
+                      "normalized_text": "branches follow feature slug",
+                      "semantic_key": "branch-naming-feature-slug",
+                      "classification_basis": "участок объявлен для всего репозитория",
+                      "applicability_state": "accepted",
+                      "owner_decision": {
+                        "decision_ref": "owner-decision:x",
+                        "decided_at": "2026-09-01",
+                        "reason": "x"
+                      }
+                    }
+                  }
+                }
+              ],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "конфликт, выбранный по порядку",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: неразрешённый конфликт",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "unknown"
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [
+                {
+                  "discovery_status": "carried-over",
+                  "candidate": {
+                    "$schema": "../scoped-record.schema.json",
+                    "schema_version": 1,
+                    "id": "sample-conflict-candidate-a",
+                    "title": "Кандидат A",
+                    "record_type": "rule-candidate",
+                    "scope": {
+                      "type": "repository-scope",
+                      "id": "sample-repository",
+                      "workspace_id": "sample-workspace"
+                    },
+                    "origin": {
+                      "kind": "derived",
+                      "source_ref": "instruction-source:root-agents-md"
+                    },
+                    "authority": {
+                      "kind": "repository-maintainer",
+                      "authority_ref": "sample-repository-maintainer",
+                      "decision_ref": "owner-decision:a"
+                    },
+                    "payload": {
+                      "source_ref": {
+                        "record_type": "instruction-source",
+                        "id": "root-agents-md",
+                        "reference": "instruction-source-registry:root-agents-md@content-a1",
+                        "revision": "content-a1",
+                        "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "boundary": {
+                        "unit": "agents-md-section",
+                        "region": "branch-naming-a"
+                      },
+                      "raw_excerpt": "Use feature/<slug>.",
+                      "normalized_text": "use feature slug",
+                      "semantic_key": "branch-naming-variant-a",
+                      "classification_basis": "x",
+                      "applicability_state": "accepted",
+                      "conflicts_with": [
+                        "branch-naming-variant-b"
+                      ],
+                      "owner_decision": {
+                        "decision_ref": "owner-decision:a",
+                        "decided_at": "2026-09-01",
+                        "reason": "x"
+                      }
+                    }
+                  }
+                },
+                {
+                  "discovery_status": "carried-over",
+                  "candidate": {
+                    "$schema": "../scoped-record.schema.json",
+                    "schema_version": 1,
+                    "id": "sample-conflict-candidate-b",
+                    "title": "Кандидат B",
+                    "record_type": "rule-candidate",
+                    "scope": {
+                      "type": "repository-scope",
+                      "id": "sample-repository",
+                      "workspace_id": "sample-workspace"
+                    },
+                    "origin": {
+                      "kind": "derived",
+                      "source_ref": "instruction-source:root-agents-md"
+                    },
+                    "authority": {
+                      "kind": "repository-maintainer",
+                      "authority_ref": "sample-repository-maintainer",
+                      "decision_ref": "owner-decision:b"
+                    },
+                    "payload": {
+                      "source_ref": {
+                        "record_type": "instruction-source",
+                        "id": "root-agents-md",
+                        "reference": "instruction-source-registry:root-agents-md@content-a1",
+                        "revision": "content-a1",
+                        "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "boundary": {
+                        "unit": "agents-md-section",
+                        "region": "branch-naming-b"
+                      },
+                      "raw_excerpt": "Use topic/<slug>.",
+                      "normalized_text": "use topic slug",
+                      "semantic_key": "branch-naming-variant-b",
+                      "classification_basis": "x",
+                      "applicability_state": "accepted",
+                      "conflicts_with": [
+                        "branch-naming-variant-a"
+                      ],
+                      "owner_decision": {
+                        "decision_ref": "owner-decision:b",
+                        "decided_at": "2026-09-01",
+                        "reason": "x"
+                      }
+                    }
+                  }
+                }
+              ],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "agent-native с full-видимостью Meridian",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: agent-native с full-видимостью",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-claude-md",
+                  "medium": "file",
+                  "path": "CLAUDE.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-claude-md",
+                  "title": "CLAUDE.md",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-claude-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "CLAUDE.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-b1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "claude-md",
+                    "read_channel": {
+                      "kind": "agent-native",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": true
+                    },
+                    "divergence": {
+                      "status": "unknown"
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "непроверенные состояния, объявленные unchanged",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: непроверенный unchanged",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "rescan",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": false,
+                      "currency": "unverified"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "unchanged",
+                      "previous_state": {
+                        "revision": "content-a1",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": false
+                      },
+                      "current_state": {
+                        "revision": "content-a1",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": false
+                      }
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "изменение, молча заменяющее принятую запись",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: молчаливая замена",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "rescan",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a2",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "changed",
+                      "previous_state": {
+                        "revision": "content-a1",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": true
+                      },
+                      "current_state": {
+                        "revision": "content-a2",
+                        "digest": {
+                          "algorithm": "sha-256",
+                          "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                        },
+                        "verified": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "неизвестные поля закрытых объектов",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: постороннее поле",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository",
+                  "mystery_field": "x"
+                }
+              ],
+              "discovered_sources": [],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "исход слота плана заявлен более чем в одном массиве (overlap)",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: overlap исходов",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-agents-md",
+                  "medium": "file",
+                  "path": "AGENTS.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [
+                {
+                  "$schema": "../scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "root-agents-md",
+                  "title": "AGENTS.md",
+                  "record_type": "instruction-source",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "declared",
+                    "source_ref": "workspace-connection-scan:root-agents-md-scan"
+                  },
+                  "authority": {
+                    "kind": "delegated-run",
+                    "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+                  },
+                  "payload": {
+                    "normative_status": "not-a-norm",
+                    "medium": "file",
+                    "location": {
+                      "path": "AGENTS.md",
+                      "container_ref": "sample-repository",
+                      "missing_behavior": "fail-closed"
+                    },
+                    "recorded_state": {
+                      "revision": "content-a1",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+                      },
+                      "revision_verified": true,
+                      "currency": "current"
+                    },
+                    "format": "agents-md",
+                    "read_channel": {
+                      "kind": "meridian-observed",
+                      "meridian_visibility": "full",
+                      "agent_auto_read": false
+                    },
+                    "divergence": {
+                      "status": "unknown"
+                    }
+                  }
+                }
+              ],
+              "missing_sources": [
+                {
+                  "plan_id": "root-agents-md",
+                  "previously_known": false
+                }
+              ],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "исход слота плана заявлен дважды в одном массиве (duplicate)",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: duplicate исход",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-cursor-rule",
+                  "medium": "file",
+                  "path": ".cursor/rules/sample.mdc",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [],
+              "missing_sources": [],
+              "unreadable_sources": [
+                {
+                  "plan_id": "root-cursor-rule",
+                  "reason": "permission denied reading file",
+                  "previously_known": false
+                },
+                {
+                  "plan_id": "root-cursor-rule",
+                  "reason": "transport error reading file",
+                  "previously_known": false
+                }
+              ],
+              "rule_candidates": [],
+              "findings": [
+                {
+                  "id": "finding-duplicate-outcome",
+                  "kind": "source-unreadable",
+                  "detail": "правило Cursor",
+                  "plan_id": "root-cursor-rule",
+                  "blocking": false
+                }
+              ],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "слот плана без исхода (omitted outcome)",
+      "registry": {
+        "$schema": "../existing-project-compatibility-mode.schema.json",
+        "schema_version": 1,
+        "registry_id": "existing-project-compatibility-mode",
+        "title": "Отрицательный пример: пропущенный исход",
+        "workspace_connections": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-invalid-scan",
+            "title": "Сканирование для отрицательного примера",
+            "record_type": "workspace-connection-scan",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:connect-sample-repository"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass-1"
+            },
+            "payload": {
+              "connection_mode": "compatibility",
+              "repository": {
+                "id": "sample-repository",
+                "workspace_id": "sample-workspace"
+              },
+              "scan_kind": "initial",
+              "discovery_plan": [
+                {
+                  "id": "root-claude-md",
+                  "medium": "file",
+                  "path": "CLAUDE.md",
+                  "container_ref": "sample-repository"
+                }
+              ],
+              "discovered_sources": [],
+              "missing_sources": [],
+              "unreadable_sources": [],
+              "rule_candidates": [],
+              "findings": [],
+              "next_step": "continue-compatibility-mode"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

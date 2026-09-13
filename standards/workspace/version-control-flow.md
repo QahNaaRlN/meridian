@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-27
-updated: 2026-09-07
+updated: 2026-09-13
 topic: version-control-flow
 profile: universal
 delivery: kernel-doc
@@ -425,8 +425,9 @@ commit'ов, а не из отдельных package-коммитов.
 рамках правил выше.
 
 Отдельный **Git-интегратор** — это task-local роль, которую владелец назначает
-явно. Для разработки самого Meridian она назначена: интегратор — Codex,
-исполнитель — Claude Code
+явно, наравне с ролью исполнителя и ролью независимого проверяющего. Для
+разработки самого Meridian наличие и распределение этих ролей устанавливает
+принятый repository- или task-local протокол Экземпляра
 (`$MERIDIAN_INSTANCE/governance/meridian-self-development-collaboration-protocol.md`).
 Где такое назначение действует:
 

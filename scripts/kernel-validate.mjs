@@ -102,6 +102,11 @@ import { evaluateEvidenceAndHandoff } from './lib/evidence-and-handoff.mjs';
 import { evaluateFieldEvaluation } from './lib/field-evaluation.mjs';
 import { evaluateControlledRuleIntake } from './lib/controlled-rule-intake.mjs';
 import { evaluateExistingProjectCompatibilityMode } from './lib/existing-project-compatibility-mode.mjs';
+import {
+  evaluateInstanceDataMigration, makeSourceSnapshotResolver, makeEvidenceResolver,
+  makeRollbackSnapshotResolver, makeDeterministicPlanResolver, makeRestorationEvidenceResolver,
+  makeSupersededPlanResolver,
+} from './lib/instance-data-migration.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2086,6 +2091,127 @@ function functionalParityConsistency(rec) {
     if (epcmOk && epcmCoverage) {
       ok('existing-project-compatibility-mode: the compatibility-mode schema parsed and keyword-checked; '
        + `${epcmSatisfied} representative fixture(s) satisfied the composition (record envelope, mandatory registry/envelope/source-registry/rule-intake schemas required regardless of document content, a bounded discovery plan whose slots trace every discovered/missing/unreadable record and location-bearing finding by a stable id and carry EXACTLY ONE outcome each — never omitted, duplicated or overlapping, discovered sources resolved through the REAL instruction-source-registry composition, rule candidates resolved through the REAL controlled-rule-intake composition against a resolver built from this scan's own discovered sources, a newly discovered candidate barred from any decided applicability_state, a required finding for every changed, previously-known-missing or unreadable source, and a next_step computed by the one closed priority — blocking conflict, else blocking ambiguous-scope, else any other blocking finding, else continue) and ${epcmRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// instance-data-migration: storage-neutral migration plan for a transitional
+// Instance's records into Meridian's logical scope areas (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/instance-data-migration.schema.json is the
+// specialised payload schema for a migration plan (record_type:
+// instance-migration-plan). Its envelope is validated against the existing
+// scoped-record.schema.json (composition, not a second envelope). The
+// contract pins an exact source revision and digest and requires an explicit
+// reproducibility qualification (a dirty, incomplete or ambiguous source is
+// never accepted as a reproducible base); gives every declared record unit
+// EXACTLY ONE correspondence decision — migrated, retained-transitional, or
+// an explicit many-to-one merged (never fewer than two units, one shared
+// merge_rule_ref); requires an explicit, per-field preserved/assigned basis
+// and an owner decision for every migrated or merged target, whose
+// PERMANENT authority is checked against the closed owner-authority table
+// for its own scope — the delegated-run authority carrying out the
+// migration itself can never mint a target's permanent authority; makes
+// rollback mandatory on every plan and actually checks it: the source
+// snapshot ref, the deterministic-reconstruction plan ref or the
+// verified-restoration evidence ref (whichever the declared rollback.plan
+// requires) is each resolved through its own external boundary and checked
+// to name THIS plan's own source and id, and rewrites_published_history is
+// pinned to the literal false; distinguishes a
+// claimed VERIFIED result from actual coverage/applicability-preservation
+// evidence and forces BLOCKED whenever the source itself is not
+// reproducible; and recomputes plan_fingerprint as a deterministic function
+// of a plan's own pinned content, alongside a container-wide unique
+// idempotency_key, so a rerun over the same pinned input recomputes the same
+// plan and never mints a duplicate record. Plan DATA is Instance, like every
+// other operating-model register: the Kernel ships the schema, the
+// product-neutral fixtures and one checkable implementation
+// (scripts/lib/instance-data-migration.mjs), not a canonical data file. The
+// contract is a MANDATORY part of this Kernel: a missing schema or missing
+// fixtures is a FAIL, not an informational skip. As with the other
+// operating-model contracts, the schema is parsed, walked for unsupported
+// keywords, and exercised against its bundled fixtures here, fail-closed on
+// the bundle's own shape.
+{
+  const idmDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const idmSchemaName = 'instance-data-migration.schema.json';
+  const idmSchemaRaw = readIfExists(path.join(idmDir, idmSchemaName));
+  if (idmSchemaRaw === null) {
+    fail(`instance-data-migration: registries/operating-model/${idmSchemaName} is missing; the instance-data migration contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let idmOk = true;
+    let idmSchema = null;
+    let idmEnv = null;
+    try { idmSchema = JSON.parse(idmSchemaRaw); }
+    catch (e) { fail(`instance-data-migration: ${idmSchemaName} is not valid JSON: ${e.message}`); idmOk = false; }
+
+    const idmEnvRaw = readIfExists(path.join(idmDir, 'scoped-record.schema.json'));
+    if (idmEnvRaw === null) {
+      fail('instance-data-migration: registries/operating-model/scoped-record.schema.json is missing; the migration plan composes with the record envelope and cannot be checked without it');
+      idmOk = false;
+    } else {
+      try { idmEnv = JSON.parse(idmEnvRaw); }
+      catch (e) { fail(`instance-data-migration: scoped-record.schema.json is not valid JSON: ${e.message}`); idmOk = false; }
+    }
+
+    if (idmSchema) {
+      try { assertSupportedDeep(idmSchema, idmSchemaName); }
+      catch (e) { fail(`instance-data-migration: the schema uses a construct this validator cannot check: ${e.message}`); idmOk = false; }
+    }
+
+    let idmSatisfied = 0;
+    let idmRejected = 0;
+    let idmCoverage = false;
+    const idmFxRaw = readIfExists(path.join(idmDir, 'fixtures', 'instance-data-migration.fixtures.json'));
+    if (idmFxRaw === null) {
+      fail('instance-data-migration: the schema carries no fixtures (registries/operating-model/fixtures/instance-data-migration.fixtures.json); a schema no run exercises is not one this gate has reached');
+      idmOk = false;
+    } else if (idmOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(idmFxRaw); }
+      catch (e) { bundleOk = false; fail(`instance-data-migration: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('instance-data-migration: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`instance-data-migration: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        idmOk = false;
+      } else {
+        const idmOpts = {
+          registrySchema: idmSchema,
+          envelopeSchema: idmEnv,
+          resolveSourceSnapshot: makeSourceSnapshotResolver(bundle.source_snapshot_resolution),
+          resolveEvidence: makeEvidenceResolver(bundle.evidence_resolution),
+          resolveRollbackSnapshot: makeRollbackSnapshotResolver(bundle.rollback_snapshot_resolution),
+          resolveDeterministicPlan: makeDeterministicPlanResolver(bundle.deterministic_plan_resolution),
+          resolveRestorationEvidence: makeRestorationEvidenceResolver(bundle.restoration_evidence_resolution),
+          resolveSupersededPlan: makeSupersededPlanResolver(bundle.superseded_plan_resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateInstanceDataMigration(c && c.registry, idmOpts);
+          if (p.length) { fail(`instance-data-migration: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); idmOk = false; }
+          else idmSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateInstanceDataMigration(c && c.registry, idmOpts);
+          if (p.length === 0) { fail(`instance-data-migration: a fixture that must be rejected validated clean (${c && c.note})`); idmOk = false; }
+          else idmRejected++;
+        }
+        idmCoverage = idmOk;
+      }
+    }
+
+    if (idmOk && idmCoverage) {
+      ok('instance-data-migration: the migration-plan schema parsed and keyword-checked; '
+       + `${idmSatisfied} representative fixture(s) satisfied the composition (record envelope, a pinned source repository_ref/revision/digest whose "reproducible" qualification is checked against a snapshot resolved through an external boundary and closed to this plan's own repository_ref and full digest, complete unit-to-mapping coverage with target groups closed to an explicit many-to-one merge sharing one rule and one structurally identical target, a migrated/merged target's mandatory origin traced to its actual contributing unit(s) and field_basis.origin always "assigned", permanent authority checked against the closed owner-authority table for its own scope — never the delegated-run authority carrying out the migration itself, mandatory rollback closed to two MUTUALLY EXCLUSIVE plan variants whose source-snapshot/deterministic-plan/restoration-evidence refs are each resolved through their own external boundary and checked to name this plan's own source, id AND its own recomputed plan_fingerprint (never a bare ref string, and never one pinned to a stale version of this plan) with rewrites_published_history pinned to false, a claimed VERIFIED result checked against actual coverage/applicability-preservation sub-verdicts each resolved through an external evidence boundary and pinned to this plan's own id AND recomputed plan_fingerprint, forced BLOCKED for a non-reproducible source, a recomputed deterministic plan_fingerprint and an idempotency_key derived from scope and the full source identity (repository_ref, revision, digest), and a supersedes checked against the predecessor's full scope and source repository_ref — in-document directly, or through an external boundary that never accepts an unknown or unresolved predecessor automatically — and ${idmRejected} were rejected as declared`);
     }
   }
 }

@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-12
+updated: 2026-09-13
 ---
 
 # Changelog
@@ -844,6 +844,15 @@ updated: 2026-09-12
   quotes it in the command; for `push` and `workflow_dispatch` the step is
   deliberately skipped so a missing `head_ref` never breaks those runs. The
   new regression suite is wired into the same job.
+
+### Fixed
+
+- **`standards/workspace/version-control-flow.md` §5 — роль не привязана к
+  конкретной модели или приложению.** §5 больше не связывает исполнителя и
+  Git-интегратора с конкретными моделью или приложением; наличие и
+  распределение этих ролей для разработки Meridian устанавливает принятый
+  repository- или task-local протокол Экземпляра, а не универсальная норма
+  Ядра.
 
 ### Notes
 

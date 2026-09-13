@@ -1,0 +1,181 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/controlled-rule-intake.schema.json",
+  "title": "Meridian controlled rule intake register",
+  "description": "Container for rule candidates parsed out of registered instruction sources. Each entry is a scoped record: its envelope (identity, scope, origin, authority) is validated separately against scoped-record.schema.json, and this schema is not a second envelope schema. This schema adds the container shape and the candidate payload contract. Discovering or reading a source (instruction-source-registry.md) grants a candidate no norm authority; the ONLY way a candidate becomes applicable is an explicit owner_decision recorded here. payload.source_ref is a closed pinned reference to ONE instruction-source-registry entry (record_type, id, reference, an explicit revision AND a SHA-256 digest, both mandatory) that must be resolved through an external boundary the schema cannot express (see scripts/lib/controlled-rule-intake.mjs) and checked against that entry's own recorded_state: an unknown source, an unverified revision, or a revision/digest mismatch against the registry's CURRENT snapshot are all rejected there. The resolved snapshot's recorded_state.currency gates applicability too (library): 'unverified' is rejected unconditionally, and 'accepted'/'not-applicable' additionally require 'current' — a 'stale' snapshot is never silently treated as current and may back only a 'candidate' entry kept as a historical finding. The resolved snapshot also carries a minimal read_channel projection (kind, meridian_visibility, agent_auto_read) checked with the SAME coherence rule instruction-source-registry.mjs applies to its own read_channel (reused, not duplicated), so an agent-native channel claiming full visibility is rejected and accepting a candidate never upgrades or reinterprets the channel. Before that coherence rule runs, the resolved response's SHAPE is checked independently and unconditionally (library, reusing instruction-source-registry.mjs's own closed pools READ_CHANNEL_KINDS / MERIDIAN_VISIBILITY / CURRENCY, not a diverging second copy): reference is a required non-empty string equal to source_ref.reference; read_channel.kind/meridian_visibility must be one of the closed pool and agent_auto_read a boolean; recorded_state.revision a non-empty string, recorded_state.digest closed to exactly algorithm/value with algorithm 'sha-256' and value 64 lowercase hex characters, recorded_state.revision_verified a boolean, and recorded_state.currency one of the closed pool — an invented value or a wrong-typed one (a string 'false' where a boolean is required) is rejected by shape alone, independent of whether it happens to also violate a coherence rule. The envelope's origin.kind is pinned to 'derived' and origin.source_ref must equal the canonical form 'instruction-source:<payload.source_ref.id>' — the envelope and the payload must name the same source (library). payload.boundary preserves the candidate's exact span inside the source (a declared agents-md-section region, a line/byte range, or the whole source) so normalization of raw_excerpt into normalized_text never severs provenance. scope is an explicit classification from the six logical areas of workspace-scope-model.md, never derived from the source's physical path. semantic_key is an EXPLICIT, asserted identity used to cluster semantically duplicate candidates found through different origins; matching ids or array order are never treated as proof of identity (checked in the library, not expressible in this schema subset). Cluster members decided accepted/not-applicable additionally require ONE full envelope authority — kind, authority_ref AND decision_ref must all agree — because a matching owner_decision is not itself proof a single owner decided; members still carrying a bare 'candidate' state are exempt and may keep distinct delegated-run origins (checked in the library). conflicts_with names other clusters this candidate is incompatible with; declarations must be symmetric and are evaluated as a graph over the WHOLE candidate set at once, not by folding records in read order (library). applicability_state is the closed MINIMAL three-value state a candidate carries: 'candidate' (discovered, undecided, no norm authority, and it carries no owner_decision at all), 'accepted' (the owner decided the candidate is applicable) and 'not-applicable' (the owner decided it is not, or it lost a symmetric conflict to an accepted cluster) — both non-candidate states require owner_decision, and not-applicable additionally requires a not_applicable_reason evidenced by the actual data (checked in the library). Deciding accepted/not-applicable additionally requires the envelope's authority.kind to be the ONE human owner authority closed to the record's scope (methodology-owner / user / organization / project-owner / repository-maintainer per scope, none for run-state); 'delegated-run' — a run's authority, legitimate for carrying a candidate's parsing — never itself decides applicability, even when its decision_ref matches payload.owner_decision.decision_ref (checked in the library, not expressible in this schema subset). The controlled-rule-intake contract is a mandatory part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/controlled-rule-intake.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "title", "rule_candidates"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "registry_id": { "const": "controlled-rule-intake" },
+    "title": { "type": "string", "minLength": 1 },
+    "rule_candidates": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/entry" }
+    }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "sha256_digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "const": "sha-256" },
+        "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "required": ["record_type", "payload"],
+      "properties": {
+        "record_type": { "const": "rule-candidate" },
+        "payload": { "$ref": "#/definitions/payload" }
+      }
+    },
+    "pinned_source_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_type", "id", "reference", "revision", "sha256"],
+      "description": "A closed pinned reference to ONE instruction-source-registry entry. Unlike the flexible revision-OR-digest pin elsewhere in Meridian, a rule candidate's source_ref pins BOTH an explicit revision AND a SHA-256 digest: property 2 names the source id, the revision and the SHA-256 as the three things a candidate must cite together.",
+      "properties": {
+        "record_type": { "const": "instruction-source" },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "reference": { "$ref": "#/definitions/non_empty" },
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit"],
+      "description": "The candidate's exact span inside its source. The three forms are mutually exclusive: 'agents-md-section' requires region and forbids start/end; 'line-range'/'byte-range' require start and end and forbid region; 'whole-source' forbids all three.",
+      "properties": {
+        "unit": { "enum": ["agents-md-section", "line-range", "byte-range", "whole-source"] },
+        "region": { "$ref": "#/definitions/non_empty" },
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 0 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "unit": { "const": "agents-md-section" } }, "required": ["unit"] },
+          "then": {
+            "required": ["region"],
+            "allOf": [{ "not": { "required": ["start"] } }, { "not": { "required": ["end"] } }]
+          }
+        },
+        {
+          "if": { "properties": { "unit": { "enum": ["line-range", "byte-range"] } }, "required": ["unit"] },
+          "then": {
+            "required": ["start", "end"],
+            "allOf": [{ "not": { "required": ["region"] } }]
+          }
+        },
+        {
+          "if": { "properties": { "unit": { "const": "whole-source" } }, "required": ["unit"] },
+          "then": {
+            "allOf": [
+              { "not": { "required": ["region"] } },
+              { "not": { "required": ["start"] } },
+              { "not": { "required": ["end"] } }
+            ]
+          }
+        }
+      ]
+    },
+    "owner_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision_ref", "decided_at", "reason"],
+      "properties": {
+        "decision_ref": { "$ref": "#/definitions/non_empty" },
+        "decided_at": { "type": "string", "format": "date" },
+        "reason": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ref",
+        "boundary",
+        "raw_excerpt",
+        "normalized_text",
+        "semantic_key",
+        "classification_basis",
+        "applicability_state"
+      ],
+      "properties": {
+        "source_ref": { "$ref": "#/definitions/pinned_source_ref" },
+        "boundary": { "$ref": "#/definitions/boundary" },
+        "raw_excerpt": {
+          "$ref": "#/definitions/non_empty",
+          "description": "The verbatim text as found. Opaque data: never parsed as code, a command or an instruction by this contract."
+        },
+        "normalized_text": {
+          "$ref": "#/definitions/non_empty",
+          "description": "The canonicalised form used for comparison (semantic_key is the identity assertion; this is not it). Normalizing never substitutes for raw_excerpt or severs source_ref/boundary provenance."
+        },
+        "semantic_key": {
+          "$ref": "#/definitions/non_empty",
+          "description": "An EXPLICITLY asserted content identity, used to cluster duplicate candidates found through different origins. Never derived from id or read order."
+        },
+        "classification_basis": {
+          "$ref": "#/definitions/non_empty",
+          "description": "Why this scope was chosen. Mandatory so classification is a stated decision, never a silent default derived from the source's path."
+        },
+        "conflicts_with": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/non_empty" },
+          "description": "semantic_key values of other clusters this candidate is asserted to be incompatible with. Declarations must be symmetric across the whole candidate set (checked in the library)."
+        },
+        "applicability_state": { "enum": ["candidate", "accepted", "not-applicable"] },
+        "not_applicable_reason": { "enum": ["owner-rejected", "lost-conflicting-decision"] },
+        "owner_decision": { "$ref": "#/definitions/owner_decision" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "applicability_state": { "const": "candidate" } },
+            "required": ["applicability_state"]
+          },
+          "then": {
+            "allOf": [
+              { "not": { "required": ["owner_decision"] } },
+              { "not": { "required": ["not_applicable_reason"] } }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": { "applicability_state": { "enum": ["accepted", "not-applicable"] } },
+            "required": ["applicability_state"]
+          },
+          "then": { "required": ["owner_decision"] }
+        },
+        {
+          "if": {
+            "properties": { "applicability_state": { "const": "not-applicable" } },
+            "required": ["applicability_state"]
+          },
+          "then": { "required": ["not_applicable_reason"] }
+        },
+        {
+          "if": {
+            "properties": { "applicability_state": { "const": "accepted" } },
+            "required": ["applicability_state"]
+          },
+          "then": { "not": { "required": ["not_applicable_reason"] } }
+        }
+      ]
+    }
+  }
+}

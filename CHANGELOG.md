@@ -18,6 +18,105 @@ updated: 2026-09-13
 
 ### Added
 
+- **Приём внешних правил (`controlled-rule-intake`) — обязательный участок
+  проверки.** Пакет 3 программы `meridian-workspace-compatibility`: контракт,
+  связывающий зарегистрированный источник инструкций
+  (`instruction-source-registry`) с кандидатом правила и последующим решением
+  владельца, — без предоставления обнаруженному тексту полномочий нормы по
+  одному факту обнаружения или чтения. Новые артефакты Ядра:
+  `standards/workspace/controlled-rule-intake.md`,
+  `registries/operating-model/controlled-rule-intake.schema.json`,
+  `registries/operating-model/fixtures/controlled-rule-intake.fixtures.json`,
+  `scripts/lib/controlled-rule-intake.mjs`,
+  `test/controlled-rule-intake.test.mjs`. Термин `rule-candidate` («Кандидат
+  правила») введён одновременно в `operating-glossary.md` и
+  `operating-foundation.yaml`.
+  - **Ссылка на источник — закрытая точная редакция.** `payload.source_ref`
+    пинует одну запись `instruction-source-registry` идентификатором,
+    явной редакцией **и** SHA-256 дайджестом одновременно (не «либо-либо», как
+    гибкий pin `bounded-context-manifest`) и разрешается через внешнюю
+    границу (`resolveSource`, переиспользующую форму `makeRecordResolver` из
+    `context-manifest.mjs`). Неизвестный источник, непроверенная резолвером
+    редакция и расхождение с текущим `recorded_state` реестра источников
+    (изменившаяся редакция или дайджест) отклоняются. Разрешённый снимок
+    сверяется и по `recorded_state.currency`: `unverified` отклоняется
+    всегда, `accepted`/`not-applicable` требуют `current`, а `stale`
+    (проверенное прошлое состояние источника, пропавшего с тех пор) молча не
+    считается текущим и может подкреплять только `candidate` как
+    историческую находку.
+  - **Происхождение конверта и payload называют один источник.**
+    `origin.kind` кандидата правила закреплён значением `derived`, а
+    `origin.source_ref` обязан равняться канонической форме
+    `instruction-source:<payload.source_ref.id>` — кандидат не вправе
+    заявлять происхождение от одного источника в конверте, пиная другой в
+    payload.
+  - **Решение владельца — только от закреплённого за областью человеческого
+    полномочия.** `accepted`/`not-applicable` требуют `authority.kind`,
+    закрытого за `scope.type` (`methodology-owner` / `user` / `organization` /
+    `project-owner` / `repository-maintainer`; у `run-state` закреплённого
+    полномочия нет). `delegated-run` — полномочие запуска, легитимное только
+    для переноса разбора кандидата, — никогда не решает применимость, даже
+    при совпадающем `authority.decision_ref`.
+  - **`read_channel` разрешённого источника — проверяемая, непереинтерпретируемая
+    проекция.** Резолвер обязан вернуть `read_channel` (`kind`,
+    `meridian_visibility`, `agent_auto_read`), сверяемый той же
+    согласованностью, что и сам `instruction-source-registry.mjs`
+    (переиспользуемой функцией, а не второй копией): `agent-native` с
+    заявленной `meridian_visibility: full` отклоняется. Приёмка кандидата не
+    повышает видимость и не превращает `agent-native` в `meridian-observed`.
+  - **Разрешённый ответ резолвера — закрытая форма, а не только
+    согласованность значений.** Согласованность (`agent-native` ⟹
+    `agent_auto_read: true` и т. п.) не ловит изобретённое значение или
+    значение неверного типа, которое не участвует ни в одном её сравнении —
+    `read_channel.kind: invented-channel`, `agent_auto_read: "false"` строкой
+    или `recorded_state.currency: invented-currency` раньше проходили
+    бесследно. Форма проверяется первой и независимо, переиспользуя закрытые
+    пулы `READ_CHANNEL_KINDS`/`MERIDIAN_VISIBILITY`/`CURRENCY`
+    `instruction-source-registry.mjs`: `read_channel.kind`/
+    `meridian_visibility` — из закрытого пула, `agent_auto_read` — `boolean`;
+    `recorded_state.revision` — непустая строка, `digest` — объект, закрытый
+    ровно к `algorithm`/`value` (`sha-256`, 64 строчных hex-символа),
+    `revision_verified` — `boolean`, `currency` — из закрытого пула.
+    `reference` верхнего ответа теперь **обязателен** (не только сверяем при
+    наличии) и обязан совпадать с `source_ref.reference`.
+  - **Граница разбора сохранена отдельно от нормализации.** `payload.boundary`
+    (участок `AGENTS.md`, диапазон строк/байт или источник целиком) хранится
+    рядом с дословным `raw_excerpt` и канонизированным `normalized_text` —
+    нормализация не подменяет происхождение.
+  - **Классификация — явная, не из пути.** `scope` — одна из шести областей
+    `workspace-scope-model`, с обязательным `classification_basis`; путь
+    источника её не определяет.
+  - **Повторы — по явному `semantic_key`, не по `id` или порядку чтения.**
+    Записи одного `semantic_key` образуют кластер дублей и обязаны разделять
+    одну область, одно решение и один набор `conflicts_with`, сохраняя
+    различное происхождение (`source_ref`+`boundary`) каждой. Записи кластера,
+    решённые в `accepted`/`not-applicable`, дополнительно обязаны разделять
+    **полное** `authority` (`kind`, `authority_ref` **и** `decision_ref`) —
+    одинаковый `owner_decision` при разных `authority_ref`/`kind`/
+    `decision_ref` больше не проходит: совпадение решения не доказывает, что
+    его принял один и тот же владелец. Требование не распространяется на
+    записи, остающиеся `candidate`, — они вправе сохранять разные
+    `delegated-run` происхождения разбора.
+  - **Конфликты — симметрично и независимо от порядка.** `conflicts_with`
+    обязан быть объявлен обеими сторонами; граф конфликтов вычисляется по
+    всему набору кандидатов сразу, а сообщения о конфликте называют обе
+    стороны в отсортированном порядке.
+  - **Закрытый минимальный набор состояний — три, не два.**
+    `applicability_state`: `candidate` (без `owner_decision`), `accepted` и
+    `not-applicable` (оба требуют `owner_decision`; `not-applicable`
+    дополнительно требует `not_applicable_reason` из закрытого пула двух
+    значений, подтверждённого данными, а не только заявленного).
+    Одновременное принятие двух симметрично конфликтующих кластеров,
+    неоднозначная классификация внутри кластера дублей и недоказанная причина
+    `not-applicable` останавливают прогон (`FAIL`), а не превращаются в
+    третье состояние.
+  - **Не заменяет и не переписывает существующую приёмку.**
+    `standards/workspace/instruction-intake.md` и
+    `registries/instruction-intake` не изменены: `controlled-rule-intake`
+    описывает более ранний шаг (до того, как что-либо предложено к принятию в
+    конкретный репозиторий); миграция данных Экземпляра остаётся отдельным
+    пакетом `instance-data-migration`.
+
 - **Полевая оценка Meridian (`meridian-field-evaluation`) — обязательный
   участок проверки.** Продуктово-независимый контракт практической оценки
   механизмов Meridian: схема восьми раздельных характеристик плана §10

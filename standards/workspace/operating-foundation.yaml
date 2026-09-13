@@ -152,6 +152,10 @@ terms:
     canonical_ru: Источник инструкций
     canonical_en: Instruction source
     machine_names: [instruction_source]
+  - id: rule-candidate
+    canonical_ru: Кандидат правила
+    canonical_en: Rule candidate
+    machine_names: [rule_candidate]
 
 principles:
   - id: human-agent-readable

@@ -470,6 +470,26 @@ function writeExistingProjectCompatibilityMode(root, { schema = null, bundle = n
   }
 }
 
+// instance-data-migration helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const IDM_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const IDM_OK_LINE = /instance-data-migration: the migration-plan schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const idmRealBundle = () => JSON.parse(fs.readFileSync(path.join(IDM_OM, 'fixtures', 'instance-data-migration.fixtures.json'), 'utf8'));
+function writeInstanceDataMigration(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/instance-data-migration.schema.json',
+    schema ?? fs.readFileSync(path.join(IDM_OM, 'instance-data-migration.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/instance-data-migration.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/instance-data-migration.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(IDM_OM, 'fixtures', 'instance-data-migration.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -508,6 +528,8 @@ function buildKernel(root) {
   writeControlledRuleIntake(root);
   // The mandatory existing-project-compatibility-mode contract, likewise.
   writeExistingProjectCompatibilityMode(root);
+  // The mandatory instance-data-migration contract, likewise.
+  writeInstanceDataMigration(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -4831,6 +4853,102 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t256 an invalid existing-project-compatibility-mode fixture the composition accepts clean is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/existing-project-compatibility-mode: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// instance-data-migration — storage-neutral migration plan for a transitional
+// Instance's records into Meridian's logical scope areas, is a MANDATORY
+// part of the Kernel (buildKernel plants it). Schema is Kernel, plan data is
+// Instance. Removing the schema or the fixtures is a FAIL; a present schema
+// is parsed, keyword-checked and exercised against its product-neutral
+// fixtures, fail-closed on the bundle's own shape. Helpers (IDM_OM,
+// IDM_OK_LINE, idmRealBundle, writeInstanceDataMigration) sit next to the
+// other operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t257 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t257');
+  check('t257 the mandatory instance-data-migration contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [IDM_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t258 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t258');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'instance-data-migration.schema.json'));
+  commitAll(kernel);
+  check('t258 removing the mandatory instance-data-migration schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: registries\/operating-model\/instance-data-migration\.schema\.json is missing; the instance-data migration contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t259 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t259');
+  const s = JSON.parse(fs.readFileSync(path.join(IDM_OM, 'instance-data-migration.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeInstanceDataMigration(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t259 an unsupported instance-data-migration schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t260 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t260');
+  writeInstanceDataMigration(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t260 a non-JSON instance-data-migration schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: instance-data-migration\.schema\.json is not valid JSON/],
+  });
+}
+
+// t261 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t261');
+  writeInstanceDataMigration(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t261 an instance-data-migration schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: the schema carries no fixtures/],
+  });
+}
+
+// t262 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t262');
+  const b = idmRealBundle();
+  const base = b.valid.find((c) => c.note.startsWith('minimal fully-migrated'));
+  const registry = JSON.parse(JSON.stringify(base.registry));
+  registry.migration_plans[0].payload.plan_fingerprint = '0'.repeat(64);
+  b.valid.push({ note: 'planted plan with a mismatched fingerprint', registry });
+  writeInstanceDataMigration(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t262 a valid instance-data-migration fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: a fixture that must be a valid registry was rejected \(planted plan with a mismatched fingerprint\)/],
+  });
+}
+
+// t263 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t263');
+  const b = idmRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeInstanceDataMigration(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t263 an invalid instance-data-migration fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
   });
 }
 

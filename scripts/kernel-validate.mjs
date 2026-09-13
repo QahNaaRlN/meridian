@@ -100,6 +100,7 @@ import { evaluateRoleRegistry, evaluateHumanControl } from './lib/role-and-human
 import { evaluateContextManifest, makeRecordResolver } from './lib/context-manifest.mjs';
 import { evaluateEvidenceAndHandoff } from './lib/evidence-and-handoff.mjs';
 import { evaluateFieldEvaluation } from './lib/field-evaluation.mjs';
+import { evaluateControlledRuleIntake } from './lib/controlled-rule-intake.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1818,6 +1819,128 @@ function functionalParityConsistency(rec) {
     if (feOk && feCoverage) {
       ok('meridian-field-evaluation: the field-evaluation schema parsed and keyword-checked; '
        + `${feSatisfied} representative fixture(s) satisfied the composition (record envelope, record_type-selected observation/report body, the eight characteristics each with a metric-fixed measurement kind and — for classification — a metric-closed outcome pool, the four distinct observation statuses each but "observed" carrying a reason and forbidding a measurement, pinned evidence resolved through the external boundary to a closed evidence-result confirming observed_result AND a metric_ref naming the observation's own metric, the supersedes/correction_reason correction pair, and for a report the resolved same-workspace/same-period comparability rules, the rejection of double counting including a superseded+superseding pair, eight-of-eight per_metric completeness, and the exact recomputation of every aggregate from the resolved, named sample) and ${feRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// controlled-rule-intake: candidate → registered source → owner decision → normalized record (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/controlled-rule-intake.schema.json is the
+// specialised payload schema for a rule candidate (record_type: rule-candidate)
+// — text parsed out of a registered instruction source
+// (instruction-source-registry.md) and proposed as a possible rule. Its
+// envelope is validated against the existing scoped-record.schema.json
+// (composition, not a second envelope). Discovering or reading a source grants
+// a candidate no norm authority: payload.source_ref pins ONE
+// instruction-source-registry entry by id, an explicit revision AND a SHA-256
+// digest (both mandatory), RESOLVED through a boundary external to this record
+// (the fixtures' companion "resolution" set) and checked against that entry's
+// own recorded_state, INCLUDING recorded_state.currency (accepted /
+// not-applicable require "current"; "stale" never counts as current; "unverified"
+// is always rejected) and a minimal read_channel projection checked with the
+// SAME coherence rule instruction-source-registry.mjs applies to its own
+// read_channel — an unknown source, an unverified revision, or a
+// revision/digest mismatch are all rejected. The envelope's origin.kind/
+// origin.source_ref must name the SAME source as payload.source_ref, and
+// accepted/not-applicable require the ONE human owner authority closed to the
+// record's scope ("delegated-run" never decides applicability, even with a
+// matching decision_ref). Semantically duplicate candidates
+// found through different origins are clustered by an EXPLICITLY asserted
+// semantic_key (never by id or read order) and share one classification and
+// one decision; conflicts_with is declared symmetrically and evaluated as a
+// graph over the WHOLE candidate set at once, so the result does not depend on
+// which record is read first. applicability_state is the closed minimal
+// three-value state — candidate / accepted / not-applicable — and an
+// unresolved conflict, an ambiguous cluster or an unevidenced not-applicable
+// reason all fail the run closed. Candidate DATA is Instance, like the source
+// registry and the intake register: the Kernel ships the schema, the
+// product-neutral fixtures and one checkable implementation
+// (scripts/lib/controlled-rule-intake.mjs), not a canonical data file. The
+// contract is a MANDATORY part of this Kernel: a missing schema or missing
+// fixtures is a FAIL, not an informational skip. The generic $schema pass
+// never reaches a JSON Schema file or a .json fixtures bundle, so — as with
+// the bounded-context-manifest and meridian-field-evaluation blocks — the
+// schema is parsed, walked for unsupported keywords, and exercised against its
+// bundled fixtures here, fail-closed on the bundle's own shape.
+{
+  const criDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const criSchemaName = 'controlled-rule-intake.schema.json';
+  const criSchemaRaw = readIfExists(path.join(criDir, criSchemaName));
+  if (criSchemaRaw === null) {
+    fail(`controlled-rule-intake: registries/operating-model/${criSchemaName} is missing; the controlled rule intake contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let criOk = true;
+    let criSchema = null;
+    let criEnv = null;
+    try { criSchema = JSON.parse(criSchemaRaw); }
+    catch (e) { fail(`controlled-rule-intake: ${criSchemaName} is not valid JSON: ${e.message}`); criOk = false; }
+
+    const criEnvRaw = readIfExists(path.join(criDir, 'scoped-record.schema.json'));
+    if (criEnvRaw === null) {
+      fail('controlled-rule-intake: registries/operating-model/scoped-record.schema.json is missing; the candidate record composes with the record envelope and cannot be checked without it');
+      criOk = false;
+    } else {
+      try { criEnv = JSON.parse(criEnvRaw); }
+      catch (e) { fail(`controlled-rule-intake: scoped-record.schema.json is not valid JSON: ${e.message}`); criOk = false; }
+    }
+
+    if (criSchema) {
+      try { assertSupportedDeep(criSchema, criSchemaName); }
+      catch (e) { fail(`controlled-rule-intake: the schema uses a construct this validator cannot check: ${e.message}`); criOk = false; }
+    }
+
+    let criSatisfied = 0;
+    let criRejected = 0;
+    let criCoverage = false;
+    const criFxRaw = readIfExists(path.join(criDir, 'fixtures', 'controlled-rule-intake.fixtures.json'));
+    if (criFxRaw === null) {
+      fail('controlled-rule-intake: the schema carries no fixtures (registries/operating-model/fixtures/controlled-rule-intake.fixtures.json); a schema no run exercises is not one this gate has reached');
+      criOk = false;
+    } else if (criOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(criFxRaw); }
+      catch (e) { bundleOk = false; fail(`controlled-rule-intake: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('controlled-rule-intake: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`controlled-rule-intake: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (bundleOk && (typeof bundle.resolution !== 'object' || bundle.resolution === null || Array.isArray(bundle.resolution))) {
+        bundleOk = false;
+        fail('controlled-rule-intake: the fixtures file carries no "resolution" object; every candidate\'s source_ref is resolved OUTSIDE the record, and a bundle that resolves nothing cannot exercise the contract against an actual instruction source snapshot');
+      }
+      if (!bundleOk) {
+        criOk = false;
+      } else {
+        const criOpts = {
+          registrySchema: criSchema,
+          envelopeSchema: criEnv,
+          resolveSource: makeRecordResolver(bundle.resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateControlledRuleIntake(c && c.registry, criOpts);
+          if (p.length) { fail(`controlled-rule-intake: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); criOk = false; }
+          else criSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateControlledRuleIntake(c && c.registry, criOpts);
+          if (p.length === 0) { fail(`controlled-rule-intake: a fixture that must be rejected validated clean (${c && c.note})`); criOk = false; }
+          else criRejected++;
+        }
+        criCoverage = criOk;
+      }
+    }
+
+    if (criOk && criCoverage) {
+      ok('controlled-rule-intake: the rule-intake schema parsed and keyword-checked; '
+       + `${criSatisfied} representative fixture(s) satisfied the composition (record envelope, pinned source_ref resolved through the external boundary and checked against the instruction source's own recorded_state INCLUDING currency and a minimal read_channel projection, origin.kind/origin.source_ref naming the same source as payload.source_ref, boundary provenance, explicit semantic-key clustering with consistent classification and decision across origins, a symmetric order-independent conflict graph, the closed candidate / accepted / not-applicable applicability state with an evidenced reason, and accepted/not-applicable decided only by the scope's own human owner authority) and ${criRejected} were rejected as declared`);
     }
   }
 }

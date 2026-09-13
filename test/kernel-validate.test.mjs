@@ -428,6 +428,26 @@ function writeFieldEvaluation(root, { schema = null, bundle = null, omitFixtures
   }
 }
 
+// controlled-rule-intake helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const CRI_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const CRI_OK_LINE = /controlled-rule-intake: the rule-intake schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const criRealBundle = () => JSON.parse(fs.readFileSync(path.join(CRI_OM, 'fixtures', 'controlled-rule-intake.fixtures.json'), 'utf8'));
+function writeControlledRuleIntake(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/controlled-rule-intake.schema.json',
+    schema ?? fs.readFileSync(path.join(CRI_OM, 'controlled-rule-intake.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/controlled-rule-intake.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/controlled-rule-intake.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(CRI_OM, 'fixtures', 'controlled-rule-intake.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -462,6 +482,8 @@ function buildKernel(root) {
   writeEvidenceAndHandoff(root);
   // The mandatory meridian-field-evaluation contract, likewise.
   writeFieldEvaluation(root);
+  // The mandatory controlled-rule-intake contract, likewise.
+  writeControlledRuleIntake(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -4579,6 +4601,115 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t241 an invalid field-evaluation fixture the composition accepts clean is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/meridian-field-evaluation: a fixture that must be rejected validated clean \(planted well-formed observation in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// controlled-rule-intake — candidate → registered source → owner decision →
+// normalized record is a MANDATORY part of the Kernel (buildKernel plants
+// it). Schema is Kernel, candidate data is Instance. Removing the schema or
+// the fixtures is a FAIL; a present schema is parsed, keyword-checked and
+// exercised against its product-neutral fixtures, fail-closed on the
+// bundle's own shape. Helpers (CRI_OM, CRI_OK_LINE, criRealBundle,
+// writeControlledRuleIntake) sit next to the other operating-model contract
+// helpers so buildKernel can call them.
+// ===========================================================================
+
+// t242 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t242');
+  check('t242 the mandatory controlled-rule-intake contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [CRI_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t243 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t243');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'controlled-rule-intake.schema.json'));
+  commitAll(kernel);
+  check('t243 removing the mandatory controlled-rule-intake schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: registries\/operating-model\/controlled-rule-intake\.schema\.json is missing; the controlled rule intake contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t244 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t244');
+  const s = JSON.parse(fs.readFileSync(path.join(CRI_OM, 'controlled-rule-intake.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeControlledRuleIntake(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t244 an unsupported controlled-rule-intake schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t245 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t245');
+  writeControlledRuleIntake(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t245 a non-JSON controlled-rule-intake schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: controlled-rule-intake\.schema\.json is not valid JSON/],
+  });
+}
+
+// t246 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t246');
+  writeControlledRuleIntake(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t246 a controlled-rule-intake schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: the schema carries no fixtures/],
+  });
+}
+
+// t247 — a fixtures bundle with no "resolution" object cannot exercise source
+// resolution and is a red run, not a silent pass.
+{
+  const { kernel, instance } = freshPair('t247');
+  const b = criRealBundle();
+  delete b.resolution;
+  writeControlledRuleIntake(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t247 a controlled-rule-intake fixtures file with no resolution object is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: the fixtures file carries no "resolution" object/],
+  });
+}
+
+// t248 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t248');
+  const b = criRealBundle();
+  const registry = JSON.parse(JSON.stringify(b.valid[0].registry));
+  delete registry.rule_candidates[0].payload.classification_basis;
+  b.valid.push({ note: 'planted candidate with no classification_basis', registry });
+  writeControlledRuleIntake(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t248 a valid controlled-rule-intake fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: a fixture that must be a valid registry was rejected \(planted candidate with no classification_basis\)/],
+  });
+}
+
+// t249 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t249');
+  const b = criRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeControlledRuleIntake(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t249 an invalid controlled-rule-intake fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
   });
 }
 

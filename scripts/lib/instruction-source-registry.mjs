@@ -151,7 +151,11 @@ export function checkDivergenceClaim(divergence) {
   return problems;
 }
 
-function checkReadChannel(id, rc, problems) {
+// Exported so a consumer resolving a source snapshot from OUTSIDE this
+// registry (controlled-rule-intake.mjs, property 10) can apply the exact same
+// agent-native/meridian-observed/manual coherence rules to a resolved
+// read_channel projection, instead of carrying a second, divergent copy.
+export function checkReadChannel(id, rc, problems) {
   const at = `instruction source "${id}"`;
   const kind = rc.kind;
   const visibility = rc.meridian_visibility;

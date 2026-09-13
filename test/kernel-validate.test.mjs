@@ -448,6 +448,28 @@ function writeControlledRuleIntake(root, { schema = null, bundle = null, omitFix
   }
 }
 
+// existing-project-compatibility-mode helpers. The contract is a MANDATORY
+// part of the Kernel, so buildKernel plants the real schema and real fixtures
+// beside it; scoped-record.schema.json, instruction-source-registry.schema.json
+// and controlled-rule-intake.schema.json are already planted by
+// writeTaskPatternCatalog / writeInstructionSourceRegistry / writeControlledRuleIntake.
+const EPCM_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const EPCM_OK_LINE = /existing-project-compatibility-mode: the compatibility-mode schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const epcmRealBundle = () => JSON.parse(fs.readFileSync(path.join(EPCM_OM, 'fixtures', 'existing-project-compatibility-mode.fixtures.json'), 'utf8'));
+function writeExistingProjectCompatibilityMode(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/existing-project-compatibility-mode.schema.json',
+    schema ?? fs.readFileSync(path.join(EPCM_OM, 'existing-project-compatibility-mode.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/existing-project-compatibility-mode.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/existing-project-compatibility-mode.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(EPCM_OM, 'fixtures', 'existing-project-compatibility-mode.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -484,6 +506,8 @@ function buildKernel(root) {
   writeFieldEvaluation(root);
   // The mandatory controlled-rule-intake contract, likewise.
   writeControlledRuleIntake(root);
+  // The mandatory existing-project-compatibility-mode contract, likewise.
+  writeExistingProjectCompatibilityMode(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -4710,6 +4734,103 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t249 an invalid controlled-rule-intake fixture the composition accepts clean is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/controlled-rule-intake: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// existing-project-compatibility-mode — bounded discovery plan → registered
+// source → rule candidate, zero writes to the connected project, is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// scan data is Instance. Removing the schema or the fixtures is a FAIL; a
+// present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. Helpers
+// (EPCM_OM, EPCM_OK_LINE, epcmRealBundle, writeExistingProjectCompatibilityMode)
+// sit next to the other operating-model contract helpers so buildKernel can
+// call them.
+// ===========================================================================
+
+// t250 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t250');
+  check('t250 the mandatory existing-project-compatibility-mode contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [EPCM_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t251 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t251');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'existing-project-compatibility-mode.schema.json'));
+  commitAll(kernel);
+  check('t251 removing the mandatory existing-project-compatibility-mode schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: registries\/operating-model\/existing-project-compatibility-mode\.schema\.json is missing; the existing-project compatibility mode contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t252 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t252');
+  const s = JSON.parse(fs.readFileSync(path.join(EPCM_OM, 'existing-project-compatibility-mode.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeExistingProjectCompatibilityMode(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t252 an unsupported existing-project-compatibility-mode schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t253 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t253');
+  writeExistingProjectCompatibilityMode(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t253 a non-JSON existing-project-compatibility-mode schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: existing-project-compatibility-mode\.schema\.json is not valid JSON/],
+  });
+}
+
+// t254 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t254');
+  writeExistingProjectCompatibilityMode(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t254 an existing-project-compatibility-mode schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: the schema carries no fixtures/],
+  });
+}
+
+// t255 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t255');
+  const b = epcmRealBundle();
+  const base = b.valid.find((c) => c.note.includes('meridian-observed'));
+  const registry = JSON.parse(JSON.stringify(base.registry));
+  registry.workspace_connections[0].payload.discovery_plan = [];
+  b.valid.push({ note: 'planted scan with a discovered source outside the plan', registry });
+  writeExistingProjectCompatibilityMode(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t255 a valid existing-project-compatibility-mode fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: a fixture that must be a valid registry was rejected \(planted scan with a discovered source outside the plan\)/],
+  });
+}
+
+// t256 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t256');
+  const b = epcmRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeExistingProjectCompatibilityMode(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t256 an invalid existing-project-compatibility-mode fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
   });
 }
 

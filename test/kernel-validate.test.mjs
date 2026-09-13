@@ -408,6 +408,26 @@ function writeEvidenceAndHandoff(root, { schema = null, bundle = null, omitFixtu
   }
 }
 
+// meridian-field-evaluation helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const FE_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const FE_OK_LINE = /meridian-field-evaluation: the field-evaluation schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const feRealBundle = () => JSON.parse(fs.readFileSync(path.join(FE_OM, 'fixtures', 'field-evaluation.fixtures.json'), 'utf8'));
+function writeFieldEvaluation(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/field-evaluation.schema.json',
+    schema ?? fs.readFileSync(path.join(FE_OM, 'field-evaluation.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/field-evaluation.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/field-evaluation.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(FE_OM, 'fixtures', 'field-evaluation.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -440,6 +460,8 @@ function buildKernel(root) {
   writeContextManifest(root);
   // The mandatory evidence-and-handoff contract, likewise.
   writeEvidenceAndHandoff(root);
+  // The mandatory meridian-field-evaluation contract, likewise.
+  writeFieldEvaluation(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -4462,6 +4484,101 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t234 an invalid evidence-and-handoff fixture the composition accepts clean is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/evidence-and-handoff-contract: a fixture that must be rejected validated clean \(planted well-formed handoff in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// meridian-field-evaluation — the practical-evaluation contract (observation +
+// report) is a MANDATORY part of the Kernel (buildKernel plants it). Schema is
+// Kernel, observation/report data is Instance. Removing the schema or the
+// fixtures is a FAIL; a present schema is parsed, keyword-checked and
+// exercised against its product-neutral fixtures, fail-closed on the
+// bundle's own shape. Helpers (FE_OM, FE_OK_LINE, feRealBundle,
+// writeFieldEvaluation) sit next to the other operating-model contract
+// helpers so buildKernel can call them.
+// ===========================================================================
+
+// t235 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t235');
+  check('t235 the mandatory field-evaluation contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [FE_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t236 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t236');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'field-evaluation.schema.json'));
+  commitAll(kernel);
+  check('t236 removing the mandatory field-evaluation schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: registries\/operating-model\/field-evaluation\.schema\.json is missing; the field-evaluation contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t237 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t237');
+  const s = JSON.parse(fs.readFileSync(path.join(FE_OM, 'field-evaluation.schema.json'), 'utf8'));
+  s.definitions.observation_payload.patternProperties = { '^x': { type: 'string' } };
+  writeFieldEvaluation(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t237 an unsupported field-evaluation schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t238 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t238');
+  writeFieldEvaluation(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t238 a non-JSON field-evaluation schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: field-evaluation\.schema\.json is not valid JSON/],
+  });
+}
+
+// t239 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t239');
+  writeFieldEvaluation(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t239 a field-evaluation schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: the schema carries no fixtures/],
+  });
+}
+
+// t240 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t240');
+  const b = feRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.valid[0].spec));
+  delete spec.payload.evidence;
+  b.valid.push({ note: 'planted observation with no evidence', spec });
+  writeFieldEvaluation(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t240 a valid field-evaluation fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: a fixture that must be valid was rejected \(planted observation with no evidence\)/],
+  });
+}
+
+// t241 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t241');
+  const b = feRealBundle();
+  b.invalid.push({ note: 'planted well-formed observation in the invalid array', spec: JSON.parse(JSON.stringify(b.valid[0].spec)) });
+  writeFieldEvaluation(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t241 an invalid field-evaluation fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: a fixture that must be rejected validated clean \(planted well-formed observation in the invalid array\)/],
   });
 }
 

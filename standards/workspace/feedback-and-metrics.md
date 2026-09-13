@@ -5,9 +5,10 @@ status: draft
 scope: workspace
 owner: workspace-owner
 created: 2026-08-19
-updated: 2026-08-19
+updated: 2026-09-12
 related_documents:
   - ./document-quality.md
+  - ./meridian-field-evaluation.md
   - ../../workflows/task-lifecycle.md
   - ../../verification/README.md
 canonical_url:
@@ -88,3 +89,54 @@ report, no CI upload. The data stays local to the Instance, exactly like
 every other product fact. If a future need justifies a rollup script, it is
 built when that need is concrete — not pre-built for data that does not
 exist yet.
+
+## Stream 3 — the field-evaluation contract and its relation to streams 1–2
+
+[`meridian-field-evaluation.md`](meridian-field-evaluation.md) defines a
+third, separate mechanism: the eight characteristics of
+`meridian-operating-upgrade-plan.md` §10 (mechanism correctness, context-entry
+time, rework returns, correct/false stops, missed norms, resumption success,
+owner cost, post-acceptance defects), each a `field-evaluation-observation`
+record grounded by externally-resolved evidence, aggregated into a
+`field-evaluation-report` that never rolls up into one score. This section
+states the boundary so the three streams are not confused with one another.
+
+**What the existing gate-run log (stream 2) already gives.** Every entry in
+`validate-log.jsonl` is a completed, actually-run validator invocation:
+`exit_code`, `failing`, `warnings`, `info_ok` and the first twenty `FAIL`/`WARN`
+messages, with `kernel_revision` and `instance_revision` pinning exactly which
+edition ran. This is a reliable, already-collected signal for exactly one
+thing: **mechanism correctness of the validator itself**, observed as "did
+this specific gate run produce the result it should have." It is not evidence
+for any of the other seven characteristics, and it is not itself a
+`field-evaluation-observation` — the two records serve different questions and
+are not converted into one another automatically.
+
+**What it does not give, and stays unknown until collected separately.** The
+gate-run log says nothing about context-entry time, rework returns, stop
+correctness, missed norms outside what the validator itself checks,
+resumption success, owner cost, or post-acceptance defects. A
+field-evaluation report built before any real observation exists for a
+metric states that metric `unknown` with a reason — it does not infer a value
+from the gate-run log's presence or absence, and it does not treat "the
+validator stayed green" as evidence that the other seven characteristics were
+good.
+
+**How the qualitative friction log (stream 1) relates.** A friction-log entry
+records that something cost more than it should have — a judgement in
+prose, not a structured, pinned measurement. It can *prompt* a human to
+record a `field-evaluation-observation` (a recurring `false-positive gate`
+entry, for instance, is a natural trigger to classify a `stop-correctness`
+instance), but a friction-log entry is never itself treated as the evidence
+a `field-evaluation-observation` requires: that evidence must resolve
+through the external boundary the contract defines, which a free-text log
+entry does not.
+
+**Collection of real data is a separate decision.** This Kernel package ships
+the schema, the product-neutral fixtures and the checkable implementation —
+a mechanism, not a data-collection effort. No existing Instance log is
+migrated into `field-evaluation-observation` records with invented values,
+and no automatic telemetry collection is introduced by this package. Starting
+to record real observations, and building any real field-evaluation report,
+begins only by a separate, explicit owner decision, named in
+`meridian-field-evaluation.md`'s own preamble.

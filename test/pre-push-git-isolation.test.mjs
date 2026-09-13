@@ -152,6 +152,7 @@ function buildSyntheticKernel(name, { dropSourcingLine = false, dropKernelPin = 
     'test/role-and-human-control.test.mjs',
     'test/context-manifest.test.mjs',
     'test/evidence-and-handoff.test.mjs',
+    'test/field-evaluation.test.mjs',
     'test/pre-push-git-isolation.test.mjs',
     'scripts/kernel-validate.mjs',
     'scripts/validate-and-log.mjs',

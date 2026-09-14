@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-13
+updated: 2026-09-14
 ---
 
 # Changelog
@@ -17,6 +17,107 @@ updated: 2026-09-13
 ## [Unreleased]
 
 ### Added
+
+- **Канонический экспорт данных Экземпляра (`instance-canonical-export-contract`)
+  — обязательный участок проверки.** Закрывает нормативный пробел прежней
+  формы `instance-data-migration`: target миграционного mapping нёс только
+  часть канонического конверта (`id`/`record_type`/`scope`/`origin`/
+  `authority`) и не мог перенести `title` или `payload` — то есть именно
+  человекочитаемое название и предметное содержимое записи. Пакет не
+  переносит данные какого-либо конкретного продукта и не
+  выбирает постоянное хранилище — он определяет проверяемый,
+  независимый от хранилища канонический экспорт.
+  - **Полная цель миграции.** `target` (`instance-data-migration.schema.json`
+    `definitions.target_record`) теперь несёт **все девять** фактических
+    полей канонического конверта — добавлены `$schema` (явно заявляемые
+    планом данные, а не выводимая проверкой константа), `title` (непустая
+    строка), `schema_version` (закреплён `1`) и `payload`, закрытый к новой
+    форме `content_envelope` (`media_type`, `encoding` — `utf-8` для
+    канонического JSON и целых текстовых файлов, `base64` для бинарного
+    содержимого, `content`, полный закрытый SHA-256 `digest`).
+    `field_basis` расширен требованием `$schema`/`title`/`payload`/
+    `schema_version` — ни одно из четырёх не может появиться без явного
+    `preserved`/`assigned`. Сравнение `target` ↔ экспортированная запись
+    (`checkExportCompleteness`) включает `$schema`: произвольный или
+    расходящийся `$schema` экспортированной записи отклоняется точно как
+    расходящийся `record_type` или `title`.
+  - **Семантическая проверка `content_envelope`.** Одна общая чистая
+    функция `checkContentEnvelope` (`scripts/lib/instance-data-migration.mjs`)
+    применяется тождественно к `target.payload` плана, к payload каждой
+    экспортированной записи и к ответу внешнего резолвера
+    `resolveSourceContent` **до** того, как этот ответ используется как
+    база для сравнения. Она никогда не доверяет заявленному `digest`:
+    `digest.algorithm` обязан быть `sha-256`; для `encoding: utf-8` SHA-256
+    пересчитывается из UTF-8-байтов `content`; для `encoding: base64`
+    `content` обязан быть корректным **каноническим** base64 (алфавит,
+    выравнивание и раунд-трип декодирование → кодирование), и SHA-256
+    пересчитывается из декодированных бинарных байтов, никогда из текста
+    base64; `application/json` и `*+json` обязаны нести `encoding: utf-8`,
+    успешно разбираемый JSON и содержимое, буквально совпадающее с
+    каноническим JSON-представлением (рекурсивно отсортированные ключи, та
+    же канонизация, что использует `computePlanFingerprint`/
+    `computeExportDigest`); `text/*` обязан нести `encoding: utf-8`; любой
+    иной `media_type` трактуется как бинарный и обязан нести `base64`.
+    Ложный `digest` отклоняется независимо от того, совпадает ли он между
+    `target`, экспортированной записью и ответом резолвера — согласованность
+    между тремя слоями никогда не заменяет доказательство.
+  - **Канонический экспорт.** Новая закрытая схема
+    `registries/operating-model/instance-canonical-export.schema.json`
+    (`record_type: instance-canonical-export`), композирующая тот же
+    `scoped-record.schema.json`, что и конверт плана, — не расходящаяся
+    вторая копия. Payload несёт `plan_ref`, `plan_fingerprint`, `source`
+    (полная закреплённая идентичность источника), `records` (массив полных
+    канонических scoped records), `retained` (закрытый список
+    `unit_id`/`reason` для `retained-transitional` единиц), `idempotency_key`
+    и `digest`.
+  - **Полнота.** `evaluateInstanceCanonicalExport`
+    (`scripts/lib/instance-data-migration.mjs`) резолвит точный план через
+    внешнюю границу `resolveMigrationPlan` и проверяет: каждая `migrated`
+    единица и каждая `merged`-группа плана дают ровно одну структурно
+    идентичную запись; каждая `retained-transitional` единица присутствует
+    в `retained` ровно один раз с той же `reason`, что несёт сам план;
+    лишние, пропущенные и дублирующиеся записи отклоняются; экспорт связан
+    с точным `plan_fingerprint` плана (устаревший экспорт отклоняется).
+  - **Сохранение содержимого.** Через вторую внешнюю границу
+    `resolveSourceContent` (запрос — `repository_ref`/`revision`/
+    отсортированные `unit_refs`/`merge_rule_ref` для слияния) проверка в
+    два шага: сам ответ резолвера сначала проверяется как `content_envelope`
+    (`checkContentEnvelope` — его `digest` не принимается на веру), и
+    только затем экспортированный `payload` каждой записи сравнивается с
+    разрешённым ответом **побайтово** (`media_type`/`encoding`/`content`/
+    `digest`) — не доверяя `classification_basis`, `unit_ref`, совпадению
+    количества записей или тому, что один и тот же ложный `digest`
+    согласован между `target`, экспортом и резолвером. `merged`-запись
+    резолвится вместе со своим `merge_rule_ref`.
+  - **Независимость от хранилища.** Ни схема, ни библиотека не выбирают
+    Git, SQLite, PostgreSQL или серверный режим; `plan_ref` и
+    `source.repository_ref` проверяются той же закрытой проверкой
+    `checkOpaqueRef`, что и остальные переносимые поля-ссылки контракта.
+  - **Повторяемость.** `computeExportDigest` — детерминированная каноническая
+    проекция (`plan_ref`, `plan_fingerprint`, `source`, `records`,
+    `retained`), нечувствительная к порядку объявления `records`/`retained`
+    и не несущая поля машинного времени генерации; `computeExportIdempotencyKey`
+    выводит `idempotency_key` из `plan_ref` и `plan_fingerprint`, уникального
+    по контейнеру реестра.
+  - **Проверка Ядра.** `scripts/kernel-validate.mjs` требует схему и
+    фикстуры этого контракта безусловно (отсутствие любой из них — `FAIL`)
+    и вызывает ту же `evaluateInstanceCanonicalExport`, что и
+    `test/instance-data-migration.test.mjs`. Новые артефакты Ядра:
+    `registries/operating-model/instance-canonical-export.schema.json`,
+    `registries/operating-model/fixtures/instance-canonical-export.fixtures.json`.
+    Изменённые: `standards/workspace/instance-data-migration.md` (новый §10
+    «Канонический экспорт»),
+    `registries/operating-model/instance-data-migration.schema.json`,
+    `registries/operating-model/fixtures/instance-data-migration.fixtures.json`,
+    `scripts/lib/instance-data-migration.mjs`, `scripts/kernel-validate.mjs`,
+    `test/instance-data-migration.test.mjs`, `test/kernel-validate.test.mjs`.
+  - **Граница пакета.** Пакет не переносит фактические данные какого-либо
+    продукта, не создаёт канонический экспорт данных какого-либо конкретного
+    продукта, не начинает Rust, Cargo
+    workspace, SQLite, SQL или CLI, не продвигает состояние программы
+    `meridian-workspace-compatibility` и не начинает
+    `workspace-compatibility-qualification`. `VERSION` не изменяется этим
+    пакетом.
 
 - **Миграция данных Экземпляра (`instance-data-migration`) — обязательный
   участок проверки.** Пакет 5 программы `meridian-workspace-compatibility`:

@@ -59,7 +59,7 @@
       "kind": "coverage",
       "plan_ref": "sample-migration-plan-one",
       "confirms": true,
-      "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+      "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
     },
     "evidence:applicability-migration-plan-one": {
       "record_type": "instance-migration-evidence",
@@ -67,7 +67,7 @@
       "kind": "applicability_preservation",
       "plan_ref": "sample-migration-plan-one",
       "confirms": true,
-      "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+      "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
     },
     "evidence:coverage-migration-plan-two": {
       "record_type": "instance-migration-evidence",
@@ -83,7 +83,7 @@
       "kind": "coverage",
       "plan_ref": "sample-migration-plan-three",
       "confirms": true,
-      "plan_fingerprint": "b7571bd3c8c81ffb5ec6af2411e0ba91cdd342995c82cf7aca1a6f8a9bd43b7e"
+      "plan_fingerprint": "3ffadc5510080ea8a1955ad4cafcd7148935bb01a8068cd68bb33224b098797d"
     },
     "evidence:applicability-migration-plan-three": {
       "record_type": "instance-migration-evidence",
@@ -91,7 +91,7 @@
       "kind": "applicability_preservation",
       "plan_ref": "sample-migration-plan-three",
       "confirms": true,
-      "plan_fingerprint": "b7571bd3c8c81ffb5ec6af2411e0ba91cdd342995c82cf7aca1a6f8a9bd43b7e"
+      "plan_fingerprint": "3ffadc5510080ea8a1955ad4cafcd7148935bb01a8068cd68bb33224b098797d"
     },
     "evidence:coverage-five": {
       "record_type": "instance-migration-evidence",
@@ -99,7 +99,7 @@
       "kind": "coverage",
       "plan_ref": "sample-migration-plan-five",
       "confirms": true,
-      "plan_fingerprint": "29d5118129770e083c7926496e2ecc76039ace88946fcadd452c87589fad8eb9"
+      "plan_fingerprint": "94c03c93bf10a01098ecf7d49d78fa4e8f5d704d9a6dd58ee23495a54edc6d72"
     },
     "evidence:applicability-five": {
       "record_type": "instance-migration-evidence",
@@ -107,7 +107,7 @@
       "kind": "applicability_preservation",
       "plan_ref": "sample-migration-plan-five",
       "confirms": true,
-      "plan_fingerprint": "29d5118129770e083c7926496e2ecc76039ace88946fcadd452c87589fad8eb9"
+      "plan_fingerprint": "94c03c93bf10a01098ecf7d49d78fa4e8f5d704d9a6dd58ee23495a54edc6d72"
     },
     "evidence:coverage-five-v2": {
       "record_type": "instance-migration-evidence",
@@ -115,7 +115,7 @@
       "kind": "coverage",
       "plan_ref": "sample-migration-plan-five-v2",
       "confirms": true,
-      "plan_fingerprint": "1db5abc4696427330fdbd8422e769da7a5886046fe854d8e1d294d1977206032"
+      "plan_fingerprint": "1129779b9587111f98678a557eec8d6f461dfdfa1c831e9e4ec2234769811c4e"
     },
     "evidence:applicability-five-v2": {
       "record_type": "instance-migration-evidence",
@@ -123,7 +123,7 @@
       "kind": "applicability_preservation",
       "plan_ref": "sample-migration-plan-five-v2",
       "confirms": true,
-      "plan_fingerprint": "1db5abc4696427330fdbd8422e769da7a5886046fe854d8e1d294d1977206032"
+      "plan_fingerprint": "1129779b9587111f98678a557eec8d6f461dfdfa1c831e9e4ec2234769811c4e"
     },
     "evidence:non-confirming-applicability": {
       "record_type": "instance-migration-evidence",
@@ -131,7 +131,7 @@
       "kind": "applicability_preservation",
       "plan_ref": "sample-migration-plan-one",
       "confirms": false,
-      "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+      "plan_fingerprint": "7dcd7212a0ec47df49dfb88899ed9056d72b1b5f0d100e51b92ab54edeffb03c"
     }
   },
   "rollback_snapshot_resolution": {
@@ -202,7 +202,7 @@
       "deterministic_plan_ref": "rollback-plan:sample-revision-0001-to-migration-plan-one",
       "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0001",
       "plan_ref": "sample-migration-plan-one",
-      "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290",
+      "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
       "applicable": true
     },
     "rollback-plan:sample-revision-0003-to-migration-plan-three": {
@@ -210,7 +210,7 @@
       "deterministic_plan_ref": "rollback-plan:sample-revision-0003-to-migration-plan-three",
       "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0003",
       "plan_ref": "sample-migration-plan-three",
-      "plan_fingerprint": "b7571bd3c8c81ffb5ec6af2411e0ba91cdd342995c82cf7aca1a6f8a9bd43b7e",
+      "plan_fingerprint": "3ffadc5510080ea8a1955ad4cafcd7148935bb01a8068cd68bb33224b098797d",
       "applicable": true
     },
     "rollback-plan:sample-revision-0005": {
@@ -218,7 +218,7 @@
       "deterministic_plan_ref": "rollback-plan:sample-revision-0005",
       "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0005",
       "plan_ref": "sample-migration-plan-five",
-      "plan_fingerprint": "29d5118129770e083c7926496e2ecc76039ace88946fcadd452c87589fad8eb9",
+      "plan_fingerprint": "94c03c93bf10a01098ecf7d49d78fa4e8f5d704d9a6dd58ee23495a54edc6d72",
       "applicable": true
     },
     "rollback-plan:sample-revision-0006": {
@@ -226,7 +226,7 @@
       "deterministic_plan_ref": "rollback-plan:sample-revision-0006",
       "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0006",
       "plan_ref": "sample-migration-plan-five-v2",
-      "plan_fingerprint": "1db5abc4696427330fdbd8422e769da7a5886046fe854d8e1d294d1977206032",
+      "plan_fingerprint": "1129779b9587111f98678a557eec8d6f461dfdfa1c831e9e4ec2234769811c4e",
       "applicable": true
     }
   },
@@ -320,7 +320,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -330,7 +334,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -357,7 +373,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
             }
           }
         ]
@@ -505,7 +521,11 @@
                       "record_type": "preserved",
                       "scope": "assigned",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -515,7 +535,19 @@
                       "kind": "repository-maintainer",
                       "authority_ref": "sample-repository-maintainer",
                       "decision_ref": "owner-decision:merge-a-and-b"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-merged-record",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:merge-a-and-b",
@@ -540,7 +572,11 @@
                       "record_type": "preserved",
                       "scope": "assigned",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -550,7 +586,19 @@
                       "kind": "repository-maintainer",
                       "authority_ref": "sample-repository-maintainer",
                       "decision_ref": "owner-decision:merge-a-and-b"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-merged-record",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:merge-a-and-b",
@@ -577,7 +625,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "43c517478c329da66680ef6a9f2bef140b31418346b1c2563f0a8589595da330",
-              "plan_fingerprint": "b7571bd3c8c81ffb5ec6af2411e0ba91cdd342995c82cf7aca1a6f8a9bd43b7e"
+              "plan_fingerprint": "3ffadc5510080ea8a1955ad4cafcd7148935bb01a8068cd68bb33224b098797d"
             }
           }
         ]
@@ -717,7 +765,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -727,7 +779,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-five"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-five",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-five\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "23a6e3a2aaca9f6754cf1c7e925c0139aa56431ad6d3280788e826447c977256"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-five",
@@ -754,7 +818,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "1bb155419e6e83b13db1445c25ec3208d8c15ffac667354b926f0933c52e4cf8",
-              "plan_fingerprint": "29d5118129770e083c7926496e2ecc76039ace88946fcadd452c87589fad8eb9"
+              "plan_fingerprint": "94c03c93bf10a01098ecf7d49d78fa4e8f5d704d9a6dd58ee23495a54edc6d72"
             }
           },
           {
@@ -809,7 +873,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -819,7 +887,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-five-v2"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-five",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-five\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "23a6e3a2aaca9f6754cf1c7e925c0139aa56431ad6d3280788e826447c977256"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-five-v2",
@@ -847,7 +927,7 @@
               },
               "supersedes": "sample-migration-plan-five",
               "idempotency_key": "1d03249c9e9ad03b3293b8b8fec8efd6e415b1b44c0962e4b6ae6345464f1bb4",
-              "plan_fingerprint": "1db5abc4696427330fdbd8422e769da7a5886046fe854d8e1d294d1977206032"
+              "plan_fingerprint": "1129779b9587111f98678a557eec8d6f461dfdfa1c831e9e4ec2234769811c4e"
             }
           }
         ]
@@ -915,7 +995,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -925,7 +1009,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -1018,7 +1114,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -1028,7 +1128,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -1121,7 +1233,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -1131,7 +1247,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -1158,7 +1286,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "1111111111111111111111111111111111111111111111111111111111111111",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
             }
           }
         ]
@@ -1224,7 +1352,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -1234,7 +1366,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -1261,7 +1405,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
             }
           },
           {
@@ -1316,7 +1460,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -1326,7 +1474,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -1353,7 +1513,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
             }
           }
         ]
@@ -1424,7 +1584,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -1434,7 +1598,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -1461,7 +1637,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "339ced143d7abc2d2e56bc292b6da70b72bd1f3f7a70db9b8bdcc616863970ae"
+              "plan_fingerprint": "e3c814e12edab5288776aa618d09d261b4c00613639d16337c75d55c5d161cce"
             }
           }
         ]
@@ -1527,7 +1703,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -1537,7 +1717,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -1560,7 +1752,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -1570,7 +1766,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -1597,7 +1805,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "44f1c0f4438a5f57c75f202bad9aba7cbca0ad48651eb270464ab8d47ca93913"
+              "plan_fingerprint": "6df6f44b9e404a203746b0f5d112b03670c1dd2e1e01a08431a87b10c8156ec2"
             }
           }
         ]
@@ -1663,7 +1871,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -1673,7 +1885,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -1700,7 +1924,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "a3cb88438858527bdde033d285a81949991f3e4f7ee62989f3d84f06c197c3cb"
+              "plan_fingerprint": "86b4afd09b8219f2b9adbfcdb12fb33b47d99ceb8a9df188c02508457da26657"
             }
           }
         ]
@@ -1766,7 +1990,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -1776,7 +2004,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -1803,7 +2043,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "57fcc2a5374ef3ca3b081af4bcca042cddbc6a1fe0139e613fdf1ddcd5f8a1ec"
+              "plan_fingerprint": "94fed018fc2543a601520814553f53dfbe1eb98cf4361a229db3624e63d405b6"
             }
           }
         ]
@@ -1869,13 +2109,29 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "authority": {
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -1902,7 +2158,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "0b4495ecd7e1121fd649fcfab3cbe40ae89a6b9c65910178dc331e2952c653f3"
+              "plan_fingerprint": "c30af24184d251472017d939b1d1ae53955bb1611d766c55bb0238387e557850"
             }
           }
         ]
@@ -1968,7 +2224,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -1978,7 +2238,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -2005,7 +2277,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "40bd1c6494887edd4834b0f621f4cd8f817f8bc54b01c16e55cbf7fadd12cf9b"
+              "plan_fingerprint": "83b8a7ae15b027ed962eae541ed52d1ec40e359faf6ce2e102838ad42d62b453"
             }
           }
         ]
@@ -2071,7 +2343,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "declared",
@@ -2081,7 +2357,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -2108,7 +2396,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "4a9cc21d2ce2299a2ba4dda61a0f9c18e031bc414e5b5ac26b0f29b6c36b93ea"
+              "plan_fingerprint": "a8d5f551615b724518b4e37cfafae1807faf50a50802fc9fd22f58df440a8698"
             }
           }
         ]
@@ -2174,7 +2462,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "preserved",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -2184,7 +2476,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -2211,7 +2515,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "ebab284a3c34f4d60040aa617a2f73f413b8d47d352c703505dc707849a91c24"
+              "plan_fingerprint": "0f082cc43c7ae0146960a6b08bd7bc8c06942cc428f9f7a46abb446cb270500b"
             }
           }
         ]
@@ -2277,7 +2581,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -2287,7 +2595,19 @@
                       "kind": "delegated-run",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -2314,7 +2634,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "163a8ad8dd7c5ec8b150a096548be0d1e49f835f876a1b2d8bc2183bf1e4d483"
+              "plan_fingerprint": "d7a1436bb448604670b1e0aff247658220e7e9ee5a09403bd5ddf107b58fd7d1"
             }
           }
         ]
@@ -2380,7 +2700,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -2390,7 +2714,19 @@
                       "kind": "repository-maintainer",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -2417,7 +2753,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "9c5831c416203c69453f69f65af5532b01d225985ba67d25c3b6b6420d512823"
+              "plan_fingerprint": "be11868d7894b1b0126e095aaa2a55d49316fb9b51d1c56ad7eaaa5f9ed6c6e1"
             }
           }
         ]
@@ -2484,7 +2820,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -2494,7 +2834,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -2521,7 +2873,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "da6ad57e0e5804824fd821ecf5a0a42f3023746253b475e523a6d6b85c641a81"
+              "plan_fingerprint": "8cab506f661dc8d749215ecf99cd4b1d39cdb0510a2f026834acb8fb05f0120a"
             }
           }
         ]
@@ -2587,7 +2939,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -2597,7 +2953,19 @@
                       "kind": "repository-maintainer",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -2624,7 +2992,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "375bca755843fa59ba0f5a6c1df89416e97c5547af5e5c1ef7d5c6654027964f"
+              "plan_fingerprint": "e422602b9bb9988aed8569f17097e6f3ba5472c27b4133358281ba755c3b32fb"
             }
           }
         ]
@@ -2693,7 +3061,11 @@
                       "record_type": "preserved",
                       "scope": "assigned",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -2703,7 +3075,19 @@
                       "kind": "repository-maintainer",
                       "authority_ref": "sample-repository-maintainer",
                       "decision_ref": "owner-decision:merge-a-and-b"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-merged-record",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:merge-a-and-b",
@@ -2730,7 +3114,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "43c517478c329da66680ef6a9f2bef140b31418346b1c2563f0a8589595da330",
-              "plan_fingerprint": "37e1bbe6a2de69e0d3974021dcd6376632fcb156e12e310b2d8174920a97fc68"
+              "plan_fingerprint": "bcf1b468e75575500312bb088aba006533c6074ab996aca51785e6169cf6880f"
             }
           }
         ]
@@ -2804,7 +3188,11 @@
                       "record_type": "preserved",
                       "scope": "assigned",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -2814,7 +3202,19 @@
                       "kind": "repository-maintainer",
                       "authority_ref": "sample-repository-maintainer",
                       "decision_ref": "owner-decision:merge-a-and-b"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-merged-record",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:merge-a-and-b",
@@ -2839,7 +3239,11 @@
                       "record_type": "preserved",
                       "scope": "assigned",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -2849,7 +3253,19 @@
                       "kind": "repository-maintainer",
                       "authority_ref": "sample-repository-maintainer",
                       "decision_ref": "owner-decision:merge-a-and-b"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-merged-record",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:merge-a-and-b",
@@ -2876,7 +3292,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "43c517478c329da66680ef6a9f2bef140b31418346b1c2563f0a8589595da330",
-              "plan_fingerprint": "58b762ca1b808ebfbd743c6bd53f97757ec5540740de559770f8fbf25b3eb214"
+              "plan_fingerprint": "f9c40aecce4b573c05aca0c886fc37816521d7e389f45a5580d8d5ad73f0ef97"
             }
           }
         ]
@@ -2950,7 +3366,11 @@
                       "record_type": "preserved",
                       "scope": "assigned",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -2960,7 +3380,19 @@
                       "kind": "repository-maintainer",
                       "authority_ref": "sample-repository-maintainer",
                       "decision_ref": "owner-decision:merge-a-and-b"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-merged-record",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:merge-a-and-b",
@@ -2985,7 +3417,11 @@
                       "record_type": "preserved",
                       "scope": "assigned",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -2995,7 +3431,19 @@
                       "kind": "repository-maintainer",
                       "authority_ref": "sample-repository-maintainer",
                       "decision_ref": "owner-decision:merge-a-and-b"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-merged-record",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:merge-a-and-b",
@@ -3022,7 +3470,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "43c517478c329da66680ef6a9f2bef140b31418346b1c2563f0a8589595da330",
-              "plan_fingerprint": "813492aeb2bef7ff102111833e6c9296291ff12d04ea2e2bf5e75086e0d610c1"
+              "plan_fingerprint": "4075702c8ea7476a4858066d35f729597e72743d2841973322292d1622bb3a3c"
             }
           }
         ]
@@ -3093,7 +3541,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -3103,7 +3555,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -3126,7 +3590,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -3136,7 +3604,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -3163,7 +3643,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "1a6ef5609f976ba017cdf92d463e10c63914d4d43a61d492a2e6594ebaf83aea"
+              "plan_fingerprint": "2237eee9ba697cda69a8ed7bb5ed8584f7eb9d5a0e7e39e47a1af821324d7dbf"
             }
           }
         ]
@@ -3229,7 +3709,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -3239,7 +3723,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -3266,7 +3762,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "b76660e4fc21557c2907c3cd2fb48c9545a08e7bcf5f9c3d0ae7ed5324299873"
+              "plan_fingerprint": "36b694e2908c85257f3694dca84020cbf02b31a8439628e7ee545f078e57a8ec"
             }
           }
         ]
@@ -3332,7 +3828,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -3342,7 +3842,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -3368,7 +3880,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
             }
           }
         ]
@@ -3435,7 +3947,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -3445,7 +3961,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -3472,7 +4000,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "a2016cd3851c43d4802be53c1acb0e44bc8d84c5b4e648a6574855bf6da8f26c"
+              "plan_fingerprint": "b3983aca22938900fad94ebb31f56f7ccb4dfab8f9fa54ed75ea4a3c155278b2"
             }
           }
         ]
@@ -3539,7 +4067,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -3549,7 +4081,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -3576,7 +4120,7 @@
                 "overall_status": "UNVERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "a2016cd3851c43d4802be53c1acb0e44bc8d84c5b4e648a6574855bf6da8f26c"
+              "plan_fingerprint": "b3983aca22938900fad94ebb31f56f7ccb4dfab8f9fa54ed75ea4a3c155278b2"
             }
           }
         ]
@@ -3642,7 +4186,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -3652,7 +4200,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:a-different-decision"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -3679,7 +4239,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "1058325ddec9e97bfe9aee5ba17182561278f4dd864d5df117c2bd6c5c1b40b5"
+              "plan_fingerprint": "af75f5a7b3b68d74266ffdfe247fe5258ca49f20e8defbf208074d49fa11020f"
             }
           }
         ]
@@ -3745,7 +4305,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -3755,7 +4319,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -3782,7 +4358,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "6e605993792137c7da8b2526095d6cfa450b90f2dc783fda4a36e965a28258c6",
-              "plan_fingerprint": "e9dd5ec7b60abf1e73df547230e8c80f48db2ed11741a49f90dafe303e4ca73d"
+              "plan_fingerprint": "a3086f0af32114d89dda7bc368c4f0444190dab3e4c836d474c2778990f493bb"
             }
           }
         ]
@@ -3848,7 +4424,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -3858,7 +4438,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -3885,7 +4477,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "2ae396c4a13ffab43b90f2131b62d52f0ec0e413c3e585724df394c568c9e925"
+              "plan_fingerprint": "888b164f1475e79be0127353131534ad6303e59920dfa8f6410300bd733f35eb"
             }
           }
         ]
@@ -3951,7 +4543,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -3961,7 +4557,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -3988,7 +4596,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
               "supersedes": "sample-migration-plan-one"
             }
           }
@@ -4055,7 +4663,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -4065,7 +4677,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -4092,7 +4716,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
             }
           },
           {
@@ -4148,7 +4772,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -4158,7 +4786,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -4185,7 +4825,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "5373dd392fcb657c15b12735454c0a92ac8d630fbc69e79e97910bf13df809bd",
-              "plan_fingerprint": "6b6929994fea88e194166cd4c540e0cc00f657918ee82a6d079761f4ecbb729c",
+              "plan_fingerprint": "4a3ea3c533d910b5310e066e774350f9ddbe8be16ecd935d0e36ea6b5031a3aa",
               "supersedes": "sample-migration-plan-predecessor"
             }
           }
@@ -4252,7 +4892,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -4262,7 +4906,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -4289,7 +4945,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
             }
           },
           {
@@ -4344,7 +5000,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -4354,7 +5014,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -4381,7 +5053,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
               "supersedes": "sample-migration-plan-predecessor-same-rev"
             }
           }
@@ -4511,7 +5183,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -4521,7 +5197,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -4548,7 +5236,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "d1af544c77bb007d59f79b9204329808fea9e11b2bce531b4236394d65ac79a5",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
             }
           }
         ]
@@ -4614,7 +5302,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -4624,7 +5316,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -4651,7 +5355,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "3b54ef63efe3a8b9e446e34388817b1deea42647147629800399d6b0ed84089f",
-              "plan_fingerprint": "554546c5800c0036d1c4bbf0fdd78f3a87d816cbe9b658f389898e0ddc9113d1"
+              "plan_fingerprint": "ca43092b8d678a5d888a0dc043436cd5529535e2511a0b854dfdeac12215d8da"
             }
           }
         ]
@@ -4717,7 +5421,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -4727,7 +5435,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -4754,7 +5474,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "fa22b9926c1c1592e3aa76ff9013e55619b2bd58ba116783b31727e61e867b99",
-              "plan_fingerprint": "dfd307fed42567456cddbb4c23cb82c18b7fc3f7b492a1078810f6f2c7db1805"
+              "plan_fingerprint": "4ce532758c0ada024744b52d6d604e7e627c6caf3b7bdfd9a524c0d498ed050f"
             }
           }
         ]
@@ -4820,7 +5540,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -4830,7 +5554,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -4857,7 +5593,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
             }
           }
         ]
@@ -4923,7 +5659,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -4933,7 +5673,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -4960,7 +5712,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
             }
           },
           {
@@ -5017,7 +5769,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -5027,7 +5783,19 @@
                       "kind": "repository-maintainer",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -5054,7 +5822,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "e629583a51f18f8d5b85facaac3e341b451fa93149578b5ea59553e7221ecfb4",
-              "plan_fingerprint": "fb612d537a673d4d206da2eba304339cdf2dcf6e36a2c51519afef0c7442ce54"
+              "plan_fingerprint": "8629d45edc093b421c99437e7595fdf5e968e2665a0b1826672997d71b7567ef"
             }
           }
         ]
@@ -5120,7 +5888,11 @@
                       "record_type": "preserved",
                       "scope": "preserved",
                       "origin": "assigned",
-                      "authority": "assigned"
+                      "authority": "assigned",
+                      "title": "assigned",
+                      "payload": "assigned",
+                      "schema_version": "assigned",
+                      "$schema": "assigned"
                     },
                     "origin": {
                       "kind": "migrated",
@@ -5130,7 +5902,19 @@
                       "kind": "project-owner",
                       "authority_ref": "sample-project-owner",
                       "decision_ref": "owner-decision:migrate-sample-unit-one"
-                    }
+                    },
+                    "title": "Перенесённая запись — sample-migrated-record-one",
+                    "schema_version": 1,
+                    "payload": {
+                      "media_type": "application/json",
+                      "encoding": "utf-8",
+                      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                      "digest": {
+                        "algorithm": "sha-256",
+                        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                      }
+                    },
+                    "$schema": "../../registries/operating-model/scoped-record.schema.json"
                   },
                   "owner_decision": {
                     "decision_ref": "owner-decision:migrate-sample-unit-one",
@@ -5157,7 +5941,7 @@
                 "overall_status": "VERIFIED"
               },
               "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
-              "plan_fingerprint": "bc39b720d64561ed23c2660a539a3ed9c0f9658db44e5108c1f1651f5d67c290"
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
             }
           }
         ]

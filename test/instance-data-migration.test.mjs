@@ -19,6 +19,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 import { assertSupportedDeep } from '../scripts/lib/json-schema.mjs';
@@ -35,7 +36,17 @@ import {
   ROLLBACK_SNAPSHOT_RECORD_TYPE, DETERMINISTIC_PLAN_RECORD_TYPE, RESTORATION_EVIDENCE_RECORD_TYPE,
   SUPERSEDED_PLAN_RECORD_TYPE,
   TARGET_AUTHORITY_BY_SCOPE,
+  EXPORT_RECORD_TYPE, EXPORT_REQUIRED_ORIGIN_KIND, SOURCE_CONTENT_RECORD_TYPE,
+  evaluateInstanceCanonicalExport,
+  computeExportDigest, computeExportIdempotencyKey, deriveExportOriginSourceRef,
+  makeMigrationPlanResolver, makeSourceContentResolver, computeSourceContentKey,
 } from '../scripts/lib/instance-data-migration.mjs';
+
+const sha256 = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex');
+function contentEnvelope(note) {
+  const content = JSON.stringify({ note });
+  return { media_type: 'application/json', encoding: 'utf-8', content, digest: { algorithm: 'sha-256', value: sha256(content) } };
+}
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let passed = 0;
@@ -142,6 +153,8 @@ function finalize(payload) {
   return { ...withKey, plan_fingerprint };
 }
 
+const TARGET_ONE_CONTENT = contentEnvelope('содержимое цели target-one');
+
 const BASE_PAYLOAD = finalize({
   source: {
     revision: REVISION,
@@ -158,12 +171,16 @@ const BASE_PAYLOAD = finalize({
       unit_id: 'unit-one',
       disposition: 'migrated',
       target: {
+        $schema: '../../registries/operating-model/scoped-record.schema.json',
         id: 'target-one',
+        title: 'Перенесённая запись — target-one',
         record_type: 'norm',
         scope: { type: 'project-workspace', id: 'sample-test-project' },
-        field_basis: { id: 'assigned', record_type: 'preserved', scope: 'preserved', origin: 'assigned', authority: 'assigned' },
+        schema_version: 1,
+        field_basis: { $schema: 'assigned', id: 'assigned', title: 'assigned', record_type: 'preserved', scope: 'preserved', schema_version: 'assigned', origin: 'assigned', authority: 'assigned', payload: 'assigned' },
         origin: { kind: 'migrated', source_ref: deriveOriginSourceRef(['unit-one']) },
         authority: { kind: 'project-owner', authority_ref: 'sample-project-owner', decision_ref: 'owner-decision:migrate-unit-one' },
+        payload: TARGET_ONE_CONTENT,
       },
       owner_decision: { decision_ref: 'owner-decision:migrate-unit-one', decided_at: '2026-09-10', reason: 'владелец подтвердил перенос' },
     },
@@ -1150,6 +1167,378 @@ check('константы окружения записи (origin/authority) с�
   assert(REQUIRED_AUTHORITY_KIND === 'delegated-run');
   assert(JSON.stringify(ALLOWED_SCOPE_TYPES) === JSON.stringify(['project-workspace', 'repository-scope']));
   assert(JSON.stringify(EVIDENCE_KINDS) === JSON.stringify(['coverage', 'applicability_preservation']));
+});
+
+// ---------------------------------------------------------------------------
+// property — full migration target: target now carries title/payload/
+// schema_version (not only id/record_type/scope/origin/authority), and
+// field_basis is closed to an explicit basis for all eight fields.
+// ---------------------------------------------------------------------------
+check('[required] target без title отклоняется схемой (полная цель миграции)', () => {
+  const d = mutate((d2) => { delete payload0(d2).mappings[0].target.title; });
+  assert(evaluateLocal(d).length > 0);
+});
+check('[required] target без payload отклоняется схемой', () => {
+  const d = mutate((d2) => { delete payload0(d2).mappings[0].target.payload; });
+  assert(evaluateLocal(d).length > 0);
+});
+check('[required] target без schema_version отклоняется схемой', () => {
+  const d = mutate((d2) => { delete payload0(d2).mappings[0].target.schema_version; });
+  assert(evaluateLocal(d).length > 0);
+});
+check('target.schema_version, отличный от 1, отклоняется схемой', () => {
+  const d = mutate((d2) => { payload0(d2).mappings[0].target.schema_version = 2; });
+  assert(evaluateLocal(d).length > 0);
+});
+check('[required] field_basis без title отклоняется схемой', () => {
+  const d = mutate((d2) => { delete payload0(d2).mappings[0].target.field_basis.title; });
+  assert(evaluateLocal(d).length > 0);
+});
+check('[required] field_basis без payload отклоняется схемой', () => {
+  const d = mutate((d2) => { delete payload0(d2).mappings[0].target.field_basis.payload; });
+  assert(evaluateLocal(d).length > 0);
+});
+check('[required] field_basis без schema_version отклоняется схемой', () => {
+  const d = mutate((d2) => { delete payload0(d2).mappings[0].target.field_basis.schema_version; });
+  assert(evaluateLocal(d).length > 0);
+});
+check('target.payload закрыт к media_type/encoding/content/digest — постороннее поле отклоняется', () => {
+  const d = mutate((d2) => { payload0(d2).mappings[0].target.payload.extra = 'x'; });
+  assert(evaluateLocal(d).length > 0);
+});
+check('target.payload.encoding вне {utf-8, base64} отклоняется', () => {
+  const d = mutate((d2) => { payload0(d2).mappings[0].target.payload.encoding = 'ascii'; });
+  assert(evaluateLocal(d).length > 0);
+});
+check('target.payload без digest отклоняется схемой', () => {
+  const d = mutate((d2) => { delete payload0(d2).mappings[0].target.payload.digest; });
+  assert(evaluateLocal(d).length > 0);
+});
+check('target.payload с бинарным содержимым (base64) структурно легален', () => {
+  const d = mutate((d2) => {
+    payload0(d2).mappings[0].target.payload = {
+      media_type: 'application/octet-stream', encoding: 'base64', content: 'AQIDBA==',
+      digest: { algorithm: 'sha-256', value: sha256(Buffer.from('AQIDBA==', 'base64')) },
+    };
+    payload0(d2).mappings[0].target.field_basis.payload = 'assigned';
+  });
+  refingerprint(d);
+  const fp = payload0(d).plan_fingerprint;
+  const opts2 = {
+    ...localOpts,
+    resolveEvidence: makeEvidenceResolver({
+      ...evidenceMap,
+      'evidence:coverage-base': withFingerprint(evidenceMap['evidence:coverage-base'], fp),
+      'evidence:applicability-base': withFingerprint(evidenceMap['evidence:applicability-base'], fp),
+    }),
+    resolveDeterministicPlan: makeDeterministicPlanResolver({
+      ...deterministicPlanMap,
+      [DETERMINISTIC_PLAN_REF]: withFingerprint(deterministicPlanMap[DETERMINISTIC_PLAN_REF], fp),
+    }),
+  };
+  const problems = evaluateInstanceDataMigration(d, opts2);
+  assert(problems.length === 0, JSON.stringify(problems));
+});
+
+// ---------------------------------------------------------------------------
+// property — content preservation (semantic layer): checkContentEnvelope
+// never trusts a declared digest, including one that is internally
+// consistent with everything around it. Exercised directly against
+// computeContentEnvelope/checkContentEnvelope's caller inside a migration
+// plan (target.payload) — the SAME shared function the canonical export
+// section below exercises against an exported record's payload and against
+// a resolveSourceContent response.
+// ---------------------------------------------------------------------------
+check('[required] неверный digest UTF-8-содержимого отклоняется', () => {
+  const d = mutate((d2) => { payload0(d2).mappings[0].target.payload.digest.value = '0'.repeat(64); });
+  const problems = evaluateLocal(d);
+  assert(problems.some((p) => p.includes('does not match the SHA-256 actually recomputed')), JSON.stringify(problems));
+});
+check('[required] application/json с невалидным JSON отклоняется', () => {
+  const d = mutate((d2) => { payload0(d2).mappings[0].target.payload.content = '{not valid json'; });
+  const problems = evaluateLocal(d);
+  assert(problems.some((p) => p.includes('is not valid JSON')), JSON.stringify(problems));
+});
+check('[required] application/json с неканоническим порядком ключей отклоняется', () => {
+  const d = mutate((d2) => {
+    const p = payload0(d2).mappings[0].target.payload;
+    p.content = '{"z-field":1,"a-field":2}';
+    p.digest.value = sha256(p.content);
+  });
+  const problems = evaluateLocal(d);
+  assert(problems.some((p) => p.includes('not in canonical JSON form')), JSON.stringify(problems));
+});
+check('[required] application/json с encoding=base64 отклоняется', () => {
+  const d = mutate((d2) => { payload0(d2).mappings[0].target.payload.encoding = 'base64'; });
+  const problems = evaluateLocal(d);
+  assert(problems.some((p) => p.includes('requires encoding "utf-8"')), JSON.stringify(problems));
+});
+check('[required] text/* с encoding=base64 отклоняется', () => {
+  const d = mutate((d2) => {
+    const p = payload0(d2).mappings[0].target.payload;
+    p.media_type = 'text/plain';
+    p.encoding = 'base64';
+  });
+  const problems = evaluateLocal(d);
+  assert(problems.some((p) => p.includes('requires encoding "utf-8"')), JSON.stringify(problems));
+});
+check('[required] бинарный media_type с encoding=utf-8 отклоняется', () => {
+  const d = mutate((d2) => { payload0(d2).mappings[0].target.payload.media_type = 'application/octet-stream'; });
+  const problems = evaluateLocal(d);
+  assert(problems.some((p) => p.includes('is treated as binary content and requires encoding "base64"')), JSON.stringify(problems));
+});
+check('[required] невалидный/неканонический base64 отклоняется', () => {
+  const d = mutate((d2) => {
+    payload0(d2).mappings[0].target.payload = {
+      media_type: 'application/octet-stream', encoding: 'base64', content: 'not_base64!!!',
+      digest: { algorithm: 'sha-256', value: '1'.repeat(64) },
+    };
+  });
+  const problems = evaluateLocal(d);
+  assert(problems.some((p) => p.includes('not well-formed canonical base64')), JSON.stringify(problems));
+});
+check('[required] digest, рассчитанный от текста base64 вместо декодированных байтов, отклоняется', () => {
+  const d = mutate((d2) => {
+    payload0(d2).mappings[0].target.payload = {
+      media_type: 'application/octet-stream', encoding: 'base64', content: 'AQIDBA==',
+      // Wrong on purpose: hashes the base64 TEXT itself, not the bytes it decodes to.
+      digest: { algorithm: 'sha-256', value: sha256('AQIDBA==') },
+    };
+  });
+  const problems = evaluateLocal(d);
+  assert(problems.some((p) => p.includes('does not match the SHA-256 actually recomputed') && p.includes('base64-decoded binary bytes')), JSON.stringify(problems));
+});
+
+// ===========================================================================
+// instance-canonical-export — the machine-checkable proof that an accepted
+// instance-data-migration plan's migrated/merged targets and
+// retained-transitional units are fully and faithfully accounted for, with
+// every exported record's payload checked against the ACTUAL content of its
+// contributing source unit(s) through an external boundary.
+// ===========================================================================
+const exportRegistrySchema = loadJson('registries/operating-model/instance-canonical-export.schema.json');
+const exportFixtures = loadJson('registries/operating-model/fixtures/instance-canonical-export.fixtures.json');
+const exportPlanResolver = makeMigrationPlanResolver(exportFixtures.plan_resolution);
+const exportContentResolver = makeSourceContentResolver(exportFixtures.source_content_resolution);
+const exportOpts = {
+  registrySchema: exportRegistrySchema, envelopeSchema,
+  resolveMigrationPlan: exportPlanResolver, resolveSourceContent: exportContentResolver,
+};
+const evaluateExport = (doc) => evaluateInstanceCanonicalExport(doc, exportOpts);
+
+check('схема канонического экспорта использует поддерживаемое подмножество JSON Schema', () => {
+  assertSupportedDeep(exportRegistrySchema, 'instance-canonical-export.schema.json');
+});
+check('специализированная схема канонического экспорта — не второй конверт записи', () => {
+  assert(exportRegistrySchema.properties.registry_id.const === 'instance-canonical-export', 'registry_id не закреплён');
+  assert(exportRegistrySchema.definitions.entry.properties.record_type.const === EXPORT_RECORD_TYPE, 'record_type записи не закреплён');
+});
+check('фикстуры канонического экспорта несут непустые valid и invalid', () => {
+  assert(Array.isArray(exportFixtures.valid) && exportFixtures.valid.length > 0, 'valid пуст');
+  assert(Array.isArray(exportFixtures.invalid) && exportFixtures.invalid.length > 0, 'invalid пуст');
+});
+check('каждая valid-фикстура канонического экспорта проходит evaluateInstanceCanonicalExport без проблем', () => {
+  for (const c of exportFixtures.valid) {
+    const problems = evaluateExport(c.registry);
+    assert(problems.length === 0, `фикстура "${c.note}" отклонена: ${problems[0]}`);
+  }
+});
+check('каждая invalid-фикстура канонического экспорта отклоняется evaluateInstanceCanonicalExport', () => {
+  for (const c of exportFixtures.invalid) {
+    const problems = evaluateExport(c.registry);
+    assert(problems.length > 0, `фикстура "${c.note}" прошла проверку чисто`);
+  }
+});
+
+const exportBaseCase = exportFixtures.valid.find((c) => c.note.startsWith('minimal migrated-only export'));
+assert(exportBaseCase, 'базовая фикстура канонического экспорта не найдена — набор фикстур изменился');
+const exportSourceContentKey = Object.keys(exportFixtures.source_content_resolution)
+  .find((k) => k.startsWith('sample-instance-repository@sample-revision-0001'));
+assert(exportSourceContentKey, 'ключ разрешения контента для plan-one не найден — набор фикстур изменился');
+
+check('пустой реестр канонического экспорта (без exports) легален', () => {
+  assert(evaluateExport({ schema_version: 1, registry_id: 'instance-canonical-export', title: 'x', exports: [] }).length === 0);
+});
+
+// --- external boundaries: resolveMigrationPlan / resolveSourceContent ------
+check('[negative] resolveMigrationPlan отсутствует — экспорт отклоняется закрыто', () => {
+  const problems = evaluateInstanceCanonicalExport(clone(exportBaseCase.registry), {
+    registrySchema: exportRegistrySchema, envelopeSchema, resolveSourceContent: exportContentResolver,
+  });
+  assert(problems.some((p) => p.includes('does not resolve to a known migration plan')), JSON.stringify(problems));
+});
+check('[negative] resolveSourceContent отсутствует — сохранение содержимого отклоняется закрыто', () => {
+  const problems = evaluateInstanceCanonicalExport(clone(exportBaseCase.registry), {
+    registrySchema: exportRegistrySchema, envelopeSchema, resolveMigrationPlan: exportPlanResolver,
+  });
+  assert(problems.some((p) => p.includes('does not resolve to known source content')), JSON.stringify(problems));
+});
+check('[negative] резолвер плана вернул план с неэхом plan_ref отклоняется', () => {
+  const badPlan = { ...clone(exportFixtures.plan_resolution['sample-migration-plan-one']), plan_ref: 'some-other-plan' };
+  const opts2 = { ...exportOpts, resolveMigrationPlan: makeMigrationPlanResolver({ 'sample-migration-plan-one': badPlan }) };
+  const problems = evaluateInstanceCanonicalExport(clone(exportBaseCase.registry), opts2);
+  assert(problems.some((p) => p.includes('does not echo the queried ref')), JSON.stringify(problems));
+});
+check('[negative] резолвер плана вернул неизвестное поле — закрытая форма ответа отклоняет', () => {
+  const badPlan = { ...clone(exportFixtures.plan_resolution['sample-migration-plan-one']), unexpected: true };
+  const opts2 = { ...exportOpts, resolveMigrationPlan: makeMigrationPlanResolver({ 'sample-migration-plan-one': badPlan }) };
+  const problems = evaluateInstanceCanonicalExport(clone(exportBaseCase.registry), opts2);
+  assert(problems.some((p) => p.includes('unknown field') && p.includes('unexpected')), JSON.stringify(problems));
+});
+check('[negative] резолвер контента вернул содержимое другого источника (repository_ref) — не подтверждает сохранение', () => {
+  const tampered = {
+    ...clone(exportFixtures.source_content_resolution),
+    [exportSourceContentKey]: { ...clone(exportFixtures.source_content_resolution[exportSourceContentKey]), repository_ref: 'some-other-repository' },
+  };
+  const opts2 = { ...exportOpts, resolveSourceContent: makeSourceContentResolver(tampered) };
+  const problems = evaluateInstanceCanonicalExport(clone(exportBaseCase.registry), opts2);
+  assert(problems.some((p) => p.includes("does not match this export's own source")), JSON.stringify(problems));
+});
+check('[negative] резолвер контента вернул содержимое для других unit_ref(s) — не подтверждает сохранение', () => {
+  const tampered = {
+    ...clone(exportFixtures.source_content_resolution),
+    [exportSourceContentKey]: { ...clone(exportFixtures.source_content_resolution[exportSourceContentKey]), unit_refs: ['sample/path/other.yaml'] },
+  };
+  const opts2 = { ...exportOpts, resolveSourceContent: makeSourceContentResolver(tampered) };
+  const problems = evaluateInstanceCanonicalExport(clone(exportBaseCase.registry), opts2);
+  assert(problems.some((p) => p.includes('does not match the actual contributing unit')), JSON.stringify(problems));
+});
+check('[negative] резолвер контента вернул расходящийся байт содержимого — не подтверждает сохранение', () => {
+  const tampered = {
+    ...clone(exportFixtures.source_content_resolution),
+    [exportSourceContentKey]: { ...clone(exportFixtures.source_content_resolution[exportSourceContentKey]), content: `${exportFixtures.source_content_resolution[exportSourceContentKey].content} ` },
+  };
+  const opts2 = { ...exportOpts, resolveSourceContent: makeSourceContentResolver(tampered) };
+  const problems = evaluateInstanceCanonicalExport(clone(exportBaseCase.registry), opts2);
+  assert(problems.some((p) => p.includes('byte-for-byte')), JSON.stringify(problems));
+});
+
+// --- target ↔ exported record: $schema is part of the structural
+// comparison, not derived and not ignored -----------------------------------
+check('[required] изменённый $schema экспортированной записи (export digest корректно пересчитан) отклоняется из-за расхождения с target', () => {
+  const d = clone(exportBaseCase.registry);
+  d.exports[0].payload.records[0].$schema = 'some-other-schema-reference-never-declared-by-the-plan';
+  d.exports[0].payload.digest = computeExportDigest(d.exports[0].payload);
+  const problems = evaluateExport(d);
+  assert(problems.some((p) => p.includes('diverges from the plan') && p.includes('$schema')), JSON.stringify(problems));
+  assert(!problems.some((p) => p.includes('digest') && p.includes('recomputed digest')), 'export digest пересчитан корректно — не должно быть отдельной жалобы на digest экспорта');
+});
+
+// --- content_envelope semantic layer, applied to the EXPORTED record and to
+// the resolver's OWN response — the same checkContentEnvelope the migration
+// plan's own target.payload is checked against above, never a second
+// diverging copy. -----------------------------------------------------------
+check('[required] невалидный JSON в payload экспортированной записи отклоняется (проверка применяется и к записи, не только к target)', () => {
+  const d = clone(exportBaseCase.registry);
+  d.exports[0].payload.records[0].payload.content = '{not valid json';
+  d.exports[0].payload.digest = computeExportDigest(d.exports[0].payload);
+  const problems = evaluateExport(d);
+  assert(problems.some((p) => p.includes('is not valid JSON')), JSON.stringify(problems));
+});
+check('[required] digest ответа резолвера, рассчитанный от текста base64 вместо декодированных байтов, отклоняется — резолверу не доверяют его собственный digest', () => {
+  const tampered = {
+    ...clone(exportFixtures.source_content_resolution),
+    [exportSourceContentKey]: {
+      ...clone(exportFixtures.source_content_resolution[exportSourceContentKey]),
+      media_type: 'application/octet-stream', encoding: 'base64', content: 'AQIDBA==',
+      digest: { algorithm: 'sha-256', value: sha256('AQIDBA==') },
+    },
+  };
+  const opts2 = { ...exportOpts, resolveSourceContent: makeSourceContentResolver(tampered) };
+  const problems = evaluateInstanceCanonicalExport(clone(exportBaseCase.registry), opts2);
+  assert(problems.some((p) => p.includes('resolved source content') && p.includes('does not match the SHA-256 actually recomputed')), JSON.stringify(problems));
+});
+check('[required] одинаковый ложный digest в exported record И в ответе резолвера отклоняется — согласованность между слоями не заменяет доказательство', () => {
+  const wrongDigest = { algorithm: 'sha-256', value: '7'.repeat(64) };
+  const d = clone(exportBaseCase.registry);
+  const realContent = d.exports[0].payload.records[0].payload.content;
+  d.exports[0].payload.records[0].payload.digest = { ...wrongDigest };
+  d.exports[0].payload.digest = computeExportDigest(d.exports[0].payload);
+  const tampered = {
+    ...clone(exportFixtures.source_content_resolution),
+    [exportSourceContentKey]: {
+      ...clone(exportFixtures.source_content_resolution[exportSourceContentKey]),
+      content: realContent,
+      digest: { ...wrongDigest },
+    },
+  };
+  const opts2 = { ...exportOpts, resolveSourceContent: makeSourceContentResolver(tampered) };
+  const problems = evaluateInstanceCanonicalExport(d, opts2);
+  // Both independent applications of checkContentEnvelope — on the exported
+  // record's own payload, and on the resolver's own response — must each
+  // catch the false digest, even though the two sides agree with each other
+  // (and would pass the plain field-for-field equality check on their own).
+  assert(problems.some((p) => p.includes('exported record') && p.includes('does not match the SHA-256 actually recomputed')), JSON.stringify(problems));
+  assert(problems.some((p) => p.includes('resolved source content') && p.includes('does not match the SHA-256 actually recomputed')), JSON.stringify(problems));
+});
+
+// --- repeatability: digest / idempotency_key / container uniqueness --------
+check('computeExportDigest — чистая детерминированная функция (повтор даёт тот же результат)', () => {
+  const payload = exportBaseCase.registry.exports[0].payload;
+  assert(computeExportDigest(payload) === computeExportDigest(clone(payload)));
+});
+check('computeExportDigest не зависит от порядка records/retained', () => {
+  const payload = {
+    plan_ref: 'p', plan_fingerprint: 'f'.repeat(64),
+    source: { repository_ref: 'r', revision: 'v', digest: { algorithm: 'sha-256', value: DIG_A } },
+    records: [{ id: 'a' }, { id: 'b' }],
+    retained: [{ unit_id: 'x', reason: 'rx' }, { unit_id: 'y', reason: 'ry' }],
+  };
+  const reordered = { ...payload, records: [...payload.records].reverse(), retained: [...payload.retained].reverse() };
+  assert(computeExportDigest(payload) === computeExportDigest(reordered));
+});
+check('[required] computeExportDigest меняется при изменении содержимого записи', () => {
+  const payload = exportBaseCase.registry.exports[0].payload;
+  const changed = clone(payload);
+  changed.records[0].payload.content = JSON.stringify({ note: 'другое содержимое' });
+  assert(computeExportDigest(payload) !== computeExportDigest(changed));
+});
+check('[required] computeExportDigest меняется при изменении plan_fingerprint', () => {
+  const payload = exportBaseCase.registry.exports[0].payload;
+  const changed = { ...clone(payload), plan_fingerprint: 'e'.repeat(64) };
+  assert(computeExportDigest(payload) !== computeExportDigest(changed));
+});
+check('несовпадающий export digest отклоняется', () => {
+  const d = clone(exportBaseCase.registry);
+  d.exports[0].payload.digest = '0'.repeat(64);
+  assert(evaluateExport(d).length > 0);
+});
+check('computeExportIdempotencyKey — чистая функция plan_ref/plan_fingerprint', () => {
+  const a = computeExportIdempotencyKey('plan-x', 'f'.repeat(64));
+  const b = computeExportIdempotencyKey('plan-x', 'f'.repeat(64));
+  assert(a === b && /^[0-9a-f]{64}$/.test(a));
+});
+check('[required] computeExportIdempotencyKey меняется при изменении plan_fingerprint', () => {
+  assert(computeExportIdempotencyKey('plan-x', 'f'.repeat(64)) !== computeExportIdempotencyKey('plan-x', 'e'.repeat(64)));
+});
+check('[required] тот же вход с другим произвольным idempotency_key отклоняется', () => {
+  const d = clone(exportBaseCase.registry);
+  d.exports[0].payload.idempotency_key = '1'.repeat(64);
+  assert(evaluateExport(d).length > 0);
+});
+check('дублирующийся (корректно вычисленный) idempotency_key между двумя экспортами одного плана отклоняется', () => {
+  const d = clone(exportBaseCase.registry);
+  const dup = clone(d.exports[0]);
+  dup.id = 'sample-canonical-export-one-dup';
+  d.exports.push(dup);
+  const problems = evaluateExport(d);
+  assert(problems.some((p) => p.includes('more than one canonical export')), JSON.stringify(problems));
+});
+check('deriveExportOriginSourceRef — детерминированная ссылка на план', () => {
+  assert(deriveExportOriginSourceRef('plan-x') === 'migration-plan:plan-x');
+});
+check('origin.source_ref, не совпадающий с derive(plan_ref), отклоняется', () => {
+  const d = clone(exportBaseCase.registry);
+  d.exports[0].origin.source_ref = 'migration-plan:some-other-plan';
+  assert(evaluateExport(d).length > 0);
+});
+
+check('константы канонического экспорта совпадают со схемой и друг с другом', () => {
+  assert(exportRegistrySchema.properties.registry_id.const === 'instance-canonical-export');
+  assert(exportRegistrySchema.definitions.entry.properties.record_type.const === EXPORT_RECORD_TYPE);
+  assert(EXPORT_RECORD_TYPE === 'instance-canonical-export');
+  assert(EXPORT_REQUIRED_ORIGIN_KIND === 'derived');
+  assert(SOURCE_CONTENT_RECORD_TYPE === 'instance-source-content');
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

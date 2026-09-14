@@ -106,6 +106,7 @@ import {
   evaluateInstanceDataMigration, makeSourceSnapshotResolver, makeEvidenceResolver,
   makeRollbackSnapshotResolver, makeDeterministicPlanResolver, makeRestorationEvidenceResolver,
   makeSupersededPlanResolver,
+  evaluateInstanceCanonicalExport, makeMigrationPlanResolver, makeSourceContentResolver,
 } from './lib/instance-data-migration.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
@@ -2212,6 +2213,113 @@ function functionalParityConsistency(rec) {
     if (idmOk && idmCoverage) {
       ok('instance-data-migration: the migration-plan schema parsed and keyword-checked; '
        + `${idmSatisfied} representative fixture(s) satisfied the composition (record envelope, a pinned source repository_ref/revision/digest whose "reproducible" qualification is checked against a snapshot resolved through an external boundary and closed to this plan's own repository_ref and full digest, complete unit-to-mapping coverage with target groups closed to an explicit many-to-one merge sharing one rule and one structurally identical target, a migrated/merged target's mandatory origin traced to its actual contributing unit(s) and field_basis.origin always "assigned", permanent authority checked against the closed owner-authority table for its own scope — never the delegated-run authority carrying out the migration itself, mandatory rollback closed to two MUTUALLY EXCLUSIVE plan variants whose source-snapshot/deterministic-plan/restoration-evidence refs are each resolved through their own external boundary and checked to name this plan's own source, id AND its own recomputed plan_fingerprint (never a bare ref string, and never one pinned to a stale version of this plan) with rewrites_published_history pinned to false, a claimed VERIFIED result checked against actual coverage/applicability-preservation sub-verdicts each resolved through an external evidence boundary and pinned to this plan's own id AND recomputed plan_fingerprint, forced BLOCKED for a non-reproducible source, a recomputed deterministic plan_fingerprint and an idempotency_key derived from scope and the full source identity (repository_ref, revision, digest), and a supersedes checked against the predecessor's full scope and source repository_ref — in-document directly, or through an external boundary that never accepts an unknown or unresolved predecessor automatically — and ${idmRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// instance-canonical-export: storage-neutral, checkable proof that an
+// accepted instance-data-migration plan's migrated/merged targets and
+// retained-transitional units are fully and faithfully accounted for
+// (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/instance-canonical-export.schema.json is the
+// specialised payload schema for a canonical export (record_type:
+// instance-canonical-export). Its envelope, and every exported record inside
+// it, compose with the SAME scoped-record.schema.json a migration plan's own
+// envelope composes with — not a second envelope schema. The contract closes
+// the gap a migration plan's target alone cannot close: it resolves the
+// referenced plan through an external boundary and checks the export's
+// plan_fingerprint/source against the plan's own RECOMPUTED fingerprint (a
+// stale export is rejected, never accepted as still current); checks that
+// every migrated unit and every merged group has EXACTLY ONE structurally
+// identical exported record and that every retained-transitional unit is
+// listed exactly once with the plan's own reason (never an extra, missing,
+// duplicated or misclassified entry); and — never trusting
+// classification_basis, unit_ref or a matching record COUNT alone — resolves
+// the ACTUAL content of every record's contributing source unit(s) (and, for
+// a merge, its own merge_rule_ref) through a second external boundary and
+// checks the exported payload against it field for field. plan DATA is
+// Instance, like every other operating-model register: the Kernel ships the
+// schema, the product-neutral fixtures and one checkable implementation
+// (scripts/lib/instance-data-migration.mjs), not a canonical export of any
+// actual product. The contract is a MANDATORY part of this Kernel: a missing
+// schema or missing fixtures is a FAIL, not an informational skip.
+{
+  const iceDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const iceSchemaName = 'instance-canonical-export.schema.json';
+  const iceSchemaRaw = readIfExists(path.join(iceDir, iceSchemaName));
+  if (iceSchemaRaw === null) {
+    fail(`instance-canonical-export: registries/operating-model/${iceSchemaName} is missing; the canonical export contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let iceOk = true;
+    let iceSchema = null;
+    let iceEnv = null;
+    try { iceSchema = JSON.parse(iceSchemaRaw); }
+    catch (e) { fail(`instance-canonical-export: ${iceSchemaName} is not valid JSON: ${e.message}`); iceOk = false; }
+
+    const iceEnvRaw = readIfExists(path.join(iceDir, 'scoped-record.schema.json'));
+    if (iceEnvRaw === null) {
+      fail('instance-canonical-export: registries/operating-model/scoped-record.schema.json is missing; a canonical export composes with the record envelope and cannot be checked without it');
+      iceOk = false;
+    } else {
+      try { iceEnv = JSON.parse(iceEnvRaw); }
+      catch (e) { fail(`instance-canonical-export: scoped-record.schema.json is not valid JSON: ${e.message}`); iceOk = false; }
+    }
+
+    if (iceSchema) {
+      try { assertSupportedDeep(iceSchema, iceSchemaName); }
+      catch (e) { fail(`instance-canonical-export: the schema uses a construct this validator cannot check: ${e.message}`); iceOk = false; }
+    }
+
+    let iceSatisfied = 0;
+    let iceRejected = 0;
+    let iceCoverage = false;
+    const iceFxRaw = readIfExists(path.join(iceDir, 'fixtures', 'instance-canonical-export.fixtures.json'));
+    if (iceFxRaw === null) {
+      fail('instance-canonical-export: the schema carries no fixtures (registries/operating-model/fixtures/instance-canonical-export.fixtures.json); a schema no run exercises is not one this gate has reached');
+      iceOk = false;
+    } else if (iceOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(iceFxRaw); }
+      catch (e) { bundleOk = false; fail(`instance-canonical-export: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('instance-canonical-export: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`instance-canonical-export: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        iceOk = false;
+      } else {
+        const iceOpts = {
+          registrySchema: iceSchema,
+          envelopeSchema: iceEnv,
+          resolveMigrationPlan: makeMigrationPlanResolver(bundle.plan_resolution),
+          resolveSourceContent: makeSourceContentResolver(bundle.source_content_resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateInstanceCanonicalExport(c && c.registry, iceOpts);
+          if (p.length) { fail(`instance-canonical-export: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); iceOk = false; }
+          else iceSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateInstanceCanonicalExport(c && c.registry, iceOpts);
+          if (p.length === 0) { fail(`instance-canonical-export: a fixture that must be rejected validated clean (${c && c.note})`); iceOk = false; }
+          else iceRejected++;
+        }
+        iceCoverage = iceOk;
+      }
+    }
+
+    if (iceOk && iceCoverage) {
+      ok('instance-canonical-export: the canonical-export schema parsed and keyword-checked; '
+       + `${iceSatisfied} representative fixture(s) satisfied the composition (record envelope for the export AND for every exported record, a referenced migration plan resolved through an external boundary and checked to name this export's own plan_ref, RECOMPUTED plan_fingerprint and pinned source — a stale export is rejected, complete unit/group-to-record coverage with exactly one structurally identical record per migrated unit and per merged group and exactly one correctly-reasoned retained entry per retained-transitional unit — never an extra, missing, duplicated or misclassified entry on either side, every exported payload checked against the ACTUAL content of its contributing source unit(s) — and, for a merge, its own merge_rule_ref — resolved through a second external boundary and compared field for field, a recomputed deterministic export digest insensitive to the declaration order of records/retained, and an idempotency_key derived from plan_ref and plan_fingerprint unique across the container) and ${iceRejected} were rejected as declared`);
     }
   }
 }

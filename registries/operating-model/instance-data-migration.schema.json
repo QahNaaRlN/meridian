@@ -80,14 +80,30 @@
     "field_basis": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "record_type", "scope", "origin", "authority"],
-      "description": "Explicit, per-field basis for every field semantics preservation requires (workspace-scope-model.md §2): 'preserved' when the old record already carried it, 'assigned' when the migration itself supplies it. A field the old format never carried can never be silently claimed 'preserved'. origin is checked at the library level to always be 'assigned': a pre-Meridian record never carried this canonical origin shape.",
+      "required": ["$schema", "id", "title", "record_type", "scope", "schema_version", "origin", "authority", "payload"],
+      "description": "Explicit, per-field basis for every field semantics preservation requires (workspace-scope-model.md §2), now closed to the FULL canonical envelope a target must be sufficient to construct (property: full migration target) — including the target's own declared $schema (property: full migration target / target $schema): 'preserved' when the old record already carried it, 'assigned' when the migration itself supplies it. A field the old format never carried can never be silently claimed 'preserved' — $schema, title, payload and schema_version are required here exactly like the five pre-existing fields, so none of the four can appear on a target without an explicit basis. origin is checked at the library level to always be 'assigned': a pre-Meridian record never carried this canonical origin shape.",
       "properties": {
+        "$schema": { "enum": ["preserved", "assigned"] },
         "id": { "enum": ["preserved", "assigned"] },
+        "title": { "enum": ["preserved", "assigned"] },
         "record_type": { "enum": ["preserved", "assigned"] },
         "scope": { "enum": ["preserved", "assigned"] },
+        "schema_version": { "enum": ["preserved", "assigned"] },
         "origin": { "enum": ["preserved", "assigned"] },
-        "authority": { "enum": ["preserved", "assigned"] }
+        "authority": { "enum": ["preserved", "assigned"] },
+        "payload": { "enum": ["preserved", "assigned"] }
+      }
+    },
+    "content_envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["media_type", "encoding", "content", "digest"],
+      "description": "A target's payload is never an untyped blob: it is closed to an explicit, checkable content representation (property: content preservation). media_type names the represented kind (\"application/json\" or a \"+json\" suffix for a canonicalised structured JSON fragment, \"text/*\" for a whole text file, an opaque binary media type otherwise); encoding is closed to \"utf-8\" (required for JSON and text/* media types) or \"base64\" (required for every other, binary media type — explicitly and safely encoded, never raw bytes); digest is the full closed SHA-256 form of the represented content. This shape is checked in TWO independent, composed ways, neither of which alone is sufficient: schema-level shape here, and — critically — SEMANTIC content-level checking at the library level (checkContentEnvelope, scripts/lib/instance-data-migration.mjs), applied identically to a migration target's own payload, a canonical export's exported record payload, and the response of the external resolveSourceContent boundary. checkContentEnvelope never trusts a declared or resolver-returned digest: it independently recomputes SHA-256 over the ACTUAL represented bytes (the UTF-8 byte sequence of content, or the bytes base64-decodes to) and rejects any digest.value that does not match — including a digest that is internally self-consistent across target, export and resolver but simply false. It rejects JSON media types whose content fails to parse or is not already in canonical form (recursively sorted object keys, no incidental whitespace — the same canonicalisation computePlanFingerprint/computeExportDigest use), text/* or JSON media types declared with encoding \"base64\", any other (binary) media type declared with encoding \"utf-8\", and content that is not well-formed canonical base64 (wrong alphabet, non-canonical padding, or a string that does not round-trip through decode-then-re-encode) whenever encoding is \"base64\". A structurally well-formed envelope whose content or digest is nonetheless fabricated is never itself accepted as proof of preservation — for a migration target, checkContentEnvelope alone catches it; for an exported record, resolveAndCheckSourceContent (instance-canonical-export.schema.json) additionally resolves the ACTUAL content of the contributing source unit(s) through the external resolveSourceContent boundary and checks this envelope against it field-for-field, and checkContentEnvelope is applied a third time to the resolver's own response before it is trusted as a comparison baseline.",
+      "properties": {
+        "media_type": { "$ref": "#/definitions/non_empty" },
+        "encoding": { "enum": ["utf-8", "base64"] },
+        "content": { "$ref": "#/definitions/non_empty" },
+        "digest": { "$ref": "#/definitions/sha256_digest" }
       }
     },
     "target_scope": {
@@ -155,14 +171,19 @@
     "target_record": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "record_type", "scope", "field_basis", "origin", "authority"],
+      "required": ["$schema", "id", "title", "record_type", "scope", "schema_version", "field_basis", "origin", "authority", "payload"],
+      "description": "The FULL canonical envelope a migrated or merged target is sufficient to build a complete scoped-record from (property: full migration target) — $schema, id, title, record_type, scope, schema_version, origin, authority and payload: every one of the nine fields scoped-record.schema.json requires of a record. $schema is EXPLICIT DATA the target itself declares, not a value the library derives or infers; a canonical export's own exported record is checked at the library level (checkExportCompleteness, instance-canonical-export.schema.json) to carry the IDENTICAL $schema this target declares — an arbitrary or diverging $schema on the exported record is rejected. A target that carried only id/record_type/scope/origin/authority — the pre-extension shape — could never reconstruct $schema, title or payload, the fields that actually let a consumer validate the resulting record as a whole and carry its human-readable identity and domain content.",
       "properties": {
+        "$schema": { "$ref": "#/definitions/non_empty" },
         "id": { "$ref": "#/definitions/semantic_id" },
+        "title": { "$ref": "#/definitions/non_empty" },
         "record_type": { "$ref": "#/definitions/semantic_id" },
         "scope": { "$ref": "#/definitions/target_scope" },
+        "schema_version": { "const": 1 },
         "field_basis": { "$ref": "#/definitions/field_basis" },
         "origin": { "$ref": "#/definitions/target_origin" },
-        "authority": { "$ref": "#/definitions/target_authority" }
+        "authority": { "$ref": "#/definitions/target_authority" },
+        "payload": { "$ref": "#/definitions/content_envelope" }
       }
     },
     "owner_decision": {

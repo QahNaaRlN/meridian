@@ -490,6 +490,26 @@ function writeInstanceDataMigration(root, { schema = null, bundle = null, omitFi
   }
 }
 
+// instance-canonical-export helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const ICE_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const ICE_OK_LINE = /instance-canonical-export: the canonical-export schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const iceRealBundle = () => JSON.parse(fs.readFileSync(path.join(ICE_OM, 'fixtures', 'instance-canonical-export.fixtures.json'), 'utf8'));
+function writeInstanceCanonicalExport(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/instance-canonical-export.schema.json',
+    schema ?? fs.readFileSync(path.join(ICE_OM, 'instance-canonical-export.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/instance-canonical-export.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/instance-canonical-export.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(ICE_OM, 'fixtures', 'instance-canonical-export.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -530,6 +550,8 @@ function buildKernel(root) {
   writeExistingProjectCompatibilityMode(root);
   // The mandatory instance-data-migration contract, likewise.
   writeInstanceDataMigration(root);
+  // The mandatory instance-canonical-export contract, likewise.
+  writeInstanceCanonicalExport(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -4949,6 +4971,103 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t263 an invalid instance-data-migration fixture the composition accepts clean is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/instance-data-migration: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// instance-canonical-export — storage-neutral, checkable proof that an
+// accepted instance-data-migration plan's migrated/merged targets and
+// retained-transitional units are fully and faithfully accounted for, is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// export data is Instance. Removing the schema or the fixtures is a FAIL; a
+// present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. Helpers
+// (ICE_OM, ICE_OK_LINE, iceRealBundle, writeInstanceCanonicalExport) sit next
+// to the other operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t264 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t264');
+  check('t264 the mandatory instance-canonical-export contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [ICE_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t265 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t265');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'instance-canonical-export.schema.json'));
+  commitAll(kernel);
+  check('t265 removing the mandatory instance-canonical-export schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: registries\/operating-model\/instance-canonical-export\.schema\.json is missing; the canonical export contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t266 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t266');
+  const s = JSON.parse(fs.readFileSync(path.join(ICE_OM, 'instance-canonical-export.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeInstanceCanonicalExport(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t266 an unsupported instance-canonical-export schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t267 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t267');
+  writeInstanceCanonicalExport(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t267 a non-JSON instance-canonical-export schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: instance-canonical-export\.schema\.json is not valid JSON/],
+  });
+}
+
+// t268 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t268');
+  writeInstanceCanonicalExport(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t268 an instance-canonical-export schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: the schema carries no fixtures/],
+  });
+}
+
+// t269 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t269');
+  const b = iceRealBundle();
+  const base = b.valid.find((c) => c.note.startsWith('minimal migrated-only export'));
+  const registry = JSON.parse(JSON.stringify(base.registry));
+  registry.exports[0].payload.digest = '0'.repeat(64);
+  b.valid.push({ note: 'planted export with a mismatched digest', registry });
+  writeInstanceCanonicalExport(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t269 a valid instance-canonical-export fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: a fixture that must be a valid registry was rejected \(planted export with a mismatched digest\)/],
+  });
+}
+
+// t270 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t270');
+  const b = iceRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeInstanceCanonicalExport(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t270 an invalid instance-canonical-export fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
   });
 }
 

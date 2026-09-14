@@ -223,6 +223,121 @@ function canonicalize(value) {
   return value;
 }
 
+// Full, strict canonical base64: only the standard alphabet with canonical
+// padding, AND the decoded-then-re-encoded string must equal the input
+// byte-for-byte. Node's Buffer.from(str, 'base64') silently drops characters
+// outside the alphabet instead of rejecting them, so the alphabet/padding
+// regex alone is not enough — the round-trip catches whitespace, wrong
+// padding length and any other non-canonical encoding the regex might miss.
+const BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
+function isCanonicalBase64(content) {
+  if (typeof content !== 'string' || content === '') return false;
+  if (!BASE64_RE.test(content)) return false;
+  return Buffer.from(content, 'base64').toString('base64') === content;
+}
+
+const JSON_MEDIA_TYPE_RE = /(?:^application\/json$)|(?:\+json$)/;
+
+// Property: content preservation (semantic layer). A content_envelope
+// (media_type/encoding/content/digest) that is merely SCHEMA-shaped is not
+// itself trustworthy: digest.value could be an internally consistent lie —
+// the same wrong value copied into a migration target, an exported record
+// and even an external resolver's response would satisfy a bare field-for-
+// field equality check without ever being backed by the actual bytes it
+// claims to represent. This function is the ONE place that independently
+// recomputes SHA-256 over the ACTUAL represented bytes and never trusts a
+// digest handed to it, from wherever it came: it is applied identically to
+// a migration target's own payload (evaluateInstanceDataMigration), a
+// canonical export's exported record payload, and the response of the
+// external resolveSourceContent boundary BEFORE that response is trusted as
+// a comparison baseline (evaluateInstanceCanonicalExport, both in
+// instance-canonical-export.schema.json's evaluator).
+//
+// Rules:
+//  - digest.algorithm is always "sha-256";
+//  - encoding "utf-8": SHA-256 is recomputed over the UTF-8 byte sequence of
+//    content;
+//  - encoding "base64": content must be well-formed CANONICAL base64 (see
+//    isCanonicalBase64 above); SHA-256 is recomputed over the DECODED binary
+//    bytes, never over the base64 text itself;
+//  - "application/json" and any "...+json" media type require encoding
+//    "utf-8", content that successfully parses as JSON, AND content already
+//    in canonical form — JSON.stringify(canonicalize(JSON.parse(content)))
+//    equal to content verbatim (the SAME sorted-key canonicalisation
+//    computePlanFingerprint/computeExportDigest use), so no incidental
+//    whitespace or key-order variation is ever accepted as "the same"
+//    content;
+//  - "text/*" requires encoding "utf-8" (no further shape constraint —
+//    arbitrary text);
+//  - every other media type is treated as binary and requires encoding
+//    "base64".
+export function checkContentEnvelope(at, payload, problems) {
+  const p = isObject(payload) ? payload : {};
+  const mediaType = p.media_type;
+  const encoding = p.encoding;
+  const content = p.content;
+  const digest = isObject(p.digest) ? p.digest : {};
+
+  if (typeof mediaType !== 'string' || mediaType === '') {
+    problems.push(`${at} media_type is missing or empty`);
+    return;
+  }
+  if (encoding !== 'utf-8' && encoding !== 'base64') {
+    problems.push(`${at} encoding "${encoding}" is not one of "utf-8"/"base64"`);
+    return;
+  }
+  if (typeof content !== 'string' || content === '') {
+    problems.push(`${at} content is missing or empty`);
+    return;
+  }
+  if (digest.algorithm !== 'sha-256') {
+    problems.push(`${at} digest.algorithm is "${digest.algorithm}", not "sha-256"`);
+  }
+  if (typeof digest.value !== 'string' || !/^[0-9a-f]{64}$/.test(digest.value)) {
+    problems.push(`${at} digest.value is not a well-formed SHA-256 hex digest`);
+  }
+
+  const isJsonType = mediaType === 'application/json' || JSON_MEDIA_TYPE_RE.test(mediaType);
+  const isTextType = mediaType.startsWith('text/');
+
+  if (isJsonType) {
+    if (encoding !== 'utf-8') {
+      problems.push(`${at} media_type "${mediaType}" requires encoding "utf-8" (canonical JSON is always UTF-8 text), got "${encoding}"`);
+      return;
+    }
+    let parsed;
+    try { parsed = JSON.parse(content); }
+    catch (e) { problems.push(`${at} content is not valid JSON for media_type "${mediaType}": ${e.message}`); return; }
+    const canonicalForm = JSON.stringify(canonicalize(parsed));
+    if (content !== canonicalForm) {
+      problems.push(`${at} content is not in canonical JSON form for media_type "${mediaType}" (recursively sorted object keys, no incidental whitespace); a structured fragment is represented as canonical JSON, never an equivalent but differently-formatted one`);
+      return;
+    }
+  } else if (isTextType) {
+    if (encoding !== 'utf-8') {
+      problems.push(`${at} media_type "${mediaType}" requires encoding "utf-8", got "${encoding}"`);
+      return;
+    }
+  } else if (encoding !== 'base64') {
+    problems.push(`${at} media_type "${mediaType}" is treated as binary content and requires encoding "base64", got "${encoding}"`);
+    return;
+  }
+
+  let actualHex;
+  if (encoding === 'utf-8') {
+    actualHex = createHash('sha256').update(content, 'utf8').digest('hex');
+  } else {
+    if (!isCanonicalBase64(content)) {
+      problems.push(`${at} content is not well-formed canonical base64 (wrong alphabet/padding, or does not round-trip through decode-then-re-encode)`);
+      return;
+    }
+    actualHex = createHash('sha256').update(Buffer.from(content, 'base64')).digest('hex');
+  }
+  if (typeof digest.value === 'string' && digest.value !== actualHex) {
+    problems.push(`${at} digest.value does not match the SHA-256 actually recomputed over the represented bytes (${encoding === 'utf-8' ? 'the UTF-8 byte sequence of content' : 'the base64-decoded binary bytes, never the base64 text itself'}); a digest is never trusted on its own — including one that is internally consistent across target, export and an external resolver's response, but simply false (property: content preservation)`);
+  }
+}
+
 // The canonical origin.source_ref a target's origin must trace to: the
 // sorted, de-duplicated set of the record_unit id(s) actually contributing
 // to it. A single contributing unit ("migrated") gets "record-unit:<id>"; a
@@ -961,11 +1076,18 @@ export function evaluateInstanceDataMigration(doc, {
     checkTargetGroups(at, mappings, problems);
 
     // Property 4: semantics preservation, for every mapping that mints a
-    // managed target.
+    // managed target. checkContentEnvelope is the semantic layer content
+    // preservation needs even at the plan level: a schema-shaped payload
+    // whose digest is simply a false, self-consistent value must never pass
+    // (property: content preservation) — this check does not depend on any
+    // external resolver and runs regardless of whether the plan's overall
+    // verdict is ever claimed VERIFIED.
     for (const m of mappings) {
       if (!isObject(m)) continue;
       if (m.disposition === 'migrated' || m.disposition === 'merged') {
         checkTargetAuthority(at, m, problems);
+        const target = isObject(m.target) ? m.target : {};
+        checkContentEnvelope(`${at} target "${target.id}" payload`, target.payload, problems);
       }
     }
 
@@ -995,6 +1117,463 @@ export function evaluateInstanceDataMigration(doc, {
 
   checkIdempotency(entries, problems);
   checkSupersedes(entries, resolveSupersededPlan, problems);
+
+  return problems;
+}
+
+// ---------------------------------------------------------------------------
+// instance-canonical-export: storage-neutral, checkable proof that an
+// accepted instance-data-migration plan's migrated/merged targets and
+// retained-transitional units are fully and faithfully accounted for.
+// ---------------------------------------------------------------------------
+// registries/operating-model/instance-canonical-export.schema.json is the
+// specialised payload schema for a canonical export (record_type:
+// instance-canonical-export). Its envelope composes with the SAME
+// scoped-record.schema.json a migration plan's own envelope composes with —
+// not a second envelope schema — and every exported record inside it
+// composes with that same envelope schema too (property: closed form,
+// mirroring instance-data-migration's own composition discipline).
+//
+// The gap this closes: a migration plan's target (extended above to carry
+// title/payload/schema_version) only proves what the PLAN claims. An export
+// proves the plan is fully realised and that every claim is backed by fact:
+//
+//   1. Stable identity / precise plan reference — every exported entry
+//      carries its own envelope id (composition, property: closed form) and
+//      payload.plan_ref names the exact migration plan; both plan_fingerprint
+//      and source are checked (resolveAndCheckMigrationPlan) against a plan
+//      resolved through the EXTERNAL resolveMigrationPlan boundary keyed by
+//      plan_ref — a claimed plan_ref/plan_fingerprint/source with no
+//      resolved, matching plan never confirms the export, and a resolved
+//      plan whose own RECOMPUTED plan_fingerprint no longer matches the
+//      export's declared one is a STALE export and is rejected.
+//   2. Completeness — checkExportCompleteness checks payload.records against
+//      the resolved plan's own mappings: EXACTLY ONE exported record per
+//      migrated unit and EXACTLY ONE per merged group (never omitted, never
+//      duplicated, never an extra record for a target the plan never
+//      minted), and every exported record structurally IDENTICAL to the
+//      plan's own target for the same group — not merely present. It checks
+//      payload.retained against the SAME resolved plan's retained-transitional
+//      units: exactly the plan's own set, each exactly once, with the SAME
+//      retained_reason the plan itself declares — never an unknown unit_id,
+//      never a migrated/merged unit misclassified as retained.
+//   3. Content preservation — checkPayloadPreservation does not trust
+//      classification_basis, unit_ref or a matching record COUNT: for every
+//      migrated/merged group it resolves the ACTUAL content of the group's
+//      contributing source unit(s) — and, for a merged group, the group's
+//      OWN merge_rule_ref together with them — through the EXTERNAL
+//      resolveSourceContent boundary, and checks the exported record's
+//      content_envelope payload against the resolved content FIELD FOR
+//      FIELD (media_type, encoding, content, digest) — a changed value or a
+//      single changed byte in content never passes.
+//   4. Repeatability — computeExportDigest recomputes a documented canonical
+//      projection (plan_ref, plan_fingerprint, source, records, retained —
+//      records/retained SORTED by a stable key, so their declaration order
+//      is neutral, and no generation timestamp enters the projection) and
+//      the declared digest must match; computeExportIdempotencyKey derives
+//      idempotency_key from plan_ref AND plan_fingerprint (never an
+//      arbitrary string) and checkExportIdempotency enforces uniqueness
+//      across the container, so a rerun over the same pinned plan state
+//      recomputes the SAME export identity instead of minting a duplicate.
+//   5. Storage neutrality / closed form — checkOpaqueRef guards plan_ref and
+//      source.repository_ref exactly as instance-data-migration's own refs
+//      are guarded; additionalProperties: false at every schema level; the
+//      resolved responses of BOTH external boundaries (resolveMigrationPlan,
+//      resolveSourceContent) are checked closed to their documented field
+//      set, exactly like every other external boundary this module uses.
+//   6. Validator integration — scripts/kernel-validate.mjs requires this
+//      schema and its fixtures unconditionally (a FAIL, not a skip, if
+//      either is absent) and calls evaluateInstanceCanonicalExport with
+//      resolvers built from the fixtures' own resolution maps, exactly as
+//      test/instance-data-migration.test.mjs does.
+//
+// Nothing here reads Git, the filesystem, the network or process env: all
+// physical access to plan state and source content stays behind the two
+// external resolver boundaries a caller supplies.
+// ---------------------------------------------------------------------------
+
+export const EXPORT_RECORD_TYPE = 'instance-canonical-export';
+export const EXPORT_REQUIRED_ORIGIN_KIND = 'derived';
+export const SOURCE_CONTENT_RECORD_TYPE = 'instance-source-content';
+
+// A resolveMigrationPlan/resolveSourceContent lookup builder from a plain
+// map keyed by plan_ref — the same shape makeRefResolver already provides.
+export const makeMigrationPlanResolver = makeRefResolver;
+
+// The deterministic key a resolveSourceContent query resolves under: the
+// pinned source identity plus the SORTED, de-duplicated set of contributing
+// unit_ref(s), plus the group's own merge_rule_ref when one applies (a
+// merged group's content is never resolved without its confirmed rule).
+// Exported so a caller building a fixtures' own content-resolution map keys
+// it identically to what the library queries with.
+export function computeSourceContentKey({ repository_ref, revision, unit_refs, merge_rule_ref } = {}) {
+  const sorted = [...new Set(Array.isArray(unit_refs) ? unit_refs : [])].sort();
+  const base = `${repository_ref ?? ''}@${revision ?? ''}::${sorted.join(',')}`;
+  return typeof merge_rule_ref === 'string' && merge_rule_ref !== '' ? `${base}::${merge_rule_ref}` : base;
+}
+
+export function makeSourceContentResolver(map) {
+  const m = isObject(map) ? map : {};
+  return (query) => {
+    if (!isObject(query)) return null;
+    const key = computeSourceContentKey(query);
+    return Object.prototype.hasOwnProperty.call(m, key) ? m[key] : null;
+  };
+}
+
+// The canonical origin.source_ref an export's origin must trace to: it is
+// mechanically derived from its own plan, never a fresh declared act
+// (mirrors deriveOriginSourceRef's role for a migration target, property 4
+// of instance-data-migration.md).
+export function deriveExportOriginSourceRef(planRef) {
+  return `migration-plan:${planRef}`;
+}
+
+// A documented, deterministic canonical projection of an export's own
+// content: plan_ref, plan_fingerprint, source and the FULL records/retained
+// arrays, each SORTED by a stable key before canonicalisation so their
+// declaration order never changes the digest. No generation timestamp is
+// part of the projection.
+export function computeExportDigest(payload) {
+  const p = isObject(payload) ? payload : {};
+  const source = canonicalize(isObject(p.source) ? p.source : {});
+  const records = (Array.isArray(p.records) ? p.records : [])
+    .filter(isObject).map(canonicalize)
+    .sort((a, b) => String(a.id ?? '').localeCompare(String(b.id ?? '')));
+  const retained = (Array.isArray(p.retained) ? p.retained : [])
+    .filter(isObject).map(canonicalize)
+    .sort((a, b) => String(a.unit_id ?? '').localeCompare(String(b.unit_id ?? '')));
+  const canonical = JSON.stringify({
+    plan_ref: p.plan_ref ?? '', plan_fingerprint: p.plan_fingerprint ?? '', source, records, retained,
+  });
+  return createHash('sha256').update(canonical).digest('hex');
+}
+
+// idempotency_key is DERIVED from plan_ref AND plan_fingerprint — the exact
+// pinned identity of the plan state this export was taken from — never an
+// arbitrary free-form string. A rerun over the same plan state (same id,
+// same fingerprint) always computes the SAME key.
+export function computeExportIdempotencyKey(planRef, planFingerprint) {
+  const canonical = JSON.stringify({ plan_ref: planRef ?? '', plan_fingerprint: planFingerprint ?? '' });
+  return createHash('sha256').update(canonical).digest('hex');
+}
+
+const RESOLVED_MIGRATION_PLAN_KEYS = ['record_type', 'plan_ref', 'plan_fingerprint', 'scope', 'source', 'record_units', 'mappings'];
+
+// The export's plan_ref/plan_fingerprint/source are checked against a plan
+// resolved through the EXTERNAL resolveMigrationPlan boundary — a claimed
+// value with no resolved, matching plan never confirms the export. Returns
+// the resolved plan (for the caller's completeness/preservation checks) or
+// null when it could not be resolved and checked.
+function resolveAndCheckMigrationPlan(at, payload, resolveMigrationPlan, problems) {
+  const doResolve = typeof resolveMigrationPlan === 'function' ? resolveMigrationPlan : () => null;
+  const ref = payload.plan_ref;
+  const resolved = doResolve(ref);
+  if (!isObject(resolved)) {
+    problems.push(`${at} plan_ref "${ref}" does not resolve to a known migration plan through the external resolver; a claimed plan_ref with no resolved backing never confirms an export`);
+    return null;
+  }
+  for (const k of Object.keys(resolved)) {
+    if (!RESOLVED_MIGRATION_PLAN_KEYS.includes(k)) {
+      problems.push(`${at} plan_ref "${ref}": the resolver returned a plan with unknown field "${k}"; the resolved response is closed to { ${RESOLVED_MIGRATION_PLAN_KEYS.join(', ')} }`);
+    }
+  }
+  if (resolved.record_type !== RECORD_TYPE) {
+    problems.push(`${at} plan_ref "${ref}": resolved record_type is "${resolved.record_type}", not "${RECORD_TYPE}"`);
+  }
+  if (resolved.plan_ref !== ref) {
+    problems.push(`${at} plan_ref "${ref}": resolved plan_ref "${resolved.plan_ref}" does not echo the queried ref`);
+  }
+  if (resolved.plan_fingerprint !== payload.plan_fingerprint) {
+    problems.push(`${at} plan_fingerprint "${payload.plan_fingerprint}" does not match the resolved plan's own recomputed plan_fingerprint "${resolved.plan_fingerprint}"; an export pinned to a stale or different version of the plan's content never confirms the current one`);
+  }
+  const rs = isObject(resolved.source) ? resolved.source : {};
+  const ps = isObject(payload.source) ? payload.source : {};
+  const rd = isObject(rs.digest) ? rs.digest : {};
+  const pd = isObject(ps.digest) ? ps.digest : {};
+  if (rs.repository_ref !== ps.repository_ref || rs.revision !== ps.revision || rd.algorithm !== pd.algorithm || rd.value !== pd.value) {
+    problems.push(`${at} source does not match the resolved plan's own pinned source (repository_ref/revision/digest); an export must carry the SAME source identity as the plan it proves`);
+  }
+  return resolved;
+}
+
+// Property: completeness. Checks payload.records against the resolved
+// plan's own migrated/merged targets (exactly one record per group, every
+// record structurally identical to the plan's own target for that group)
+// and payload.retained against the resolved plan's own retained-transitional
+// units (exactly the plan's set, each exactly once, with the plan's own
+// retained_reason) — never an omitted, duplicated or extra entry on either
+// side. Returns the expected-target map for the caller's content check.
+function checkExportCompleteness(at, resolvedPlan, records, retained, problems) {
+  const mappings = Array.isArray(resolvedPlan.mappings) ? resolvedPlan.mappings.filter(isObject) : [];
+
+  const expectedTargets = new Map();
+  const expectedRetained = new Map();
+  for (const m of mappings) {
+    if (m.disposition === 'migrated' || m.disposition === 'merged') {
+      const targetId = isObject(m.target) ? m.target.id : undefined;
+      if (typeof targetId === 'string') expectedTargets.set(targetId, m.target);
+    } else if (m.disposition === 'retained-transitional' && typeof m.unit_id === 'string') {
+      expectedRetained.set(m.unit_id, m.retained_reason);
+    }
+  }
+
+  const seenTargetIds = new Map();
+  for (const r of records) {
+    const id = isObject(r) ? r.id : undefined;
+    if (typeof id !== 'string') { problems.push(`${at} an exported record has no id`); continue; }
+    seenTargetIds.set(id, (seenTargetIds.get(id) || 0) + 1);
+    if (!expectedTargets.has(id)) {
+      problems.push(`${at} exported record "${id}" does not correspond to any migrated or merged target the resolved plan minted; an extra record is never legal (property: completeness)`);
+      continue;
+    }
+    const expected = expectedTargets.get(id);
+    // $schema is included here deliberately (property: full migration target
+    // / target $schema): the target declares it explicitly, and an exported
+    // record with an arbitrary or diverging $schema must be rejected exactly
+    // like any other structural divergence — not silently ignored because it
+    // happens to sit outside this comparison.
+    const pick = (o) => ({
+      $schema: o.$schema, id: o.id, title: o.title, record_type: o.record_type, scope: o.scope,
+      origin: o.origin, authority: o.authority, payload: o.payload, schema_version: o.schema_version,
+    });
+    if (JSON.stringify(canonicalize(pick(expected))) !== JSON.stringify(canonicalize(pick(r)))) {
+      problems.push(`${at} exported record "${id}" diverges from the plan's own target for the same group; the exported record and the plan's target must be structurally identical, including $schema (property: completeness)`);
+    }
+    checkContentEnvelope(`${at} exported record "${id}" payload`, r.payload, problems);
+  }
+  for (const [id, count] of seenTargetIds) {
+    if (count > 1) problems.push(`${at} exported record "${id}" appears ${count} times; exactly one record is required per migrated/merged target (property: completeness)`);
+  }
+  for (const targetId of expectedTargets.keys()) {
+    if (!seenTargetIds.has(targetId)) {
+      problems.push(`${at} the plan's target "${targetId}" has no corresponding exported record; every migrated unit and every merged group requires exactly one exported record (property: completeness)`);
+    }
+  }
+
+  const seenRetained = new Map();
+  for (const r of retained) {
+    const unitId = isObject(r) ? r.unit_id : undefined;
+    if (typeof unitId !== 'string') { problems.push(`${at} a retained entry has no unit_id`); continue; }
+    seenRetained.set(unitId, (seenRetained.get(unitId) || 0) + 1);
+    if (!expectedRetained.has(unitId)) {
+      problems.push(`${at} retained unit_id "${unitId}" is not a retained-transitional unit of the resolved plan; an unknown or misclassified unit is never a legal retained entry (property: completeness)`);
+      continue;
+    }
+    if (r.reason !== expectedRetained.get(unitId)) {
+      problems.push(`${at} retained unit_id "${unitId}" reason does not match the plan's own retained_reason for that unit; a retained reason is a documented fact of the plan, not a freely restated one`);
+    }
+  }
+  for (const [unitId, count] of seenRetained) {
+    if (count > 1) problems.push(`${at} retained unit_id "${unitId}" appears ${count} times; exactly one retained entry is required per retained-transitional unit (property: completeness)`);
+  }
+  for (const unitId of expectedRetained.keys()) {
+    if (!seenRetained.has(unitId)) {
+      problems.push(`${at} the plan's retained-transitional unit "${unitId}" has no corresponding retained entry; every retained-transitional unit must be listed exactly once (property: completeness)`);
+    }
+  }
+
+  return expectedTargets;
+}
+
+const RESOLVED_SOURCE_CONTENT_KEYS = ['record_type', 'repository_ref', 'revision', 'unit_refs', 'merge_rule_ref', 'media_type', 'encoding', 'content', 'digest'];
+
+// Property: content preservation. Never trusts classification_basis,
+// unit_ref or a matching record count: resolves the ACTUAL content of the
+// group's contributing source unit(s) — and, for a merge, the group's own
+// merge_rule_ref together with them — through the EXTERNAL
+// resolveSourceContent boundary, and checks the exported payload against the
+// resolved content FIELD FOR FIELD. A changed value or a single changed byte
+// in content never passes. The resolver's OWN response is not trusted either:
+// before it is used as a comparison baseline, checkContentEnvelope is run
+// against it exactly as it is run against a target's or an exported record's
+// own payload — a resolver that returns a digest.value which does not match
+// the actual bytes of its own content is rejected here, independent of
+// whether that same false digest also happens to match the exported payload.
+function resolveAndCheckSourceContent(at, source, unitRefs, mergeRuleRef, payload, resolveSourceContent, problems) {
+  const doResolve = typeof resolveSourceContent === 'function' ? resolveSourceContent : () => null;
+  const query = { repository_ref: source.repository_ref, revision: source.revision, unit_refs: unitRefs, merge_rule_ref: mergeRuleRef };
+  const resolved = doResolve(query);
+  if (!isObject(resolved)) {
+    problems.push(`${at} does not resolve to known source content through the external resolver for unit_ref(s) [${unitRefs.join(', ')}]${mergeRuleRef ? ` and merge_rule_ref "${mergeRuleRef}"` : ''}; an unresolved content claim never confirms preservation (property: content preservation)`);
+    return;
+  }
+  for (const k of Object.keys(resolved)) {
+    if (!RESOLVED_SOURCE_CONTENT_KEYS.includes(k)) {
+      problems.push(`${at}: the resolver returned content with unknown field "${k}"; the resolved response is closed to { ${RESOLVED_SOURCE_CONTENT_KEYS.join(', ')} }`);
+    }
+  }
+  if (resolved.record_type !== SOURCE_CONTENT_RECORD_TYPE) {
+    problems.push(`${at}: resolved record_type is "${resolved.record_type}", not "${SOURCE_CONTENT_RECORD_TYPE}"`);
+  }
+  if (resolved.repository_ref !== source.repository_ref || resolved.revision !== source.revision) {
+    problems.push(`${at}: resolved content names repository_ref/revision "${resolved.repository_ref}"/"${resolved.revision}", which does not match this export's own source "${source.repository_ref}"/"${source.revision}"; content resolved for a different source never confirms preservation`);
+  }
+  const resolvedUnitRefs = [...new Set(Array.isArray(resolved.unit_refs) ? resolved.unit_refs : [])].sort();
+  if (JSON.stringify(resolvedUnitRefs) !== JSON.stringify(unitRefs)) {
+    problems.push(`${at}: resolved content names unit_ref(s) [${resolvedUnitRefs.join(', ')}], which does not match the actual contributing unit(s) [${unitRefs.join(', ')}]; content resolved for different source unit(s) never confirms preservation`);
+  }
+  if ((resolved.merge_rule_ref ?? null) !== (mergeRuleRef ?? null)) {
+    problems.push(`${at}: resolved content names merge_rule_ref "${resolved.merge_rule_ref}", which does not match this target's own merge_rule_ref "${mergeRuleRef}"; a merged record's content must be resolved together with its OWN confirmed merge rule`);
+  }
+  // The resolved response is checked as a content_envelope in its own right
+  // BEFORE it backs any comparison — a resolver's digest is never trusted
+  // merely because it is present and well-shaped.
+  checkContentEnvelope(`${at} resolved source content`, {
+    media_type: resolved.media_type, encoding: resolved.encoding, content: resolved.content, digest: resolved.digest,
+  }, problems);
+
+  const p = isObject(payload) ? payload : {};
+  const pd = isObject(p.digest) ? p.digest : {};
+  const rd = isObject(resolved.digest) ? resolved.digest : {};
+  if (p.media_type !== resolved.media_type || p.encoding !== resolved.encoding || p.content !== resolved.content
+      || pd.algorithm !== rd.algorithm || pd.value !== rd.value) {
+    problems.push(`${at}: exported payload does not match the resolved actual content of its contributing source unit(s) byte-for-byte (media_type/encoding/content/digest); a changed value or byte is never accepted as preserved (property: content preservation)`);
+  }
+}
+
+// For every migrated/merged group the resolved plan's own record_units give
+// the ACTUAL contributing unit_ref(s) (via unit_id -> unit_ref) — never a
+// freely asserted list — and the group's own merge_rule_ref for a merge.
+function checkPayloadPreservation(at, source, resolvedPlan, records, expectedTargets, resolveSourceContent, problems) {
+  const mappings = Array.isArray(resolvedPlan.mappings) ? resolvedPlan.mappings.filter(isObject) : [];
+  const unitRefById = new Map((Array.isArray(resolvedPlan.record_units) ? resolvedPlan.record_units : [])
+    .filter(isObject).map((u) => [u.id, u.unit_ref]));
+  const recordsById = new Map(records.filter(isObject).filter((r) => typeof r.id === 'string').map((r) => [r.id, r]));
+
+  for (const [targetId] of expectedTargets) {
+    const record = recordsById.get(targetId);
+    if (!record) continue; // already flagged missing by checkExportCompleteness
+    const group = mappings.filter((m) => (m.disposition === 'migrated' || m.disposition === 'merged')
+      && isObject(m.target) && m.target.id === targetId);
+    const unitRefs = [...new Set(group.map((m) => unitRefById.get(m.unit_id)).filter((r) => typeof r === 'string'))].sort();
+    const mergeRuleRef = group.find((m) => typeof m.merge_rule_ref === 'string')?.merge_rule_ref;
+    resolveAndCheckSourceContent(`${at} target "${targetId}"`, source, unitRefs, mergeRuleRef, record.payload, resolveSourceContent, problems);
+  }
+}
+
+// Property: repeatability (container-wide). A rerun over the same pinned
+// plan state recomputes the same idempotency_key and must be recognised as
+// the same export, never minted as a second, duplicate one.
+function checkExportIdempotency(entries, problems) {
+  const seen = new Map();
+  for (const e of entries) {
+    if (!isObject(e) || !isObject(e.payload)) continue;
+    const key = e.payload.idempotency_key;
+    if (typeof key !== 'string' || key === '') continue;
+    if (seen.has(key)) {
+      problems.push(`export idempotency_key "${key}" is declared by more than one canonical export ("${seen.get(key)}" and "${e.id}"); a rerun over the same pinned plan state must recognise the existing export, not mint a duplicate`);
+    } else {
+      seen.set(key, e.id);
+    }
+  }
+}
+
+// The whole composition pipeline for one instance-canonical-export document:
+// container + payload schema, per-entry envelope schema (and every exported
+// record's own envelope schema — the SAME scoped-record.schema.json, not a
+// second copy), resolution of the referenced plan and of every exported
+// record's actual source content through the external boundaries, then the
+// cross-cutting completeness/preservation/repeatability rules the JSON
+// Schema subset cannot state.
+export function evaluateInstanceCanonicalExport(doc, {
+  registrySchema, envelopeSchema, resolveMigrationPlan, resolveSourceContent,
+} = {}) {
+  if (!isObject(registrySchema)) return ['registrySchema is not an object; the instance-canonical-export contract cannot be checked without its schema'];
+  if (!isObject(envelopeSchema)) return ['envelopeSchema is not an object; a canonical export composes with the record envelope and cannot be checked without it'];
+
+  const problems = [];
+
+  const containerErrs = [];
+  try { validate(doc, registrySchema, registrySchema, '', containerErrs); }
+  catch (e) { return [`container/payload schema could not be applied: ${e.message}`]; }
+  problems.push(...containerErrs);
+
+  const entries = Array.isArray(doc && doc.exports) ? doc.exports : [];
+
+  for (let i = 0; i < entries.length; i += 1) {
+    const envErrs = [];
+    try { validate(entries[i], envelopeSchema, envelopeSchema, '', envErrs); }
+    catch (e) { problems.push(`entry ${i} envelope could not be applied: ${e.message}`); continue; }
+    problems.push(...envErrs.map((m) => `entry ${i} envelope ${m}`));
+
+    const entryPayload = isObject(entries[i].payload) ? entries[i].payload : {};
+    const records = Array.isArray(entryPayload.records) ? entryPayload.records : [];
+    for (let j = 0; j < records.length; j += 1) {
+      const recErrs = [];
+      try { validate(records[j], envelopeSchema, envelopeSchema, '', recErrs); }
+      catch (e) { problems.push(`entry ${i} record ${j} envelope could not be applied: ${e.message}`); continue; }
+      problems.push(...recErrs.map((m) => `entry ${i} record ${j} envelope ${m}`));
+    }
+  }
+
+  const seenIds = new Set();
+  for (const e of entries) {
+    if (!isObject(e)) continue;
+    const id = typeof e.id === 'string' ? e.id : `#${entries.indexOf(e)}`;
+    const at = `canonical export "${id}"`;
+    if (typeof e.id === 'string') {
+      if (seenIds.has(e.id)) problems.push(`${at} is declared more than once`);
+      seenIds.add(e.id);
+    }
+    if (e.record_type !== EXPORT_RECORD_TYPE) {
+      problems.push(`${at} declares record_type "${e.record_type}", not "${EXPORT_RECORD_TYPE}"`);
+    }
+
+    const scope = isObject(e.scope) ? e.scope : {};
+    if (!ALLOWED_SCOPE_TYPES.includes(scope.type)) {
+      problems.push(`${at} scope.type is "${scope.type}"; a canonical export is scoped to project-workspace or repository-scope only`);
+    }
+    const origin = isObject(e.origin) ? e.origin : {};
+    if (origin.kind !== EXPORT_REQUIRED_ORIGIN_KIND) {
+      problems.push(`${at} origin.kind is "${origin.kind}", not "${EXPORT_REQUIRED_ORIGIN_KIND}"; a canonical export is mechanically derived from its plan, never a fresh declared act`);
+    }
+    const authority = isObject(e.authority) ? e.authority : {};
+    if (authority.kind !== REQUIRED_AUTHORITY_KIND) {
+      problems.push(`${at} authority.kind is "${authority.kind}", not "${REQUIRED_AUTHORITY_KIND}"; the export is produced by a run's delegated authority and never mints an owner decision on its own`);
+    }
+
+    const payload = isObject(e.payload) ? e.payload : {};
+    const source = isObject(payload.source) ? payload.source : {};
+    if ('repository_ref' in source) {
+      const r = checkOpaqueRef(source.repository_ref, `${at} source.repository_ref`);
+      if (r) problems.push(r);
+    }
+    if ('plan_ref' in payload) {
+      const r = checkOpaqueRef(payload.plan_ref, `${at} plan_ref`);
+      if (r) problems.push(r);
+    }
+
+    const expectedOriginRef = deriveExportOriginSourceRef(payload.plan_ref);
+    if (origin.source_ref !== expectedOriginRef) {
+      problems.push(`${at} origin.source_ref "${origin.source_ref}" does not trace to this export's own plan_ref "${payload.plan_ref}"; expected "${expectedOriginRef}"`);
+    }
+
+    const resolvedPlan = resolveAndCheckMigrationPlan(at, payload, resolveMigrationPlan, problems);
+    if (resolvedPlan) {
+      if (!sameScope(scope, isObject(resolvedPlan.scope) ? resolvedPlan.scope : {})) {
+        problems.push(`${at} scope does not match the resolved plan's own scope; an export must be scoped exactly like the plan it proves`);
+      }
+      const records = Array.isArray(payload.records) ? payload.records : [];
+      const retained = Array.isArray(payload.retained) ? payload.retained : [];
+      const expectedTargets = checkExportCompleteness(at, resolvedPlan, records, retained, problems);
+      checkPayloadPreservation(at, source, resolvedPlan, records, expectedTargets, resolveSourceContent, problems);
+    }
+
+    const declaredIdempotencyKey = payload.idempotency_key;
+    const computedIdempotencyKey = computeExportIdempotencyKey(payload.plan_ref, payload.plan_fingerprint);
+    if (typeof declaredIdempotencyKey === 'string' && declaredIdempotencyKey !== computedIdempotencyKey) {
+      problems.push(`${at} idempotency_key "${declaredIdempotencyKey}" does not match the recomputed key "${computedIdempotencyKey}" derived from this export's own plan_ref and plan_fingerprint; idempotency_key is never an arbitrary free-form string`);
+    }
+
+    const declaredDigest = payload.digest;
+    const computedDigest = computeExportDigest(payload);
+    if (typeof declaredDigest === 'string' && declaredDigest !== computedDigest) {
+      problems.push(`${at} digest "${declaredDigest}" does not match the recomputed digest "${computedDigest}" of its own documented canonical projection (plan_ref, plan_fingerprint, source, records, retained); the same pinned content must always compute the same digest`);
+    }
+  }
+
+  checkExportIdempotency(entries, problems);
 
   return problems;
 }

@@ -510,6 +510,29 @@ function writeInstanceCanonicalExport(root, { schema = null, bundle = null, omit
   }
 }
 
+/*
+ * workspace-compatibility-qualification helpers. The contract is a MANDATORY
+ * part of the Kernel, so buildKernel plants the real schema and real
+ * fixtures beside it; the five contracts it composes (and their own
+ * scoped-record.schema.json) are already planted by the writers above.
+ */
+const WCQ_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const WCQ_OK_LINE = /workspace-compatibility-qualification: the qualification schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const wcqRealBundle = () => JSON.parse(fs.readFileSync(path.join(WCQ_OM, 'fixtures', 'workspace-compatibility-qualification.fixtures.json'), 'utf8'));
+function writeWorkspaceCompatibilityQualification(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/workspace-compatibility-qualification.schema.json',
+    schema ?? fs.readFileSync(path.join(WCQ_OM, 'workspace-compatibility-qualification.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/workspace-compatibility-qualification.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/workspace-compatibility-qualification.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(WCQ_OM, 'fixtures', 'workspace-compatibility-qualification.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -552,6 +575,8 @@ function buildKernel(root) {
   writeInstanceDataMigration(root);
   // The mandatory instance-canonical-export contract, likewise.
   writeInstanceCanonicalExport(root);
+  /* The mandatory workspace-compatibility-qualification contract, likewise. */
+  writeWorkspaceCompatibilityQualification(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -5068,6 +5093,108 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t270 an invalid instance-canonical-export fixture the composition accepts clean is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/instance-canonical-export: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
+  });
+}
+
+/*
+ * ===========================================================================
+ * workspace-compatibility-qualification — the closed, product-neutral final
+ * verdict composing the five contracts above, is a MANDATORY part of the
+ * Kernel (buildKernel plants it). Schema is Kernel, qualification data is
+ * Instance. Removing the schema or the fixtures is a FAIL; a present schema
+ * is parsed, keyword-checked and exercised against its product-neutral
+ * fixtures — the eight BRANCHES of the decision matrix
+ * (workspace-compatibility-qualification.md §4.1), a separate, smaller claim
+ * than the program's eight acceptance scenarios (§4.2, proven by
+ * test/workspace-compatibility-qualification.test.mjs, not by this bundle) —
+ * fail-closed on the bundle's own shape. Helpers (WCQ_OM, WCQ_OK_LINE,
+ * wcqRealBundle, writeWorkspaceCompatibilityQualification) sit next to the
+ * other operating-model contract helpers so buildKernel can call them.
+ * ===========================================================================
+ */
+
+/* t271 — an ordinary synthetic kernel already carries the mandatory contract. */
+{
+  const { kernel, instance } = freshPair('t271');
+  check('t271 the mandatory workspace-compatibility-qualification contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [WCQ_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+/* t272 — the contract is MANDATORY: removing the schema is a red run, not a skip. */
+{
+  const { kernel, instance } = freshPair('t272');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'workspace-compatibility-qualification.schema.json'));
+  commitAll(kernel);
+  check('t272 removing the mandatory workspace-compatibility-qualification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: registries\/operating-model\/workspace-compatibility-qualification\.schema\.json is missing; the workspace compatibility qualification contract is a mandatory part of this Kernel/],
+  });
+}
+
+/* t273 — a schema keyword the in-gate validator does not implement fails loudly. */
+{
+  const { kernel, instance } = freshPair('t273');
+  const s = JSON.parse(fs.readFileSync(path.join(WCQ_OM, 'workspace-compatibility-qualification.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeWorkspaceCompatibilityQualification(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t273 an unsupported workspace-compatibility-qualification schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: the schema uses a construct this validator cannot check/],
+  });
+}
+
+/* t274 — a schema that is not valid JSON fails, it is not skipped. */
+{
+  const { kernel, instance } = freshPair('t274');
+  writeWorkspaceCompatibilityQualification(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t274 a non-JSON workspace-compatibility-qualification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: workspace-compatibility-qualification\.schema\.json is not valid JSON/],
+  });
+}
+
+/* t275 — the schema is present but no fixtures sit beside it: a gap, not a skip. */
+{
+  const { kernel, instance } = freshPair('t275');
+  writeWorkspaceCompatibilityQualification(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t275 a workspace-compatibility-qualification schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: the schema carries no fixtures/],
+  });
+}
+
+/* t276 — a fixture declared valid that the composition rejects is a red run. */
+{
+  const { kernel, instance } = freshPair('t276');
+  const b = wcqRealBundle();
+  const base = b.valid.find((c) => c.note.includes('branch 5'));
+  const registry = JSON.parse(JSON.stringify(base.registry));
+  registry.qualifications[0].payload.qualification_reason = '';
+  b.valid.push({ note: 'planted qualification with an empty qualification_reason', registry });
+  writeWorkspaceCompatibilityQualification(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t276 a valid workspace-compatibility-qualification fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: a fixture that must be a valid registry was rejected \(planted qualification with an empty qualification_reason\)/],
+  });
+}
+
+/* t277 — a fixture declared invalid that the composition accepts clean is a red run. */
+{
+  const { kernel, instance } = freshPair('t277');
+  const b = wcqRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeWorkspaceCompatibilityQualification(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t277 an invalid workspace-compatibility-qualification fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
   });
 }
 

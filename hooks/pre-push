@@ -112,6 +112,13 @@ if ! node "$ROOT/test/field-evaluation.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: verifying the workspace compatibility qualification contract"
+if ! node "$ROOT/test/workspace-compatibility-qualification.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the workspace compatibility qualification contract is inconsistent."
+  exit 1
+fi
+
 echo "pre-push: running the Git-environment isolation regression test"
 if ! node "$ROOT/test/pre-push-git-isolation.test.mjs"; then
   echo ""

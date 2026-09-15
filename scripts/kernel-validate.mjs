@@ -107,7 +107,9 @@ import {
   makeRollbackSnapshotResolver, makeDeterministicPlanResolver, makeRestorationEvidenceResolver,
   makeSupersededPlanResolver,
   evaluateInstanceCanonicalExport, makeMigrationPlanResolver, makeSourceContentResolver,
+  makeRefResolver,
 } from './lib/instance-data-migration.mjs';
+import { evaluateWorkspaceCompatibilityQualification } from './lib/workspace-compatibility-qualification.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2320,6 +2322,210 @@ function functionalParityConsistency(rec) {
     if (iceOk && iceCoverage) {
       ok('instance-canonical-export: the canonical-export schema parsed and keyword-checked; '
        + `${iceSatisfied} representative fixture(s) satisfied the composition (record envelope for the export AND for every exported record, a referenced migration plan resolved through an external boundary and checked to name this export's own plan_ref, RECOMPUTED plan_fingerprint and pinned source — a stale export is rejected, complete unit/group-to-record coverage with exactly one structurally identical record per migrated unit and per merged group and exactly one correctly-reasoned retained entry per retained-transitional unit — never an extra, missing, duplicated or misclassified entry on either side, every exported payload checked against the ACTUAL content of its contributing source unit(s) — and, for a merge, its own merge_rule_ref — resolved through a second external boundary and compared field for field, a recomputed deterministic export digest insensitive to the declaration order of records/retained, and an idempotency_key derived from plan_ref and plan_fingerprint unique across the container) and ${iceRejected} were rejected as declared`);
+    }
+  }
+}
+
+/*
+ * workspace-compatibility-qualification: the closed, product-neutral final
+ * verdict over one workspace/repository's run through the
+ * meridian-workspace-compatibility program (MANDATORY).
+ *
+ * registries/operating-model/workspace-compatibility-qualification.schema.json
+ * is the specialised payload schema for a qualification record (record_type:
+ * workspace-compatibility-qualification) — the sixth, closing package of the
+ * meridian-workspace-compatibility program. Its envelope is validated
+ * against the existing scoped-record.schema.json (composition, not a second
+ * envelope). The record never embeds any of the three composed records: it
+ * carries CLOSED PINNED REFERENCES (workspace_connection_ref, always
+ * required; migration_plan_ref/canonical_export_ref, nullable), each
+ * resolved through an external boundary this section wires from the
+ * fixtures bundle's own connection_record_resolution/plan_record_resolution/
+ * export_record_resolution maps, then composed against the REAL
+ * evaluateExistingProjectCompatibilityMode/evaluateInstanceDataMigration/
+ * evaluateInstanceCanonicalExport — never a raw imported field
+ * (raw_excerpt, normalized_text, or a secret-bearing value) persisted in
+ * this record. ALL THREE references pin an exact sha256 (the resolved
+ * record's own recomputed content digest — computeConnectionDigest for the
+ * workspace connection, computePlanFingerprint/computeExportDigest for the
+ * plan/export — checked by the library, never a bare id/reference an
+ * independent resolver could satisfy with different content under the same
+ * label); when a canonical export is composed, the library derives its plan
+ * boundary itself from the already-resolved, already-pinned plan and
+ * ignores any exportOptions.resolveMigrationPlan this section might
+ * otherwise construct — there is deliberately none wired below. A resolved
+ * workspace connection that still carries any rule candidate with
+ * applicability_state "candidate" additionally forces qualification_state
+ * UNVERIFIED — never QUALIFIED — regardless of next_step or migration plan
+ * state; the connection's own next_step priority does not look inside
+ * rule_candidates, so this section's evaluator closes that gap itself.
+ *
+ * The composed contracts' schemas (and, for
+ * existing-project-compatibility-mode, ITS own composed
+ * instruction-source-registry/controlled-rule-intake schemas) are mandatory
+ * composition dependencies regardless of a given record's own content — an
+ * absent one fails the whole evaluation closed even when
+ * migration_plan_ref/canonical_export_ref are null.
+ *
+ * qualification_state (QUALIFIED/BLOCKED/UNVERIFIED) is a closed, RECOMPUTED
+ * verdict — the DECISION MATRIX documented in
+ * workspace-compatibility-qualification.md §4.1 — over the composed
+ * workspace connection's own next_step and, when a migration plan is
+ * composed, its own verification.overall_status and whether a plan that
+ * mints a migrated/merged record is backed by a composed canonical export;
+ * never a value trusted on its own, never one this evaluator derives from
+ * array order. blockers/open_questions are each checked closed to
+ * qualification_state (blockers non-empty exactly at BLOCKED, open_questions
+ * non-empty exactly at UNVERIFIED). This decision matrix is a SEPARATE,
+ * smaller claim than the program's eight ACCEPTANCE SCENARIOS
+ * (workspace-compatibility-qualification.md §4.2 —
+ * empty-project-no-instance, existing-project-zero-write,
+ * duplicate-rule-provenance, conflict-order-independent,
+ * source-change-no-silent-replacement, agent-native-partial-visibility,
+ * multi-repository-workspace, migration-applicability-preservation), which
+ * are proven by dedicated, mostly non-fixture tests in
+ * test/workspace-compatibility-qualification.test.mjs — not by this bundle
+ * of fixtures, and not conflated with the decision matrix's own nine table
+ * rows (eight logical steps; resolve-conflict and resolve-ambiguity share
+ * one), which is a different, smaller claim entirely. Seven of the eight
+ * scenarios are fully closed by this Kernel slice; the eighth,
+ * migration-applicability-preservation, is closed only in its KERNEL part
+ * (applicability_preservation accepted as verified only with evidence
+ * resolved through an external boundary, never asserted on its word) —
+ * whether the actual set of applicable norms is equal before/after a real
+ * migration is product-specific field evidence this product-neutral Kernel
+ * cannot supply, and remains the next, separate Instance-repository
+ * package's proof (workspace-compatibility-qualification.md §4.3).
+ *
+ * Qualification DATA is Instance, like every other operating-model
+ * register: the Kernel ships the schema, the product-neutral fixtures
+ * (covering the nine decision-matrix rows) and one checkable
+ * implementation (scripts/lib/workspace-compatibility-qualification.mjs),
+ * not a canonical qualification of any actual product. The contract is a
+ * MANDATORY part of this Kernel: a missing schema or missing fixtures is a
+ * FAIL, not an informational skip.
+ */
+{
+  const wcqDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const wcqSchemaName = 'workspace-compatibility-qualification.schema.json';
+  const wcqSchemaRaw = readIfExists(path.join(wcqDir, wcqSchemaName));
+  if (wcqSchemaRaw === null) {
+    fail(`workspace-compatibility-qualification: registries/operating-model/${wcqSchemaName} is missing; the workspace compatibility qualification contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let wcqOk = true;
+    let wcqSchema = null;
+    let wcqEnv = null;
+    let wcqCompatSchema = null;
+    let wcqSourceRegistrySchema = null;
+    let wcqRuleIntakeSchema = null;
+    let wcqMigrationSchema = null;
+    let wcqExportSchema = null;
+    try { wcqSchema = JSON.parse(wcqSchemaRaw); }
+    catch (e) { fail(`workspace-compatibility-qualification: ${wcqSchemaName} is not valid JSON: ${e.message}`); wcqOk = false; }
+
+    const composedSchemaFiles = {
+      wcqEnv: ['scoped-record.schema.json', 'the composed records\' envelope'],
+      wcqCompatSchema: ['existing-project-compatibility-mode.schema.json', 'the composed workspace connection'],
+      wcqSourceRegistrySchema: ['instruction-source-registry.schema.json', 'the composed workspace connection\'s own discovered sources'],
+      wcqRuleIntakeSchema: ['controlled-rule-intake.schema.json', 'the composed workspace connection\'s own rule candidates'],
+      wcqMigrationSchema: ['instance-data-migration.schema.json', 'a composed migration plan'],
+      wcqExportSchema: ['instance-canonical-export.schema.json', 'a composed canonical export'],
+    };
+    const loaded = {};
+    for (const [varName, [fileName, reason]] of Object.entries(composedSchemaFiles)) {
+      const raw = readIfExists(path.join(wcqDir, fileName));
+      if (raw === null) {
+        fail(`workspace-compatibility-qualification: registries/operating-model/${fileName} is missing; ${reason} cannot be checked without it`);
+        wcqOk = false;
+      } else {
+        try { loaded[varName] = JSON.parse(raw); }
+        catch (e) { fail(`workspace-compatibility-qualification: ${fileName} is not valid JSON: ${e.message}`); wcqOk = false; }
+      }
+    }
+    wcqEnv = loaded.wcqEnv ?? null;
+    wcqCompatSchema = loaded.wcqCompatSchema ?? null;
+    wcqSourceRegistrySchema = loaded.wcqSourceRegistrySchema ?? null;
+    wcqRuleIntakeSchema = loaded.wcqRuleIntakeSchema ?? null;
+    wcqMigrationSchema = loaded.wcqMigrationSchema ?? null;
+    wcqExportSchema = loaded.wcqExportSchema ?? null;
+
+    if (wcqSchema) {
+      try { assertSupportedDeep(wcqSchema, wcqSchemaName); }
+      catch (e) { fail(`workspace-compatibility-qualification: the schema uses a construct this validator cannot check: ${e.message}`); wcqOk = false; }
+    }
+
+    let wcqSatisfied = 0;
+    let wcqRejected = 0;
+    let wcqCoverage = false;
+    const wcqFxRaw = readIfExists(path.join(wcqDir, 'fixtures', 'workspace-compatibility-qualification.fixtures.json'));
+    if (wcqFxRaw === null) {
+      fail('workspace-compatibility-qualification: the schema carries no fixtures (registries/operating-model/fixtures/workspace-compatibility-qualification.fixtures.json); a schema no run exercises is not one this gate has reached');
+      wcqOk = false;
+    } else if (wcqOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(wcqFxRaw); }
+      catch (e) { bundleOk = false; fail(`workspace-compatibility-qualification: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('workspace-compatibility-qualification: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`workspace-compatibility-qualification: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        wcqOk = false;
+      } else {
+        const mr = bundle.migration_resolution || {};
+        const er = bundle.export_resolution || {};
+        const wcqOpts = {
+          registrySchema: wcqSchema,
+          envelopeSchema: wcqEnv,
+          resolveConnectionRecord: makeRefResolver(bundle.connection_record_resolution),
+          resolvePlanRecord: makeRefResolver(bundle.plan_record_resolution),
+          resolveExportRecord: makeRefResolver(bundle.export_record_resolution),
+          compatOptions: {
+            registrySchema: wcqCompatSchema,
+            envelopeSchema: wcqEnv,
+            sourceRegistrySchema: wcqSourceRegistrySchema,
+            ruleIntakeSchema: wcqRuleIntakeSchema,
+          },
+          migrationOptions: {
+            registrySchema: wcqMigrationSchema,
+            envelopeSchema: wcqEnv,
+            resolveSourceSnapshot: makeSourceSnapshotResolver(mr.source_snapshot_resolution),
+            resolveEvidence: makeEvidenceResolver(mr.evidence_resolution),
+            resolveRollbackSnapshot: makeRollbackSnapshotResolver(mr.rollback_snapshot_resolution),
+            resolveDeterministicPlan: makeDeterministicPlanResolver(mr.deterministic_plan_resolution),
+            resolveRestorationEvidence: makeRestorationEvidenceResolver(mr.restoration_evidence_resolution),
+            resolveSupersededPlan: makeSupersededPlanResolver(mr.superseded_plan_resolution),
+          },
+          exportOptions: {
+            registrySchema: wcqExportSchema,
+            envelopeSchema: wcqEnv,
+            resolveSourceContent: makeSourceContentResolver(er.source_content_resolution),
+          },
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateWorkspaceCompatibilityQualification(c && c.registry, wcqOpts);
+          if (p.length) { fail(`workspace-compatibility-qualification: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); wcqOk = false; }
+          else wcqSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateWorkspaceCompatibilityQualification(c && c.registry, wcqOpts);
+          if (p.length === 0) { fail(`workspace-compatibility-qualification: a fixture that must be rejected validated clean (${c && c.note})`); wcqOk = false; }
+          else wcqRejected++;
+        }
+        wcqCoverage = wcqOk;
+      }
+    }
+
+    if (wcqOk && wcqCoverage) {
+      ok('workspace-compatibility-qualification: the qualification schema parsed and keyword-checked; '
+       + `${wcqSatisfied} representative fixture(s) satisfied the composition (record envelope, mandatory composed registry/envelope/source-registry/rule-intake/migration/export schemas required regardless of document content, an always-required workspace_connection_ref and an optional migration_plan_ref/canonical_export_ref — ALL THREE pinned to a recomputed sha256 content digest (computeConnectionDigest/computePlanFingerprint/computeExportDigest) and checked against the REAL evaluateExistingProjectCompatibilityMode/evaluateInstanceDataMigration/evaluateInstanceCanonicalExport — the export's own plan boundary derived from the already-resolved plan, never an independently configured resolver — full scope agreement across every resolved record, and a recomputed qualification_state — the nine-row decision matrix of workspace-compatibility-qualification.md §4.1, closed to the composed connection's own next_step, whether any resolved rule candidate is still an undecided "candidate" (forcing UNVERIFIED, never QUALIFIED, regardless of migration state), and, when a plan is composed, its own verification.overall_status and canonical-export coverage of any minted record — checked against the declared value, with blockers/open_questions each closed to qualification_state) covering all nine decision-matrix rows, and ${wcqRejected} were rejected as declared; the program's eight acceptance scenarios (§4.2) are proven separately by test/workspace-compatibility-qualification.test.mjs — seven fully, and the eighth (migration-applicability-preservation) only in its Kernel part, its product-specific field evidence being the next, separate Instance-repository package's proof (§4.3)`);
     }
   }
 }

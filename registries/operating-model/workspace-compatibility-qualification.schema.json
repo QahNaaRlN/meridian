@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/workspace-compatibility-qualification.schema.json",
+  "title": "Meridian workspace compatibility qualification register",
+  "description": "Container for the final, product-neutral qualification (record_type: workspace-compatibility-qualification) of one workspace/repository's run through the meridian-workspace-compatibility program: discovery and rule intake (existing-project-compatibility-mode.schema.json, composing instruction-source-registry.schema.json and controlled-rule-intake.schema.json), an optional migration plan (instance-data-migration.schema.json) and an optional canonical export (instance-canonical-export.schema.json). Each entry is a scoped record: its envelope (identity, scope, origin, authority) is validated against the same scoped-record.schema.json every other operating-model contract composes with, and this schema is not a second envelope schema. The record does NOT embed any of the three composed records: payload.workspace_connection_ref/migration_plan_ref/canonical_export_ref are CLOSED pinned references, resolved through an external boundary at the library level and checked there against the REAL evaluateExistingProjectCompatibilityMode/evaluateInstanceDataMigration/evaluateInstanceCanonicalExport — never a second, competing shape for any of the three, and never a raw imported field (raw_excerpt, normalized_text, or any secret-bearing value) persisted in this record. All three references pin an exact sha256 content digest of the resolved record — computeConnectionDigest for the workspace connection scan, computePlanFingerprint/computeExportDigest for the migration plan and canonical export — never a bare id/reference an independent resolver could satisfy with different content under the same label. payload.qualification_state is a closed, RECOMPUTED verdict — QUALIFIED, BLOCKED or UNVERIFIED — checked at the library level against the composed evaluations' own outcome (including whether any resolved rule candidate is still an undecided applicability_state candidate, which alone forces UNVERIFIED and never QUALIFIED); a declared state that does not match the recomputed one is rejected, never trusted on its own. blockers/open_questions are closed to qualification_state: blockers is non-empty exactly when BLOCKED, open_questions is non-empty exactly when UNVERIFIED. This package does not migrate, export, scan, or accept any rule; it only qualifies — declares one closed verdict over records produced by the five packages it composes. The contract is a mandatory part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/workspace-compatibility-qualification.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "title", "qualifications"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "registry_id": { "const": "workspace-compatibility-qualification" },
+    "title": { "type": "string", "minLength": 1 },
+    "qualifications": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/entry" }
+    }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "sha256_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "entry": {
+      "type": "object",
+      "required": ["record_type", "payload"],
+      "properties": {
+        "record_type": { "const": "workspace-compatibility-qualification" },
+        "payload": { "$ref": "#/definitions/payload" }
+      }
+    },
+    "qualification_state": {
+      "enum": ["QUALIFIED", "BLOCKED", "UNVERIFIED"]
+    },
+    "pinned_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_type", "id", "reference", "sha256"],
+      "description": "A closed reference resolved through an external boundary — never an embedded body. sha256 is mandatory on all three uses of this shape in this schema: the exact composed version's own recomputed content digest (computeConnectionDigest/computePlanFingerprint/computeExportDigest), never a bare id/reference an independent resolver could satisfy with different content under the same label.",
+      "properties": {
+        "record_type": { "$ref": "#/definitions/non_empty" },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "reference": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "$ref": "#/definitions/sha256_hex" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace_connection_ref",
+        "migration_plan_ref",
+        "canonical_export_ref",
+        "qualification_state",
+        "qualification_reason",
+        "blockers",
+        "open_questions"
+      ],
+      "properties": {
+        "workspace_connection_ref": {
+          "$ref": "#/definitions/pinned_ref",
+          "description": "Always required: a qualification without a pinned, resolvable workspace connection scan does not exist. sha256 pins the resolved record's own recomputed computeConnectionDigest."
+        },
+        "migration_plan_ref": {
+          "anyOf": [
+            { "$ref": "#/definitions/pinned_ref" },
+            { "type": "null" }
+          ],
+          "description": "null when this qualification composes no migration plan; otherwise a pinned reference to one FULL instance-data-migration entry, sha256-pinned to its recomputed plan_fingerprint."
+        },
+        "canonical_export_ref": {
+          "anyOf": [
+            { "$ref": "#/definitions/pinned_ref" },
+            { "type": "null" }
+          ],
+          "description": "null when no canonical export is composed; otherwise a pinned reference to one FULL instance-canonical-export entry, sha256-pinned to its recomputed digest. Present only meaningfully alongside a non-null migration_plan_ref."
+        },
+        "qualification_state": { "$ref": "#/definitions/qualification_state" },
+        "qualification_reason": { "$ref": "#/definitions/non_empty" },
+        "blockers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/non_empty" }
+        },
+        "open_questions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/non_empty" }
+        }
+      }
+    }
+  }
+}

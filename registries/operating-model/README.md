@@ -455,3 +455,92 @@ Schema выразить не может, и продуктово-нейтрал�
 самостоятельной записи схемы. Схема — Ядро, **конкретные наблюдения и
 отчёты — Экземпляр**. Отсутствие схемы или фикстур — ошибка проверки Ядра.
 Нормативный смысл — в `standards/workspace/meridian-field-evaluation.md`.
+
+`workspace-compatibility-qualification.schema.json` — **полная обязательная**
+схема закрытого итогового вердикта (`record_type:
+workspace-compatibility-qualification`) программы `meridian-workspace-compatibility`
+— шестого, завершающего пакета, композирующего пять уже обязательных
+контрактов выше (`instruction-source-registry`, `controlled-rule-intake`,
+`existing-project-compatibility-mode` и `instance-data-migration`, включая его
+дополнение `instance-canonical-export`) без дублирования их проверок. Запись
+объявляет **эту** схему в своём `$schema` переносимой относительной ссылкой;
+специализированная схема композирует общий конверт `scoped-record` с телом, а
+`scripts/lib/workspace-compatibility-qualification.mjs` дополнительно
+прогоняет запись против канонической `scoped-record.schema.json`. Область —
+`project-workspace` и `repository-scope`, те же две, что уже допускают
+`existing-project-compatibility-mode` и `instance-data-migration`; `origin.kind`
+закреплён значением `derived` (вердикт вычислен, а не заявлен), `authority.kind`
+— значением `delegated-run` (вычисление ведёт запуск и не подменяет собой ни
+одно из решений владельца, закреплённых внутри составленных записей). `payload`
+**не встраивает** ни одну из трёх составляемых записей — только закрытые
+**закреплённые ссылки** (`pinned_ref`), разрешаемые через внешнюю границу
+внутри проверки и никогда не персистируемые в записи квалификации (обнаруженные
+источники, кандидаты правил и их `raw_excerpt`/`normalized_text` остаются вне
+этого реестра): **всегда обязательный** `workspace_connection_ref` и
+**допускающие `null`** `migration_plan_ref`/`canonical_export_ref` — **все
+три** одной закрытой формы `{record_type, id, reference, sha256}` с
+**обязательным** `sha256`: точный пересчитанный дайджест содержимого
+разрешённой записи — `computePlanFingerprint`/`computeExportDigest` для
+плана/экспорта (переиспользованные из `instance-data-migration.mjs`) и
+**собственная** функция этого пакета, `computeConnectionDigest`, для
+сканирования подключения (`existing-project-compatibility-mode.md` не несёт
+аналогичной функции). Заявленный `sha256`, расходящийся с пересчитанным по
+фактически разрешённой записи, отклоняется **даже когда `id` и `reference`
+совпадают буквально** — доказано тремя самостоятельными негативными тестами
+подмены содержимого, по одному на каждую ссылку. Разрешённый
+`workspace_connection_ref` проверяется **той же**
+`evaluateExistingProjectCompatibilityMode`; разрешённый `migration_plan_ref` —
+**той же** `evaluateInstanceDataMigration`; разрешённый `canonical_export_ref`
+— **той же** `evaluateInstanceCanonicalExport`, вызванной с **производным**
+резолвером плана, построенным здесь же из уже разрешённого и уже сверенного
+по `sha256` плана, — независимо настроенный резолвер, отображающий тот же
+`id` на другое содержимое, структурно не достигает этой проверки. Закрытый
+пересчитываемый `qualification_state` (`QUALIFIED`/`BLOCKED`/`UNVERIFIED`) —
+заявленное значение, расходящееся с вычисленным закрытой матрицей решений
+(пересчитываемый `next_step` разрешённого сканирования; наличие среди
+разрешённых `rule_candidates` хотя бы одного нерешённого
+(`applicability_state: candidate`) — само по себе форсирующее `UNVERIFIED`,
+никогда `QUALIFIED`, независимо от состояния миграции, поскольку `next_step`
+существующего пакета не заглядывает внутрь `rule_candidates`; и, когда план
+разрешается, его собственный `verification.overall_status` и покрытие
+минченной цели разрешённым экспортом), отклоняется; `blockers` и
+`open_questions` образуют одно закрытое отношение с `qualification_state`
+(`blockers` непуст ровно при `BLOCKED`, `open_questions` непуст ровно при
+`UNVERIFIED`). Все схемы композиции (собственная схема конверта,
+`existing-project-compatibility-mode` вместе с её
+`instruction-source-registry`/`controlled-rule-intake`, и
+`instance-data-migration`/`instance-canonical-export`) — обязательная часть
+контракта **независимо от содержимого** конкретной записи: отсутствие любой
+из них останавливает всю проверку закрыто, даже когда `migration_plan_ref`/
+`canonical_export_ref` этой записи равны `null`. Правила, которые подмножество
+JSON Schema выразить не может (форма и обязательность `sha256` каждой из трёх
+ссылок; разрешение через внешнюю границу и сверка эха `record_type`/`id`;
+согласованность области между конвертом записи и тремя разрешёнными записями;
+связь разрешённого `canonical_export_ref` с разрешённым `migration_plan_ref`
+через производный резолвер плана; наличие нерешённого кандидата правила;
+закрытая матрица решений девяти строк
+`workspace-compatibility-qualification.md` §4.1; согласованность
+`blockers`/`open_questions` с `qualification_state`), и продуктово-нейтральные
+фикстуры — по одной записи на каждую из девяти строк матрицы решений — из
+`fixtures/workspace-compatibility-qualification.fixtures.json` живут в одной
+функции `scripts/lib/workspace-compatibility-qualification.mjs`, которую
+вызывают и участок `workspace-compatibility-qualification` в
+`scripts/kernel-validate.mjs`, и набор
+`test/workspace-compatibility-qualification.test.mjs`. Тот же самостоятельный
+набор отдельно доказывает восемь **приёмочных сценариев программы**
+(`workspace-compatibility-qualification.md` §4.2 — не то же утверждение, что
+девять строк матрицы решений §4.1) на реальных `rule_candidates`,
+`discovered_sources` и, для `existing-project-zero-write`, реальном временном
+каталоге с `AGENTS.md`/`CLAUDE.md`/правилом Cursor. Семь из восьми сценариев
+полностью закрыты этим Kernel-срезом; `migration-applicability-preservation`
+закрыт частично — Kernel-механизм (приём `applicability_preservation` только
+с разрешённым через внешнюю границу evidence) доказан здесь, а фактическое
+равенство множества применимых норм конкретного продукта до и после
+миграции остаётся предметом следующего, отдельного пакета в
+Instance-репозитории (`workspace-compatibility-qualification.md` §4.3). Схема
+— Ядро,
+**конкретные записи квалификации — Экземпляр**. Отсутствие схемы или фикстур
+— ошибка проверки Ядра. Нормативный смысл — в
+`standards/workspace/workspace-compatibility-qualification.md`; переносимое
+руководство оператора — в
+`standards/workspace/workspace-compatibility-operator-guide.md`.

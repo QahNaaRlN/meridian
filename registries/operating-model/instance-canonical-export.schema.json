@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/instance-canonical-export.schema.json",
+  "title": "Meridian instance canonical export register",
+  "description": "Container for canonical exports (record_type: instance-canonical-export) of an accepted instance-data-migration plan (instance-data-migration.schema.json) — the product-neutral, storage-neutral, machine-checkable proof that a plan's migrated/merged targets and its retained-transitional units together account for the plan's own record_units, that every exported record's payload is the ACTUAL preserved content of its contributing source unit(s) (not merely a claim), and that the whole export is reproducible from the same pinned plan state. Each entry is a scoped record: its envelope (identity, scope, origin, authority) is validated against the same scoped-record.schema.json a migration plan's own envelope is validated against — composition, not a second envelope schema — and this schema is not a second envelope schema either. payload.plan_ref names the exact migration plan this export proves; payload.plan_fingerprint and payload.source are checked at the library level against a plan resolved through an EXTERNAL boundary (resolveMigrationPlan) keyed by plan_ref — a claimed plan_ref/plan_fingerprint/source with no resolved, matching plan behind it never confirms the export, and a resolved plan whose OWN recomputed plan_fingerprint no longer matches the export's declared one is a STALE export and is rejected, never accepted as still current. payload.records is the array of full canonical scoped records this export claims for the plan's migrated/merged targets: checked at the library level (property: completeness) to contain EXACTLY ONE record per migrated unit and EXACTLY ONE record per merged group — never omitted, never duplicated, never an extra record for a target the plan never minted, and every record's own $schema/id/title/record_type/scope/origin/authority/payload/schema_version — all nine fields the target_record definition in instance-data-migration.schema.json requires, $schema included: it is EXPLICIT data the target declares, never derived or inferred — checked to be structurally IDENTICAL to the plan's own resolved target for the same group, not merely present; an arbitrary or diverging $schema on an exported record is rejected exactly like a diverging record_type or title. payload.retained is the explicit, closed list of retained-transitional unit_id/reason pairs this export accounts for — checked to contain EXACTLY the plan's own retained-transitional units, each exactly once, never a migrated/merged unit misclassified as retained and never an unknown unit_id. Every record's payload is checked (property: content preservation) in TWO independent ways: first as a content_envelope in its own right, through the SAME checkContentEnvelope function instance-data-migration.schema.json's own target.payload is checked against (never a second, diverging copy of this logic) — digest.algorithm is always sha-256, a utf-8 digest is recomputed over the UTF-8 bytes of content, a base64 digest is recomputed over the DECODED bytes (never the base64 text itself), application/json and any +json media type require utf-8 encoding, parseable JSON and content already in canonical (sorted-key) form, text/* requires utf-8, and every other media type requires base64 — then against the ACTUAL content of its contributing source unit(s) at the plan's pinned revision, resolved through a second EXTERNAL boundary (resolveSourceContent) whose OWN response is run through checkContentEnvelope too, before it is trusted as a comparison baseline — never trusted on the strength of classification_basis, unit_ref, a matching record COUNT, or a digest that merely happens to agree across target/export/resolver but is not backed by the actual bytes; a merged record's content is resolved together with its merge_rule_ref, so an unconfirmed or mismatched merge combination is rejected exactly like an unconfirmed single-unit content claim. payload.idempotency_key is DERIVED from plan_ref and plan_fingerprint (never an arbitrary string) and unique across the container, so a rerun over the same pinned plan state recomputes the same export identity rather than minting a duplicate. payload.digest is a documented deterministic canonical projection of the export's own content (plan_ref, plan_fingerprint, source, records, retained) — recomputed and checked at the library level, insensitive to the declaration ORDER of records/retained and to wall-clock generation time (no timestamp enters the projection). The contract is a mandatory part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/instance-data-migration.md, which also documents this canonical export.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "title", "exports"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "registry_id": { "const": "instance-canonical-export" },
+    "title": { "type": "string", "minLength": 1 },
+    "exports": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/entry" }
+    }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "sha256_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "sha256_digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "const": "sha-256" },
+        "value": { "$ref": "#/definitions/sha256_hex" }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "required": ["record_type", "payload"],
+      "properties": {
+        "record_type": { "const": "instance-canonical-export" },
+        "payload": { "$ref": "#/definitions/payload" }
+      }
+    },
+    "pinned_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_ref", "revision", "digest"],
+      "description": "The full identity of the exact source revision this export was taken from — repository_ref (an opaque identifier, never a filesystem path — property: storage neutrality), revision and a full closed SHA-256 digest. Checked at the library level to match the identity of the migration plan resolved through the external resolveMigrationPlan boundary for this export's own plan_ref — an export cannot claim a source identity its own plan does not pin.",
+      "properties": {
+        "repository_ref": { "$ref": "#/definitions/non_empty" },
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "digest": { "$ref": "#/definitions/sha256_digest" }
+      }
+    },
+    "retained_unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit_id", "reason"],
+      "description": "One retained-transitional source unit this export accounts for. Checked at the library level against the plan resolved through resolveMigrationPlan: unit_id must name a unit the plan itself classified retained-transitional (never a migrated/merged unit, never an unknown unit_id), exactly once, and reason is checked to match the plan's own retained_reason for that unit — a retained reason is a documented fact of the plan, not a freely restated one.",
+      "properties": {
+        "unit_id": { "$ref": "#/definitions/semantic_id" },
+        "reason": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_ref", "plan_fingerprint", "source", "records", "retained", "idempotency_key", "digest"],
+      "properties": {
+        "plan_ref": { "$ref": "#/definitions/non_empty" },
+        "plan_fingerprint": { "$ref": "#/definitions/sha256_hex" },
+        "source": { "$ref": "#/definitions/pinned_source" },
+        "records": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "object" }
+        },
+        "retained": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/retained_unit" }
+        },
+        "idempotency_key": { "$ref": "#/definitions/sha256_hex" },
+        "digest": { "$ref": "#/definitions/sha256_hex" }
+      }
+    }
+  }
+}

@@ -25,11 +25,61 @@ jobs:
       - name: Regression-test the rule resolver
         run: node test/rule-resolver.test.mjs
 
+      - name: Verify the workspace scope model
+        run: node test/workspace-scope-model.test.mjs
+
+      - name: Verify the task pattern registry
+        run: node test/task-pattern-registry.test.mjs
+
+      - name: Verify the instruction source registry
+        run: node test/instruction-source-registry.test.mjs
+
+      - name: Verify the task specification contract
+        run: node test/task-specification.test.mjs
+
+      - name: Verify the execution state model
+        run: node test/execution-state.test.mjs
+
+      - name: Verify the role and human control contract
+        run: node test/role-and-human-control.test.mjs
+
+      - name: Verify the bounded context manifest contract
+        run: node test/context-manifest.test.mjs
+
+      - name: Verify the evidence and handoff contract
+        run: node test/evidence-and-handoff.test.mjs
+
+      - name: Verify the field-evaluation contract
+        run: node test/field-evaluation.test.mjs
+
+      - name: Verify the workspace compatibility qualification contract
+        run: node test/workspace-compatibility-qualification.test.mjs
+
+      - name: Verify the upgrade integration qualification contract
+        run: node test/upgrade-integration-qualification.test.mjs
+
       - name: Regression-test the pre-push Git-environment isolation
         run: node test/pre-push-git-isolation.test.mjs
 
       - name: Regression-test the metrics-logging wrapper
         run: node test/validate-and-log.test.mjs
+
+      - name: Regression-test the branch-name syntax check
+        run: node test/branch-name-validation.test.mjs
+
+      # pull_request only: check the SYNTAX of the merge request's source
+      # branch (version-control-flow.md §3.1, §13.2). This step is part of
+      # the already-mandatory "Kernel validate (synthetic instance)" job, so
+      # a red result here blocks the merge into the protected main / dev.
+      # It is deliberately skipped for push and workflow_dispatch, where
+      # github.head_ref is empty — its absence must not break those runs.
+      # The ref is passed through an environment variable and quoted in the
+      # command, so a branch name is never interpreted by the shell.
+      - name: Check the merge request source branch name (pull_request only)
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: node scripts/validate-branch-name.mjs "$HEAD_REF"
 
       - name: Validate against the synthetic instance
         env:

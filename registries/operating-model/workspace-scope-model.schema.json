@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/workspace-scope-model.schema.json",
+  "title": "Meridian workspace scope model",
+  "description": "Canonical logical scope types. Scope identity is independent from a repository, directory, database or remote storage location.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "model_id", "title", "scope_types"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "model_id": { "const": "workspace-scope-model" },
+    "title": { "type": "string", "minLength": 1 },
+    "scope_types": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/scope_type" },
+      "allOf": [
+        { "contains": { "type": "object", "properties": { "id": { "const": "built-in-methodology" } }, "required": ["id"] } },
+        { "contains": { "type": "object", "properties": { "id": { "const": "user-profile" } }, "required": ["id"] } },
+        { "contains": { "type": "object", "properties": { "id": { "const": "organization-profile" } }, "required": ["id"] } },
+        { "contains": { "type": "object", "properties": { "id": { "const": "project-workspace" } }, "required": ["id"] } },
+        { "contains": { "type": "object", "properties": { "id": { "const": "repository-scope" } }, "required": ["id"] } },
+        { "contains": { "type": "object", "properties": { "id": { "const": "run-state" } }, "required": ["id"] } }
+      ]
+    }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "scope_type": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "subject", "cardinality", "allowed_parent_types"],
+      "properties": {
+        "id": {
+          "enum": [
+            "built-in-methodology",
+            "user-profile",
+            "organization-profile",
+            "project-workspace",
+            "repository-scope",
+            "run-state"
+          ]
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "subject": {
+          "enum": ["meridian", "user", "organization", "project", "repository", "execution-run"]
+        },
+        "cardinality": { "enum": ["one-per-installation", "many"] },
+        "allowed_parent_types": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "built-in-methodology",
+              "user-profile",
+              "organization-profile",
+              "project-workspace",
+              "repository-scope",
+              "run-state"
+            ]
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "id": { "const": "built-in-methodology" } }, "required": ["id"] },
+          "then": {
+            "properties": {
+              "subject": { "const": "meridian" },
+              "cardinality": { "const": "one-per-installation" },
+              "allowed_parent_types": { "const": [] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "id": { "const": "user-profile" } }, "required": ["id"] },
+          "then": {
+            "properties": {
+              "subject": { "const": "user" },
+              "cardinality": { "const": "many" },
+              "allowed_parent_types": { "const": [] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "id": { "const": "organization-profile" } }, "required": ["id"] },
+          "then": {
+            "properties": {
+              "subject": { "const": "organization" },
+              "cardinality": { "const": "many" },
+              "allowed_parent_types": { "const": [] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "id": { "const": "project-workspace" } }, "required": ["id"] },
+          "then": {
+            "properties": {
+              "subject": { "const": "project" },
+              "cardinality": { "const": "many" },
+              "allowed_parent_types": { "const": ["organization-profile"] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "id": { "const": "repository-scope" } }, "required": ["id"] },
+          "then": {
+            "properties": {
+              "subject": { "const": "repository" },
+              "cardinality": { "const": "many" },
+              "allowed_parent_types": { "const": ["project-workspace"] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "id": { "const": "run-state" } }, "required": ["id"] },
+          "then": {
+            "properties": {
+              "subject": { "const": "execution-run" },
+              "cardinality": { "const": "many" },
+              "allowed_parent_types": { "const": ["project-workspace"] }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

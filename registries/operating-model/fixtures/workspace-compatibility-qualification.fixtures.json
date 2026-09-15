@@ -1,0 +1,2653 @@
+{
+  "note": "Product-neutral fixtures for registries/operating-model/workspace-compatibility-qualification.schema.json and scripts/lib/workspace-compatibility-qualification.mjs. Every `valid` registry must pass evaluateWorkspaceCompatibilityQualification with no problem; every `invalid` registry must produce at least one. connection_record_resolution/plan_record_resolution/export_record_resolution are THIS package's own external boundaries (resolveConnectionRecord/resolvePlanRecord/resolveExportRecord), keyed by the opaque `reference` string each pinned_ref carries. migration_resolution/export_resolution are the COMPOSED contracts' own resolution maps (unchanged shape from instance-data-migration.fixtures.json / instance-canonical-export.fixtures.json), reused verbatim so the files never drift silently apart. Every pinned_ref.sha256 (each workspace_connection_refs[] entry included) is the REAL, recomputed output of computeConnectionDigest/computePlanFingerprint/computeExportDigest over the pinned record's own content — never an arbitrary value. The nine `valid` entries are the nine table rows of the decision matrix (workspace-compatibility-qualification.md §4.1, eight logical steps — resolve-conflict and resolve-ambiguity share one step) — a separate, smaller claim than the program's eight acceptance scenarios (§4.2), which are proven by dedicated, mostly non-fixture tests in test/workspace-compatibility-qualification.test.mjs. No product literals, no absolute machine paths, no dependency on a separate Instance.",
+  "connection_record_resolution": {
+    "connection:sample-connection-clean": {
+      "$schema": "../scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-connection-clean",
+      "title": "Сканирование — чистое подключение без спорных находок",
+      "record_type": "workspace-connection-scan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:connect-sample-connection-clean"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "existing-project-compatibility-mode-run:sample-connection-clean"
+      },
+      "payload": {
+        "connection_mode": "compatibility",
+        "repository": {
+          "id": "sample-project-repository",
+          "workspace_id": "sample-project"
+        },
+        "scan_kind": "initial",
+        "discovery_plan": [],
+        "discovered_sources": [],
+        "missing_sources": [],
+        "unreadable_sources": [],
+        "rule_candidates": [],
+        "findings": [],
+        "next_step": "continue-compatibility-mode"
+      }
+    },
+    "connection:sample-connection-conflict": {
+      "$schema": "../scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-connection-conflict",
+      "title": "Сканирование — конфликтующие кандидаты правил",
+      "record_type": "workspace-connection-scan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:connect-sample-connection-conflict"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "existing-project-compatibility-mode-run:sample-connection-conflict"
+      },
+      "payload": {
+        "connection_mode": "compatibility",
+        "repository": {
+          "id": "sample-project-repository",
+          "workspace_id": "sample-project"
+        },
+        "scan_kind": "initial",
+        "discovery_plan": [],
+        "discovered_sources": [],
+        "missing_sources": [],
+        "unreadable_sources": [],
+        "rule_candidates": [],
+        "findings": [
+          {
+            "id": "finding-conflict-1",
+            "kind": "conflict",
+            "detail": "два принятых кандидата правил конфликтуют по существу",
+            "blocking": true
+          }
+        ],
+        "next_step": "resolve-conflict"
+      }
+    },
+    "connection:sample-connection-ambiguous": {
+      "$schema": "../scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-connection-ambiguous",
+      "title": "Сканирование — неоднозначная классификация кластера дублей",
+      "record_type": "workspace-connection-scan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:connect-sample-connection-ambiguous"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "existing-project-compatibility-mode-run:sample-connection-ambiguous"
+      },
+      "payload": {
+        "connection_mode": "compatibility",
+        "repository": {
+          "id": "sample-project-repository",
+          "workspace_id": "sample-project"
+        },
+        "scan_kind": "initial",
+        "discovery_plan": [],
+        "discovered_sources": [],
+        "missing_sources": [],
+        "unreadable_sources": [],
+        "rule_candidates": [],
+        "findings": [
+          {
+            "id": "finding-ambiguous-1",
+            "kind": "ambiguous-scope",
+            "detail": "кластер дублей классифицирован в двух разных областях",
+            "blocking": true
+          }
+        ],
+        "next_step": "resolve-ambiguity"
+      }
+    },
+    "connection:sample-connection-pending": {
+      "$schema": "../scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-connection-pending",
+      "title": "Сканирование — ожидает решения владельца",
+      "record_type": "workspace-connection-scan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:connect-sample-connection-pending"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "existing-project-compatibility-mode-run:sample-connection-pending"
+      },
+      "payload": {
+        "connection_mode": "compatibility",
+        "repository": {
+          "id": "sample-project-repository",
+          "workspace_id": "sample-project"
+        },
+        "scan_kind": "initial",
+        "discovery_plan": [],
+        "discovered_sources": [],
+        "missing_sources": [],
+        "unreadable_sources": [],
+        "rule_candidates": [],
+        "findings": [
+          {
+            "id": "finding-pending-1",
+            "kind": "other",
+            "detail": "обнаруженный кандидат ожидает решения владельца",
+            "blocking": true
+          }
+        ],
+        "next_step": "await-owner-decision"
+      }
+    },
+    "connection:sample-connection-undecided": {
+      "$schema": "../scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-connection-undecided",
+      "title": "Сканирование — нерешённые кандидаты без блокирующей находки",
+      "record_type": "workspace-connection-scan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:connect-sample-connection-undecided"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "existing-project-compatibility-mode-run:sample-connection-undecided"
+      },
+      "payload": {
+        "connection_mode": "compatibility",
+        "repository": {
+          "id": "sample-project-repository",
+          "workspace_id": "sample-project"
+        },
+        "scan_kind": "initial",
+        "discovery_plan": [
+          {
+            "id": "undecided-source",
+            "medium": "file",
+            "path": "AGENTS.md",
+            "container_ref": "sample-project-repository"
+          }
+        ],
+        "discovered_sources": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "undecided-source",
+            "title": "Источник — undecided-source",
+            "record_type": "instruction-source",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "workspace-connection-scan:undecided-source-scan"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "existing-project-compatibility-mode-run:sample-pass"
+            },
+            "payload": {
+              "normative_status": "not-a-norm",
+              "medium": "file",
+              "location": {
+                "path": "AGENTS.md",
+                "container_ref": "sample-project-repository",
+                "missing_behavior": "fail-closed"
+              },
+              "recorded_state": {
+                "revision": "content-undecided-1",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5"
+                },
+                "revision_verified": true,
+                "currency": "current"
+              },
+              "format": "agents-md",
+              "read_channel": {
+                "kind": "meridian-observed",
+                "meridian_visibility": "full",
+                "agent_auto_read": false
+              },
+              "divergence": {
+                "status": "unknown"
+              }
+            }
+          }
+        ],
+        "missing_sources": [],
+        "unreadable_sources": [],
+        "rule_candidates": [
+          {
+            "discovery_status": "new",
+            "candidate": {
+              "$schema": "../scoped-record.schema.json",
+              "schema_version": 1,
+              "id": "undecided-candidate-a",
+              "title": "Кандидат — undecided-candidate-a",
+              "record_type": "rule-candidate",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample-project"
+              },
+              "origin": {
+                "kind": "derived",
+                "source_ref": "instruction-source:undecided-source"
+              },
+              "authority": {
+                "kind": "delegated-run",
+                "authority_ref": "controlled-rule-intake-run:sample-pass"
+              },
+              "payload": {
+                "source_ref": {
+                  "record_type": "instruction-source",
+                  "id": "undecided-source",
+                  "reference": "instruction-source-registry:undecided-source@content-undecided-1",
+                  "revision": "content-undecided-1",
+                  "sha256": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5"
+                },
+                "boundary": {
+                  "unit": "line-range",
+                  "start": 1,
+                  "end": 5
+                },
+                "raw_excerpt": "дословный текст undecided-candidate-a",
+                "normalized_text": "нормализованный текст undecided-candidate-a",
+                "semantic_key": "undecided-rule-a",
+                "classification_basis": "явно классифицировано, решение владельца ещё не принято",
+                "applicability_state": "candidate"
+              }
+            }
+          },
+          {
+            "discovery_status": "new",
+            "candidate": {
+              "$schema": "../scoped-record.schema.json",
+              "schema_version": 1,
+              "id": "undecided-candidate-b",
+              "title": "Кандидат — undecided-candidate-b",
+              "record_type": "rule-candidate",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample-project"
+              },
+              "origin": {
+                "kind": "derived",
+                "source_ref": "instruction-source:undecided-source"
+              },
+              "authority": {
+                "kind": "delegated-run",
+                "authority_ref": "controlled-rule-intake-run:sample-pass"
+              },
+              "payload": {
+                "source_ref": {
+                  "record_type": "instruction-source",
+                  "id": "undecided-source",
+                  "reference": "instruction-source-registry:undecided-source@content-undecided-1",
+                  "revision": "content-undecided-1",
+                  "sha256": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5"
+                },
+                "boundary": {
+                  "unit": "line-range",
+                  "start": 10,
+                  "end": 15
+                },
+                "raw_excerpt": "дословный текст undecided-candidate-b",
+                "normalized_text": "нормализованный текст undecided-candidate-b",
+                "semantic_key": "undecided-rule-b",
+                "classification_basis": "второе явно классифицированное правило, решение ещё не принято",
+                "applicability_state": "candidate"
+              }
+            }
+          }
+        ],
+        "findings": [],
+        "next_step": "continue-compatibility-mode"
+      }
+    },
+    "connection:sample-connection-clean-two": {
+      "$schema": "../scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-connection-clean-two",
+      "title": "Сканирование — второй репозиторий одного workspace, без спорных находок",
+      "record_type": "workspace-connection-scan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:connect-sample-connection-clean-two"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "existing-project-compatibility-mode-run:sample-connection-clean-two"
+      },
+      "payload": {
+        "connection_mode": "compatibility",
+        "repository": {
+          "id": "sample-project-repository-two",
+          "workspace_id": "sample-project"
+        },
+        "scan_kind": "initial",
+        "discovery_plan": [],
+        "discovered_sources": [],
+        "missing_sources": [],
+        "unreadable_sources": [],
+        "rule_candidates": [],
+        "findings": [],
+        "next_step": "continue-compatibility-mode"
+      }
+    },
+    "connection:sample-connection-other-workspace": {
+      "$schema": "../scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-connection-other-workspace",
+      "title": "Сканирование — репозиторий другого workspace",
+      "record_type": "workspace-connection-scan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project-other"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:connect-sample-connection-other-workspace"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "existing-project-compatibility-mode-run:sample-connection-other-workspace"
+      },
+      "payload": {
+        "connection_mode": "compatibility",
+        "repository": {
+          "id": "sample-project-repository-other",
+          "workspace_id": "sample-project-other"
+        },
+        "scan_kind": "initial",
+        "discovery_plan": [],
+        "discovered_sources": [],
+        "missing_sources": [],
+        "unreadable_sources": [],
+        "rule_candidates": [],
+        "findings": [],
+        "next_step": "continue-compatibility-mode"
+      }
+    },
+    "connection:sample-connection-repo-scope-solo": {
+      "$schema": "../scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-connection-repo-scope-solo",
+      "title": "Сканирование — единственный репозиторий области repository-scope",
+      "record_type": "workspace-connection-scan",
+      "scope": {
+        "type": "repository-scope",
+        "id": "sample-repository-solo",
+        "workspace_id": "sample-workspace-solo"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:connect-sample-connection-repo-scope-solo"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "existing-project-compatibility-mode-run:sample-connection-repo-scope-solo"
+      },
+      "payload": {
+        "connection_mode": "compatibility",
+        "repository": {
+          "id": "sample-repository-solo",
+          "workspace_id": "sample-workspace-solo"
+        },
+        "scan_kind": "initial",
+        "discovery_plan": [],
+        "discovered_sources": [],
+        "missing_sources": [],
+        "unreadable_sources": [],
+        "rule_candidates": [],
+        "findings": [],
+        "next_step": "continue-compatibility-mode"
+      }
+    }
+  },
+  "plan_record_resolution": {
+    "plan:sample-migration-plan-one": {
+      "$schema": "../../registries/operating-model/scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-migration-plan-one",
+      "title": "План миграции — единица один",
+      "record_type": "instance-migration-plan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:sample-migration-plan-one"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "instance-data-migration-run:sample-migration-plan-one"
+      },
+      "payload": {
+        "source": {
+          "revision": "sample-revision-0001",
+          "digest": {
+            "algorithm": "sha-256",
+            "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+          },
+          "repository_ref": "sample-instance-repository",
+          "working_tree_clean": true,
+          "qualification": "reproducible"
+        },
+        "record_units": [
+          {
+            "id": "sample-unit-one",
+            "unit_ref": "sample/path/one.yaml",
+            "classification_basis": "norm record declared under registries/sample in the source Instance"
+          }
+        ],
+        "mappings": [
+          {
+            "unit_id": "sample-unit-one",
+            "disposition": "migrated",
+            "target": {
+              "id": "sample-migrated-record-one",
+              "record_type": "norm",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample-project"
+              },
+              "field_basis": {
+                "id": "assigned",
+                "record_type": "preserved",
+                "scope": "preserved",
+                "origin": "assigned",
+                "authority": "assigned",
+                "title": "assigned",
+                "payload": "assigned",
+                "schema_version": "assigned",
+                "$schema": "assigned"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:sample-unit-one"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-project-owner",
+                "decision_ref": "owner-decision:migrate-sample-unit-one"
+              },
+              "title": "Перенесённая запись — sample-migrated-record-one",
+              "schema_version": 1,
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                }
+              },
+              "$schema": "../../registries/operating-model/scoped-record.schema.json"
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:migrate-sample-unit-one",
+              "decided_at": "2026-09-10",
+              "reason": "единственный владелец подтвердил перенос записи в проектную область"
+            }
+          }
+        ],
+        "rollback": {
+          "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0001",
+          "plan": "deterministic-reconstruction",
+          "deterministic_plan_ref": "rollback-plan:sample-revision-0001-to-migration-plan-one",
+          "rewrites_published_history": false
+        },
+        "verification": {
+          "coverage": {
+            "status": "verified",
+            "evidence_ref": "evidence:coverage-migration-plan-one"
+          },
+          "applicability_preservation": {
+            "status": "verified",
+            "evidence_ref": "evidence:applicability-migration-plan-one"
+          },
+          "overall_status": "VERIFIED"
+        },
+        "idempotency_key": "c10f925785d8f8b953bfbeb52ad81c6207be0fb5b7d0150a725b76902b0eb143",
+        "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
+      }
+    },
+    "plan:sample-migration-plan-two": {
+      "$schema": "../../registries/operating-model/scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-migration-plan-two",
+      "title": "План миграции — переходная единица",
+      "record_type": "instance-migration-plan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:sample-migration-plan-two"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "instance-data-migration-run:sample-migration-plan-two"
+      },
+      "payload": {
+        "source": {
+          "revision": "sample-revision-0002",
+          "digest": {
+            "algorithm": "sha-256",
+            "value": "e28cce53ba0375063d2c80a40ed81798f5841428305241ad96f33f10cb12407b"
+          },
+          "repository_ref": "sample-instance-repository",
+          "working_tree_clean": true,
+          "qualification": "reproducible"
+        },
+        "record_units": [
+          {
+            "id": "sample-unit-transitional",
+            "unit_ref": "sample/path/transitional.yaml",
+            "classification_basis": "запись остаётся переходным источником до отдельного решения владельца об её классе"
+          }
+        ],
+        "mappings": [
+          {
+            "unit_id": "sample-unit-transitional",
+            "disposition": "retained-transitional",
+            "retained_reason": "владелец пока не классифицировал единицу; она остаётся переходным источником"
+          }
+        ],
+        "rollback": {
+          "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0002",
+          "plan": "verified-restoration",
+          "restoration_evidence_ref": "evidence:restoration-sample-revision-0002",
+          "rewrites_published_history": false
+        },
+        "verification": {
+          "coverage": {
+            "status": "verified",
+            "evidence_ref": "evidence:coverage-migration-plan-two"
+          },
+          "applicability_preservation": {
+            "status": "unverified"
+          },
+          "overall_status": "UNVERIFIED"
+        },
+        "idempotency_key": "00e484fd27bcf0284645787893c26ccd54b101967f72a1323f96aeb1713f752b",
+        "plan_fingerprint": "7d0ae722ddbe7e7b4014443fd5e47403047156eb1e76606eb6705cc9474e70de"
+      }
+    },
+    "plan:sample-migration-plan-four": {
+      "$schema": "../../registries/operating-model/scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-migration-plan-four",
+      "title": "План миграции — заблокирован",
+      "record_type": "instance-migration-plan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:sample-migration-plan-four"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "instance-data-migration-run:sample-migration-plan-four"
+      },
+      "payload": {
+        "source": {
+          "revision": "sample-revision-0004",
+          "digest": {
+            "algorithm": "sha-256",
+            "value": "076144b961aa66bec1b6cd45e826b18c3f2045bbe6e124e4c489a44d77e65274"
+          },
+          "repository_ref": "sample-instance-repository",
+          "working_tree_clean": false,
+          "qualification": "not-reproducible",
+          "qualification_reason": "рабочее дерево источника содержит незафиксированные изменения на момент снимка"
+        },
+        "record_units": [
+          {
+            "id": "sample-unit-blocked",
+            "unit_ref": "sample/path/blocked.yaml",
+            "classification_basis": "план заблокирован до получения чистого рабочего дерева источника"
+          }
+        ],
+        "mappings": [
+          {
+            "unit_id": "sample-unit-blocked",
+            "disposition": "retained-transitional",
+            "retained_reason": "источник не воспроизводим; единица остаётся переходным источником до повторного снимка"
+          }
+        ],
+        "rollback": {
+          "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0004",
+          "plan": "verified-restoration",
+          "restoration_evidence_ref": "evidence:restoration-sample-revision-0004",
+          "rewrites_published_history": false
+        },
+        "verification": {
+          "coverage": {
+            "status": "unverified"
+          },
+          "applicability_preservation": {
+            "status": "unverified"
+          },
+          "overall_status": "BLOCKED"
+        },
+        "idempotency_key": "c4f4ded4fa235dcded50d6fae2809f165194e2ea8289a72de1478aec62fd47c0",
+        "plan_fingerprint": "5d1a94009dced7c59c908913983a300cbf4f3a8d5eb08a381e491a7d21f81ab7"
+      }
+    }
+  },
+  "export_record_resolution": {
+    "export:sample-canonical-export-one": {
+      "$schema": "../../registries/operating-model/scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-canonical-export-one",
+      "title": "Канонический экспорт — sample-canonical-export-one",
+      "record_type": "instance-canonical-export",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "origin": {
+        "kind": "derived",
+        "source_ref": "migration-plan:sample-migration-plan-one"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+      },
+      "payload": {
+        "plan_ref": "sample-migration-plan-one",
+        "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+        "source": {
+          "repository_ref": "sample-instance-repository",
+          "revision": "sample-revision-0001",
+          "digest": {
+            "algorithm": "sha-256",
+            "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+          }
+        },
+        "records": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-migrated-record-one",
+            "title": "Перенесённая запись — sample-migrated-record-one",
+            "record_type": "norm",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:sample-unit-one"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-project-owner",
+              "decision_ref": "owner-decision:migrate-sample-unit-one"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+              }
+            }
+          }
+        ],
+        "retained": [],
+        "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+        "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+      }
+    }
+  },
+  "migration_resolution": {
+    "source_snapshot_resolution": {
+      "sample-instance-repository@sample-revision-0001": {
+        "record_type": "instance-source-snapshot",
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0001",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+        },
+        "working_tree_clean": true
+      },
+      "sample-instance-repository@sample-revision-0002": {
+        "record_type": "instance-source-snapshot",
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0002",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "e28cce53ba0375063d2c80a40ed81798f5841428305241ad96f33f10cb12407b"
+        },
+        "working_tree_clean": true
+      },
+      "sample-repository-instance@sample-revision-0003": {
+        "record_type": "instance-source-snapshot",
+        "repository_ref": "sample-repository-instance",
+        "revision": "sample-revision-0003",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "58bf02dabe3011e26fd379c9aaf583decfb2e3e5844211095c8df0a970cd2ec7"
+        },
+        "working_tree_clean": true
+      },
+      "sample-instance-repository@sample-revision-0005": {
+        "record_type": "instance-source-snapshot",
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0005",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "c5eb10d257b2275a95fa41435f9a2c6cbcba0b25abe378d704e09331d69b063a"
+        },
+        "working_tree_clean": true
+      },
+      "sample-instance-repository@sample-revision-0006": {
+        "record_type": "instance-source-snapshot",
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0006",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "3f7e96cf8a0a984b79df2f0f2583ff013be7d8903bd75b5a5c53756fd7520785"
+        },
+        "working_tree_clean": true
+      }
+    },
+    "evidence_resolution": {
+      "evidence:coverage-migration-plan-one": {
+        "record_type": "instance-migration-evidence",
+        "evidence_ref": "evidence:coverage-migration-plan-one",
+        "kind": "coverage",
+        "plan_ref": "sample-migration-plan-one",
+        "confirms": true,
+        "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
+      },
+      "evidence:applicability-migration-plan-one": {
+        "record_type": "instance-migration-evidence",
+        "evidence_ref": "evidence:applicability-migration-plan-one",
+        "kind": "applicability_preservation",
+        "plan_ref": "sample-migration-plan-one",
+        "confirms": true,
+        "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
+      },
+      "evidence:coverage-migration-plan-two": {
+        "record_type": "instance-migration-evidence",
+        "evidence_ref": "evidence:coverage-migration-plan-two",
+        "kind": "coverage",
+        "plan_ref": "sample-migration-plan-two",
+        "confirms": true,
+        "plan_fingerprint": "7d0ae722ddbe7e7b4014443fd5e47403047156eb1e76606eb6705cc9474e70de"
+      },
+      "evidence:coverage-migration-plan-three": {
+        "record_type": "instance-migration-evidence",
+        "evidence_ref": "evidence:coverage-migration-plan-three",
+        "kind": "coverage",
+        "plan_ref": "sample-migration-plan-three",
+        "confirms": true,
+        "plan_fingerprint": "3ffadc5510080ea8a1955ad4cafcd7148935bb01a8068cd68bb33224b098797d"
+      },
+      "evidence:applicability-migration-plan-three": {
+        "record_type": "instance-migration-evidence",
+        "evidence_ref": "evidence:applicability-migration-plan-three",
+        "kind": "applicability_preservation",
+        "plan_ref": "sample-migration-plan-three",
+        "confirms": true,
+        "plan_fingerprint": "3ffadc5510080ea8a1955ad4cafcd7148935bb01a8068cd68bb33224b098797d"
+      },
+      "evidence:coverage-five": {
+        "record_type": "instance-migration-evidence",
+        "evidence_ref": "evidence:coverage-five",
+        "kind": "coverage",
+        "plan_ref": "sample-migration-plan-five",
+        "confirms": true,
+        "plan_fingerprint": "94c03c93bf10a01098ecf7d49d78fa4e8f5d704d9a6dd58ee23495a54edc6d72"
+      },
+      "evidence:applicability-five": {
+        "record_type": "instance-migration-evidence",
+        "evidence_ref": "evidence:applicability-five",
+        "kind": "applicability_preservation",
+        "plan_ref": "sample-migration-plan-five",
+        "confirms": true,
+        "plan_fingerprint": "94c03c93bf10a01098ecf7d49d78fa4e8f5d704d9a6dd58ee23495a54edc6d72"
+      },
+      "evidence:coverage-five-v2": {
+        "record_type": "instance-migration-evidence",
+        "evidence_ref": "evidence:coverage-five-v2",
+        "kind": "coverage",
+        "plan_ref": "sample-migration-plan-five-v2",
+        "confirms": true,
+        "plan_fingerprint": "1129779b9587111f98678a557eec8d6f461dfdfa1c831e9e4ec2234769811c4e"
+      },
+      "evidence:applicability-five-v2": {
+        "record_type": "instance-migration-evidence",
+        "evidence_ref": "evidence:applicability-five-v2",
+        "kind": "applicability_preservation",
+        "plan_ref": "sample-migration-plan-five-v2",
+        "confirms": true,
+        "plan_fingerprint": "1129779b9587111f98678a557eec8d6f461dfdfa1c831e9e4ec2234769811c4e"
+      },
+      "evidence:non-confirming-applicability": {
+        "record_type": "instance-migration-evidence",
+        "evidence_ref": "evidence:non-confirming-applicability",
+        "kind": "applicability_preservation",
+        "plan_ref": "sample-migration-plan-one",
+        "confirms": false,
+        "plan_fingerprint": "7dcd7212a0ec47df49dfb88899ed9056d72b1b5f0d100e51b92ab54edeffb03c"
+      }
+    },
+    "rollback_snapshot_resolution": {
+      "snapshot:sample-instance@sample-revision-0001": {
+        "record_type": "instance-rollback-snapshot",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0001",
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0001",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+        }
+      },
+      "snapshot:sample-instance@sample-revision-0002": {
+        "record_type": "instance-rollback-snapshot",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0002",
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0002",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "e28cce53ba0375063d2c80a40ed81798f5841428305241ad96f33f10cb12407b"
+        }
+      },
+      "snapshot:sample-instance@sample-revision-0003": {
+        "record_type": "instance-rollback-snapshot",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0003",
+        "repository_ref": "sample-repository-instance",
+        "revision": "sample-revision-0003",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "58bf02dabe3011e26fd379c9aaf583decfb2e3e5844211095c8df0a970cd2ec7"
+        }
+      },
+      "snapshot:sample-instance@sample-revision-0004": {
+        "record_type": "instance-rollback-snapshot",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0004",
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0004",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "076144b961aa66bec1b6cd45e826b18c3f2045bbe6e124e4c489a44d77e65274"
+        }
+      },
+      "snapshot:sample-instance@sample-revision-0005": {
+        "record_type": "instance-rollback-snapshot",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0005",
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0005",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "c5eb10d257b2275a95fa41435f9a2c6cbcba0b25abe378d704e09331d69b063a"
+        }
+      },
+      "snapshot:sample-instance@sample-revision-0006": {
+        "record_type": "instance-rollback-snapshot",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0006",
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0006",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "3f7e96cf8a0a984b79df2f0f2583ff013be7d8903bd75b5a5c53756fd7520785"
+        }
+      }
+    },
+    "deterministic_plan_resolution": {
+      "rollback-plan:sample-revision-0001-to-migration-plan-one": {
+        "record_type": "instance-deterministic-reconstruction-plan",
+        "deterministic_plan_ref": "rollback-plan:sample-revision-0001-to-migration-plan-one",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0001",
+        "plan_ref": "sample-migration-plan-one",
+        "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+        "applicable": true
+      },
+      "rollback-plan:sample-revision-0003-to-migration-plan-three": {
+        "record_type": "instance-deterministic-reconstruction-plan",
+        "deterministic_plan_ref": "rollback-plan:sample-revision-0003-to-migration-plan-three",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0003",
+        "plan_ref": "sample-migration-plan-three",
+        "plan_fingerprint": "3ffadc5510080ea8a1955ad4cafcd7148935bb01a8068cd68bb33224b098797d",
+        "applicable": true
+      },
+      "rollback-plan:sample-revision-0005": {
+        "record_type": "instance-deterministic-reconstruction-plan",
+        "deterministic_plan_ref": "rollback-plan:sample-revision-0005",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0005",
+        "plan_ref": "sample-migration-plan-five",
+        "plan_fingerprint": "94c03c93bf10a01098ecf7d49d78fa4e8f5d704d9a6dd58ee23495a54edc6d72",
+        "applicable": true
+      },
+      "rollback-plan:sample-revision-0006": {
+        "record_type": "instance-deterministic-reconstruction-plan",
+        "deterministic_plan_ref": "rollback-plan:sample-revision-0006",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0006",
+        "plan_ref": "sample-migration-plan-five-v2",
+        "plan_fingerprint": "1129779b9587111f98678a557eec8d6f461dfdfa1c831e9e4ec2234769811c4e",
+        "applicable": true
+      }
+    },
+    "restoration_evidence_resolution": {
+      "evidence:restoration-sample-revision-0002": {
+        "record_type": "instance-restoration-evidence",
+        "evidence_ref": "evidence:restoration-sample-revision-0002",
+        "plan_ref": "sample-migration-plan-two",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0002",
+        "confirms": true,
+        "plan_fingerprint": "7d0ae722ddbe7e7b4014443fd5e47403047156eb1e76606eb6705cc9474e70de"
+      },
+      "evidence:restoration-sample-revision-0004": {
+        "record_type": "instance-restoration-evidence",
+        "evidence_ref": "evidence:restoration-sample-revision-0004",
+        "plan_ref": "sample-migration-plan-four",
+        "source_snapshot_ref": "snapshot:sample-instance@sample-revision-0004",
+        "confirms": true,
+        "plan_fingerprint": "5d1a94009dced7c59c908913983a300cbf4f3a8d5eb08a381e491a7d21f81ab7"
+      }
+    },
+    "superseded_plan_resolution": {}
+  },
+  "export_resolution": {
+    "source_content_resolution": {
+      "sample-instance-repository@sample-revision-0001::sample/path/one.yaml": {
+        "record_type": "instance-source-content",
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0001",
+        "unit_refs": [
+          "sample/path/one.yaml"
+        ],
+        "media_type": "application/json",
+        "encoding": "utf-8",
+        "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+        }
+      },
+      "sample-repository-instance@sample-revision-0003::sample/path/a.yaml,sample/path/b.yaml::merge-rule:combine-a-and-b": {
+        "record_type": "instance-source-content",
+        "repository_ref": "sample-repository-instance",
+        "revision": "sample-revision-0003",
+        "unit_refs": [
+          "sample/path/a.yaml",
+          "sample/path/b.yaml"
+        ],
+        "media_type": "application/json",
+        "encoding": "utf-8",
+        "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+        },
+        "merge_rule_ref": "merge-rule:combine-a-and-b"
+      }
+    }
+  },
+  "valid": [
+    {
+      "note": "decision-matrix branch 1: сканирование сообщает блокирующий конфликт кандидатов правил",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-conflict",
+            "title": "Квалификация — конфликт кандидатов правил",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-conflict"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-conflict"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-conflict",
+                  "reference": "connection:sample-connection-conflict",
+                  "sha256": "3906ff2e4680b42c68c82d0d570350f0d7d30474e7366b61c7c5bd9dee7aa4a1"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "сканирование сообщает блокирующий конфликт кандидатов правил; квалификация невозможна до его разрешения владельцем",
+              "blockers": [
+                "unresolved rule-candidate conflict (finding-conflict-1)"
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "decision-matrix branch 2: находка \"ambiguous-scope\" — кластер дублей классифицирован неоднозначно",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-ambiguous",
+            "title": "Квалификация — неоднозначная классификация",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-ambiguous"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-ambiguous"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-ambiguous",
+                  "reference": "connection:sample-connection-ambiguous",
+                  "sha256": "12cd5423e2d7210fe77d0c0cc65883d20c98b07d509109643bc2c54e0dd721cc"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "сканирование сообщает блокирующую неоднозначность классификации; квалификация невозможна до её разрешения владельцем",
+              "blockers": [
+                "ambiguous duplicate-cluster classification (finding-ambiguous-1)"
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "decision-matrix branch 3: находка ожидает решения владельца — next_step \"await-owner-decision\"",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-pending-decision",
+            "title": "Квалификация — ожидание решения владельца",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-pending"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-pending-decision"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-pending",
+                  "reference": "connection:sample-connection-pending",
+                  "sha256": "bf2568e2ab709889db9f786d73e6aaf249c1a8fd8d8b8c72a79e06d0d0806a10"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "UNVERIFIED",
+              "qualification_reason": "сканирование ожидает решения владельца по обнаруженному кандидату; соответствие ещё не проверено",
+              "blockers": [],
+              "open_questions": [
+                "владелец ещё не принял решение по кандидату, приведшему к finding-pending-1"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "decision-matrix branch 4: next_step \"continue-compatibility-mode\", но два разрешённых кандидата остаются \"candidate\" — квалификация не может быть QUALIFIED",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-undecided-candidates",
+            "title": "Квалификация — нерешённые кандидаты правил",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-undecided"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-undecided-candidates"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-undecided",
+                  "reference": "connection:sample-connection-undecided",
+                  "sha256": "0dc814ca6094ccef65a79c061ab69869c88b5595c8647ee717f8c8fc4dd3033a"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "UNVERIFIED",
+              "qualification_reason": "два разрешённых кандидата правила ещё не получили решения владельца; next_step сканирования не заявляет это блокирующим, но квалификация обязана остановиться сама",
+              "blockers": [],
+              "open_questions": [
+                "владелец ещё не принял решение по \"undecided-candidate-a\"",
+                "владелец ещё не принял решение по \"undecided-candidate-b\""
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "decision-matrix branch 5: чистое сканирование, миграция не начата — совместимость квалифицируется сама по себе",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-compatibility-only",
+            "title": "Квалификация — совместимость без миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование не сообщает ни одной блокирующей находки и не несёт нерешённых кандидатов, и рабочее пространство не заявляет миграцию; режим совместимости квалифицирован как есть",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "decision-matrix branch 6: составленный план миграции BLOCKED (источник не воспроизводим) — квалификация заблокирована",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-migration-blocked",
+            "title": "Квалификация — заблокированный план миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migration-blocked"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": {
+                "record_type": "instance-migration-plan",
+                "id": "sample-migration-plan-four",
+                "reference": "plan:sample-migration-plan-four",
+                "sha256": "5d1a94009dced7c59c908913983a300cbf4f3a8d5eb08a381e491a7d21f81ab7"
+              },
+              "canonical_export_ref": null,
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "составленный план миграции имеет verification.overall_status BLOCKED (источник не воспроизводим); квалификация не смягчает это до неопределённого состояния",
+              "blockers": [
+                "migration plan \"sample-migration-plan-four\" is BLOCKED (source not reproducible)"
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "decision-matrix branch 7: составленный план миграции UNVERIFIED (сохранение применимости не проверено) — квалификация не проверена",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-migration-unverified",
+            "title": "Квалификация — непроверенный план миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migration-unverified"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": {
+                "record_type": "instance-migration-plan",
+                "id": "sample-migration-plan-two",
+                "reference": "plan:sample-migration-plan-two",
+                "sha256": "7d0ae722ddbe7e7b4014443fd5e47403047156eb1e76606eb6705cc9474e70de"
+              },
+              "canonical_export_ref": null,
+              "qualification_state": "UNVERIFIED",
+              "qualification_reason": "составленный план миграции имеет verification.overall_status UNVERIFIED; соответствие ещё не доказано",
+              "blockers": [],
+              "open_questions": [
+                "применимость плана \"sample-migration-plan-two\" ещё не подтверждена доказательством"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "decision-matrix branch 8: план VERIFIED и минтит запись, но канонический экспорт ещё не составлен — квалификация не проверена",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-export-pending",
+            "title": "Квалификация — экспорт ещё не составлен",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-export-pending"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": {
+                "record_type": "instance-migration-plan",
+                "id": "sample-migration-plan-one",
+                "reference": "plan:sample-migration-plan-one",
+                "sha256": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
+              },
+              "canonical_export_ref": null,
+              "qualification_state": "UNVERIFIED",
+              "qualification_reason": "план миграции проверен (VERIFIED) и минтит запись, но канонический экспорт, доказывающий фактическое сохранение содержимого, ещё не составлен",
+              "blockers": [],
+              "open_questions": [
+                "канонический экспорт плана \"sample-migration-plan-one\" ещё не составлен"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "decision-matrix branch 9: план VERIFIED, минтит запись, канонический экспорт составлен и подтверждён — полная квалификация",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-migrated-and-exported",
+            "title": "Квалификация — миграция подтверждена экспортом",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migrated-and-exported"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": {
+                "record_type": "instance-migration-plan",
+                "id": "sample-migration-plan-one",
+                "reference": "plan:sample-migration-plan-one",
+                "sha256": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
+              },
+              "canonical_export_ref": {
+                "record_type": "instance-canonical-export",
+                "id": "sample-canonical-export-one",
+                "reference": "export:sample-canonical-export-one",
+                "sha256": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+              },
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "план миграции проверен (VERIFIED), и составленный канонический экспорт полностью и точно подтверждает его единственную минченную цель; квалификация завершена",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "note": "заявленный QUALIFIED расходится с вычисленным BLOCKED (сканирование сообщает конфликт)",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-conflict",
+            "title": "Квалификация — конфликт кандидатов правил",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-conflict"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-conflict"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-conflict",
+                  "reference": "connection:sample-connection-conflict",
+                  "sha256": "3906ff2e4680b42c68c82d0d570350f0d7d30474e7366b61c7c5bd9dee7aa4a1"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование сообщает блокирующий конфликт кандидатов правил; квалификация невозможна до его разрешения владельцем",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "BLOCKED без единого blocker",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-conflict",
+            "title": "Квалификация — конфликт кандидатов правил",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-conflict"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-conflict"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-conflict",
+                  "reference": "connection:sample-connection-conflict",
+                  "sha256": "3906ff2e4680b42c68c82d0d570350f0d7d30474e7366b61c7c5bd9dee7aa4a1"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "сканирование сообщает блокирующий конфликт кандидатов правил; квалификация невозможна до его разрешения владельцем",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "QUALIFIED с непустым open_questions",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-compatibility-only",
+            "title": "Квалификация — совместимость без миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование не сообщает ни одной блокирующей находки и не несёт нерешённых кандидатов, и рабочее пространство не заявляет миграцию; режим совместимости квалифицирован как есть",
+              "blockers": [],
+              "open_questions": [
+                "посторонний открытый вопрос при полной квалификации"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "UNVERIFIED с пустым open_questions (нет проверяемой причины незавершённости)",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-migration-unverified",
+            "title": "Квалификация — непроверенный план миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migration-unverified"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": {
+                "record_type": "instance-migration-plan",
+                "id": "sample-migration-plan-two",
+                "reference": "plan:sample-migration-plan-two",
+                "sha256": "7d0ae722ddbe7e7b4014443fd5e47403047156eb1e76606eb6705cc9474e70de"
+              },
+              "canonical_export_ref": null,
+              "qualification_state": "UNVERIFIED",
+              "qualification_reason": "составленный план миграции имеет verification.overall_status UNVERIFIED; соответствие ещё не доказано",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "заявленный QUALIFIED поверх нерешённых кандидатов правил — отклонён",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-undecided-candidates",
+            "title": "Квалификация — нерешённые кандидаты правил",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-undecided"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-undecided-candidates"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-undecided",
+                  "reference": "connection:sample-connection-undecided",
+                  "sha256": "0dc814ca6094ccef65a79c061ab69869c88b5595c8647ee717f8c8fc4dd3033a"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "два разрешённых кандидата правила ещё не получили решения владельца; next_step сканирования не заявляет это блокирующим, но квалификация обязана остановиться сама",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "canonical_export_ref присутствует без migration_plan_ref",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-compatibility-only",
+            "title": "Квалификация — совместимость без миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": {
+                "record_type": "instance-canonical-export",
+                "id": "sample-canonical-export-one",
+                "reference": "export:sample-canonical-export-one",
+                "sha256": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+              },
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование не сообщает ни одной блокирующей находки и не несёт нерешённых кандидатов, и рабочее пространство не заявляет миграцию; режим совместимости квалифицирован как есть",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "canonical_export_ref разрешается в экспорт, называющий не тот составленный план (plan_ref расходится)",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-migration-unverified",
+            "title": "Квалификация — непроверенный план миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migration-unverified"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": {
+                "record_type": "instance-migration-plan",
+                "id": "sample-migration-plan-two",
+                "reference": "plan:sample-migration-plan-two",
+                "sha256": "7d0ae722ddbe7e7b4014443fd5e47403047156eb1e76606eb6705cc9474e70de"
+              },
+              "canonical_export_ref": {
+                "record_type": "instance-canonical-export",
+                "id": "sample-canonical-export-one",
+                "reference": "export:sample-canonical-export-one",
+                "sha256": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+              },
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "составленный план миграции имеет verification.overall_status UNVERIFIED; соответствие ещё не доказано",
+              "blockers": [],
+              "open_questions": [
+                "применимость плана \"sample-migration-plan-two\" ещё не подтверждена доказательством"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "workspace_connection_refs[0].sha256 расходится с фактически пересчитанным digest (заявлен чужой дайджест)",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-compatibility-only",
+            "title": "Квалификация — совместимость без миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование не сообщает ни одной блокирующей находки и не несёт нерешённых кандидатов, и рабочее пространство не заявляет миграцию; режим совместимости квалифицирован как есть",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "migration_plan_ref.sha256 расходится с фактически пересчитанным plan_fingerprint (заявлен чужой дайджест)",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-migration-blocked",
+            "title": "Квалификация — заблокированный план миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migration-blocked"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": {
+                "record_type": "instance-migration-plan",
+                "id": "sample-migration-plan-four",
+                "reference": "plan:sample-migration-plan-four",
+                "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+              },
+              "canonical_export_ref": null,
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "составленный план миграции имеет verification.overall_status BLOCKED (источник не воспроизводим); квалификация не смягчает это до неопределённого состояния",
+              "blockers": [
+                "migration plan \"sample-migration-plan-four\" is BLOCKED (source not reproducible)"
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "canonical_export_ref.sha256 расходится с фактически пересчитанным digest (заявлен чужой дайджест)",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-migrated-and-exported",
+            "title": "Квалификация — миграция подтверждена экспортом",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migrated-and-exported"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": {
+                "record_type": "instance-migration-plan",
+                "id": "sample-migration-plan-one",
+                "reference": "plan:sample-migration-plan-one",
+                "sha256": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae"
+              },
+              "canonical_export_ref": {
+                "record_type": "instance-canonical-export",
+                "id": "sample-canonical-export-one",
+                "reference": "export:sample-canonical-export-one",
+                "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+              },
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "план миграции проверен (VERIFIED), и составленный канонический экспорт полностью и точно подтверждает его единственную минченную цель; квалификация завершена",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "origin.kind не \"derived\"",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-compatibility-only",
+            "title": "Квалификация — совместимость без миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование не сообщает ни одной блокирующей находки и не несёт нерешённых кандидатов, и рабочее пространство не заявляет миграцию; режим совместимости квалифицирован как есть",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "authority.kind не \"delegated-run\"",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-compatibility-only",
+            "title": "Квалификация — совместимость без миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование не сообщает ни одной блокирующей находки и не несёт нерешённых кандидатов, и рабочее пространство не заявляет миграцию; режим совместимости квалифицирован как есть",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "record_type не \"workspace-compatibility-qualification\"",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-compatibility-only",
+            "title": "Квалификация — совместимость без миграции",
+            "record_type": "norm",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование не сообщает ни одной блокирующей находки и не несёт нерешённых кандидатов, и рабочее пространство не заявляет миграцию; режим совместимости квалифицирован как есть",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "scope конверта расходится со scope разрешённого элемента workspace_connection_refs",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-compatibility-only",
+            "title": "Квалификация — совместимость без миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование не сообщает ни одной блокирующей находки и не несёт нерешённых кандидатов, и рабочее пространство не заявляет миграцию; режим совместимости квалифицирован как есть",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "элемент workspace_connection_refs сам по себе структурно повреждён (лишнее поле)",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-compatibility-only",
+            "title": "Квалификация — совместимость без миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b",
+                  "extra_field": "not allowed"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование не сообщает ни одной блокирующей находки и не несёт нерешённых кандидатов, и рабочее пространство не заявляет миграцию; режим совместимости квалифицирован как есть",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "попытка встроить необработанное импортированное содержимое (raw_excerpt) прямо в payload — отклонена замкнутой схемой",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-compatibility-only",
+            "title": "Квалификация — совместимость без миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование не сообщает ни одной блокирующей находки и не несёт нерешённых кандидатов, и рабочее пространство не заявляет миграцию; режим совместимости квалифицирован как есть",
+              "blockers": [],
+              "open_questions": [],
+              "raw_excerpt": "text pulled straight from a discovered source"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "попытка встроить поле, несущее секретное значение, прямо в payload — отклонена замкнутой схемой",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-compatibility-only",
+            "title": "Квалификация — совместимость без миграции",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "сканирование не сообщает ни одной блокирующей находки и не несёт нерешённых кандидатов, и рабочее пространство не заявляет миграцию; режим совместимости квалифицирован как есть",
+              "blockers": [],
+              "open_questions": [],
+              "secret_value": "sk-not-a-real-secret-but-shaped-like-one"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "два элемента workspace_connection_refs называют один и тот же reference — отклонено",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-duplicate-connection-ref",
+            "title": "Квалификация — повтор reference в workspace_connection_refs",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean+sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-duplicate-connection-ref"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                },
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "намеренный повтор ссылки на одно и то же сканирование — проверка обязана отклонить",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "workspace_repository_ids называет репозиторий, который ни один разрешённый скан не подтверждает — отклонено",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-repository-ids-mismatch",
+            "title": "Квалификация — лишний репозиторий в workspace_repository_ids",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-repository-ids-mismatch"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository",
+                "phantom-repository-never-scanned"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "намеренно лишний репозиторий в workspace_repository_ids — проверка обязана отклонить",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "sha256 второго из двух элементов workspace_connection_refs расходится с пересчитанным digest — отклонено",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-second-connection-digest-mismatch",
+            "title": "Квалификация — испорченный digest второго сканирования",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean+sample-connection-clean-two"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-second-connection-digest-mismatch"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                },
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean-two",
+                  "reference": "connection:sample-connection-clean-two",
+                  "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository",
+                "sample-project-repository-two"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "намеренно испорченный digest второго сканирования — проверка обязана отклонить",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "второй элемент workspace_connection_refs разрешается в скан ДРУГОГО workspace — отклонено",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-foreign-workspace-connection",
+            "title": "Квалификация — сканирование чужого workspace",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean+sample-connection-other-workspace"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-foreign-workspace-connection"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                },
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-other-workspace",
+                  "reference": "connection:sample-connection-other-workspace",
+                  "sha256": "09cc0380756cb02b19fd88a811305de56be0bfb91ce6824636ec7f648c77364e"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository",
+                "sample-project-repository-other"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "намеренно смешанный workspace во втором сканировании — проверка обязана отклонить",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "repository-scope запись несёт workspace_repository_ids — поле запрещено для этой области, отклонено",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-repo-scope-with-repository-ids",
+            "title": "Квалификация — repository-scope с запрещённым workspace_repository_ids",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository-solo",
+              "workspace_id": "sample-workspace-solo"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-repo-scope-solo"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-repo-scope-with-repository-ids"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-repo-scope-solo",
+                  "reference": "connection:sample-connection-repo-scope-solo",
+                  "sha256": "5b2bb417b40d945ee0f88efe02e215aad977dd2e5562a47c93c2f5eaef19dcf2"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-repository-solo"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "намеренно присутствующий запрещённый workspace_repository_ids на repository-scope — проверка обязана отклонить",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

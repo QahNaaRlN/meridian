@@ -1,0 +1,225 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/existing-project-compatibility-mode.schema.json",
+  "title": "Meridian existing-project compatibility mode register",
+  "description": "Container for workspace connection scans (record_type: workspace-connection-scan) — the product-neutral connection mode that discovers an existing project's instruction sources through an explicit, bounded discovery plan without writing to any file of the connected project. Each entry is a scoped record: its envelope (identity, scope, origin, authority) is validated separately against scoped-record.schema.json, and this schema is not a second envelope schema. This schema adds the container shape and the scan payload contract. Discovery never guesses recursively over a project's tree: payload.discovery_plan is a closed, explicit, bounded list of candidate locations (medium file or external-service, opaque and relative like instruction-source-registry.md's own location contract), each carrying a stable plan slot id that every later discovered/missing/unreadable/finding record traces back to; every declared slot carries EXACTLY ONE outcome across discovered_sources/missing_sources/unreadable_sources, checked at the library level (omitted, duplicated or overlapping outcomes are all rejected). A discovered source is normalized through the ACTUAL instruction-source-registry contract (composed at the library level against the real schema and the real scripts/lib/instruction-source-registry.mjs checks, never a second competing source format) and its own recorded divergence carries the initial-vs-rescan comparison; a currently missing or unreadable location is never listed as discovered. Text parsed out of a discovered source reaches controlled-rule-intake ONLY as a rule candidate (composed at the library level against the real controlled-rule-intake.schema.json and scripts/lib/controlled-rule-intake.mjs, resolved through an internal boundary built from this SAME scan's own discovered_sources — an unknown or since-changed source is rejected there exactly as in that contract); discovery, a snapshot or a rescan can never itself mint an accepted or not-applicable candidate — a candidate first found in THIS scan (discovery_status \"new\") must stay \"candidate\", and only a candidate carried forward from an already-represented, independently re-checked owner decision (discovery_status \"carried-over\") may hold a decided applicability_state. A source found changed, missing or unreadable relative to a prior scan must carry a matching finding — an unresolved change is never silently absorbed into a rewritten snapshot, decision or normalized record. next_step is the ONE value a closed priority computes from the findings set (a blocking \"conflict\" finding requires \"resolve-conflict\"; else a blocking \"ambiguous-scope\" finding requires \"resolve-ambiguity\"; else any other blocking finding requires \"await-owner-decision\"; else \"continue-compatibility-mode\") — the same findings set, in any order, computes exactly one value. connection_mode defaults the connection to \"compatibility\"; \"managed\" never activates automatically and requires an explicit, separately authorised managed_mode_decision. The contract is a mandatory part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. Evaluation additionally requires the registry envelope schema and the ACTUAL instruction-source-registry and controlled-rule-intake schemas to be supplied and applicable regardless of whether discovered_sources or rule_candidates happen to be populated in a given document — these are mandatory composition dependencies, not conditional on content. The rules JSON Schema cannot state live in scripts/lib/existing-project-compatibility-mode.mjs. The normative document is standards/workspace/existing-project-compatibility-mode.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "title", "workspace_connections"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "registry_id": { "const": "existing-project-compatibility-mode" },
+    "title": { "type": "string", "minLength": 1 },
+    "workspace_connections": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/entry" }
+    }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "entry": {
+      "type": "object",
+      "required": ["record_type", "payload"],
+      "properties": {
+        "record_type": { "const": "workspace-connection-scan" },
+        "payload": { "$ref": "#/definitions/payload" }
+      }
+    },
+    "plan_slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "medium"],
+      "description": "One explicit, bounded candidate location of the discovery plan. The two forms are mutually exclusive, mirroring instruction-source-registry.md's own location contract: medium 'file' requires path + container_ref and forbids service_ref + resource_ref; medium 'external-service' requires service_ref + resource_ref and forbids path + container_ref. Path normalisation and reference opacity are enforced in scripts/lib/existing-project-compatibility-mode.mjs. id is this slot's stable identity: every discovered source, missing-source record, unreadable-source record and finding that concerns this slot names it by this SAME id, never by array position. Every declared slot's id is checked at the library level to carry EXACTLY ONE outcome across discovered_sources/missing_sources/unreadable_sources — omitted, duplicated within one array or overlapping across two of the three are all rejected.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "medium": { "enum": ["file", "external-service"] },
+        "path": { "$ref": "#/definitions/non_empty" },
+        "container_ref": { "$ref": "#/definitions/non_empty" },
+        "service_ref": { "$ref": "#/definitions/non_empty" },
+        "resource_ref": { "$ref": "#/definitions/non_empty" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "medium": { "const": "file" } }, "required": ["medium"] },
+          "then": {
+            "required": ["path", "container_ref"],
+            "allOf": [
+              { "not": { "required": ["service_ref"] } },
+              { "not": { "required": ["resource_ref"] } }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "medium": { "const": "external-service" } }, "required": ["medium"] },
+          "then": {
+            "required": ["service_ref", "resource_ref"],
+            "allOf": [
+              { "not": { "required": ["path"] } },
+              { "not": { "required": ["container_ref"] } }
+            ]
+          }
+        }
+      ]
+    },
+    "missing_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_id", "previously_known"],
+      "description": "A discovery_plan slot checked this scan and found absent. previously_known is an EXPLICIT assertion, never inferred: true means a prior scan held a source at this slot (this scan's evaluation then requires a matching finding, never a silent drop of the earlier record); false means this slot has never yielded a source. An initial scan can never assert previously_known: true — it has no prior scan to know from.",
+      "properties": {
+        "plan_id": { "$ref": "#/definitions/semantic_id" },
+        "previously_known": { "type": "boolean" },
+        "id": { "$ref": "#/definitions/semantic_id" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "previously_known": { "const": true } }, "required": ["previously_known"] },
+          "then": { "required": ["id"] },
+          "else": { "not": { "required": ["id"] } }
+        }
+      ]
+    },
+    "unreadable_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_id", "reason", "previously_known"],
+      "description": "A discovery_plan slot checked this scan and found present but not readable (permission, format or transport failure — the source's own reason, not a guess). An unreadable slot always requires a matching finding, whether or not it was ever readable before.",
+      "properties": {
+        "plan_id": { "$ref": "#/definitions/semantic_id" },
+        "reason": { "$ref": "#/definitions/non_empty" },
+        "previously_known": { "type": "boolean" },
+        "id": { "$ref": "#/definitions/semantic_id" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "previously_known": { "const": true } }, "required": ["previously_known"] },
+          "then": { "required": ["id"] },
+          "else": { "not": { "required": ["id"] } }
+        }
+      ]
+    },
+    "rule_candidate_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["discovery_status", "candidate"],
+      "description": "One candidate carried by this scan. discovery_status is the EXPLICIT provenance of the candidate within this scan: 'new' — text parsed for the first time from a source THIS scan discovered, which can never itself hold a decided applicability_state (checked in the library, property 5 of controlled-rule-intake.md); 'carried-over' — a candidate whose applicability was already decided through an earlier, independently represented owner decision and is re-checked here against the CURRENT state of its pinned source. candidate is the full controlled-rule-intake rule-candidate record, validated at the library level against the actual controlled-rule-intake.schema.json and scripts/lib/controlled-rule-intake.mjs — never a copy of that contract's shape.",
+      "properties": {
+        "discovery_status": { "enum": ["new", "carried-over"] },
+        "candidate": { "type": "object" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "detail", "blocking"],
+      "description": "One separately tracked observation of this scan. kind is closed to the reasons this contract actually needs to distinguish. plan_id names the discovery_plan slot the finding concerns, when it concerns one; a finding is not required to name a slot (a conflict or an ambiguous-scope finding concerns candidates, not a single location).",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "kind": {
+          "enum": ["source-changed", "source-missing", "source-unreadable", "conflict", "ambiguous-scope", "unresolved-decision", "other"]
+        },
+        "detail": { "$ref": "#/definitions/non_empty" },
+        "plan_id": { "$ref": "#/definitions/semantic_id" },
+        "blocking": { "type": "boolean" }
+      }
+    },
+    "managed_mode_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision_ref", "decided_at", "reason", "authority"],
+      "description": "The separate, verifiable owner decision managed mode requires before it may ever activate. Never inferred from connection_mode alone.",
+      "properties": {
+        "decision_ref": { "$ref": "#/definitions/non_empty" },
+        "decided_at": { "type": "string", "format": "date" },
+        "reason": { "$ref": "#/definitions/non_empty" },
+        "authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "authority_ref"],
+          "properties": {
+            "kind": { "enum": ["project-owner", "repository-maintainer"] },
+            "authority_ref": { "$ref": "#/definitions/non_empty" }
+          }
+        }
+      }
+    },
+    "repository_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "workspace_id"],
+      "description": "The exact workspace and repository this scan covers, checked against the record's own scope at the library level (property 6: an exact workspace AND repository scope).",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "workspace_id": { "$ref": "#/definitions/semantic_id" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "connection_mode",
+        "repository",
+        "scan_kind",
+        "discovery_plan",
+        "discovered_sources",
+        "missing_sources",
+        "unreadable_sources",
+        "rule_candidates",
+        "findings",
+        "next_step"
+      ],
+      "properties": {
+        "connection_mode": {
+          "enum": ["compatibility", "managed"],
+          "description": "The default connection mode for an existing project is 'compatibility'. 'managed' never activates automatically."
+        },
+        "managed_mode_decision": { "$ref": "#/definitions/managed_mode_decision" },
+        "repository": { "$ref": "#/definitions/repository_ref" },
+        "scan_kind": { "enum": ["initial", "rescan"] },
+        "discovery_plan": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/plan_slot" }
+        },
+        "discovered_sources": {
+          "type": "array",
+          "description": "Full instruction-source-registry entries, validated at the library level against the real schema and scripts/lib/instruction-source-registry.mjs — never a copy of that contract's shape.",
+          "items": { "type": "object" }
+        },
+        "missing_sources": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/missing_source" }
+        },
+        "unreadable_sources": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/unreadable_source" }
+        },
+        "rule_candidates": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/rule_candidate_entry" }
+        },
+        "findings": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/finding" }
+        },
+        "next_step": {
+          "enum": ["continue-compatibility-mode", "resolve-conflict", "resolve-ambiguity", "await-owner-decision"],
+          "description": "The one value the closed priority (scripts/lib/existing-project-compatibility-mode.mjs computeNextStep) computes from the findings set, checked at the library level: a blocking 'conflict' finding requires 'resolve-conflict'; else a blocking 'ambiguous-scope' finding requires 'resolve-ambiguity'; else any other blocking finding requires 'await-owner-decision'; else 'continue-compatibility-mode'. The same findings set, in any order, computes exactly one value."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "connection_mode": { "const": "managed" } }, "required": ["connection_mode"] },
+          "then": { "required": ["managed_mode_decision"] },
+          "else": { "not": { "required": ["managed_mode_decision"] } }
+        }
+      ]
+    }
+  }
+}

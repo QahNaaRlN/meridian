@@ -1,0 +1,187 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/instruction-source-registry.schema.json",
+  "title": "Meridian instruction source registry",
+  "description": "Container for registered instruction sources. Each entry is a scoped record: its envelope (identity, scope, origin, authority) is validated separately against scoped-record.schema.json, and this schema is not a second envelope schema. This schema adds the container shape and the source-snapshot contract carried in each entry's payload. read_channel describes only who observes the SOURCE and how (the agent's own tool ingests the file, Meridian's registry reads it to snapshot it, or a person reports its state); it never describes delivery of a norm to an agent. Registering a source, and reading it to snapshot it, grant its text no authority and do not bypass controlled-rule-intake, which alone parses discovered text into rules and takes an acceptance decision. Temporal model: recorded_state is the snapshot the registry currently holds for the source; divergence.previous_state is the snapshot held before the last check; divergence.current_state is the fresh observation that check produced. recorded_state and divergence.current_state describe one and the same present observation and must not disagree on revision, digest OR verification state; previous_state is historical and may differ, except on source-missing / source-unreadable where the last-known recorded_state must equal previous_state. Two verified states are unchanged only when BOTH revision and SHA-256 digest match; a difference in either is changed. currency is one of current | stale | unverified — stale is a verified last-known state whose source has since gone missing or become unreadable (not merely changed: on a changed result the registry re-records the fresh observation, so recorded_state is current), and is never a substitute for an unverified snapshot. Registering a source grants its text no norm authority: every payload declares normative_status = not-a-norm and record_type is instruction-source, never norm. The rules JSON Schema cannot state live in scripts/lib/instruction-source-registry.mjs. The instruction-source-registry contract is a mandatory part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/instruction-source-registry.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "title", "instruction_sources"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "registry_id": { "const": "instruction-source-registry" },
+    "title": { "type": "string", "minLength": 1 },
+    "instruction_sources": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/entry" }
+    }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "sha256_digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value"],
+      "description": "A source state is fixed by a SHA-256 digest and nothing weaker. algorithm is a single accepted value; value is 64 lowercase hex characters.",
+      "properties": {
+        "algorithm": { "const": "sha-256" },
+        "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "observed_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "digest", "verified"],
+      "description": "A previous or current observation of the source used to compute divergence. verified is whether this exact state was actually read back from the source; an unverified state cannot support an unchanged or changed claim. Two verified states are unchanged only when both revision and digest.value match.",
+      "properties": {
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "digest": { "$ref": "#/definitions/sha256_digest" },
+        "verified": { "type": "boolean" }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "required": ["record_type", "payload"],
+      "properties": {
+        "record_type": { "const": "instruction-source" },
+        "payload": { "$ref": "#/definitions/payload" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "normative_status",
+        "medium",
+        "location",
+        "recorded_state",
+        "format",
+        "read_channel",
+        "divergence"
+      ],
+      "properties": {
+        "normative_status": {
+          "const": "not-a-norm",
+          "description": "The only accepted value. Registration does not grant the source's text the authority of a norm, accept a rule or resolve a conflict."
+        },
+        "medium": {
+          "enum": ["file", "external-service"],
+          "description": "The declared bearer of the source. The location is confined to it: a file source is located by a relative path AND an opaque container identity; a service source by opaque service and resource identifiers with no filesystem path."
+        },
+        "location": { "$ref": "#/definitions/location" },
+        "recorded_state": { "$ref": "#/definitions/recorded_state" },
+        "format": {
+          "enum": ["agents-md", "claude-md", "cursor-rule", "kernel-doc", "markdown-section", "plain-text"],
+          "description": "The shape of the source content. Modelled separately from the read channel: neither is derived from the other."
+        },
+        "read_channel": { "$ref": "#/definitions/read_channel" },
+        "divergence": { "$ref": "#/definitions/divergence" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "medium": { "const": "file" } }, "required": ["medium"] },
+          "then": {
+            "properties": {
+              "location": {
+                "required": ["path", "container_ref"],
+                "allOf": [
+                  { "not": { "required": ["service_ref"] } },
+                  { "not": { "required": ["resource_ref"] } }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "medium": { "const": "external-service" } }, "required": ["medium"] },
+          "then": {
+            "properties": {
+              "location": {
+                "required": ["service_ref", "resource_ref"],
+                "allOf": [
+                  { "not": { "required": ["path"] } },
+                  { "not": { "required": ["container_ref"] } }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["missing_behavior"],
+      "description": "Where the source is, confined to the declared medium. The two forms are mutually exclusive: medium 'file' requires path + container_ref and forbids service_ref + resource_ref; medium 'external-service' requires service_ref + resource_ref and forbids path + container_ref. No absolute path, no escape through '..' and no hidden fallback resolution: missing_behavior has one accepted value, and the confinement of a relative path and the opacity of every reference are enforced in scripts/lib/instruction-source-registry.mjs.",
+      "properties": {
+        "path": {
+          "$ref": "#/definitions/non_empty",
+          "description": "For medium 'file' only (required there, forbidden elsewhere): a POSIX-relative path inside the declared medium. Absolute paths, a leading '/', a drive letter, a backslash separator and '.'/'..' segments are rejected by the library check."
+        },
+        "container_ref": {
+          "$ref": "#/definitions/non_empty",
+          "description": "For medium 'file' only (required there, forbidden elsewhere): an opaque identifier of the repository or workspace that bears the file — the identity of the medium, never a machine path. Absolute forms and '..' segments are rejected by the library check."
+        },
+        "service_ref": {
+          "$ref": "#/definitions/non_empty",
+          "description": "For medium 'external-service' only (required there, forbidden elsewhere): opaque identifier of the service."
+        },
+        "resource_ref": {
+          "$ref": "#/definitions/non_empty",
+          "description": "For medium 'external-service' only (required there, forbidden elsewhere): opaque identifier of the resource within the service."
+        },
+        "missing_behavior": {
+          "const": "fail-closed",
+          "description": "The only accepted value. When the source cannot be resolved the registry fails closed; it does not fall back to a parent directory, a cached copy or a plausible sibling. Its absence is undeclared fallback behaviour and is rejected."
+        }
+      }
+    },
+    "recorded_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "digest", "revision_verified", "currency"],
+      "description": "The snapshot the registry currently holds for the source: an explicit revision and a SHA-256 digest. revision_verified is whether that snapshot was read back from the source. currency states how the snapshot relates to the source now: 'current' (verified, and divergence.status is not source-missing / source-unreadable), 'stale' (verified once, but a later check found the source missing or unreadable — the last known state; NOT used for 'changed', where the fresh observation is re-recorded and the snapshot is current), 'unverified' (never verified). The library check binds currency to revision_verified and to divergence.status.",
+      "properties": {
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "digest": { "$ref": "#/definitions/sha256_digest" },
+        "revision_verified": { "type": "boolean" },
+        "currency": { "enum": ["current", "stale", "unverified"] }
+      }
+    },
+    "read_channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "meridian_visibility", "agent_auto_read"],
+      "description": "Who observes the SOURCE and how, modelled separately from the format. This is not a norm-delivery channel: registering or reading a source grants its text no authority (see controlled-rule-intake). 'agent-native' — the agent's own tool ingests the source file itself (AGENTS.md, CLAUDE.md, Cursor rules) and Meridian is not in that read path. 'meridian-observed' — Meridian's registry reads the source to take its snapshot. 'manual' — a person observes the source and reports its state. The agent-native channel has an explicit visibility boundary: Meridian cannot fully observe what the agent's own tool does with the source (enforced in the library check).",
+      "properties": {
+        "kind": { "enum": ["meridian-observed", "agent-native", "manual"] },
+        "meridian_visibility": {
+          "enum": ["full", "partial", "none"],
+          "description": "How completely Meridian's registry can observe this source on its way to an agent. 'full' is possible only on the meridian-observed channel; the agent-native channel, where the agent's own tool ingests the source, is never 'full'."
+        },
+        "agent_auto_read": {
+          "type": "boolean",
+          "description": "True when the agent's own tooling ingests this source itself, without Meridian in the read path. Ties to kind 'agent-native'."
+        }
+      }
+    },
+    "divergence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "description": "The result of comparing the snapshot held before the last check (previous_state) with the fresh observation that check produced (current_state). 'unchanged' and 'changed' are computed only from two verifiable states; 'unknown' is allowed only when the evidence is genuinely insufficient — never when both states are present and verified. 'source-missing' and 'source-unreadable' carry no current_state at all: a source that cannot be observed has no current state; and when they carry a previous_state, recorded_state (the last-known state) must equal it on revision and digest. current_state, when present, describes the same present observation as recorded_state and must not disagree with it on revision, digest or verification state.",
+      "properties": {
+        "status": {
+          "enum": ["unknown", "unchanged", "changed", "source-missing", "source-unreadable"]
+        },
+        "previous_state": { "$ref": "#/definitions/observed_state" },
+        "current_state": { "$ref": "#/definitions/observed_state" }
+      }
+    }
+  }
+}

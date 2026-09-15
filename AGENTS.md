@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-27
-updated: 2026-09-07
+updated: 2026-09-08
 topic: agent-conduct
 profile: universal
 delivery: agents-md-section
@@ -167,3 +167,18 @@ corresponding tracked document exists. A tracked document in Instance
 (owner intent contract, collaboration protocol, active plan) always
 supersedes what a prior conversation implied.
 <!-- meridian:end instruction-section id=source-of-truth -->
+
+<!-- meridian:begin instruction-section id=operating-foundation owner=workspace-owner generated=no -->
+## 8. Operating foundation
+
+Before naming a governed entity or using an operating-model term, read
+`standards/workspace/operating-glossary.md` and
+`standards/workspace/operating-principles.md`.
+
+A governed entity is presented to a person as `title [id]`: a meaningful
+human title together with a stable semantic identifier. Do not use a roadmap
+number, status, date, actor, tool or model name as the entity's identity. Use
+the glossary's exact entity rather than the conversational word "task" in a
+machine contract. If a needed term or principle is absent, do not invent it in
+the consuming artifact; change the paired operating-foundation registry first.
+<!-- meridian:end instruction-section id=operating-foundation -->

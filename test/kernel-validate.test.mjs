@@ -23,6 +23,7 @@ import { spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { validate } from '../scripts/lib/json-schema.mjs';
+import { yamlParse } from '../scripts/lib/yaml.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const VALIDATOR = path.join(__dirname, '..', 'scripts', 'kernel-validate.mjs');
@@ -85,6 +86,42 @@ function writeTopicPool(root, { names = ['naming'], documented = ['naming'], out
     + (outside.length
       ? `\n## Прочее\n\n| Что | Зачем |\n|---|---|\n${outside.map((n) => `| \`${n}\` | вне пула |\n`).join('')}`
       : ''));
+}
+
+// The operating foundation is also split deliberately: stable identities and
+// bilingual names are machine-readable, while definitions and consequences
+// stay readable to a person. Every synthetic Kernel carries a minimal complete
+// pair so unrelated tests do not pass against a missing foundation.
+function writeOperatingFoundation(root, {
+  terms = [{ id: 'work-item', ru: 'Единица работы', en: 'Work item' }],
+  principles = [{ id: 'explicit-unknown', ru: 'Неизвестное обозначается явно', en: 'Unknown is explicit' }],
+  documentedTerms = null,
+  documentedPrinciples = null,
+} = {}) {
+  const yaml = ['schema_version: 1', 'terms:'];
+  for (const term of terms) {
+    yaml.push(`  - id: ${term.id}`, `    canonical_ru: ${term.ru}`, `    canonical_en: ${term.en}`);
+    if (term.machineNames) yaml.push(`    machine_names: [${term.machineNames.join(', ')}]`);
+  }
+  yaml.push('principles:');
+  for (const principle of principles) {
+    yaml.push(`  - id: ${principle.id}`, `    title_ru: ${principle.ru}`, `    title_en: ${principle.en}`);
+  }
+  write(root, 'standards/workspace/operating-foundation.yaml', `${yaml.join('\n')}\n`);
+
+  const termRows = documentedTerms ?? terms;
+  write(root, 'standards/workspace/operating-glossary.md',
+    `${fm('Synthetic operating glossary', 'reference')}\n# Synthetic operating glossary\n\n`
+    + '<!-- meridian:begin operating-term-pool -->\n\n| Идентификатор | Русский термин | English term | Определение |\n|---|---|---|---|\n'
+    + termRows.map((term) => `| \`${term.id}\` | ${term.ru} | ${term.en} | synthetic |\n`).join('')
+    + '\n<!-- meridian:end operating-term-pool -->\n');
+
+  const principleRows = documentedPrinciples ?? principles;
+  write(root, 'standards/workspace/operating-principles.md',
+    `${fm('Synthetic operating principles', 'standard')}\n# Synthetic operating principles\n\n`
+    + '<!-- meridian:begin operating-principle-pool -->\n\n| Идентификатор | Русское название | English title | Следствие |\n|---|---|---|---|\n'
+    + principleRows.map((principle) => `| \`${principle.id}\` | ${principle.ru} | ${principle.en} | synthetic |\n`).join('')
+    + '\n<!-- meridian:end operating-principle-pool -->\n');
 }
 
 // The stack profile pool, like the topic pool, is split between data and prose
@@ -159,9 +196,372 @@ function plantProfiledRepo(instance, repoRoot, {
   ].join('\n'));
 }
 
+const TPR_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const TPR_STD = path.join(__dirname, '..', 'standards', 'workspace');
+// The BUGFIX task pattern links to this skill package; a synthetic kernel plants
+// it, and every intake register over the kernel tree records it (plantIntake).
+const BUGFIX_SKILL_STUB = '# Bugfix\n\nStub bugfix skill for the validator test suite.\n';
+
+// The real catalog, parsed once. A synthetic kernel plants THIS (small) as its
+// mandatory catalog data plus a COMPACT fixtures bundle — not the 1.1 MB /
+// 15 446-line negative bundle, which was being copied into every buildKernel.
+// The full negative bundle is exercised by the standalone set
+// (test/task-pattern-registry.test.mjs) and by one dedicated case here (t180)
+// and by the real `node scripts/kernel-validate.mjs` run.
+const TPR_REAL_CATALOG = (() => {
+  const doc = yamlParse(fs.readFileSync(path.join(TPR_STD, 'task-pattern-registry.yaml'), 'utf8'));
+  delete doc.$schema;
+  return doc;
+})();
+const tprClone = (x) => JSON.parse(JSON.stringify(x));
+const tprFindPattern = (doc, id) => doc.task_patterns.find((p) => p.id === id);
+// A minimal-but-correct fixtures bundle: one valid catalog and three
+// representative rejections (a classification error, an axis-mixing error, a
+// link-confinement error). Enough to keep the gate's fixture-classification
+// path exercised without copying the full negative set.
+function tprCompactBundle() {
+  const good = tprClone(TPR_REAL_CATALOG);
+  const badWorkKind = tprClone(TPR_REAL_CATALOG);
+  tprFindPattern(badWorkKind, 'assess-existing-state').payload.work_kind = 'inspection';
+  const skillInProtocols = tprClone(TPR_REAL_CATALOG);
+  tprFindPattern(skillInProtocols, 'fix-defect').payload.applicable_protocols =
+    [{ status: 'present', id: 'x', path: 'skills/bugfix-protocol/SKILL.md' }];
+  const absoluteLink = tprClone(TPR_REAL_CATALOG);
+  tprFindPattern(absoluteLink, 'assess-existing-state').payload.applicable_protocols =
+    [{ status: 'present', id: 'x', path: '/etc/task-lifecycle.md' }];
+  return {
+    valid: [{ note: 'minimal valid catalog', registry: good }],
+    invalid: [
+      { note: 'unknown work_kind', registry: badWorkKind },
+      { note: 'skill in the protocol axis', registry: skillInProtocols },
+      { note: 'absolute link path', registry: absoluteLink },
+    ],
+  };
+}
+
+// The task-pattern catalog is a MANDATORY part of the Kernel, so a synthetic
+// kernel's normal state carries it: the real catalog data, its specialised
+// schema, the reused envelope schema, a COMPACT fixtures bundle, and a stub
+// file at every path the catalog links to as `status: present`. `bundle`
+// accepts 'compact' (default), 'real' (the full 34-negative file) or an object.
+// Other overrides plant a broken schema / yaml, or omit fixtures.
+function writeTaskPatternCatalog(root, { schema = null, yaml = null, bundle = 'compact', omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/scoped-record.schema.json',
+    fs.readFileSync(path.join(TPR_OM, 'scoped-record.schema.json'), 'utf8'));
+  write(root, 'registries/operating-model/task-pattern-registry.schema.json',
+    schema ?? fs.readFileSync(path.join(TPR_OM, 'task-pattern-registry.schema.json'), 'utf8'));
+  write(root, 'standards/workspace/task-pattern-registry.yaml',
+    yaml ?? fs.readFileSync(path.join(TPR_STD, 'task-pattern-registry.yaml'), 'utf8'));
+  if (!omitFixtures) {
+    let bundleText;
+    if (bundle === 'real') bundleText = fs.readFileSync(path.join(TPR_OM, 'fixtures', 'task-pattern-registry.fixtures.json'), 'utf8');
+    else if (bundle === 'compact') bundleText = JSON.stringify(tprCompactBundle());
+    else bundleText = JSON.stringify(bundle);
+    write(root, 'registries/operating-model/fixtures/task-pattern-registry.fixtures.json', bundleText);
+  }
+  // rule-resolution.md is scanned by the catalog section's text guard; the
+  // synthetic kernel carries a minimal copy that keeps that guard green.
+  write(root, 'standards/workspace/rule-resolution.md',
+    `${fm('Rule resolution', 'standard')}\n# Rule resolution\n\n`
+    + 'Для `BUGFIX` каноническим носителем порядка является способ выполнения '
+    + '`bugfix-protocol` (`skill`, не `protocol`); отдельного протокола BUGFIX нет.\n');
+  write(root, 'workflows/task-lifecycle.md', `${fm('Task lifecycle', 'protocol')}\n# Task lifecycle\n\nStub.\n`);
+  write(root, 'verification/regression-testing/README.md', `${fm('Regression testing', 'readme')}\n# Regression testing\n\nStub.\n`);
+  write(root, 'verification/functional-parity/refactor-protocol.md', `${fm('REFACTOR execution protocol', 'protocol')}\n# REFACTOR execution protocol\n\nStub.\n`);
+  write(root, 'verification/functional-parity/functional-parity-evidence-contract.md', `${fm('Functional-parity evidence contract', 'contract')}\n# Functional-parity evidence contract\n\nStub.\n`);
+  write(root, 'skills/bugfix-protocol/SKILL.md', BUGFIX_SKILL_STUB);
+  write(root, 'skills/bugfix-protocol/PIN.yaml', [
+    'schema_version: 1', 'name: bugfix-protocol', 'artifact: SKILL.md',
+    `sha256: ${sha256(BUGFIX_SKILL_STUB)}`, 'state: vendored',
+    "pinned_at: '2026-01-01'", 'pinned_by: test-suite', '',
+  ].join('\n'));
+}
+
+// instruction-source-registry helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const ISR_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const ISR_OK_LINE = /instruction-source-registry: the source-registry schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const isrRealBundle = () => JSON.parse(fs.readFileSync(path.join(ISR_OM, 'fixtures', 'instruction-source-registry.fixtures.json'), 'utf8'));
+function writeInstructionSourceRegistry(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/instruction-source-registry.schema.json',
+    schema ?? fs.readFileSync(path.join(ISR_OM, 'instruction-source-registry.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/instruction-source-registry.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/instruction-source-registry.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(ISR_OM, 'fixtures', 'instruction-source-registry.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+// task-specification-contract helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog, and
+// the task-pattern catalogue it resolves against is planted too.
+const TSC_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const TSC_OK_LINE = /task-specification-contract: the task-specification schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const tscRealBundle = () => JSON.parse(fs.readFileSync(path.join(TSC_OM, 'fixtures', 'task-specification.fixtures.json'), 'utf8'));
+function writeTaskSpecificationContract(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/task-specification.schema.json',
+    schema ?? fs.readFileSync(path.join(TSC_OM, 'task-specification.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/task-specification.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/task-specification.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(TSC_OM, 'fixtures', 'task-specification.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+// execution-state-model helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const ESM_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const ESM_OK_LINE = /execution-state-model: the execution-state schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const esmRealBundle = () => JSON.parse(fs.readFileSync(path.join(ESM_OM, 'fixtures', 'execution-state.fixtures.json'), 'utf8'));
+function writeExecutionStateModel(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/execution-state.schema.json',
+    schema ?? fs.readFileSync(path.join(ESM_OM, 'execution-state.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/execution-state.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/execution-state.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(ESM_OM, 'fixtures', 'execution-state.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+// role-and-human-control helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants both real schemas, the real catalogue and real
+// fixtures beside them; scoped-record.schema.json is already planted by
+// writeTaskPatternCatalog.
+const RHC_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const RHC_OK_LINE = /role-and-human-control: the role-registry and human-control schemas parsed and keyword-checked; the built-in catalogue carries the seven universal roles; \d+ role-registry fixture\(s\) satisfied the composition and \d+ were rejected as declared; \d+ human-control fixture\(s\) satisfied it .* and \d+ were rejected as declared/;
+const rhcRealBundle = () => JSON.parse(fs.readFileSync(path.join(RHC_OM, 'fixtures', 'role-and-human-control.fixtures.json'), 'utf8'));
+function writeRoleAndHumanControl(root, { registrySchema = null, controlSchema = null, catalogue = null, bundle = null, omitFixtures = false, omitCatalogue = false } = {}) {
+  write(root, 'registries/operating-model/role-registry.schema.json',
+    registrySchema ?? fs.readFileSync(path.join(RHC_OM, 'role-registry.schema.json'), 'utf8'));
+  write(root, 'registries/operating-model/human-control.schema.json',
+    controlSchema ?? fs.readFileSync(path.join(RHC_OM, 'human-control.schema.json'), 'utf8'));
+  const catPath = path.join(root, 'standards/workspace/role-registry.yaml');
+  if (omitCatalogue) {
+    fs.rmSync(catPath, { force: true });
+  } else {
+    write(root, 'standards/workspace/role-registry.yaml',
+      catalogue ?? fs.readFileSync(path.join(__dirname, '..', 'standards', 'workspace', 'role-registry.yaml'), 'utf8'));
+  }
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/role-and-human-control.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/role-and-human-control.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(RHC_OM, 'fixtures', 'role-and-human-control.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+// bounded-context-manifest helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const CM_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const CM_OK_LINE = /bounded-context-manifest: the context-manifest schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const cmRealBundle = () => JSON.parse(fs.readFileSync(path.join(CM_OM, 'fixtures', 'context-manifest.fixtures.json'), 'utf8'));
+function writeContextManifest(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/context-manifest.schema.json',
+    schema ?? fs.readFileSync(path.join(CM_OM, 'context-manifest.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/context-manifest.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/context-manifest.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(CM_OM, 'fixtures', 'context-manifest.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+// evidence-and-handoff-contract helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const EH_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const EH_OK_LINE = /evidence-and-handoff-contract: the evidence-and-handoff schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const ehRealBundle = () => JSON.parse(fs.readFileSync(path.join(EH_OM, 'fixtures', 'evidence-and-handoff.fixtures.json'), 'utf8'));
+function writeEvidenceAndHandoff(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/evidence-and-handoff.schema.json',
+    schema ?? fs.readFileSync(path.join(EH_OM, 'evidence-and-handoff.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/evidence-and-handoff.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/evidence-and-handoff.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(EH_OM, 'fixtures', 'evidence-and-handoff.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+// meridian-field-evaluation helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const FE_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const FE_OK_LINE = /meridian-field-evaluation: the field-evaluation schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const feRealBundle = () => JSON.parse(fs.readFileSync(path.join(FE_OM, 'fixtures', 'field-evaluation.fixtures.json'), 'utf8'));
+function writeFieldEvaluation(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/field-evaluation.schema.json',
+    schema ?? fs.readFileSync(path.join(FE_OM, 'field-evaluation.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/field-evaluation.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/field-evaluation.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(FE_OM, 'fixtures', 'field-evaluation.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+// controlled-rule-intake helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const CRI_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const CRI_OK_LINE = /controlled-rule-intake: the rule-intake schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const criRealBundle = () => JSON.parse(fs.readFileSync(path.join(CRI_OM, 'fixtures', 'controlled-rule-intake.fixtures.json'), 'utf8'));
+function writeControlledRuleIntake(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/controlled-rule-intake.schema.json',
+    schema ?? fs.readFileSync(path.join(CRI_OM, 'controlled-rule-intake.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/controlled-rule-intake.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/controlled-rule-intake.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(CRI_OM, 'fixtures', 'controlled-rule-intake.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+// existing-project-compatibility-mode helpers. The contract is a MANDATORY
+// part of the Kernel, so buildKernel plants the real schema and real fixtures
+// beside it; scoped-record.schema.json, instruction-source-registry.schema.json
+// and controlled-rule-intake.schema.json are already planted by
+// writeTaskPatternCatalog / writeInstructionSourceRegistry / writeControlledRuleIntake.
+const EPCM_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const EPCM_OK_LINE = /existing-project-compatibility-mode: the compatibility-mode schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const epcmRealBundle = () => JSON.parse(fs.readFileSync(path.join(EPCM_OM, 'fixtures', 'existing-project-compatibility-mode.fixtures.json'), 'utf8'));
+function writeExistingProjectCompatibilityMode(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/existing-project-compatibility-mode.schema.json',
+    schema ?? fs.readFileSync(path.join(EPCM_OM, 'existing-project-compatibility-mode.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/existing-project-compatibility-mode.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/existing-project-compatibility-mode.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(EPCM_OM, 'fixtures', 'existing-project-compatibility-mode.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+// instance-data-migration helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const IDM_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const IDM_OK_LINE = /instance-data-migration: the migration-plan schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const idmRealBundle = () => JSON.parse(fs.readFileSync(path.join(IDM_OM, 'fixtures', 'instance-data-migration.fixtures.json'), 'utf8'));
+function writeInstanceDataMigration(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/instance-data-migration.schema.json',
+    schema ?? fs.readFileSync(path.join(IDM_OM, 'instance-data-migration.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/instance-data-migration.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/instance-data-migration.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(IDM_OM, 'fixtures', 'instance-data-migration.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+// instance-canonical-export helpers. The contract is a MANDATORY part of the
+// Kernel, so buildKernel plants the real schema and real fixtures beside it;
+// scoped-record.schema.json is already planted by writeTaskPatternCatalog.
+const ICE_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const ICE_OK_LINE = /instance-canonical-export: the canonical-export schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const iceRealBundle = () => JSON.parse(fs.readFileSync(path.join(ICE_OM, 'fixtures', 'instance-canonical-export.fixtures.json'), 'utf8'));
+function writeInstanceCanonicalExport(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/instance-canonical-export.schema.json',
+    schema ?? fs.readFileSync(path.join(ICE_OM, 'instance-canonical-export.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/instance-canonical-export.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/instance-canonical-export.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(ICE_OM, 'fixtures', 'instance-canonical-export.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+/*
+ * workspace-compatibility-qualification helpers. The contract is a MANDATORY
+ * part of the Kernel, so buildKernel plants the real schema and real
+ * fixtures beside it; the five contracts it composes (and their own
+ * scoped-record.schema.json) are already planted by the writers above.
+ */
+const WCQ_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const WCQ_OK_LINE = /workspace-compatibility-qualification: the qualification schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const wcqRealBundle = () => JSON.parse(fs.readFileSync(path.join(WCQ_OM, 'fixtures', 'workspace-compatibility-qualification.fixtures.json'), 'utf8'));
+function writeWorkspaceCompatibilityQualification(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/workspace-compatibility-qualification.schema.json',
+    schema ?? fs.readFileSync(path.join(WCQ_OM, 'workspace-compatibility-qualification.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/workspace-compatibility-qualification.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/workspace-compatibility-qualification.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(WCQ_OM, 'fixtures', 'workspace-compatibility-qualification.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
+/*
+ * upgrade-integration-qualification helpers. The contract is a MANDATORY
+ * part of the Kernel, so buildKernel plants the real schema and real
+ * fixtures beside it; the four contracts it composes (evidence-and-handoff,
+ * meridian-field-evaluation, task-specification-contract,
+ * execution-state-model — and their own scoped-record.schema.json /
+ * task-pattern-registry.yaml) are already planted by the writers above.
+ */
+const UIQ_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const UIQ_OK_LINE = /upgrade-integration-qualification: the qualification schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const uiqRealBundle = () => JSON.parse(fs.readFileSync(path.join(UIQ_OM, 'fixtures', 'upgrade-integration-qualification.fixtures.json'), 'utf8'));
+function writeUpgradeIntegrationQualification(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/upgrade-integration-qualification.schema.json',
+    schema ?? fs.readFileSync(path.join(UIQ_OM, 'upgrade-integration-qualification.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/upgrade-integration-qualification.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/upgrade-integration-qualification.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(UIQ_OM, 'fixtures', 'upgrade-integration-qualification.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
+  writeOperatingFoundation(root);
   writeStackProfilePool(root);
   write(root, 'docs/note.md', `${fm('A note', 'reference')}\n# A note\n\nA note.\n`);
   const skill = '# Demo skill\n\nA fictional vendored skill used only by this suite.\n';
@@ -176,6 +576,34 @@ function buildKernel(root) {
     'pinned_by: test-suite',
     '',
   ].join('\n'));
+  // The mandatory task-pattern catalog is part of a well-formed Kernel.
+  writeTaskPatternCatalog(root);
+  // The mandatory instruction-source-registry contract, likewise.
+  writeInstructionSourceRegistry(root);
+  // The mandatory task-specification contract, likewise.
+  writeTaskSpecificationContract(root);
+  // The mandatory execution-state-model contract, likewise.
+  writeExecutionStateModel(root);
+  // The mandatory role-and-human-control contract, likewise.
+  writeRoleAndHumanControl(root);
+  // The mandatory bounded-context-manifest contract, likewise.
+  writeContextManifest(root);
+  // The mandatory evidence-and-handoff contract, likewise.
+  writeEvidenceAndHandoff(root);
+  // The mandatory meridian-field-evaluation contract, likewise.
+  writeFieldEvaluation(root);
+  // The mandatory controlled-rule-intake contract, likewise.
+  writeControlledRuleIntake(root);
+  // The mandatory existing-project-compatibility-mode contract, likewise.
+  writeExistingProjectCompatibilityMode(root);
+  // The mandatory instance-data-migration contract, likewise.
+  writeInstanceDataMigration(root);
+  // The mandatory instance-canonical-export contract, likewise.
+  writeInstanceCanonicalExport(root);
+  /* The mandatory workspace-compatibility-qualification contract, likewise. */
+  writeWorkspaceCompatibilityQualification(root);
+  /* The mandatory upgrade-integration-qualification contract, likewise. */
+  writeUpgradeIntegrationQualification(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -541,14 +969,24 @@ function plantIntake(kernel, instance, { records, repoPath }) {
     "    last_verified: '2026-01-01'",
     '',
   ].join('\n'));
+  // The synthetic kernel carries the mandatory task-pattern catalog, which
+  // links to skills/bugfix-protocol/SKILL.md. That file matches the intake
+  // SKILL mask, so every register over the kernel tree records it — otherwise
+  // completeness would fail for a reason unrelated to the case under test.
   write(instance, 'instruction-intake/synthetic.yaml', [
     '$schema: ./intake.schema.json',
     'schema_version: 1',
     'repository: synthetic',
     'records:',
     ...records,
+    ...bugfixSkillRecordLines(),
     '',
   ].join('\n'));
+}
+
+// Appended after each case's own records so their indices are unchanged.
+function bugfixSkillRecordLines() {
+  return intakeRecord('skills/bugfix-protocol/SKILL.md', sha256(BUGFIX_SKILL_STUB), { delivery: 'skill-package' });
 }
 
 function intakeRecord(artifact, digest, { verdict = 'keep-local', topic = 'naming', delivery = 'cursor-rule', extra = [], recordedAt = '2026-01-01' } = {}) {
@@ -1298,7 +1736,7 @@ function regionRecord(id, opts = {}) {
   sh('git', ['mv', 'instruction-intake/synthetic.yaml', 'instruction-intake/renamed.yaml'], instance);
   fs.writeFileSync(path.join(instance, 'instruction-intake', 'renamed.yaml'), [
     '$schema: ./intake.schema.json', 'schema_version: 1', 'repository: synthetic', 'records:',
-    ...intakeRecord('skills/demo/SKILL.md', sha256('a')), '',
+    ...intakeRecord('skills/demo/SKILL.md', sha256('a')), ...bugfixSkillRecordLines(), '',
   ].join('\n'));
   commitAll(instance);
   check('t61 a record dropped under a rename detected', run(kernel, instance), {
@@ -1451,7 +1889,7 @@ function regionRecord(id, opts = {}) {
   sh('git', ['mv', 'instruction-intake/synthetic.yaml', 'instruction-intake/renamed.yaml'], instance);
   fs.writeFileSync(path.join(instance, 'instruction-intake', 'renamed.yaml'), [
     '$schema: ./intake.schema.json', 'schema_version: 1', 'repository: synthetic', 'records:',
-    ...intakeRecord('skills/demo/SKILL.md', sha256('a')), '',
+    ...intakeRecord('skills/demo/SKILL.md', sha256('a')), ...bugfixSkillRecordLines(), '',
   ].join('\n'));
   sh('git', ['add', '-A'], instance);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '--amend', '-m', 'renamed and rewritten'], instance);
@@ -3115,6 +3553,1778 @@ function fpBundleWith(where, doc) {
   inv('t159d inventory schema still accepts an entry with no ownership field', errsFor(doc({})).length === 0);
   inv('t159e inventory schema_version stays const 1', invSchema.properties.schema_version.const === 1
     && invSchema.items === undefined && invSchema.properties.repositories.items.additionalProperties === false);
+}
+
+// t160 — a term present only in machine data is not a complete canonical term.
+{
+  const { kernel, instance } = freshPair('t160');
+  const terms = [
+    { id: 'work-item', ru: 'Единица работы', en: 'Work item' },
+    { id: 'orphan-term', ru: 'Термин без определения', en: 'Orphan term' },
+  ];
+  writeOperatingFoundation(kernel, { terms, documentedTerms: terms.slice(0, 1) });
+  commitAll(kernel);
+  check('t160 machine-only operating term is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: term halves disagree .*orphan-term/],
+  });
+}
+
+// t161 — bilingual names are contract data, not display text free to drift.
+{
+  const { kernel, instance } = freshPair('t161');
+  writeOperatingFoundation(kernel, {
+    documentedPrinciples: [{
+      id: 'explicit-unknown',
+      ru: 'Неизвестное скрывается',
+      en: 'Unknown is explicit',
+    }],
+  });
+  commitAll(kernel);
+  check('t161 operating principle name drift is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: principle "explicit-unknown" has different bilingual names/],
+  });
+}
+
+// t162 — one absent half fails closed; no pool can be inferred from neighbours.
+{
+  const { kernel, instance } = freshPair('t162');
+  fs.rmSync(path.join(kernel, 'standards', 'workspace', 'operating-glossary.md'));
+  commitAll(kernel);
+  check('t162 incomplete operating foundation fails closed', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: the canonical pool is incomplete .*operating-glossary\.md/],
+  });
+}
+
+// t163 — the marked region, not any signature-looking table, defines the pool.
+{
+  const { kernel, instance } = freshPair('t163');
+  const p = path.join(kernel, 'standards', 'workspace', 'operating-principles.md');
+  fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('<!-- meridian:end operating-principle-pool -->', ''));
+  commitAll(kernel);
+  check('t163 unclosed operating principle region fails closed', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: the principle-pool region is not readable/],
+  });
+}
+
+// t164 — a name-only glossary row is not a human-readable definition.
+{
+  const { kernel, instance } = freshPair('t164');
+  const p = path.join(kernel, 'standards', 'workspace', 'operating-glossary.md');
+  fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('| synthetic |', '| |'));
+  commitAll(kernel);
+  check('t164 operating term without a definition is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: term-pool rows without a definition: work-item/],
+  });
+}
+
+// t165 — a principle without its consequence is only a label, not a norm.
+{
+  const { kernel, instance } = freshPair('t165');
+  const p = path.join(kernel, 'standards', 'workspace', 'operating-principles.md');
+  fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('| synthetic |', '| |'));
+  commitAll(kernel);
+  check('t165 operating principle without a consequence is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: principle-pool rows without a mandatory consequence: explicit-unknown/],
+  });
+}
+
+// t166 — one machine field cannot identify two different canonical terms.
+{
+  const { kernel, instance } = freshPair('t166');
+  const terms = [
+    { id: 'work-item', ru: 'Единица работы', en: 'Work item', machineNames: ['work_item'] },
+    { id: 'task-specification', ru: 'Постановка задачи', en: 'Task specification', machineNames: ['work_item'] },
+  ];
+  writeOperatingFoundation(kernel, { terms });
+  commitAll(kernel);
+  check('t166 ambiguous operating machine name is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/operating-foundation: machine names assigned to more than one term: work_item/],
+  });
+}
+
+// ===========================================================================
+// task-pattern-registry — the built-in universal task-type catalog is reached
+// ===========================================================================
+// These cases exercise the gate's `task-pattern-registry` section: the
+// container/payload schema parses and uses only implemented keywords, the
+// record envelope is validated against the existing scoped-record schema, the
+// cross-record rules JSON Schema cannot state are enforced, and the bundled
+// product-neutral fixtures are classified — every valid one accepted, every
+// invalid one rejected. A negative case plants a catalog or a schema the
+// section must refuse; a positive case plants one it must accept.
+
+const TPR_OK_LINE = /task-pattern-registry: the mandatory catalog and its specialised schema parsed and keyword-checked; seven built-in patterns validated against the envelope, the pattern-body contract and link confinement, and \d+ representative fixture\(s\) satisfied the composition while \d+ were rejected/;
+
+// A synthetic kernel already carries the mandatory catalog with a COMPACT
+// fixtures bundle (buildKernel → writeTaskPatternCatalog). A case that needs a
+// planted document appends it to the compact bundle — topologically complete,
+// so only the planted document can decide the run. The full 34-negative bundle
+// is used by t180 alone here (and by the standalone set).
+function tprBundleWith(where, note, registry) {
+  const b = tprCompactBundle();
+  b[where] = [...b[where], { note, registry }];
+  return b;
+}
+const tprBaseRegistry = () => tprClone(TPR_REAL_CATALOG);
+
+// t167 — the mandatory catalog and its fixtures are reached and classified in
+// an otherwise ordinary synthetic kernel.
+{
+  const { kernel, instance } = freshPair('t167');
+  check('t167 the mandatory task-pattern catalog is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [TPR_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t168 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t168');
+  const s = JSON.parse(fs.readFileSync(path.join(TPR_OM, 'task-pattern-registry.schema.json'), 'utf8'));
+  s.definitions.payload.minProperties = 1;
+  writeTaskPatternCatalog(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t168 an unsupported keyword in the catalog schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: the registry schema uses a construct this validator cannot check/],
+  });
+}
+
+// t169 — the catalog schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t169');
+  writeTaskPatternCatalog(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t169 a malformed catalog schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: .*task-pattern-registry\.schema\.json is not valid JSON/],
+  });
+}
+
+// t170 — the mandatory catalog with no fixtures beside it is a gap.
+{
+  const { kernel, instance } = freshPair('t170');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'fixtures', 'task-pattern-registry.fixtures.json'));
+  commitAll(kernel);
+  check('t170 the catalog without fixtures is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: the mandatory catalog carries no fixtures/],
+  });
+}
+
+// t171 — a fixture declared invalid that the composition accepts clean is a
+// red run: a rejection that no longer fires is a defect in the check.
+{
+  const { kernel, instance } = freshPair('t171');
+  writeTaskPatternCatalog(kernel, { bundle: tprBundleWith('invalid', 'planted clean catalog', tprBaseRegistry()) });
+  commitAll(kernel);
+  check('t171 an invalid fixture that validates clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: a fixture that must be rejected validated clean \(planted clean catalog\)/],
+  });
+}
+
+// t172 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t172');
+  const broken = tprBaseRegistry();
+  broken.task_patterns.find((p) => p.id === 'fix-defect').payload.change_class = 'PATCH';
+  writeTaskPatternCatalog(kernel, { bundle: tprBundleWith('valid', 'planted broken catalog', broken) });
+  commitAll(kernel);
+  check('t172 a valid fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: a fixture that must be a valid catalog was rejected \(planted broken catalog\)/],
+  });
+}
+
+// t173 — the schema's work_kind pool cannot silently grow a second vocabulary.
+{
+  const { kernel, instance } = freshPair('t173');
+  const s = JSON.parse(fs.readFileSync(path.join(TPR_OM, 'task-pattern-registry.schema.json'), 'utf8'));
+  s.definitions.payload.properties.work_kind.enum = ['assessment', 'operation', 'initiative', 'change', 'chore'];
+  writeTaskPatternCatalog(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t173 a diverged work_kind pool is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: the schema's work_kind pool .* diverges from the canonical four/],
+  });
+}
+
+// t174 — a real defect in the catalog itself (a missing classifier pair) is a
+// red run, named by the cross-record rule.
+{
+  const { kernel, instance } = freshPair('t174');
+  const y = fs.readFileSync(path.join(TPR_STD, 'task-pattern-registry.yaml'), 'utf8')
+    .replace('      change_class: BEHAVIOR_CHANGE', '      change_class: REFACTOR');
+  writeTaskPatternCatalog(kernel, { yaml: y });
+  commitAll(kernel);
+  check('t174 a missing classifier pair in the catalog is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: (no pattern for classification pair \(change, BEHAVIOR_CHANGE\)|classification pair \(change, REFACTOR\) is declared 2 times)/],
+  });
+}
+
+// t175 — the catalog is MANDATORY: removing standards/workspace/task-pattern-registry.yaml
+// is a red run, not an informational "nothing to check".
+{
+  const { kernel, instance } = freshPair('t175');
+  fs.rmSync(path.join(kernel, 'standards', 'workspace', 'task-pattern-registry.yaml'));
+  commitAll(kernel);
+  check('t175 a Kernel with no task-pattern catalog is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: standards\/workspace\/task-pattern-registry\.yaml is missing; the built-in task-type catalog is a mandatory part of this Kernel/],
+    mustNotMatch: [/task-pattern-registry: no catalog in this Kernel/],
+  });
+}
+
+// t176 — the specialised schema is mandatory too: removing it is a red run.
+{
+  const { kernel, instance } = freshPair('t176');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'task-pattern-registry.schema.json'));
+  commitAll(kernel);
+  check('t176 a Kernel with the catalog but no schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: registries\/operating-model\/task-pattern-registry\.schema\.json is missing; the mandatory catalog cannot be checked without its registry schema/],
+  });
+}
+
+// t177 — a way of carrying work out (skill package) placed in applicable_protocols
+// reaches the gate and is rejected: the three reference axes are different
+// entities.
+{
+  const { kernel, instance } = freshPair('t177');
+  const mixed = tprBaseRegistry();
+  mixed.task_patterns.find((p) => p.id === 'fix-defect').payload.applicable_protocols =
+    [{ status: 'present', id: 'bugfix-protocol', path: 'skills/bugfix-protocol/SKILL.md' }];
+  writeTaskPatternCatalog(kernel, { bundle: tprBundleWith('valid', 'planted skill-in-protocols catalog', mixed) });
+  commitAll(kernel);
+  check('t177 a skill package in applicable_protocols is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: a fixture that must be a valid catalog was rejected \(planted skill-in-protocols catalog\): .*points at a skill package/],
+  });
+}
+
+// t178 — a present canonical link that escapes the Kernel by an absolute path
+// reaches the gate and is rejected on Kernel membership, not on file absence.
+{
+  const { kernel, instance } = freshPair('t178');
+  const escaped = tprBaseRegistry();
+  escaped.task_patterns.find((p) => p.id === 'assess-existing-state').payload.applicable_protocols =
+    [{ status: 'present', id: 'abs', path: '/etc/task-lifecycle.md' }];
+  writeTaskPatternCatalog(kernel, { bundle: tprBundleWith('valid', 'planted absolute-link catalog', escaped) });
+  commitAll(kernel);
+  check('t178 an absolute canonical link path is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: a fixture that must be a valid catalog was rejected \(planted absolute-link catalog\): .*the path is absolute/],
+  });
+}
+
+// t179 — a present canonical link to a real file that is NOT tracked by the
+// Kernel is a red run: membership is proven, not assumed.
+{
+  const { kernel, instance } = freshPair('t179');
+  const untrackedTarget = tprBaseRegistry();
+  untrackedTarget.task_patterns.find((p) => p.id === 'assess-existing-state').payload.applicable_protocols =
+    [{ status: 'present', id: 'loose', path: 'docs/loose-note.md' }];
+  writeTaskPatternCatalog(kernel, { bundle: tprBundleWith('valid', 'untracked target', untrackedTarget) });
+  // docs/loose-note.md exists on disk but is never `git add`ed.
+  fs.writeFileSync(path.join(kernel, 'docs', 'loose-note.md'), `${fm('Loose note', 'reference')}\n# Loose\n\nUntracked.\n`);
+  sh('git', ['add', 'registries', 'standards', 'workflows', 'verification', 'skills'], kernel);
+  sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'planted (loose note left untracked)'], kernel);
+  check('t179 a canonical link to an untracked file is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: a fixture that must be a valid catalog was rejected \(untracked target\): .*not in the Kernel's tracked file set/],
+  });
+}
+
+// t180 — the full 34-negative fixtures file, planted for this one case only, is
+// classified by the gate: every valid one accepted, all 34 rejected. This is
+// the integration proof that the shipped bundle's negatives all still fire; the
+// other synthetic cases use the compact bundle so buildKernel stays fast.
+{
+  const { kernel, instance } = freshPair('t180');
+  writeTaskPatternCatalog(kernel, { bundle: 'real' });
+  commitAll(kernel);
+  check('t180 the full shipped fixtures bundle is classified (34 rejected)', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [/task-pattern-registry: .*1 representative fixture\(s\) satisfied the composition while 34 were rejected as declared/],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t181 — the text guard: if rule-resolution.md re-introduces the wording that
+// BUGFIX routes to a Kernel *protocol*, the catalog section goes red. This is
+// the machine-checkable defence against that one normative divergence
+// reappearing.
+{
+  const { kernel, instance } = freshPair('t181');
+  write(kernel, 'standards/workspace/rule-resolution.md',
+    `${fm('Rule resolution', 'standard')}\n# Rule resolution\n\n`
+    + '- Kernel хранит универсальные маршруты (класс работы → протокол ядра): '
+    + '`BUGFIX → bugfix-protocol` и `REFACTOR → refactor-protocol`;\n');
+  commitAll(kernel);
+  check('t181 rule-resolution.md calling BUGFIX a protocol route is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-pattern-registry: rule-resolution\.md still routes "BUGFIX → bugfix-protocol" as a protocol route/],
+  });
+}
+
+// ===========================================================================
+// instruction-source-registry — the portable source-snapshot contract is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// registry data is Instance. Removing the schema or its fixtures is a FAIL;
+// a present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. The helpers
+// (ISR_OM, ISR_OK_LINE, isrRealBundle, writeInstructionSourceRegistry) are
+// defined next to the task-pattern-catalog helpers so buildKernel can call them.
+// ===========================================================================
+
+// t182 — an ordinary synthetic kernel already carries the mandatory contract
+// (buildKernel → writeInstructionSourceRegistry): the section is reached and
+// every fixture is classified as declared.
+{
+  const { kernel, instance } = freshPair('t182');
+  check('t182 the mandatory source-registry contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [ISR_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t183 — the contract is MANDATORY: removing the schema is a red run, not a
+// skip (Codex CHANGES_REQUESTED item 5).
+{
+  const { kernel, instance } = freshPair('t183');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'instruction-source-registry.schema.json'));
+  commitAll(kernel);
+  check('t183 removing the mandatory source-registry schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: registries\/operating-model\/instruction-source-registry\.schema\.json is missing; the instruction source registry contract is a mandatory part of this Kernel/],
+    mustNotMatch: [/instruction-source-registry: no source-registry schema in this Kernel/],
+  });
+}
+
+// t184 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t184');
+  const s = JSON.parse(fs.readFileSync(path.join(ISR_OM, 'instruction-source-registry.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeInstructionSourceRegistry(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t184 an unsupported schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t185 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t185');
+  writeInstructionSourceRegistry(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t185 a non-JSON source-registry schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: instruction-source-registry\.schema\.json is not valid JSON/],
+  });
+}
+
+// t186 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t186');
+  writeInstructionSourceRegistry(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t186 a schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: the schema carries no fixtures/],
+  });
+}
+
+// t187 — the fixtures bundle is the wrong shape (an array): fail-closed.
+{
+  const { kernel, instance } = freshPair('t187');
+  writeInstructionSourceRegistry(kernel, { bundle: [] });
+  commitAll(kernel);
+  check('t187 a wrong-shaped fixtures bundle is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: the fixtures file must be an object with non-empty "valid" and "invalid" arrays/],
+  });
+}
+
+// t188 — a fixtures bundle with an empty "invalid" array: fail-closed.
+{
+  const { kernel, instance } = freshPair('t188');
+  const b = isrRealBundle();
+  b.invalid = [];
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t188 an empty "invalid" array is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: the fixtures file has no non-empty "invalid" array/],
+  });
+}
+
+// t189 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t189');
+  const b = isrRealBundle();
+  const broken = JSON.parse(JSON.stringify(b.valid[1]));
+  broken.note = 'planted broken source';
+  broken.registry.instruction_sources[0].payload.location.path = '/etc/agents.md';
+  b.valid.push(broken);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t189 a valid-declared fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted broken source\)/],
+  });
+}
+
+// t190 — a fixture declared invalid that the composition accepts clean is a
+// red run.
+{
+  const { kernel, instance } = freshPair('t190');
+  const b = isrRealBundle();
+  b.invalid.push({ note: 'planted clean source', registry: JSON.parse(JSON.stringify(b.valid[1].registry)) });
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t190 an invalid-declared fixture that passes clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be rejected validated clean \(planted clean source\)/],
+  });
+}
+
+// t191–t194 — the four records the earlier revision let through. Each is
+// planted as a valid-declared fixture the composition must now reject; the
+// assertion names the exact rejection (Codex CHANGES_REQUESTED regression set).
+const isrOrdinary = () => JSON.parse(JSON.stringify(isrRealBundle().valid[1]));
+
+// t191 — a file source with no container_ref.
+{
+  const { kernel, instance } = freshPair('t191');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted file without container_ref';
+  delete f.registry.instruction_sources[0].payload.location.container_ref;
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t191 a file source without container_ref is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted file without container_ref\):.*container_ref/],
+  });
+}
+
+// t192 — two verified states, different revision, same digest, declared unchanged.
+{
+  const { kernel, instance } = freshPair('t192');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted revision-only change as unchanged';
+  f.registry.instruction_sources[0].payload.divergence.previous_state.revision = 'rev-000000';
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t192 different revision, same digest, declared unchanged is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted revision-only change as unchanged\):.*the revision differs while the SHA-256 digest is unchanged/],
+  });
+}
+
+// t193 — status unknown with two complete verified states.
+{
+  const { kernel, instance } = freshPair('t193');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted unknown with two full states';
+  f.registry.instruction_sources[0].payload.divergence.status = 'unknown';
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t193 unknown with two complete verified states is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted unknown with two full states\):.*"unknown" is declared with two complete verified states/],
+  });
+}
+
+// t194 — recorded_state contradicting divergence.current_state.
+{
+  const { kernel, instance } = freshPair('t194');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted recorded_state vs current_state contradiction';
+  const p = f.registry.instruction_sources[0].payload;
+  p.divergence.status = 'changed';
+  p.divergence.previous_state.revision = 'rev-000001';
+  p.divergence.current_state.revision = 'rev-000002';
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t194 recorded_state contradicting current_state is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted recorded_state vs current_state contradiction\):.*contradicts recorded_state\.revision/],
+  });
+}
+
+// t195–t198 — the four records the second review round names. Each planted as a
+// valid-declared fixture the composition must reject.
+const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); // the external-service fixture
+
+// t195 — a file source carrying resource_ref (the two location forms are exclusive).
+{
+  const { kernel, instance } = freshPair('t195');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted file with resource_ref';
+  f.registry.instruction_sources[0].payload.location.resource_ref = 'spaces/eng/pages/x';
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t195 a file source carrying resource_ref is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted file with resource_ref\)/],
+  });
+}
+
+// t196 — an external-service source carrying container_ref.
+{
+  const { kernel, instance } = freshPair('t196');
+  const b = isrRealBundle();
+  const f = isrExternal();
+  f.note = 'planted external-service with container_ref';
+  f.registry.instruction_sources[0].payload.location.container_ref = 'sample-repository';
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t196 an external-service source carrying container_ref is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted external-service with container_ref\)/],
+  });
+}
+
+// t197 — mismatched verification of one present observation.
+{
+  const { kernel, instance } = freshPair('t197');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted mismatched verified flags';
+  f.registry.instruction_sources[0].payload.divergence.current_state.verified = false;
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t197 mismatched verified flags of one present observation is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted mismatched verified flags\):.*current_state\.verified is false but recorded_state\.revision_verified is true/],
+  });
+}
+
+// t198 — source-missing with recorded_state contradicting previous_state.
+{
+  const { kernel, instance } = freshPair('t198');
+  const b = isrRealBundle();
+  const f = isrOrdinary();
+  f.note = 'planted source-missing with drifted last-known state';
+  const p = f.registry.instruction_sources[0].payload;
+  p.recorded_state = { revision: 'rev-000002', digest: { algorithm: 'sha-256', value: '2'.repeat(64) }, revision_verified: true, currency: 'stale' };
+  p.divergence = { status: 'source-missing', previous_state: { revision: 'rev-000001', digest: { algorithm: 'sha-256', value: '1'.repeat(64) }, verified: true } };
+  b.valid.push(f);
+  writeInstructionSourceRegistry(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t198 source-missing with recorded_state contradicting previous_state is rejected', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instruction-source-registry: a fixture that must be a valid registry was rejected \(planted source-missing with drifted last-known state\):.*"source-missing" with a previous_state whose revision "rev-000001" contradicts recorded_state\.revision "rev-000002"/],
+  });
+}
+
+// ===========================================================================
+// task-specification-contract — the portable statement of one concrete work
+// item is a MANDATORY part of the Kernel (buildKernel plants it). Schema is
+// Kernel, specification data is Instance. Removing the schema, the task-pattern
+// catalogue it resolves against, or the fixtures is a FAIL; a present schema is
+// parsed, keyword-checked and exercised against its product-neutral fixtures,
+// fail-closed on the bundle's own shape. Helpers (TSC_OM, TSC_OK_LINE,
+// tscRealBundle, writeTaskSpecificationContract) sit next to the other
+// operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t199 — an ordinary synthetic kernel already carries the mandatory contract
+// (buildKernel → writeTaskSpecificationContract): the section is reached and
+// every fixture is classified as declared.
+{
+  const { kernel, instance } = freshPair('t199');
+  check('t199 the mandatory task-specification contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [TSC_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t200 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t200');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'task-specification.schema.json'));
+  commitAll(kernel);
+  check('t200 removing the mandatory task-specification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: registries\/operating-model\/task-specification\.schema\.json is missing; the task specification contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t201 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t201');
+  const s = JSON.parse(fs.readFileSync(path.join(TSC_OM, 'task-specification.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeTaskSpecificationContract(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t201 an unsupported schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t202 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t202');
+  writeTaskSpecificationContract(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t202 a non-JSON task-specification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: task-specification\.schema\.json is not valid JSON/],
+  });
+}
+
+// t203 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t203');
+  writeTaskSpecificationContract(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t203 a task-specification schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: the schema carries no fixtures/],
+  });
+}
+
+// t204 — the task-pattern catalogue is the reference target; without it the
+// specification's task_pattern reference cannot be resolved: a red run.
+{
+  const { kernel, instance } = freshPair('t204');
+  fs.rmSync(path.join(kernel, 'standards', 'workspace', 'task-pattern-registry.yaml'));
+  commitAll(kernel);
+  check('t204 a missing task-pattern catalogue is a red run for the specification contract', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: standards\/workspace\/task-pattern-registry\.yaml is missing; the specification's task-pattern reference cannot be resolved without the catalogue/],
+  });
+}
+
+// t205 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t205');
+  const b = tscRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.valid[0].spec));
+  delete spec.payload.goal;
+  b.valid.push({ note: 'planted spec with no goal', spec });
+  writeTaskSpecificationContract(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t205 a valid fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: a fixture that must be a valid specification was rejected \(planted spec with no goal\)/],
+  });
+}
+
+// t206 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t206');
+  const b = tscRealBundle();
+  b.invalid.push({ note: 'planted well-formed spec in the invalid array', spec: JSON.parse(JSON.stringify(b.valid[0].spec)) });
+  writeTaskSpecificationContract(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t206 an invalid fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/task-specification-contract: a fixture that must be rejected validated clean \(planted well-formed spec in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// execution-state-model — the portable state of one execution run is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// run-state data is Instance. Removing the schema or the fixtures is a FAIL; a
+// present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. Helpers
+// (ESM_OM, ESM_OK_LINE, esmRealBundle, writeExecutionStateModel) sit next to
+// the other operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t207 — an ordinary synthetic kernel already carries the mandatory contract:
+// the section is reached and every fixture is classified as declared.
+{
+  const { kernel, instance } = freshPair('t207');
+  check('t207 the mandatory execution-state-model contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [ESM_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t208 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t208');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'execution-state.schema.json'));
+  commitAll(kernel);
+  check('t208 removing the mandatory execution-state schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: registries\/operating-model\/execution-state\.schema\.json is missing; the execution state model contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t209 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t209');
+  const s = JSON.parse(fs.readFileSync(path.join(ESM_OM, 'execution-state.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeExecutionStateModel(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t209 an unsupported schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t210 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t210');
+  writeExecutionStateModel(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t210 a non-JSON execution-state schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: execution-state\.schema\.json is not valid JSON/],
+  });
+}
+
+// t211 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t211');
+  writeExecutionStateModel(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t211 an execution-state schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: the schema carries no fixtures/],
+  });
+}
+
+// t212 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t212');
+  const b = esmRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.valid[0].spec));
+  delete spec.payload.transition_history;
+  b.valid.push({ note: 'planted run with no transition history', spec });
+  writeExecutionStateModel(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t212 a valid fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: a fixture that must be a valid run record was rejected \(planted run with no transition history\)/],
+  });
+}
+
+// t213 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t213');
+  const b = esmRealBundle();
+  b.invalid.push({ note: 'planted well-formed run in the invalid array', spec: JSON.parse(JSON.stringify(b.valid[0].spec)) });
+  writeExecutionStateModel(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t213 an invalid fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/execution-state-model: a fixture that must be rejected validated clean \(planted well-formed run in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// role-and-human-control — the universal role catalogue and one run's
+// human-control state are a MANDATORY part of the Kernel (buildKernel plants
+// both schemas, the catalogue and the fixtures). Schemas and catalogue are
+// Kernel; concrete control records are Instance. Removing the schema, the
+// catalogue or the fixtures is a FAIL; a present schema is parsed,
+// keyword-checked and exercised against its product-neutral fixtures,
+// fail-closed on the two-group bundle's own shape.
+// ===========================================================================
+
+// t214 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t214');
+  check('t214 the mandatory role-and-human-control contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [RHC_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t215 — the contract is MANDATORY: removing a schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t215');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'human-control.schema.json'));
+  commitAll(kernel);
+  check('t215 removing a mandatory role-and-human-control schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: registries\/operating-model\/human-control\.schema\.json is missing; the role and human control contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t216 — removing the built-in role catalogue is a red run.
+{
+  const { kernel, instance } = freshPair('t216');
+  writeRoleAndHumanControl(kernel, { omitCatalogue: true });
+  commitAll(kernel);
+  check('t216 removing the built-in role catalogue is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: standards\/workspace\/role-registry\.yaml is missing; the built-in universal-role catalogue is a mandatory part of this Kernel/],
+  });
+}
+
+// t217 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t217');
+  const s = JSON.parse(fs.readFileSync(path.join(RHC_OM, 'human-control.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeRoleAndHumanControl(kernel, { controlSchema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t217 an unsupported role-and-human-control schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t218 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t218');
+  writeRoleAndHumanControl(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t218 role-and-human-control schemas with no fixtures beside them is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: the schemas carry no fixtures/],
+  });
+}
+
+// t219 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t219');
+  const b = rhcRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.control.valid[0].spec));
+  delete spec.payload.human_authority;
+  b.control.valid.push({ note: 'planted control record with no human authority', spec });
+  writeRoleAndHumanControl(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t219 a valid role-and-human-control fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: a fixture that must be a valid human-control record was rejected \(planted control record with no human authority\)/],
+  });
+}
+
+// t220 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t220');
+  const b = rhcRealBundle();
+  b.registry.invalid.push({ note: 'planted well-formed catalogue in the invalid array', spec: JSON.parse(JSON.stringify(b.registry.valid[0].spec)) });
+  writeRoleAndHumanControl(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t220 an invalid role-and-human-control fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/role-and-human-control: a role registry fixture that must be rejected validated clean \(planted well-formed catalogue in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// bounded-context-manifest — the bounded, resumable context of one run is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// manifest data is Instance. Removing the schema or the fixtures is a FAIL; a
+// present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. Helpers
+// (CM_OM, CM_OK_LINE, cmRealBundle, writeContextManifest) sit next to the other
+// operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t221 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t221');
+  check('t221 the mandatory bounded-context-manifest contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [CM_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t222 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t222');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'context-manifest.schema.json'));
+  commitAll(kernel);
+  check('t222 removing the mandatory context-manifest schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: registries\/operating-model\/context-manifest\.schema\.json is missing; the bounded context manifest contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t223 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t223');
+  const s = JSON.parse(fs.readFileSync(path.join(CM_OM, 'context-manifest.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeContextManifest(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t223 an unsupported context-manifest schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t224 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t224');
+  writeContextManifest(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t224 a non-JSON context-manifest schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: context-manifest\.schema\.json is not valid JSON/],
+  });
+}
+
+// t225 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t225');
+  writeContextManifest(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t225 a context-manifest schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: the schema carries no fixtures/],
+  });
+}
+
+// t226 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t226');
+  const b = cmRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.valid[0].spec));
+  delete spec.payload.run_state_checkpoint;
+  b.valid.push({ note: 'planted manifest with no run_state_checkpoint', spec });
+  writeContextManifest(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t226 a valid context-manifest fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: a fixture that must be a valid context manifest was rejected \(planted manifest with no run_state_checkpoint\)/],
+  });
+}
+
+// t227 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t227');
+  const b = cmRealBundle();
+  b.invalid.push({ note: 'planted well-formed manifest in the invalid array', spec: JSON.parse(JSON.stringify(b.valid[0].spec)) });
+  writeContextManifest(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t227 an invalid context-manifest fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/bounded-context-manifest: a fixture that must be rejected validated clean \(planted well-formed manifest in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// evidence-and-handoff-contract — the state and result handoff of one run is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// handoff data is Instance. Removing the schema or the fixtures is a FAIL; a
+// present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. Helpers
+// (EH_OM, EH_OK_LINE, ehRealBundle, writeEvidenceAndHandoff) sit next to the
+// other operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t228 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t228');
+  check('t228 the mandatory evidence-and-handoff contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [EH_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t229 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t229');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'evidence-and-handoff.schema.json'));
+  commitAll(kernel);
+  check('t229 removing the mandatory evidence-and-handoff schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: registries\/operating-model\/evidence-and-handoff\.schema\.json is missing; the evidence and handoff contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t230 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t230');
+  const s = JSON.parse(fs.readFileSync(path.join(EH_OM, 'evidence-and-handoff.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeEvidenceAndHandoff(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t230 an unsupported evidence-and-handoff schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t231 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t231');
+  writeEvidenceAndHandoff(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t231 a non-JSON evidence-and-handoff schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: evidence-and-handoff\.schema\.json is not valid JSON/],
+  });
+}
+
+// t232 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t232');
+  writeEvidenceAndHandoff(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t232 an evidence-and-handoff schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: the schema carries no fixtures/],
+  });
+}
+
+// t233 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t233');
+  const b = ehRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.valid[0].spec));
+  delete spec.payload.worktree_disposition;
+  b.valid.push({ note: 'planted handoff with no worktree_disposition', spec });
+  writeEvidenceAndHandoff(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t233 a valid evidence-and-handoff fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: a fixture that must be a valid handoff was rejected \(planted handoff with no worktree_disposition\)/],
+  });
+}
+
+// t234 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t234');
+  const b = ehRealBundle();
+  b.invalid.push({ note: 'planted well-formed handoff in the invalid array', spec: JSON.parse(JSON.stringify(b.valid[0].spec)) });
+  writeEvidenceAndHandoff(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t234 an invalid evidence-and-handoff fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/evidence-and-handoff-contract: a fixture that must be rejected validated clean \(planted well-formed handoff in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// meridian-field-evaluation — the practical-evaluation contract (observation +
+// report) is a MANDATORY part of the Kernel (buildKernel plants it). Schema is
+// Kernel, observation/report data is Instance. Removing the schema or the
+// fixtures is a FAIL; a present schema is parsed, keyword-checked and
+// exercised against its product-neutral fixtures, fail-closed on the
+// bundle's own shape. Helpers (FE_OM, FE_OK_LINE, feRealBundle,
+// writeFieldEvaluation) sit next to the other operating-model contract
+// helpers so buildKernel can call them.
+// ===========================================================================
+
+// t235 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t235');
+  check('t235 the mandatory field-evaluation contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [FE_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t236 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t236');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'field-evaluation.schema.json'));
+  commitAll(kernel);
+  check('t236 removing the mandatory field-evaluation schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: registries\/operating-model\/field-evaluation\.schema\.json is missing; the field-evaluation contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t237 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t237');
+  const s = JSON.parse(fs.readFileSync(path.join(FE_OM, 'field-evaluation.schema.json'), 'utf8'));
+  s.definitions.observation_payload.patternProperties = { '^x': { type: 'string' } };
+  writeFieldEvaluation(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t237 an unsupported field-evaluation schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t238 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t238');
+  writeFieldEvaluation(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t238 a non-JSON field-evaluation schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: field-evaluation\.schema\.json is not valid JSON/],
+  });
+}
+
+// t239 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t239');
+  writeFieldEvaluation(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t239 a field-evaluation schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: the schema carries no fixtures/],
+  });
+}
+
+// t240 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t240');
+  const b = feRealBundle();
+  const spec = JSON.parse(JSON.stringify(b.valid[0].spec));
+  delete spec.payload.evidence;
+  b.valid.push({ note: 'planted observation with no evidence', spec });
+  writeFieldEvaluation(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t240 a valid field-evaluation fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: a fixture that must be valid was rejected \(planted observation with no evidence\)/],
+  });
+}
+
+// t241 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t241');
+  const b = feRealBundle();
+  b.invalid.push({ note: 'planted well-formed observation in the invalid array', spec: JSON.parse(JSON.stringify(b.valid[0].spec)) });
+  writeFieldEvaluation(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t241 an invalid field-evaluation fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/meridian-field-evaluation: a fixture that must be rejected validated clean \(planted well-formed observation in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// controlled-rule-intake — candidate → registered source → owner decision →
+// normalized record is a MANDATORY part of the Kernel (buildKernel plants
+// it). Schema is Kernel, candidate data is Instance. Removing the schema or
+// the fixtures is a FAIL; a present schema is parsed, keyword-checked and
+// exercised against its product-neutral fixtures, fail-closed on the
+// bundle's own shape. Helpers (CRI_OM, CRI_OK_LINE, criRealBundle,
+// writeControlledRuleIntake) sit next to the other operating-model contract
+// helpers so buildKernel can call them.
+// ===========================================================================
+
+// t242 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t242');
+  check('t242 the mandatory controlled-rule-intake contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [CRI_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t243 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t243');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'controlled-rule-intake.schema.json'));
+  commitAll(kernel);
+  check('t243 removing the mandatory controlled-rule-intake schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: registries\/operating-model\/controlled-rule-intake\.schema\.json is missing; the controlled rule intake contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t244 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t244');
+  const s = JSON.parse(fs.readFileSync(path.join(CRI_OM, 'controlled-rule-intake.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeControlledRuleIntake(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t244 an unsupported controlled-rule-intake schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t245 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t245');
+  writeControlledRuleIntake(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t245 a non-JSON controlled-rule-intake schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: controlled-rule-intake\.schema\.json is not valid JSON/],
+  });
+}
+
+// t246 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t246');
+  writeControlledRuleIntake(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t246 a controlled-rule-intake schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: the schema carries no fixtures/],
+  });
+}
+
+// t247 — a fixtures bundle with no "resolution" object cannot exercise source
+// resolution and is a red run, not a silent pass.
+{
+  const { kernel, instance } = freshPair('t247');
+  const b = criRealBundle();
+  delete b.resolution;
+  writeControlledRuleIntake(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t247 a controlled-rule-intake fixtures file with no resolution object is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: the fixtures file carries no "resolution" object/],
+  });
+}
+
+// t248 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t248');
+  const b = criRealBundle();
+  const registry = JSON.parse(JSON.stringify(b.valid[0].registry));
+  delete registry.rule_candidates[0].payload.classification_basis;
+  b.valid.push({ note: 'planted candidate with no classification_basis', registry });
+  writeControlledRuleIntake(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t248 a valid controlled-rule-intake fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: a fixture that must be a valid registry was rejected \(planted candidate with no classification_basis\)/],
+  });
+}
+
+// t249 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t249');
+  const b = criRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeControlledRuleIntake(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t249 an invalid controlled-rule-intake fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/controlled-rule-intake: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// existing-project-compatibility-mode — bounded discovery plan → registered
+// source → rule candidate, zero writes to the connected project, is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// scan data is Instance. Removing the schema or the fixtures is a FAIL; a
+// present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. Helpers
+// (EPCM_OM, EPCM_OK_LINE, epcmRealBundle, writeExistingProjectCompatibilityMode)
+// sit next to the other operating-model contract helpers so buildKernel can
+// call them.
+// ===========================================================================
+
+// t250 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t250');
+  check('t250 the mandatory existing-project-compatibility-mode contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [EPCM_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t251 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t251');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'existing-project-compatibility-mode.schema.json'));
+  commitAll(kernel);
+  check('t251 removing the mandatory existing-project-compatibility-mode schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: registries\/operating-model\/existing-project-compatibility-mode\.schema\.json is missing; the existing-project compatibility mode contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t252 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t252');
+  const s = JSON.parse(fs.readFileSync(path.join(EPCM_OM, 'existing-project-compatibility-mode.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeExistingProjectCompatibilityMode(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t252 an unsupported existing-project-compatibility-mode schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t253 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t253');
+  writeExistingProjectCompatibilityMode(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t253 a non-JSON existing-project-compatibility-mode schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: existing-project-compatibility-mode\.schema\.json is not valid JSON/],
+  });
+}
+
+// t254 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t254');
+  writeExistingProjectCompatibilityMode(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t254 an existing-project-compatibility-mode schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: the schema carries no fixtures/],
+  });
+}
+
+// t255 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t255');
+  const b = epcmRealBundle();
+  const base = b.valid.find((c) => c.note.includes('meridian-observed'));
+  const registry = JSON.parse(JSON.stringify(base.registry));
+  registry.workspace_connections[0].payload.discovery_plan = [];
+  b.valid.push({ note: 'planted scan with a discovered source outside the plan', registry });
+  writeExistingProjectCompatibilityMode(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t255 a valid existing-project-compatibility-mode fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: a fixture that must be a valid registry was rejected \(planted scan with a discovered source outside the plan\)/],
+  });
+}
+
+// t256 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t256');
+  const b = epcmRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeExistingProjectCompatibilityMode(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t256 an invalid existing-project-compatibility-mode fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/existing-project-compatibility-mode: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// instance-data-migration — storage-neutral migration plan for a transitional
+// Instance's records into Meridian's logical scope areas, is a MANDATORY
+// part of the Kernel (buildKernel plants it). Schema is Kernel, plan data is
+// Instance. Removing the schema or the fixtures is a FAIL; a present schema
+// is parsed, keyword-checked and exercised against its product-neutral
+// fixtures, fail-closed on the bundle's own shape. Helpers (IDM_OM,
+// IDM_OK_LINE, idmRealBundle, writeInstanceDataMigration) sit next to the
+// other operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t257 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t257');
+  check('t257 the mandatory instance-data-migration contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [IDM_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t258 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t258');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'instance-data-migration.schema.json'));
+  commitAll(kernel);
+  check('t258 removing the mandatory instance-data-migration schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: registries\/operating-model\/instance-data-migration\.schema\.json is missing; the instance-data migration contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t259 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t259');
+  const s = JSON.parse(fs.readFileSync(path.join(IDM_OM, 'instance-data-migration.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeInstanceDataMigration(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t259 an unsupported instance-data-migration schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t260 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t260');
+  writeInstanceDataMigration(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t260 a non-JSON instance-data-migration schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: instance-data-migration\.schema\.json is not valid JSON/],
+  });
+}
+
+// t261 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t261');
+  writeInstanceDataMigration(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t261 an instance-data-migration schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: the schema carries no fixtures/],
+  });
+}
+
+// t262 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t262');
+  const b = idmRealBundle();
+  const base = b.valid.find((c) => c.note.startsWith('minimal fully-migrated'));
+  const registry = JSON.parse(JSON.stringify(base.registry));
+  registry.migration_plans[0].payload.plan_fingerprint = '0'.repeat(64);
+  b.valid.push({ note: 'planted plan with a mismatched fingerprint', registry });
+  writeInstanceDataMigration(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t262 a valid instance-data-migration fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: a fixture that must be a valid registry was rejected \(planted plan with a mismatched fingerprint\)/],
+  });
+}
+
+// t263 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t263');
+  const b = idmRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeInstanceDataMigration(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t263 an invalid instance-data-migration fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-data-migration: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
+  });
+}
+
+// ===========================================================================
+// instance-canonical-export — storage-neutral, checkable proof that an
+// accepted instance-data-migration plan's migrated/merged targets and
+// retained-transitional units are fully and faithfully accounted for, is a
+// MANDATORY part of the Kernel (buildKernel plants it). Schema is Kernel,
+// export data is Instance. Removing the schema or the fixtures is a FAIL; a
+// present schema is parsed, keyword-checked and exercised against its
+// product-neutral fixtures, fail-closed on the bundle's own shape. Helpers
+// (ICE_OM, ICE_OK_LINE, iceRealBundle, writeInstanceCanonicalExport) sit next
+// to the other operating-model contract helpers so buildKernel can call them.
+// ===========================================================================
+
+// t264 — an ordinary synthetic kernel already carries the mandatory contract.
+{
+  const { kernel, instance } = freshPair('t264');
+  check('t264 the mandatory instance-canonical-export contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [ICE_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+// t265 — the contract is MANDATORY: removing the schema is a red run, not a skip.
+{
+  const { kernel, instance } = freshPair('t265');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'instance-canonical-export.schema.json'));
+  commitAll(kernel);
+  check('t265 removing the mandatory instance-canonical-export schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: registries\/operating-model\/instance-canonical-export\.schema\.json is missing; the canonical export contract is a mandatory part of this Kernel/],
+  });
+}
+
+// t266 — a schema keyword the in-gate validator does not implement fails loudly.
+{
+  const { kernel, instance } = freshPair('t266');
+  const s = JSON.parse(fs.readFileSync(path.join(ICE_OM, 'instance-canonical-export.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeInstanceCanonicalExport(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t266 an unsupported instance-canonical-export schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: the schema uses a construct this validator cannot check/],
+  });
+}
+
+// t267 — a schema that is not valid JSON fails, it is not skipped.
+{
+  const { kernel, instance } = freshPair('t267');
+  writeInstanceCanonicalExport(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t267 a non-JSON instance-canonical-export schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: instance-canonical-export\.schema\.json is not valid JSON/],
+  });
+}
+
+// t268 — the schema is present but no fixtures sit beside it: a gap, not a skip.
+{
+  const { kernel, instance } = freshPair('t268');
+  writeInstanceCanonicalExport(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t268 an instance-canonical-export schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: the schema carries no fixtures/],
+  });
+}
+
+// t269 — a fixture declared valid that the composition rejects is a red run.
+{
+  const { kernel, instance } = freshPair('t269');
+  const b = iceRealBundle();
+  const base = b.valid.find((c) => c.note.startsWith('minimal migrated-only export'));
+  const registry = JSON.parse(JSON.stringify(base.registry));
+  registry.exports[0].payload.digest = '0'.repeat(64);
+  b.valid.push({ note: 'planted export with a mismatched digest', registry });
+  writeInstanceCanonicalExport(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t269 a valid instance-canonical-export fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: a fixture that must be a valid registry was rejected \(planted export with a mismatched digest\)/],
+  });
+}
+
+// t270 — a fixture declared invalid that the composition accepts clean is a red run.
+{
+  const { kernel, instance } = freshPair('t270');
+  const b = iceRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeInstanceCanonicalExport(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t270 an invalid instance-canonical-export fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/instance-canonical-export: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
+  });
+}
+
+/*
+ * ===========================================================================
+ * workspace-compatibility-qualification — the closed, product-neutral final
+ * verdict composing the five contracts above, is a MANDATORY part of the
+ * Kernel (buildKernel plants it). Schema is Kernel, qualification data is
+ * Instance. Removing the schema or the fixtures is a FAIL; a present schema
+ * is parsed, keyword-checked and exercised against its product-neutral
+ * fixtures — the eight BRANCHES of the decision matrix
+ * (workspace-compatibility-qualification.md §4.1), a separate, smaller claim
+ * than the program's eight acceptance scenarios (§4.2, proven by
+ * test/workspace-compatibility-qualification.test.mjs, not by this bundle) —
+ * fail-closed on the bundle's own shape. Helpers (WCQ_OM, WCQ_OK_LINE,
+ * wcqRealBundle, writeWorkspaceCompatibilityQualification) sit next to the
+ * other operating-model contract helpers so buildKernel can call them.
+ * ===========================================================================
+ */
+
+/* t271 — an ordinary synthetic kernel already carries the mandatory contract. */
+{
+  const { kernel, instance } = freshPair('t271');
+  check('t271 the mandatory workspace-compatibility-qualification contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [WCQ_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+/* t272 — the contract is MANDATORY: removing the schema is a red run, not a skip. */
+{
+  const { kernel, instance } = freshPair('t272');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'workspace-compatibility-qualification.schema.json'));
+  commitAll(kernel);
+  check('t272 removing the mandatory workspace-compatibility-qualification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: registries\/operating-model\/workspace-compatibility-qualification\.schema\.json is missing; the workspace compatibility qualification contract is a mandatory part of this Kernel/],
+  });
+}
+
+/* t273 — a schema keyword the in-gate validator does not implement fails loudly. */
+{
+  const { kernel, instance } = freshPair('t273');
+  const s = JSON.parse(fs.readFileSync(path.join(WCQ_OM, 'workspace-compatibility-qualification.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeWorkspaceCompatibilityQualification(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t273 an unsupported workspace-compatibility-qualification schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: the schema uses a construct this validator cannot check/],
+  });
+}
+
+/* t274 — a schema that is not valid JSON fails, it is not skipped. */
+{
+  const { kernel, instance } = freshPair('t274');
+  writeWorkspaceCompatibilityQualification(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t274 a non-JSON workspace-compatibility-qualification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: workspace-compatibility-qualification\.schema\.json is not valid JSON/],
+  });
+}
+
+/* t275 — the schema is present but no fixtures sit beside it: a gap, not a skip. */
+{
+  const { kernel, instance } = freshPair('t275');
+  writeWorkspaceCompatibilityQualification(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t275 a workspace-compatibility-qualification schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: the schema carries no fixtures/],
+  });
+}
+
+/* t276 — a fixture declared valid that the composition rejects is a red run. */
+{
+  const { kernel, instance } = freshPair('t276');
+  const b = wcqRealBundle();
+  const base = b.valid.find((c) => c.note.includes('branch 5'));
+  const registry = JSON.parse(JSON.stringify(base.registry));
+  registry.qualifications[0].payload.qualification_reason = '';
+  b.valid.push({ note: 'planted qualification with an empty qualification_reason', registry });
+  writeWorkspaceCompatibilityQualification(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t276 a valid workspace-compatibility-qualification fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: a fixture that must be a valid registry was rejected \(planted qualification with an empty qualification_reason\)/],
+  });
+}
+
+/* t277 — a fixture declared invalid that the composition accepts clean is a red run. */
+{
+  const { kernel, instance } = freshPair('t277');
+  const b = wcqRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeWorkspaceCompatibilityQualification(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t277 an invalid workspace-compatibility-qualification fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/workspace-compatibility-qualification: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
+  });
+}
+
+/*
+ * ===========================================================================
+ * upgrade-integration-qualification — the closed, product-neutral final
+ * verdict composing packages 1-8 of meridian-operating-upgrade (package 9),
+ * is a MANDATORY part of the Kernel (buildKernel plants it). Schema is
+ * Kernel, qualification data is Instance. Removing the schema or the
+ * fixtures is a FAIL; a present schema is parsed, keyword-checked and
+ * exercised against its product-neutral fixtures — the decision matrix
+ * (upgrade-integration-qualification.md §5), a separate, smaller claim than
+ * the three required neutral scenarios (§3, proven by
+ * test/upgrade-integration-qualification.test.mjs, not by this bundle) —
+ * fail-closed on the bundle's own shape. Helpers (UIQ_OM, UIQ_OK_LINE,
+ * uiqRealBundle, writeUpgradeIntegrationQualification) sit next to the other
+ * operating-model contract helpers so buildKernel can call them.
+ * ===========================================================================
+ */
+
+/* t278 — an ordinary synthetic kernel already carries the mandatory contract. */
+{
+  const { kernel, instance } = freshPair('t278');
+  check('t278 the mandatory upgrade-integration-qualification contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [UIQ_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+/* t279 — the contract is MANDATORY: removing the schema is a red run, not a skip. */
+{
+  const { kernel, instance } = freshPair('t279');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'upgrade-integration-qualification.schema.json'));
+  commitAll(kernel);
+  check('t279 removing the mandatory upgrade-integration-qualification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: registries\/operating-model\/upgrade-integration-qualification\.schema\.json is missing; the upgrade integration qualification contract is a mandatory part of this Kernel/],
+  });
+}
+
+/* t280 — a schema keyword the in-gate validator does not implement fails loudly. */
+{
+  const { kernel, instance } = freshPair('t280');
+  const s = JSON.parse(fs.readFileSync(path.join(UIQ_OM, 'upgrade-integration-qualification.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeUpgradeIntegrationQualification(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t280 an unsupported upgrade-integration-qualification schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: the schema uses a construct this validator cannot check/],
+  });
+}
+
+/* t281 — a schema that is not valid JSON fails, it is not skipped. */
+{
+  const { kernel, instance } = freshPair('t281');
+  writeUpgradeIntegrationQualification(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t281 a non-JSON upgrade-integration-qualification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: upgrade-integration-qualification\.schema\.json is not valid JSON/],
+  });
+}
+
+/* t282 — the schema is present but no fixtures sit beside it: a gap, not a skip. */
+{
+  const { kernel, instance } = freshPair('t282');
+  writeUpgradeIntegrationQualification(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t282 an upgrade-integration-qualification schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: the schema carries no fixtures/],
+  });
+}
+
+/* t283 — a fixture declared valid that the composition rejects is a red run. */
+{
+  const { kernel, instance } = freshPair('t283');
+  const b = uiqRealBundle();
+  const base = b.valid.find((c) => c.note.includes('QUALIFIED'));
+  const registry = JSON.parse(JSON.stringify(base.registry));
+  registry.qualifications[0].payload.qualification_reason = '';
+  b.valid.push({ note: 'planted qualification with an empty qualification_reason', registry });
+  writeUpgradeIntegrationQualification(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t283 a valid upgrade-integration-qualification fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: a fixture that must be a valid registry was rejected \(planted qualification with an empty qualification_reason\)/],
+  });
+}
+
+/* t284 — a fixture declared invalid that the composition accepts clean is a red run. */
+{
+  const { kernel, instance } = freshPair('t284');
+  const b = uiqRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeUpgradeIntegrationQualification(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t284 an invalid upgrade-integration-qualification fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
+  });
 }
 
 fs.rmSync(workRoot, { recursive: true, force: true });

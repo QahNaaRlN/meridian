@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/role-registry.schema.json",
+  "title": "Meridian universal role registry",
+  "description": "The complete schema for the built-in, product-neutral catalogue of universal engineering roles (record_type: role-registry). The catalogue is ONE scoped record: it declares THIS schema in its $schema and composes the reused scoped-record.schema.json envelope (identity, scope, origin, authority) with a specialised body, so a consumer that follows the declaration validates the whole record in one pass; scripts/lib/role-and-human-control.mjs additionally validates every record against scoped-record.schema.json directly, so the canonical envelope check is reused and separately performed, never dropped. The catalogue is Kernel methodology: it lives ONLY in scope.type built-in-methodology (scope.id built-in-methodology), origin.kind built-in and authority.kind methodology-owner; a concrete run's role assignments are a different record (human-control.schema.json) in run-state. The payload is a CLOSED object carrying exactly one axis, roles: the closed pool owner, operator, executor, reviewer, verifier, git_integrator, deployer — every role present exactly once, each with a Russian title, a one-line summary and at least one responsibility. A role definition names powers and responsibilities only: a concrete programme, an AI model, a vendor or a person's name is never part of a universal role and is rejected as an extra field. The rules this JSON Schema subset cannot state live in scripts/lib/role-and-human-control.mjs: the declared $schema is RESOLVED as a LOGICAL address within the Meridian namespace and must resolve to exactly this file (resolution and the rooted-path rules are REUSED from scripts/lib/task-specification.mjs, no divergent copy); the seven roles are all present and none is duplicated; every text string is portable (no rooted machine path, no drive-letter path, no backslash path, no ~/ reference, no file:// URL); the human-readable name is Russian. The contract is a mandatory part of the Kernel: an absent schema, catalogue or fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/role-and-human-control.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "id", "title", "record_type", "scope", "origin", "authority", "payload"],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/definitions/semantic_id" },
+    "title": { "type": "string", "minLength": 1 },
+    "record_type": { "const": "role-registry" },
+    "scope": { "$ref": "#/definitions/scope_ref" },
+    "origin": { "$ref": "#/definitions/origin" },
+    "authority": { "$ref": "#/definitions/authority" },
+    "payload": { "$ref": "#/definitions/payload" }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "role_id": {
+      "type": "string",
+      "enum": ["owner", "operator", "executor", "reviewer", "verifier", "git_integrator", "deployer"]
+    },
+    "scope_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "description": "The built-in role catalogue lives only in built-in-methodology; every other workspace-scope-model area is rejected here and in scripts/lib/role-and-human-control.mjs with the rationale.",
+      "properties": {
+        "type": { "enum": ["built-in-methodology"] },
+        "id": { "const": "built-in-methodology" }
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "description": "Same contract as scoped-record.schema.json's origin. The catalogue is shipped with the methodology, so kind is built-in and no source_ref is carried.",
+      "properties": {
+        "kind": { "const": "built-in" }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "authority_ref"],
+      "description": "Same contract as scoped-record.schema.json's authority; the catalogue is methodology-owner authority.",
+      "properties": {
+        "kind": { "const": "methodology-owner" },
+        "authority_ref": { "$ref": "#/definitions/non_empty" },
+        "decision_ref": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "summary", "responsibilities"],
+      "description": "One universal role. id is from the closed pool. title is the Russian name. summary is a one-line statement of the role. responsibilities is a non-empty list of the powers and duties the role carries. No programme, model, vendor or person name — those are a concrete run's assignment, not a universal definition.",
+      "properties": {
+        "id": { "$ref": "#/definitions/role_id" },
+        "title": { "$ref": "#/definitions/non_empty" },
+        "summary": { "$ref": "#/definitions/non_empty" },
+        "responsibilities": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/non_empty" }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roles"],
+      "description": "The catalogue body: the closed pool of universal roles as a CLOSED object with exactly one axis. Exactly seven roles, each id from the pool, none repeated; full coverage and non-duplication are also checked in scripts/lib/role-and-human-control.mjs.",
+      "properties": {
+        "roles": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/role" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/task-pattern-registry.schema.json",
+  "title": "Meridian task pattern registry",
+  "description": "Container for the built-in universal task patterns, one per active classifier pair. Each entry is a scoped record: its envelope (identity, scope, origin, authority) is validated separately against scoped-record.schema.json, and this schema is not a second envelope schema. This schema adds the container shape and the pattern-body contract carried in each entry's payload. It reuses the existing work_kind and change_class pools (standards/workspace/rule-resolution.md §2–§3) as closed enums; it does not define a second vocabulary or change their meaning. Protocols, ways of carrying work out (skills) and evidence contracts are kept in three separate arrays: applicable_protocols, applicable_skills and applicable_evidence_contracts. The validator enforces that a skill-package path may sit only in applicable_skills.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "title", "task_patterns"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "registry_id": { "const": "task-pattern-registry" },
+    "title": { "type": "string", "minLength": 1 },
+    "task_patterns": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/entry" }
+    }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "nonempty_clause_list": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "canonical_link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["present", "absent"] },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "path": { "type": "string", "minLength": 1 },
+        "absence_reason": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "present" } }, "required": ["status"] },
+          "then": {
+            "required": ["id", "path"],
+            "not": { "required": ["absence_reason"] }
+          },
+          "else": {
+            "required": ["absence_reason"],
+            "allOf": [
+              { "not": { "required": ["id"] } },
+              { "not": { "required": ["path"] } }
+            ]
+          }
+        }
+      ]
+    },
+    "entry": {
+      "type": "object",
+      "required": ["record_type", "payload"],
+      "properties": {
+        "record_type": { "const": "task-pattern" },
+        "payload": { "$ref": "#/definitions/payload" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "work_kind",
+        "invariants",
+        "required_inputs",
+        "required_evidence",
+        "stop_conditions",
+        "applicable_protocols",
+        "applicable_skills",
+        "applicable_evidence_contracts"
+      ],
+      "properties": {
+        "work_kind": { "enum": ["assessment", "operation", "initiative", "change"] },
+        "change_class": { "enum": ["BUGFIX", "FEATURE", "BEHAVIOR_CHANGE", "REFACTOR"] },
+        "decomposition_required": { "type": "boolean" },
+        "invariants": { "$ref": "#/definitions/nonempty_clause_list" },
+        "required_inputs": { "$ref": "#/definitions/nonempty_clause_list" },
+        "required_evidence": { "$ref": "#/definitions/nonempty_clause_list" },
+        "stop_conditions": { "$ref": "#/definitions/nonempty_clause_list" },
+        "applicable_protocols": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/canonical_link" }
+        },
+        "applicable_skills": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/canonical_link" }
+        },
+        "applicable_evidence_contracts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/canonical_link" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "work_kind": { "const": "change" } }, "required": ["work_kind"] },
+          "then": { "required": ["change_class"] },
+          "else": { "not": { "required": ["change_class"] } }
+        },
+        {
+          "if": { "properties": { "work_kind": { "const": "initiative" } }, "required": ["work_kind"] },
+          "then": {
+            "required": ["decomposition_required"],
+            "properties": { "decomposition_required": { "const": true } }
+          },
+          "else": { "not": { "required": ["decomposition_required"] } }
+        }
+      ]
+    }
+  }
+}

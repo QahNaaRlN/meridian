@@ -1,0 +1,317 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/field-evaluation.schema.json",
+  "title": "Meridian field evaluation",
+  "description": "The complete schema for TWO record types of the practical-evaluation contract: record_type field-evaluation-observation (one measured data point about ONE metric of ONE execution run, scoped to run-state and pinned to that run) and record_type field-evaluation-report (a deterministic aggregation over a pinned, externally-resolved set of observations, scoped to project-workspace, never a single rolled-up score). A record declares THIS schema in its $schema, so a consumer that follows the declaration validates the whole record — the reused scoped-record envelope AND the specialised body — in one pass. The envelope is the SAME contract as registries/operating-model/scoped-record.schema.json; scripts/lib/field-evaluation.mjs validates every record against scoped-record.schema.json directly as well. Which body shape applies is selected by record_type (allOf/if/then below), not by a second schema file. The eight characteristics of meridian-operating-upgrade-plan.md §10 are modelled separately (never one score): mechanism-correctness, context-entry-time, rework-returns, stop-correctness, missed-norms, resumption-success, owner-cost, post-acceptance-defects. Each has a closed measurement kind — classification / duration / count — fixed per metric_id; a classification's outcome pool is closed per metric and its basis is never the bare run status. An observation's status is one of observed / unknown / not_applicable / unmeasurable — four distinct states, each but 'observed' carrying a reason, because absence of observation is not zero. Every calendar date and timestamp of this contract (observed_at, observation_period, the report's period, measurement start_ts/end_ts) is checked for REAL calendar existence — the length of the specific month, leap years — not merely a digit pattern; 31 February, 31 April and a non-leap 29 February are rejected, never silently rolled over the way Date.parse would. Status 'observed' requires at least one PINNED evidence entry RESOLVED through the external boundary to a closed evidence-result confirming observed_result 'confirmed' AND a metric_ref naming THIS observation's own metric — evidence of a different metric is rejected. A correction is a NEW observation that pins the one it supersedes with a correction_reason; the superseded record is never edited in place. A report pins a set of included and excluded observations (each reasoned) that are kept DISJOINT — no reference, and no resolved observation id, is shared between the two lists, and no excluded reference repeats under a different reason — checks them for the SAME workspace and the SAME reporting period, rejects double counting (a repeated id, or a superseded+superseding pair both included), represents every one of the eight metrics exactly once, and RECOMPUTES — for EVERY status, known/unknown/not_applicable alike — each metric's aggregate from the resolved, named sample: a report that diverges from what its own observations show is rejected regardless of the status it claims. Every observation referenced by a report is resolved through the SAME THREE-PART boundary everywhere in this module, never a lighter, ad hoc check and never a second divergent copy of the pinned_ref rule: (1) checkPinnedRef on the INPUT pinned_ref ITSELF — its own record_type is strictly field-evaluation-observation, it carries a stable semantic id, a portable reference, and a pin (an exact revision and/or sha256) — checked independently of whatever the resolver later returns, because resolvePinnedReference alone only cross-checks a pin field's value WHEN that field happens to be present on the input ref and does not itself require id, record_type or a pin to be present at all; (2) resolvePinnedReference on the RESOLVED record — its record_type, the closed key set with no extra field, id and reference matching the pin, and an exact revision and/or confirmed digest matching what was pinned; (3) resolvedObservationIssues on the resolved record's subject VALUES (metric_id, status, measurement, workspace_id, observed_at, supersedes_id, observation_period, coverage all checked for validity, not merely for the closed key set) — only once (1) and (2) are clean. A problem at ANY of the three is a precise, named error, never a silent omission: an invalid or unresolvable record, a wrong record_type (on the input ref OR on the resolved record), a missing id, a missing pin, an unexpected field, or a mismatched digest/revision all make the deterministic report builder (buildFieldEvaluationReport) fail closed with an explicit thrown error rather than building a report around it. A correction (supersedes) and the observation it corrects are never both included: the builder rejects that pair immediately with a thrown error, rather than silently dropping one from the aggregate, auto-preferring the correction, or returning a report for evaluateFieldEvaluation to reject afterwards. A ratio always carries both a numerator and a denominator; a zero denominator forbids a percentage. The rules this JSON Schema subset cannot state live in scripts/lib/field-evaluation.mjs (the declared $schema resolves as a LOGICAL address within the Meridian namespace — resolveSchemaRef/nonPortableReason reused from scripts/lib/task-specification.mjs via scripts/lib/context-manifest.mjs; the metric-to-measurement-kind and classification-outcome-pool mappings; strict calendar-date/time validity; the external resolution AND validated projection of every pinned reference and evidence entry; the comparability, disjointness and double-counting rules; the exact recomputation of every per-metric aggregate at every status; the fail-closed, canonically-ordered — by resolved id with the reference as an unambiguous tie-break — deterministic report builder; portability of every reference and prose string; the Russian name). The contract is a MANDATORY part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/meridian-field-evaluation.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "id", "title", "record_type", "scope", "origin", "authority", "payload"],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/definitions/semantic_id" },
+    "title": { "type": "string", "minLength": 1 },
+    "record_type": { "enum": ["field-evaluation-observation", "field-evaluation-report"] },
+    "scope": { "$ref": "#/definitions/scope_ref" },
+    "origin": { "$ref": "#/definitions/origin" },
+    "authority": { "$ref": "#/definitions/authority" },
+    "payload": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "record_type": { "const": "field-evaluation-observation" } }, "required": ["record_type"] },
+      "then": { "properties": { "payload": { "$ref": "#/definitions/observation_payload" } } }
+    },
+    {
+      "if": { "properties": { "record_type": { "const": "field-evaluation-report" } }, "required": ["record_type"] },
+      "then": { "properties": { "payload": { "$ref": "#/definitions/report_payload" } } }
+    }
+  ],
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "portable_ref": { "type": "string", "minLength": 1 },
+    "date_str": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
+    "metric_id": {
+      "enum": [
+        "mechanism-correctness", "context-entry-time", "rework-returns",
+        "stop-correctness", "missed-norms", "resumption-success",
+        "owner-cost", "post-acceptance-defects"
+      ]
+    },
+    "pinned_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_type", "id", "reference"],
+      "description": "A closed, structured, pinned reference to exactly one record — execution-run or field-evaluation-observation in this contract. No record body is embedded: the object is closed to these fields only. revision and/or sha256 pin the exact edition (checked in scripts/lib/field-evaluation.mjs).",
+      "properties": {
+        "record_type": { "enum": ["execution-run", "field-evaluation-observation"] },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "reference": { "$ref": "#/definitions/portable_ref" },
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "scope_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "description": "An evaluation record's area: run-state for an observation (scope.id equals execution_run_ref.id and workspace_id is mandatory), project-workspace for a report (scope.id is the report's own id; workspace_id lives in the payload instead, because project-workspace scope does not carry one).",
+      "properties": {
+        "type": { "enum": ["run-state", "project-workspace"] },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "workspace_id": { "$ref": "#/definitions/semantic_id" }
+      },
+      "if": { "properties": { "type": { "const": "run-state" } }, "required": ["type"] },
+      "then": { "required": ["workspace_id"] },
+      "else": { "not": { "required": ["workspace_id"] } }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "description": "Same contract as scoped-record.schema.json's origin. Evaluation data is written in a workspace, so kind 'built-in' is additionally rejected by scripts/lib/field-evaluation.mjs.",
+      "properties": {
+        "kind": { "enum": ["built-in", "declared", "migrated", "imported", "derived"] },
+        "source_ref": { "$ref": "#/definitions/non_empty" }
+      },
+      "if": { "properties": { "kind": { "const": "built-in" } }, "required": ["kind"] },
+      "then": { "not": { "required": ["source_ref"] } },
+      "else": { "required": ["source_ref"] }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "authority_ref"],
+      "description": "Same contract as scoped-record.schema.json's authority.",
+      "properties": {
+        "kind": { "enum": ["methodology-owner", "user", "organization", "project-owner", "repository-maintainer", "delegated-run"] },
+        "authority_ref": { "$ref": "#/definitions/non_empty" },
+        "decision_ref": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "classification_measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "outcome", "basis"],
+      "description": "A classification of ONE instance (one stop event, one norm-application opportunity, one resumption attempt, one mechanism check) for a metric whose measurement kind is 'classification'. outcome must be one of that metric's own closed pool (checked in scripts/lib/field-evaluation.mjs, which also fixes WHICH metrics use this kind). basis is the stated reason for the classification — never the bare run status or work_status by itself, and an 'unknown' outcome is never silently counted as the tracked positive/negative outcome.",
+      "properties": {
+        "kind": { "const": "classification" },
+        "outcome": { "type": "string" },
+        "basis": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "duration_measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "duration_kind", "unit", "seconds"],
+      "description": "A duration for a metric whose measurement kind is 'duration'. duration_kind distinguishes calendar length from active effort — the two are never summed into one figure. unit is always 'seconds'. seconds is non-negative. paused_seconds (only valid with duration_kind 'calendar') is the time subtracted to reach an active-effort figure, and cannot exceed seconds. start_ts/end_ts, when both present, name an interval whose end is strictly after its start (checked in scripts/lib/field-evaluation.mjs).",
+      "properties": {
+        "kind": { "const": "duration" },
+        "duration_kind": { "enum": ["calendar", "active"] },
+        "unit": { "const": "seconds" },
+        "seconds": { "type": "number", "minimum": 0 },
+        "paused_seconds": { "type": "number", "minimum": 0 },
+        "start_ts": { "type": "string", "format": "date-time" },
+        "end_ts": { "type": "string", "format": "date-time" }
+      }
+    },
+    "count_measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "unit", "value"],
+      "description": "A non-negative integer count for a metric whose measurement kind is 'count'.",
+      "properties": {
+        "kind": { "const": "count" },
+        "unit": { "const": "count" },
+        "value": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "measurement": {
+      "oneOf": [
+        { "$ref": "#/definitions/classification_measurement" },
+        { "$ref": "#/definitions/duration_measurement" },
+        { "$ref": "#/definitions/count_measurement" }
+      ]
+    },
+    "observation_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_date", "end_date"],
+      "properties": {
+        "start_date": { "$ref": "#/definitions/date_str" },
+        "end_date": { "$ref": "#/definitions/date_str" }
+      }
+    },
+    "evidence_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "reference", "summary"],
+      "description": "One piece of evidence grounding ONE observation's measurement. id is a stable semantic identifier, unique within the record. kind is one of a closed set. reference is a portable, storage-neutral pointer, PINNED by an exact revision and/or a SHA-256 digest (checked in scripts/lib/field-evaluation.mjs). summary states what was observed. Every evidence entry is RESOLVED through the external boundary to a closed 'evidence-result' carrying observed_result (confirmed / contradicted / inconclusive) AND metric_ref — the metric this evidence bears on; an observation's status 'observed' needs at least one entry that resolves with observed_result 'confirmed' and metric_ref equal to this observation's own metric_id.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "kind": { "enum": ["check-run", "observation", "artifact-inspection", "external-confirmation"] },
+        "reference": { "$ref": "#/definitions/portable_ref" },
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "$ref": "#/definitions/sha256" },
+        "summary": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "observation_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_run_ref", "metric_id", "observed_at", "status", "evidence"],
+      "description": "The bounded body of one field-evaluation observation, as a CLOSED object. It carries a structured pinned reference to the run (never the run's body); the metric it measures; when it was itself recorded; one of four statuses (observed / unknown / not_applicable / unmeasurable), each non-'observed' status carrying status_reason and no measurement, 'observed' carrying a measurement matching the metric's own fixed kind and no status_reason; a required, non-empty evidence list only when 'observed'; observation_period + coverage only for metrics that declare a window (post-acceptance-defects), only while 'observed'; and an optional supersedes + correction_reason pair naming, with a reason, the earlier observation this one corrects.",
+      "properties": {
+        "execution_run_ref": { "$ref": "#/definitions/pinned_ref" },
+        "metric_id": { "$ref": "#/definitions/metric_id" },
+        "observed_at": { "$ref": "#/definitions/date_str" },
+        "status": { "enum": ["observed", "unknown", "not_applicable", "unmeasurable"] },
+        "status_reason": { "$ref": "#/definitions/non_empty" },
+        "measurement": { "$ref": "#/definitions/measurement" },
+        "observation_period": { "$ref": "#/definitions/observation_window" },
+        "coverage": { "enum": ["complete", "partial"] },
+        "coverage_note": { "$ref": "#/definitions/non_empty" },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/evidence_entry" }
+        },
+        "supersedes": { "$ref": "#/definitions/pinned_ref" },
+        "correction_reason": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "excluded_observation_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "exclusion_reason"],
+      "description": "One observation deliberately left out of the report's computation, with the reason stated — an exclusion is explicit, never a silent drop. If the excluded observation would have contributed to a metric, that metric's per_metric entry must disclose it as a limitation (checked in scripts/lib/field-evaluation.mjs).",
+      "properties": {
+        "ref": { "$ref": "#/definitions/pinned_ref" },
+        "exclusion_reason": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "classification_aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "counts", "total", "rate"],
+      "description": "The recomputed aggregate for a classification metric: counts per closed outcome, their total, and a rate whose numerator/denominator are both always present. A zero denominator (no classified sample) forbids the percentage field.",
+      "properties": {
+        "kind": { "const": "classification" },
+        "counts": { "type": "object" },
+        "total": { "type": "integer", "minimum": 0 },
+        "rate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["numerator", "denominator", "outcome", "note"],
+          "properties": {
+            "numerator": { "type": "integer", "minimum": 0 },
+            "denominator": { "type": "integer", "minimum": 0 },
+            "percentage": { "type": "number", "minimum": 0, "maximum": 100 },
+            "outcome": { "type": "string" },
+            "note": { "$ref": "#/definitions/non_empty" }
+          }
+        }
+      }
+    },
+    "duration_sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sample_count", "total_seconds"],
+      "properties": {
+        "sample_count": { "type": "integer", "minimum": 0 },
+        "total_seconds": { "type": "number", "minimum": 0 },
+        "mean_seconds": { "type": "number", "minimum": 0 }
+      }
+    },
+    "duration_aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "calendar", "active"],
+      "description": "The recomputed aggregate for a duration metric: calendar length and active effort are two SEPARATE sub-aggregates, never summed into one total (a sample contributes to exactly one of the two, by its own duration_kind).",
+      "properties": {
+        "kind": { "const": "duration" },
+        "calendar": { "$ref": "#/definitions/duration_sample" },
+        "active": { "$ref": "#/definitions/duration_sample" }
+      }
+    },
+    "count_aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "sample_count", "total"],
+      "description": "The recomputed aggregate for a count metric. observation_window and coverage appear only for a metric that declares a window (post-acceptance-defects); coverage 'mixed' means contributing observations disagreed on completeness.",
+      "properties": {
+        "kind": { "const": "count" },
+        "sample_count": { "type": "integer", "minimum": 0 },
+        "total": { "type": "integer", "minimum": 0 },
+        "mean": { "type": "number", "minimum": 0 },
+        "observation_window": { "$ref": "#/definitions/observation_window" },
+        "coverage": { "enum": ["complete", "partial", "mixed"] }
+      }
+    },
+    "aggregate": {
+      "oneOf": [
+        { "$ref": "#/definitions/classification_aggregate" },
+        { "$ref": "#/definitions/duration_aggregate" },
+        { "$ref": "#/definitions/count_aggregate" }
+      ]
+    },
+    "per_metric_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric_id", "status", "aggregate", "sample_observation_ids", "limitations"],
+      "description": "ONE of the eight characteristics, represented separately — never folded into another. metric_id is one of the closed eight, and the full per_metric array carries each EXACTLY once (checked in scripts/lib/field-evaluation.mjs). status 'known' carries no status_reason and an aggregate recomputed from the named sample; 'unknown' / 'not_applicable' carry a status_reason and an aggregate reflecting an empty or inapplicable sample. sample_observation_ids names which included observations contributed, all belonging to this metric_id. limitations discloses gaps the aggregate alone does not show — including a disclosed exclusion and the explicit caveat that a zero post-acceptance-defect count over a partial window is not proof of no defects.",
+      "properties": {
+        "metric_id": { "$ref": "#/definitions/metric_id" },
+        "status": { "enum": ["known", "unknown", "not_applicable"] },
+        "status_reason": { "$ref": "#/definitions/non_empty" },
+        "aggregate": { "$ref": "#/definitions/aggregate" },
+        "sample_observation_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/semantic_id" }
+        },
+        "limitations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/non_empty" }
+        }
+      }
+    },
+    "report_period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_date", "end_date"],
+      "properties": {
+        "start_date": { "$ref": "#/definitions/date_str" },
+        "end_date": { "$ref": "#/definitions/date_str" }
+      }
+    },
+    "report_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspace_id", "period", "included_observations", "excluded_observations", "per_metric"],
+      "description": "The bounded body of one field-evaluation report, as a CLOSED object. workspace_id names the project workspace it covers (project-workspace scope carries no workspace_id itself, unlike run-state). period is the reporting window. included_observations and excluded_observations are separate, pinned, externally-resolved lists — an exclusion always carries a reason. per_metric carries exactly the eight closed characteristics, each with an aggregate recomputed from its own resolved sample, never a single rolled-up score (forbidden fields are rejected by scripts/lib/field-evaluation.mjs).",
+      "properties": {
+        "workspace_id": { "$ref": "#/definitions/semantic_id" },
+        "period": { "$ref": "#/definitions/report_period" },
+        "included_observations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/pinned_ref" }
+        },
+        "excluded_observations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/excluded_observation_entry" }
+        },
+        "per_metric": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": { "$ref": "#/definitions/per_metric_entry" }
+        }
+      }
+    }
+  }
+}

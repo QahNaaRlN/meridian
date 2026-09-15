@@ -7,8 +7,8 @@
  * (scripts/lib/workspace-compatibility-qualification.mjs) so the two cannot
  * drift: the record envelope against scoped-record.schema.json, the
  * qualification payload against workspace-compatibility-qualification.schema.json,
- * the three pinned references (workspace_connection_ref/migration_plan_ref/
- * canonical_export_ref) resolved through external boundaries, EACH checked
+ * pinned connection references (workspace_connection_refs[]) plus
+ * migration_plan_ref/canonical_export_ref, resolved through external boundaries, EACH checked
  * against a recomputed sha256 content digest of what the resolver actually
  * returned, composed against the REAL evaluateExistingProjectCompatibilityMode/
  * evaluateInstanceDataMigration/evaluateInstanceCanonicalExport, scope
@@ -52,7 +52,7 @@ import {
   canonicalConnectionSourceRef,
   computeConnectionDigest,
   RECORD_TYPE, ALLOWED_SCOPE_TYPES, REQUIRED_ORIGIN_KIND, REQUIRED_AUTHORITY_KIND,
-  QUALIFICATION_STATES, PINNED_REF_KEYS,
+  QUALIFICATION_STATES, PINNED_REF_KEYS, REPOSITORY_SCOPE_MAX_CONNECTION_REFS,
 } from '../scripts/lib/workspace-compatibility-qualification.mjs';
 import { evaluateExistingProjectCompatibilityMode, scanDiscoveryPlan } from '../scripts/lib/existing-project-compatibility-mode.mjs';
 import {
@@ -172,7 +172,7 @@ check('константы схемы совпадают с библиотеко�
   assert(JSON.stringify([...ALLOWED_SCOPE_TYPES].sort()) === JSON.stringify(['project-workspace', 'repository-scope'].sort()));
   assert(JSON.stringify([...QUALIFICATION_STATES].sort()) === JSON.stringify(['BLOCKED', 'QUALIFIED', 'UNVERIFIED'].sort()));
   assert(JSON.stringify([...PINNED_REF_KEYS].sort()) === JSON.stringify(['id', 'reference', 'record_type', 'sha256'].sort()));
-  assert(registrySchema.definitions.pinned_ref.required.includes('sha256'), 'sha256 обязателен во всех трёх ссылках, включая workspace_connection_ref');
+  assert(registrySchema.definitions.pinned_ref.required.includes('sha256'), 'sha256 обязателен во всех ссылках, включая каждый элемент workspace_connection_refs');
 });
 
 check('неподдерживаемое ключевое слово схемы отклоняется движком', () => {
@@ -219,7 +219,7 @@ check('valid-фикстуры покрывают все три состояни�
 
 check('branch 4 (нерешённые кандидаты) реально несёт два разрешённых rule_candidates с applicability_state "candidate"', () => {
   const c = fixtures.valid.find((x) => x.note.includes('branch 4'));
-  const ref = c.registry.qualifications[0].payload.workspace_connection_ref;
+  const ref = c.registry.qualifications[0].payload.workspace_connection_refs[0];
   const connection = fixtures.connection_record_resolution[ref.reference];
   const undecided = connection.payload.rule_candidates.filter((w) => w.candidate.payload.applicability_state === 'candidate');
   assert(undecided.length === 2, 'сценарий обязан опираться на настоящие нерешённые rule_candidates, а не на одну находку при пустом массиве');
@@ -255,67 +255,95 @@ check('негативный тест: заявленный QUALIFIED повер�
   assert(c, 'фикстура для этого негативного теста не найдена');
   assert(evaluate(c.registry).length > 0);
 });
-check('негативный тест: workspace_connection_ref.sha256 расходится с пересчитанным digest отклонён', () => {
-  const c = fixtures.invalid.find((x) => x.note.includes('workspace_connection_ref.sha256'));
+check('негативный тест: workspace_connection_refs[0].sha256 расходится с пересчитанным digest отклонён', () => {
+  const c = fixtures.invalid.find((x) => x.note.includes('workspace_connection_refs[0].sha256'));
   assert(c, 'фикстура для этого негативного теста не найдена');
   const problems = evaluate(c.registry);
   assert(problems.length > 0);
-  assert(problems.some((p) => p.includes('workspace_connection_ref.sha256')), JSON.stringify(problems));
+  assert(problems.some((p) => p.includes('workspace_connection_refs[0].sha256')), JSON.stringify(problems));
 });
 
 /* ===========================================================================
- * computeQualificationState — pure decision-matrix function
+ * computeQualificationState — pure decision-matrix function, now aggregated
+ * over an array of next_steps (one per declared workspace_connection_refs
+ * entry) rather than one scalar. A single-element array reproduces every
+ * branch a single connection already exercised; the additional checks below
+ * prove the "any of N" aggregation and its order-independence directly.
  * ======================================================================== */
 
 check('computeQualificationState: resolve-conflict/resolve-ambiguity → BLOCKED', () => {
-  assert(computeQualificationState({ nextStep: 'resolve-conflict' }) === 'BLOCKED');
-  assert(computeQualificationState({ nextStep: 'resolve-ambiguity' }) === 'BLOCKED');
+  assert(computeQualificationState({ nextSteps: ['resolve-conflict'] }) === 'BLOCKED');
+  assert(computeQualificationState({ nextSteps: ['resolve-ambiguity'] }) === 'BLOCKED');
 });
 check('computeQualificationState: await-owner-decision → UNVERIFIED', () => {
-  assert(computeQualificationState({ nextStep: 'await-owner-decision' }) === 'UNVERIFIED');
+  assert(computeQualificationState({ nextSteps: ['await-owner-decision'] }) === 'UNVERIFIED');
 });
 check('computeQualificationState: нераспознанный next_step → UNVERIFIED (explicit-unknown)', () => {
-  assert(computeQualificationState({ nextStep: 'invented-next-step' }) === 'UNVERIFIED');
+  assert(computeQualificationState({ nextSteps: ['invented-next-step'] }) === 'UNVERIFIED');
+});
+check('computeQualificationState: пустой массив next_steps → UNVERIFIED (fail-closed по умолчанию)', () => {
+  assert(computeQualificationState({ nextSteps: [] }) === 'UNVERIFIED');
+});
+check('computeQualificationState: устаревший скалярный nextStep поддержан как алиас массива из одного элемента — не превращается молча в UNVERIFIED', () => {
+  assert(computeQualificationState({ nextStep: 'continue-compatibility-mode', hasUndecidedCandidates: false, hasMigrationPlan: false }) === 'QUALIFIED', 'старый вызов с одним чистым next_step обязан остаться QUALIFIED, а не молча стать UNVERIFIED из-за пустого nextSteps');
+  assert(computeQualificationState({ nextStep: 'resolve-conflict' }) === 'BLOCKED');
+  assert(computeQualificationState({ nextStep: 'await-owner-decision' }) === 'UNVERIFIED');
+  assert(computeQualificationState({ nextSteps: [], nextStep: 'continue-compatibility-mode' }) === 'UNVERIFIED', 'явно переданный nextSteps (включая пустой массив) обязан иметь приоритет над устаревшим nextStep');
 });
 check('computeQualificationState: continue-compatibility-mode, все кандидаты решены, без плана → QUALIFIED', () => {
-  assert(computeQualificationState({ nextStep: 'continue-compatibility-mode', hasUndecidedCandidates: false, hasMigrationPlan: false }) === 'QUALIFIED');
+  assert(computeQualificationState({ nextSteps: ['continue-compatibility-mode'], hasUndecidedCandidates: false, hasMigrationPlan: false }) === 'QUALIFIED');
+});
+check('computeQualificationState: несколько connection, все continue-compatibility-mode, без плана → QUALIFIED', () => {
+  assert(computeQualificationState({ nextSteps: ['continue-compatibility-mode', 'continue-compatibility-mode', 'continue-compatibility-mode'], hasUndecidedCandidates: false, hasMigrationPlan: false }) === 'QUALIFIED');
+});
+check('computeQualificationState: любой один конфликт среди чистых connection → BLOCKED, независимо от позиции', () => {
+  assert(computeQualificationState({ nextSteps: ['continue-compatibility-mode', 'resolve-conflict', 'continue-compatibility-mode'], hasUndecidedCandidates: false, hasMigrationPlan: false }) === 'BLOCKED');
+  assert(computeQualificationState({ nextSteps: ['resolve-conflict', 'continue-compatibility-mode', 'continue-compatibility-mode'], hasUndecidedCandidates: false, hasMigrationPlan: false }) === 'BLOCKED');
+  assert(computeQualificationState({ nextSteps: ['continue-compatibility-mode', 'continue-compatibility-mode', 'resolve-conflict'], hasUndecidedCandidates: false, hasMigrationPlan: false }) === 'BLOCKED');
+});
+check('computeQualificationState: один await-owner-decision среди чистых connection → UNVERIFIED', () => {
+  assert(computeQualificationState({ nextSteps: ['continue-compatibility-mode', 'await-owner-decision'], hasUndecidedCandidates: false, hasMigrationPlan: false }) === 'UNVERIFIED');
 });
 check('computeQualificationState: continue-compatibility-mode, но есть нерешённый кандидат → UNVERIFIED, даже без плана', () => {
-  assert(computeQualificationState({ nextStep: 'continue-compatibility-mode', hasUndecidedCandidates: true, hasMigrationPlan: false }) === 'UNVERIFIED');
+  assert(computeQualificationState({ nextSteps: ['continue-compatibility-mode'], hasUndecidedCandidates: true, hasMigrationPlan: false }) === 'UNVERIFIED');
 });
 check('computeQualificationState: нерешённый кандидат форсирует UNVERIFIED даже при VERIFIED-плане с экспортом', () => {
   assert(computeQualificationState({
-    nextStep: 'continue-compatibility-mode', hasUndecidedCandidates: true, hasMigrationPlan: true,
+    nextSteps: ['continue-compatibility-mode'], hasUndecidedCandidates: true, hasMigrationPlan: true,
     migrationOverallStatus: 'VERIFIED', mintsRecords: true, hasCanonicalExport: true,
   }) === 'UNVERIFIED');
 });
 check('computeQualificationState: план BLOCKED форсирует BLOCKED', () => {
   assert(computeQualificationState({
-    nextStep: 'continue-compatibility-mode', hasUndecidedCandidates: false, hasMigrationPlan: true, migrationOverallStatus: 'BLOCKED',
+    nextSteps: ['continue-compatibility-mode'], hasUndecidedCandidates: false, hasMigrationPlan: true, migrationOverallStatus: 'BLOCKED',
   }) === 'BLOCKED');
 });
 check('computeQualificationState: план UNVERIFIED → UNVERIFIED', () => {
   assert(computeQualificationState({
-    nextStep: 'continue-compatibility-mode', hasUndecidedCandidates: false, hasMigrationPlan: true, migrationOverallStatus: 'UNVERIFIED',
+    nextSteps: ['continue-compatibility-mode'], hasUndecidedCandidates: false, hasMigrationPlan: true, migrationOverallStatus: 'UNVERIFIED',
   }) === 'UNVERIFIED');
 });
 check('computeQualificationState: VERIFIED без минченных записей и без экспорта → QUALIFIED', () => {
   assert(computeQualificationState({
-    nextStep: 'continue-compatibility-mode', hasUndecidedCandidates: false, hasMigrationPlan: true, migrationOverallStatus: 'VERIFIED',
+    nextSteps: ['continue-compatibility-mode'], hasUndecidedCandidates: false, hasMigrationPlan: true, migrationOverallStatus: 'VERIFIED',
     mintsRecords: false, hasCanonicalExport: false,
   }) === 'QUALIFIED');
 });
 check('computeQualificationState: VERIFIED, минтит запись, без экспорта → UNVERIFIED', () => {
   assert(computeQualificationState({
-    nextStep: 'continue-compatibility-mode', hasUndecidedCandidates: false, hasMigrationPlan: true, migrationOverallStatus: 'VERIFIED',
+    nextSteps: ['continue-compatibility-mode'], hasUndecidedCandidates: false, hasMigrationPlan: true, migrationOverallStatus: 'VERIFIED',
     mintsRecords: true, hasCanonicalExport: false,
   }) === 'UNVERIFIED');
 });
 check('computeQualificationState: VERIFIED, минтит запись, экспорт составлен → QUALIFIED', () => {
   assert(computeQualificationState({
-    nextStep: 'continue-compatibility-mode', hasUndecidedCandidates: false, hasMigrationPlan: true, migrationOverallStatus: 'VERIFIED',
+    nextSteps: ['continue-compatibility-mode'], hasUndecidedCandidates: false, hasMigrationPlan: true, migrationOverallStatus: 'VERIFIED',
     mintsRecords: true, hasCanonicalExport: true,
   }) === 'QUALIFIED');
+});
+check('canonicalConnectionSourceRef: множество из нескольких id детерминировано и не зависит от порядка', () => {
+  assert(canonicalConnectionSourceRef(['repo-b', 'repo-a']) === canonicalConnectionSourceRef(['repo-a', 'repo-b']));
+  assert(canonicalConnectionSourceRef(['repo-a', 'repo-b']) === 'workspace-connection-scan:repo-a+repo-b');
 });
 check('canonicalConnectionSourceRef — детерминированная ссылка на сканирование', () => {
   assert(canonicalConnectionSourceRef('sample-scan') === 'workspace-connection-scan:sample-scan');
@@ -382,27 +410,28 @@ check('scope.type вне ALLOWED_SCOPE_TYPES отклоняется', () => {
   d.qualifications[0].scope = { type: 'run-state', id: 'sample-run', workspace_id: 'sample-project' };
   assert(evaluate(d).length > 0);
 });
-check('payload.workspace_connection_ref отсутствует (null) — отказ', () => {
+check('payload.workspace_connection_refs отсутствует (null) — отказ', () => {
   const d = base();
-  d.qualifications[0].payload.workspace_connection_ref = null;
+  d.qualifications[0].payload.workspace_connection_refs = null;
   const p = evaluate(d);
-  assert(p.some((x) => x.includes('workspace_connection_ref is not an object')), JSON.stringify(p));
+  assert(p.some((x) => x.includes('workspace_connection_refs is missing or empty')), JSON.stringify(p));
 });
-check('payload.workspace_connection_ref не разрешается через внешнюю границу — отказ', () => {
+check('payload.workspace_connection_refs[0] не разрешается через внешнюю границу — отказ', () => {
   const d = base();
-  d.qualifications[0].payload.workspace_connection_ref.reference = 'unknown-reference';
+  d.qualifications[0].payload.workspace_connection_refs[0].reference = 'unknown-reference';
   const p = evaluate(d);
   assert(p.some((x) => x.includes('does not resolve through the external boundary')), JSON.stringify(p));
 });
 
 /* ===========================================================================
- * Point 1 — workspace_connection_ref is a REAL pinned reference: sha256 is
- * mandatory and content substitution under the SAME id/reference is caught.
+ * Point 1 — each entry of workspace_connection_refs is a REAL pinned
+ * reference: sha256 is mandatory and content substitution under the SAME
+ * id/reference is caught.
  * ======================================================================== */
 
-check('workspace_connection_ref: подмена содержимого при тех же id/reference отклонена (пересчитанный digest расходится)', () => {
+check('workspace_connection_refs[0]: подмена содержимого при тех же id/reference отклонена (пересчитанный digest расходится)', () => {
   const good = base();
-  const connectionRefObj = good.qualifications[0].payload.workspace_connection_ref;
+  const connectionRefObj = good.qualifications[0].payload.workspace_connection_refs[0];
   const original = fixtures.connection_record_resolution[connectionRefObj.reference];
   assert(connectionRefObj.sha256 === computeConnectionDigest(original), 'фикстура сама должна быть согласована перед тестом подмены');
 
@@ -416,7 +445,180 @@ check('workspace_connection_ref: подмена содержимого при т
     exportMap: fixtures.export_record_resolution,
   });
   const problems = evaluateWorkspaceCompatibilityQualification(good, tamperedOpts);
-  assert(problems.some((p) => p.includes('workspace_connection_ref.sha256') && p.includes('does not equal the resolved connection')), JSON.stringify(problems));
+  assert(problems.some((p) => p.includes('workspace_connection_refs[0].sha256') && p.includes('does not equal the resolved connection')), JSON.stringify(problems));
+});
+
+/* ===========================================================================
+ * payload.workspace_connection_refs — multiple entries: array-level
+ * properties (minItems, no duplicate declared ref, exact repository set,
+ * per-entry independence, order-independence) proven directly, on top of the
+ * richer multi-repository-workspace acceptance scenario further below.
+ * ======================================================================== */
+
+function secondCleanConnection(overrides = {}) {
+  const base = fixtures.connection_record_resolution['connection:sample-connection-clean'];
+  return {
+    ...clone(base),
+    id: overrides.id ?? 'sample-connection-clean-two',
+    scope: overrides.scope ?? base.scope,
+    payload: {
+      ...clone(base.payload),
+      repository: overrides.repository ?? { id: 'sample-project-repository-two', workspace_id: 'sample-project' },
+    },
+  };
+}
+
+check('негативный тест: payload.workspace_connection_refs пустой массив отклонён', () => {
+  const d = base();
+  d.qualifications[0].payload.workspace_connection_refs = [];
+  const p = evaluate(d);
+  assert(p.some((x) => x.includes('workspace_connection_refs is missing or empty')), JSON.stringify(p));
+});
+
+check('негативный тест: повтор reference в workspace_connection_refs отклонён', () => {
+  const d = base();
+  const ref = d.qualifications[0].payload.workspace_connection_refs[0];
+  d.qualifications[0].payload.workspace_connection_refs = [ref, clone(ref)];
+  const p = evaluate(d);
+  assert(p.some((x) => x.includes('repeats') && x.includes('.reference')), JSON.stringify(p));
+});
+
+check('негативный тест: повтор id (разный reference) в workspace_connection_refs отклонён', () => {
+  const second = secondCleanConnection({ id: 'sample-connection-clean' });
+  const d = base();
+  const ref = d.qualifications[0].payload.workspace_connection_refs[0];
+  const secondRef = { record_type: 'workspace-connection-scan', id: 'sample-connection-clean', reference: 'connection:sample-connection-clean-alias', sha256: computeConnectionDigest(second) };
+  d.qualifications[0].payload.workspace_connection_refs = [ref, secondRef];
+  const localOpts = buildOpts({
+    connectionMap: { ...fixtures.connection_record_resolution, 'connection:sample-connection-clean-alias': second },
+    planMap: fixtures.plan_record_resolution,
+    exportMap: fixtures.export_record_resolution,
+  });
+  const p = evaluateWorkspaceCompatibilityQualification(d, localOpts);
+  assert(p.some((x) => x.includes('repeats') && x.includes('.id')), JSON.stringify(p));
+});
+
+check('негативный тест: два разных connection называют один и тот же payload.repository.id — отклонено', () => {
+  const second = secondCleanConnection({ id: 'sample-connection-clean-same-repo', repository: { id: 'sample-project-repository', workspace_id: 'sample-project' } });
+  const d = base();
+  const ref = d.qualifications[0].payload.workspace_connection_refs[0];
+  const secondRef = { record_type: 'workspace-connection-scan', id: second.id, reference: 'connection:sample-connection-clean-same-repo', sha256: computeConnectionDigest(second) };
+  d.qualifications[0].payload.workspace_connection_refs = [ref, secondRef];
+  d.qualifications[0].origin.source_ref = canonicalConnectionSourceRef([ref.id, second.id]);
+  const localOpts = buildOpts({
+    connectionMap: { ...fixtures.connection_record_resolution, 'connection:sample-connection-clean-same-repo': second },
+    planMap: fixtures.plan_record_resolution,
+    exportMap: fixtures.export_record_resolution,
+  });
+  const p = evaluateWorkspaceCompatibilityQualification(d, localOpts);
+  assert(p.some((x) => x.includes('all naming the same payload.repository.id')), JSON.stringify(p));
+});
+
+check('негативный тест: workspace_repository_ids расходится с фактически просканированными репозиториями', () => {
+  const d = base();
+  d.qualifications[0].payload.workspace_repository_ids = ['a-repository-never-scanned'];
+  const p = evaluate(d);
+  assert(p.some((x) => x.includes('workspace_repository_ids is missing') || x.includes('workspace_repository_ids declares')), JSON.stringify(p));
+});
+
+check('негативный тест: connection другого workspace в том же массиве — отклонено (scope не совпадает)', () => {
+  const second = secondCleanConnection({
+    id: 'sample-connection-other-workspace',
+    scope: { type: 'project-workspace', id: 'sample-project-other' },
+    repository: { id: 'sample-project-repository-two', workspace_id: 'sample-project-other' },
+  });
+  const d = base();
+  const ref = d.qualifications[0].payload.workspace_connection_refs[0];
+  const secondRef = { record_type: 'workspace-connection-scan', id: second.id, reference: 'connection:sample-connection-other-workspace', sha256: computeConnectionDigest(second) };
+  d.qualifications[0].payload.workspace_connection_refs = [ref, secondRef];
+  d.qualifications[0].payload.workspace_repository_ids = ['sample-project-repository', 'sample-project-repository-two'];
+  d.qualifications[0].origin.source_ref = canonicalConnectionSourceRef([ref.id, second.id]);
+  const localOpts = buildOpts({
+    connectionMap: { ...fixtures.connection_record_resolution, 'connection:sample-connection-other-workspace': second },
+    planMap: fixtures.plan_record_resolution,
+    exportMap: fixtures.export_record_resolution,
+  });
+  const p = evaluateWorkspaceCompatibilityQualification(d, localOpts);
+  assert(p.some((x) => x.includes("scope does not match the resolved payload.workspace_connection_refs[1] record's scope")), JSON.stringify(p));
+});
+
+check('негативный тест: неразрешённая вторая ссылка в массиве — отклонено', () => {
+  const d = base();
+  const ref = d.qualifications[0].payload.workspace_connection_refs[0];
+  const secondRef = { record_type: 'workspace-connection-scan', id: 'sample-connection-nowhere', reference: 'connection:does-not-exist', sha256: '0'.repeat(64) };
+  d.qualifications[0].payload.workspace_connection_refs = [ref, secondRef];
+  d.qualifications[0].payload.workspace_repository_ids = ['sample-project-repository'];
+  d.qualifications[0].origin.source_ref = canonicalConnectionSourceRef([ref.id, secondRef.id]);
+  const p = evaluate(d);
+  assert(p.some((x) => x.includes('payload.workspace_connection_refs[1] "connection:does-not-exist" does not resolve through the external boundary')), JSON.stringify(p));
+});
+
+check('негативный тест: неверный digest одного из двух connection в массиве отклонён', () => {
+  const second = secondCleanConnection();
+  const d = base();
+  const ref = d.qualifications[0].payload.workspace_connection_refs[0];
+  const secondRef = { record_type: 'workspace-connection-scan', id: second.id, reference: 'connection:sample-connection-clean-two', sha256: '1'.repeat(64) };
+  d.qualifications[0].payload.workspace_connection_refs = [ref, secondRef];
+  d.qualifications[0].payload.workspace_repository_ids = ['sample-project-repository', 'sample-project-repository-two'];
+  d.qualifications[0].origin.source_ref = canonicalConnectionSourceRef([ref.id, second.id]);
+  const localOpts = buildOpts({
+    connectionMap: { ...fixtures.connection_record_resolution, 'connection:sample-connection-clean-two': second },
+    planMap: fixtures.plan_record_resolution,
+    exportMap: fixtures.export_record_resolution,
+  });
+  const p = evaluateWorkspaceCompatibilityQualification(d, localOpts);
+  assert(p.some((x) => x.includes('payload.workspace_connection_refs[1].sha256') && x.includes('does not equal the resolved connection')), JSON.stringify(p));
+});
+
+/* ===========================================================================
+ * repository-scope: payload.workspace_connection_refs is closed to AT MOST
+ * ONE entry — one repository, one scan; a second scan of the SAME single
+ * repository is never a second legal entry, and multiple repositories are
+ * expressed only through one project-workspace record (§2), never through
+ * several repository-scope records.
+ * ======================================================================== */
+
+const REPO_SCOPE_SOLO = { type: 'repository-scope', id: 'sample-repository-solo', workspace_id: 'sample-workspace-solo' };
+function repoScopeConnection(id) {
+  return {
+    $schema: '../scoped-record.schema.json',
+    schema_version: 1,
+    id,
+    title: `Сканирование — ${id}`,
+    record_type: 'workspace-connection-scan',
+    scope: REPO_SCOPE_SOLO,
+    origin: { kind: 'declared', source_ref: `owner-decision:connect-${id}` },
+    authority: { kind: 'delegated-run', authority_ref: `existing-project-compatibility-mode-run:${id}` },
+    payload: {
+      connection_mode: 'compatibility',
+      repository: { id: REPO_SCOPE_SOLO.id, workspace_id: REPO_SCOPE_SOLO.workspace_id },
+      scan_kind: 'initial',
+      discovery_plan: [],
+      discovered_sources: [],
+      missing_sources: [],
+      unreadable_sources: [],
+      rule_candidates: [],
+      findings: [],
+      next_step: 'continue-compatibility-mode',
+    },
+  };
+}
+
+check('константа REPOSITORY_SCOPE_MAX_CONNECTION_REFS равна 1 и совпадает со схемой', () => {
+  assert(REPOSITORY_SCOPE_MAX_CONNECTION_REFS === 1);
+});
+
+check('позитивный тест: repository-scope с РОВНО одним workspace_connection_refs проходит', () => {
+  const solo = repoScopeConnection('scenario-repo-scope-solo');
+  const result = qualifyConnection(solo, { state: 'QUALIFIED', reason: 'ровно один разрешённый скан единственного репозитория этой области; миграция не заявлена' });
+  assert(result.problems.length === 0, JSON.stringify(result.problems));
+});
+
+check('негативный тест: repository-scope с ДВУМЯ элементами workspace_connection_refs отклонён (превышен maxItems)', () => {
+  const soloA = repoScopeConnection('scenario-repo-scope-solo-a');
+  const soloB = repoScopeConnection('scenario-repo-scope-solo-b');
+  const result = qualifyConnection([soloA, soloB], { state: 'QUALIFIED', reason: 'намеренно два элемента в repository-scope — проверка обязана отклонить' });
+  assert(result.problems.some((p) => p.includes('may carry at most') || p.includes('more than 1 items')), JSON.stringify(result.problems));
 });
 
 /* ===========================================================================
@@ -531,27 +733,42 @@ function ruleCandidate({
 }
 
 /**
- * Wraps one hand-built workspace-connection-scan record in a full
+ * Wraps one or more hand-built workspace-connection-scan records in a full
  * workspace-compatibility-qualification entry and evaluates it end to end
  * (through the SAME resolver-based composition the fixtures use), returning
- * { problems, entry }. `expected` supplies the declared qualification_state/
- * blockers/open_questions/reason this test asserts against — the caller
- * states the property under test, this helper never guesses it. The
- * connection's own sha256 pin is always computed here from the ACTUAL
- * connection object passed in, mirroring what a real caller would do.
+ * { problems, entry }. `connectionOrConnections` accepts either a single
+ * connection (every single-repository scenario below) or an array of two or
+ * more (the multi-repository-workspace scenario) — the SAME helper, not a
+ * second code path, so a single-connection caller proves nothing a
+ * multi-connection caller could not also prove. `expected` supplies the
+ * declared qualification_state/blockers/open_questions/reason this test
+ * asserts against — the caller states the property under test, this helper
+ * never guesses it. Each connection's own sha256 pin is always computed here
+ * from the ACTUAL connection object passed in, mirroring what a real caller
+ * would do. `expected.workspaceRepositoryIds`, when supplied, overrides the
+ * default (the exact set of payload.repository.id every connection declares)
+ * — used only by tests that deliberately mismatch it.
  */
-function qualifyConnection(connection, expected) {
+function qualifyConnection(connectionOrConnections, expected) {
+  const connections = Array.isArray(connectionOrConnections) ? connectionOrConnections : [connectionOrConnections];
+  const scope = connections[0].scope;
+  const label = connections.map((c) => c.id).join('-and-');
+  const workspaceConnectionRefs = connections.map((c) => (
+    { record_type: 'workspace-connection-scan', id: c.id, reference: `ad-hoc:${c.id}`, sha256: computeConnectionDigest(c) }
+  ));
+  const defaultRepositoryIds = [...new Set(connections.map((c) => c.payload?.repository?.id).filter((v) => typeof v === 'string'))];
   const entry = {
     $schema: '../scoped-record.schema.json',
     schema_version: 1,
-    id: `qualification-of-${connection.id}`,
-    title: `Квалификация — ${connection.id}`,
+    id: `qualification-of-${label}`,
+    title: `Квалификация — ${label}`,
     record_type: 'workspace-compatibility-qualification',
-    scope: connection.scope,
-    origin: { kind: 'derived', source_ref: canonicalConnectionSourceRef(connection.id) },
-    authority: { kind: 'delegated-run', authority_ref: `workspace-compatibility-qualification-run:${connection.id}` },
+    scope,
+    origin: { kind: 'derived', source_ref: canonicalConnectionSourceRef(connections.map((c) => c.id)) },
+    authority: { kind: 'delegated-run', authority_ref: `workspace-compatibility-qualification-run:${label}` },
     payload: {
-      workspace_connection_ref: { record_type: 'workspace-connection-scan', id: connection.id, reference: `ad-hoc:${connection.id}`, sha256: computeConnectionDigest(connection) },
+      workspace_connection_refs: workspaceConnectionRefs,
+      ...(scope.type === 'project-workspace' ? { workspace_repository_ids: expected.workspaceRepositoryIds ?? defaultRepositoryIds } : {}),
       migration_plan_ref: expected.migrationPlanRef ?? null,
       canonical_export_ref: expected.canonicalExportRef ?? null,
       qualification_state: expected.state,
@@ -561,7 +778,7 @@ function qualifyConnection(connection, expected) {
     },
   };
   const localOpts = buildOpts({
-    connectionMap: { [`ad-hoc:${connection.id}`]: connection },
+    connectionMap: Object.fromEntries(connections.map((c) => [`ad-hoc:${c.id}`, c])),
     planMap: { ...fixtures.plan_record_resolution, ...(expected.extraPlanMap || {}) },
     exportMap: { ...fixtures.export_record_resolution, ...(expected.extraExportMap || {}) },
   });
@@ -1017,28 +1234,32 @@ check('scenario:existing-project-zero-write — реальное сканиро�
   });
 }
 
-/* --- scenario:multi-repository-workspace --- */
+/* --- scenario:multi-repository-workspace ---
+ * Rewritten to prove the actual property this program requires: ONE
+ * qualification composes AT LEAST TWO real repository connection scans of
+ * the SAME project-workspace through payload.workspace_connection_refs —
+ * never two independent qualification records standing in for "multi-repo".
+ * Both repositories are REAL, independently resolved and independently
+ * composed against evaluateExistingProjectCompatibilityMode; the aggregate
+ * verdict is proven to read the WORST signal across every declared
+ * connection, and to do so regardless of declared order. */
 {
-  const idm = loadJson('registries/operating-model/fixtures/instance-data-migration.fixtures.json');
-  const ice = loadJson('registries/operating-model/fixtures/instance-canonical-export.fixtures.json');
-  const planThree = idm.valid[3].registry.migration_plans[0];
-  const exportThree = ice.valid[3].registry.exports[0];
-  const REPO_A_SCOPE = { type: 'repository-scope', id: 'sample-repository', workspace_id: 'sample-workspace' };
-  const REPO_B_SCOPE = { type: 'repository-scope', id: 'sample-repository-two', workspace_id: 'sample-workspace' };
+  const planOne = fixtures.plan_record_resolution['plan:sample-migration-plan-one'];
+  const exportOne = fixtures.export_record_resolution['export:sample-canonical-export-one'];
 
-  function repoConnection(id, scope) {
+  function repoConnection(id, repositoryId, payloadOverrides = {}) {
     return {
       $schema: '../scoped-record.schema.json',
       schema_version: 1,
       id,
       title: `Сканирование — ${id}`,
       record_type: 'workspace-connection-scan',
-      scope,
+      scope: PROJECT_SCOPE,
       origin: { kind: 'declared', source_ref: `owner-decision:connect-${id}` },
       authority: { kind: 'delegated-run', authority_ref: `existing-project-compatibility-mode-run:${id}` },
       payload: {
         connection_mode: 'compatibility',
-        repository: { id: scope.id, workspace_id: scope.workspace_id },
+        repository: { id: repositoryId, workspace_id: PROJECT_SCOPE.id },
         scan_kind: 'initial',
         discovery_plan: [],
         discovered_sources: [],
@@ -1047,38 +1268,118 @@ check('scenario:existing-project-zero-write — реальное сканиро�
         rule_candidates: [],
         findings: [],
         next_step: 'continue-compatibility-mode',
+        ...payloadOverrides,
       },
     };
   }
-  const connectionA = repoConnection('scenario-multi-repo-a', REPO_A_SCOPE);
-  const connectionB = repoConnection('scenario-multi-repo-b', REPO_B_SCOPE);
+  const repoA = repoConnection('scenario-multi-repo-a', 'sample-project-repository');
+  const repoB = repoConnection('scenario-multi-repo-b', 'sample-project-repository-two');
+  const migrationExpected = {
+    migrationPlanRef: { record_type: 'instance-migration-plan', id: planOne.id, reference: `ad-hoc-plan:${planOne.id}`, sha256: computePlanFingerprint(planOne.payload) },
+    canonicalExportRef: { record_type: 'instance-canonical-export', id: exportOne.id, reference: `ad-hoc-export:${exportOne.id}`, sha256: computeExportDigest(exportOne.payload) },
+    extraPlanMap: { [`ad-hoc-plan:${planOne.id}`]: planOne },
+    extraExportMap: { [`ad-hoc-export:${exportOne.id}`]: exportOne },
+  };
 
-  check('scenario:multi-repository-workspace — два независимых repository-scope под одним workspace_id квалифицируются независимо', () => {
-    const resultA = qualifyConnection(connectionA, {
+  check('scenario:multi-repository-workspace — одна квалификация компонует ДВА реальных repository-скана одного workspace, подтверждённых миграцией, в любом порядке объявления', () => {
+    const forward = qualifyConnection([repoA, repoB], {
       state: 'QUALIFIED',
-      reason: 'репозиторий A полностью мигрирован (many-to-one merge) и подтверждён каноническим экспортом',
-      migrationPlanRef: { record_type: 'instance-migration-plan', id: planThree.id, reference: `ad-hoc-plan:${planThree.id}`, sha256: computePlanFingerprint(planThree.payload) },
-      canonicalExportRef: { record_type: 'instance-canonical-export', id: exportThree.id, reference: `ad-hoc-export:${exportThree.id}`, sha256: computeExportDigest(exportThree.payload) },
-      extraPlanMap: { [`ad-hoc-plan:${planThree.id}`]: planThree },
-      extraExportMap: { [`ad-hoc-export:${exportThree.id}`]: exportThree },
+      reason: 'два независимых репозитория одного workspace просканированы чисто, план миграции проверен и подтверждён каноническим экспортом',
+      ...migrationExpected,
     });
-    assert(resultA.problems.length === 0, JSON.stringify(resultA.problems));
+    assert(forward.problems.length === 0, JSON.stringify(forward.problems));
 
-    const resultB = qualifyConnection(connectionB, {
+    const reversed = qualifyConnection([repoB, repoA], {
       state: 'QUALIFIED',
-      reason: 'репозиторий B остаётся в режиме совместимости без миграции',
+      reason: 'два независимых репозитория одного workspace просканированы чисто, план миграции проверен и подтверждён каноническим экспортом',
+      ...migrationExpected,
     });
-    assert(resultB.problems.length === 0, JSON.stringify(resultB.problems));
+    assert(reversed.problems.length === 0, 'перестановка workspace_connection_refs изменила результат: ' + JSON.stringify(reversed.problems));
   });
 
-  check('scenario:multi-repository-workspace (негативный) — план репозитория A не может быть составлен вместе со сканированием репозитория B', () => {
-    const mismatched = qualifyConnection(connectionB, {
-      state: 'QUALIFIED',
-      reason: 'намеренно смешанная область — проверка обязана отклонить',
-      migrationPlanRef: { record_type: 'instance-migration-plan', id: planThree.id, reference: `ad-hoc-plan:${planThree.id}`, sha256: computePlanFingerprint(planThree.payload) },
-      extraPlanMap: { [`ad-hoc-plan:${planThree.id}`]: planThree },
+  check('scenario:multi-repository-workspace (негативный) — блокирующий конфликт в ОДНОМ из двух сканов блокирует всю квалификацию, независимо от порядка', () => {
+    const dirtyB = repoConnection('scenario-multi-repo-b-conflict', 'sample-project-repository-two', {
+      findings: [{ id: 'finding-multi-repo-conflict', kind: 'conflict', detail: 'конфликтующие кандидаты правил в репозитории B', blocking: true }],
+      next_step: 'resolve-conflict',
     });
-    assert(mismatched.problems.length > 0, 'план репозитория A принят вместе со сканированием репозитория B без замечаний');
+    const expectedBlocked = {
+      state: 'BLOCKED',
+      reason: 'сканирование repository B сообщает блокирующий конфликт; квалификация невозможна до его разрешения владельцем, независимо от чистого состояния repository A',
+      blockers: ['unresolved rule-candidate conflict (finding-multi-repo-conflict)'],
+    };
+    const forward = qualifyConnection([repoA, dirtyB], expectedBlocked);
+    assert(forward.problems.length === 0, JSON.stringify(forward.problems));
+
+    const reversed = qualifyConnection([dirtyB, repoA], expectedBlocked);
+    assert(reversed.problems.length === 0, JSON.stringify(reversed.problems));
+
+    const wronglyDeclaredQualified = qualifyConnection([repoA, dirtyB], { state: 'QUALIFIED', reason: 'намеренно неверно — проверка обязана отклонить' });
+    assert(wronglyDeclaredQualified.problems.length > 0, 'заявленный QUALIFIED поверх конфликта в одном из двух сканов принят без замечаний');
+  });
+
+  check('scenario:multi-repository-workspace (негативный) — повтор payload.repository.id между двумя сканами отклонён', () => {
+    const duplicateRepoB = repoConnection('scenario-multi-repo-b-duplicate-repo', 'sample-project-repository');
+    const result = qualifyConnection([repoA, duplicateRepoB], {
+      state: 'QUALIFIED',
+      reason: 'намеренно повторяющийся repository.id — проверка обязана отклонить',
+      workspaceRepositoryIds: ['sample-project-repository'],
+    });
+    assert(result.problems.some((p) => p.includes('all naming the same payload.repository.id')), JSON.stringify(result.problems));
+  });
+
+  check('scenario:multi-repository-workspace (негативный) — workspace_repository_ids не совпадает с фактически просканированными репозиториями', () => {
+    const result = qualifyConnection([repoA, repoB], {
+      state: 'QUALIFIED',
+      reason: 'намеренно неполный список — проверка обязана отклонить',
+      workspaceRepositoryIds: ['sample-project-repository'],
+    });
+    assert(result.problems.some((p) => p.includes('workspace_repository_ids is missing')), JSON.stringify(result.problems));
+  });
+
+  check('scenario:multi-repository-workspace (негативный) — next_step "await-owner-decision" на ВТОРОМ скане даёт UNVERIFIED независимо от порядка', () => {
+    const pendingB = repoConnection('scenario-multi-repo-b-pending', 'sample-project-repository-two', {
+      findings: [{ id: 'finding-multi-repo-pending', kind: 'other', detail: 'обнаруженный кандидат в репозитории B ожидает решения владельца', blocking: true }],
+      next_step: 'await-owner-decision',
+    });
+    const expectedUnverified = {
+      state: 'UNVERIFIED',
+      reason: 'сканирование repository B ожидает решения владельца; соответствие ещё не проверено, независимо от чистого состояния repository A',
+      openQuestions: ['владелец ещё не принял решение по кандидату, приведшему к finding-multi-repo-pending'],
+    };
+    const forward = qualifyConnection([repoA, pendingB], expectedUnverified);
+    assert(forward.problems.length === 0, JSON.stringify(forward.problems));
+
+    const reversed = qualifyConnection([pendingB, repoA], expectedUnverified);
+    assert(reversed.problems.length === 0, JSON.stringify(reversed.problems));
+
+    const wronglyDeclaredQualified = qualifyConnection([repoA, pendingB], { state: 'QUALIFIED', reason: 'намеренно неверно — проверка обязана отклонить' });
+    assert(wronglyDeclaredQualified.problems.length > 0, 'заявленный QUALIFIED поверх await-owner-decision в одном из двух сканов принят без замечаний');
+  });
+
+  check('scenario:multi-repository-workspace (негативный) — настоящий нерешённый кандидат правила на ВТОРОМ скане даёт UNVERIFIED независимо от порядка, даже когда его next_step чист', () => {
+    const sourceB = discoveredSource({ id: 'scenario-multi-repo-b-source', revision: 'content-multi-repo-b-1', digest: 'f'.repeat(64), containerRef: 'sample-project-repository-two' });
+    const candidateB = ruleCandidate({
+      id: 'scenario-multi-repo-b-candidate', sourceId: 'scenario-multi-repo-b-source', revision: 'content-multi-repo-b-1', digest: 'f'.repeat(64),
+      boundaryStart: 1, boundaryEnd: 3, semanticKey: 'multi-repo-b-rule', classificationBasis: 'явно классифицировано, решение владельца ещё не принято', applicabilityState: 'candidate',
+    });
+    const undecidedB = repoConnection('scenario-multi-repo-b-undecided', 'sample-project-repository-two', {
+      discovery_plan: [{ id: 'scenario-multi-repo-b-source', medium: 'file', path: 'AGENTS.md', container_ref: 'sample-project-repository-two' }],
+      discovered_sources: [sourceB],
+      rule_candidates: [{ discovery_status: 'new', candidate: candidateB }],
+    });
+    const expectedUnverified = {
+      state: 'UNVERIFIED',
+      reason: 'разрешённый кандидат правила в repository B ещё не получил решения владельца; next_step сканирования не заявляет это блокирующим, но квалификация обязана остановиться сама',
+      openQuestions: ['владелец ещё не принял решение по "scenario-multi-repo-b-candidate"'],
+    };
+    const forward = qualifyConnection([repoA, undecidedB], expectedUnverified);
+    assert(forward.problems.length === 0, JSON.stringify(forward.problems));
+
+    const reversed = qualifyConnection([undecidedB, repoA], expectedUnverified);
+    assert(reversed.problems.length === 0, JSON.stringify(reversed.problems));
+
+    const wronglyDeclaredQualified = qualifyConnection([repoA, undecidedB], { state: 'QUALIFIED', reason: 'намеренно неверно — проверка обязана отклонить' });
+    assert(wronglyDeclaredQualified.problems.length > 0, 'заявленный QUALIFIED поверх нерешённого кандидата в одном из двух сканов принят без замечаний');
   });
 }
 

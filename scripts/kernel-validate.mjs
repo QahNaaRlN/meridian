@@ -110,6 +110,7 @@ import {
   makeRefResolver,
 } from './lib/instance-data-migration.mjs';
 import { evaluateWorkspaceCompatibilityQualification } from './lib/workspace-compatibility-qualification.mjs';
+import { evaluateUpgradeIntegrationQualification } from './lib/upgrade-integration-qualification.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2534,6 +2535,177 @@ function functionalParityConsistency(rec) {
     if (wcqOk && wcqCoverage) {
       ok('workspace-compatibility-qualification: the qualification schema parsed and keyword-checked; '
        + `${wcqSatisfied} representative fixture(s) satisfied the composition (record envelope, mandatory composed registry/envelope/source-registry/rule-intake/migration/export schemas required regardless of document content, an always-required non-empty workspace_connection_refs array — with no duplicate declared id/reference, and, for a project-workspace, a workspace_repository_ids set closed to exactly the scanned repositories — and an optional migration_plan_ref/canonical_export_ref — ALL pinned to a recomputed sha256 content digest (computeConnectionDigest/computePlanFingerprint/computeExportDigest) and checked against the REAL evaluateExistingProjectCompatibilityMode/evaluateInstanceDataMigration/evaluateInstanceCanonicalExport — the export's own plan boundary derived from the already-resolved plan, never an independently configured resolver — full scope agreement across every resolved record, and a recomputed qualification_state — the nine-row decision matrix of workspace-compatibility-qualification.md §4.1, closed to every composed connection's own next_step aggregated order-independently, whether any resolved rule candidate on any of them is still an undecided "candidate" (forcing UNVERIFIED, never QUALIFIED, regardless of migration state), and, when a plan is composed, its own verification.overall_status and canonical-export coverage of any minted record — checked against the declared value, with blockers/open_questions each closed to qualification_state) covering all nine decision-matrix rows, and ${wcqRejected} were rejected as declared; the program's eight acceptance scenarios (§4.2) are proven separately by test/workspace-compatibility-qualification.test.mjs — seven fully, and the eighth (migration-applicability-preservation) only in its Kernel part, its product-specific field evidence being the next, separate Instance-repository package's proof (§4.3)`);
+    }
+  }
+}
+
+/**
+ * upgrade-integration-qualification: the closed, product-neutral final
+ * qualification (record_type: upgrade-integration-qualification) of one
+ * workspace's run through packages 1-8 of the meridian-operating-upgrade
+ * program — meridian-operating-foundation, task-pattern-registry,
+ * task-specification-contract, execution-state-model, role-and-human-control,
+ * bounded-context-manifest, evidence-and-handoff-contract and
+ * meridian-field-evaluation. This is package 9 — the ninth, penultimate
+ * package before meridian-operating-upgrade-release (package 10). It
+ * composes, never duplicates: payload.task_journey_ref pins one FULL
+ * evidence-and-handoff record — the terminal point that already composes
+ * execution-state-model, role-and-human-control, bounded-context-manifest
+ * and, transitively, task-specification-contract/task-pattern-registry
+ * (evidence-and-handoff-contract.md §4, §12) — checked against the REAL
+ * evaluateEvidenceAndHandoff; payload.field_evaluation_report_ref (nullable)
+ * pins one FULL field-evaluation-report record (package 8), checked against
+ * the REAL evaluateFieldEvaluation; payload.scenario_classifications pins
+ * exactly three FULL task-specification/execution-run record pairs, one per
+ * required neutral scenario (single-module-refactor,
+ * multi-repository-decomposition, language-change-limit-case —
+ * upgrade-integration-qualification.md §3), checked against the REAL
+ * evaluateTaskSpecification/evaluateExecutionState and against that
+ * scenario's own closed expectation (task_pattern id, and, for the two
+ * initiative-shaped scenarios, lifecycle_stage relative to "classification").
+ * payload.workspace_transition_compatibility is a required, closed,
+ * product-neutral Kernel-side template requirement recording that the
+ * Kernel/Instance transition to the new operating-model workspace model is
+ * documented — never any specific product's filled transition evidence,
+ * which is the subject of a separate, later Instance package.
+ * payload.qualification_state is a closed, RECOMPUTED verdict — QUALIFIED,
+ * BLOCKED or UNVERIFIED (upgrade-integration-qualification.md §5) — checked
+ * here against the composed evaluations' own outcome; blockers/open_questions
+ * are each closed to qualification_state. The tests proving the decision
+ * matrix (fixtures) and the three required neutral scenarios live in
+ * test/upgrade-integration-qualification.test.mjs — not by this bundle
+ * (schema/keyword-check/fixture-coverage) alone. The contract is a MANDATORY
+ * part of this Kernel: a missing schema or missing fixtures is a FAIL, not an
+ * informational skip.
+ */
+{
+  const uiqDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const uiqSchemaName = 'upgrade-integration-qualification.schema.json';
+  const uiqSchemaRaw = readIfExists(path.join(uiqDir, uiqSchemaName));
+  if (uiqSchemaRaw === null) {
+    fail(`upgrade-integration-qualification: registries/operating-model/${uiqSchemaName} is missing; the upgrade integration qualification contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let uiqOk = true;
+    let uiqSchema = null;
+    try { uiqSchema = JSON.parse(uiqSchemaRaw); }
+    catch (e) { fail(`upgrade-integration-qualification: ${uiqSchemaName} is not valid JSON: ${e.message}`); uiqOk = false; }
+
+    const composedSchemaFiles = {
+      uiqEnv: ['scoped-record.schema.json', 'the composed records\' envelope'],
+      uiqEhSchema: ['evidence-and-handoff.schema.json', 'the composed task journey'],
+      uiqFeSchema: ['field-evaluation.schema.json', 'a composed field-evaluation report'],
+      uiqTsSchema: ['task-specification.schema.json', 'a composed scenario task specification'],
+      uiqEsSchema: ['execution-state.schema.json', 'a composed scenario execution run'],
+    };
+    const loaded = {};
+    for (const [varName, [fileName, reason]] of Object.entries(composedSchemaFiles)) {
+      const raw = readIfExists(path.join(uiqDir, fileName));
+      if (raw === null) {
+        fail(`upgrade-integration-qualification: registries/operating-model/${fileName} is missing; ${reason} cannot be checked without it`);
+        uiqOk = false;
+      } else {
+        try { loaded[varName] = JSON.parse(raw); }
+        catch (e) { fail(`upgrade-integration-qualification: ${fileName} is not valid JSON: ${e.message}`); uiqOk = false; }
+      }
+    }
+    const uiqEnv = loaded.uiqEnv ?? null;
+    const uiqEhSchema = loaded.uiqEhSchema ?? null;
+    const uiqFeSchema = loaded.uiqFeSchema ?? null;
+    const uiqTsSchema = loaded.uiqTsSchema ?? null;
+    const uiqEsSchema = loaded.uiqEsSchema ?? null;
+
+    if (uiqSchema) {
+      try { assertSupportedDeep(uiqSchema, uiqSchemaName); }
+      catch (e) { fail(`upgrade-integration-qualification: the schema uses a construct this validator cannot check: ${e.message}`); uiqOk = false; }
+    }
+
+    // The scenario_classifications' task_pattern reference is resolved
+    // against the same built-in catalogue task-specification-contract uses.
+    let uiqTaskPatterns = null;
+    const uiqTprRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'task-pattern-registry.yaml'));
+    if (uiqTprRaw === null) {
+      fail('upgrade-integration-qualification: standards/workspace/task-pattern-registry.yaml is missing; a scenario\'s task-pattern reference cannot be resolved without the catalogue');
+      uiqOk = false;
+    } else {
+      try {
+        const tprDoc = yamlParse(uiqTprRaw);
+        uiqTaskPatterns = (Array.isArray(tprDoc && tprDoc.task_patterns) ? tprDoc.task_patterns : []).map((p) => ({
+          id: p && p.id,
+          work_kind: p && p.payload && p.payload.work_kind,
+          change_class: (p && p.payload && p.payload.change_class) ?? null,
+        }));
+      } catch (e) { fail(`upgrade-integration-qualification: cannot parse task-pattern-registry.yaml: ${e.message}`); uiqOk = false; }
+    }
+
+    let uiqSatisfied = 0;
+    let uiqRejected = 0;
+    let uiqCoverage = false;
+    const uiqFxRaw = readIfExists(path.join(uiqDir, 'fixtures', 'upgrade-integration-qualification.fixtures.json'));
+    if (uiqFxRaw === null) {
+      fail('upgrade-integration-qualification: the schema carries no fixtures (registries/operating-model/fixtures/upgrade-integration-qualification.fixtures.json); a schema no run exercises is not one this gate has reached');
+      uiqOk = false;
+    } else if (uiqOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(uiqFxRaw); }
+      catch (e) { bundleOk = false; fail(`upgrade-integration-qualification: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('upgrade-integration-qualification: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`upgrade-integration-qualification: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        uiqOk = false;
+      } else {
+        const uiqOpts = {
+          registrySchema: uiqSchema,
+          envelopeSchema: uiqEnv,
+          resolveTaskJourney: makeRefResolver(bundle.task_journey_resolution),
+          resolveFieldEvaluationReport: makeRefResolver(bundle.field_evaluation_resolution),
+          resolveTaskSpecification: makeRefResolver(bundle.task_specification_resolution),
+          resolveExecutionState: makeRefResolver(bundle.execution_state_resolution),
+          taskJourneyOptions: {
+            recordSchema: uiqEhSchema,
+            envelopeSchema: uiqEnv,
+            resolveRecords: makeRecordResolver(bundle.task_journey_nested_resolution),
+          },
+          fieldEvaluationOptions: {
+            recordSchema: uiqFeSchema,
+            envelopeSchema: uiqEnv,
+            resolveRecords: makeRecordResolver(bundle.field_evaluation_nested_resolution),
+          },
+          taskSpecificationOptions: {
+            recordSchema: uiqTsSchema,
+            envelopeSchema: uiqEnv,
+            taskPatterns: uiqTaskPatterns,
+          },
+          executionStateOptions: {
+            recordSchema: uiqEsSchema,
+            envelopeSchema: uiqEnv,
+          },
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateUpgradeIntegrationQualification(c && c.registry, uiqOpts);
+          if (p.length) { fail(`upgrade-integration-qualification: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); uiqOk = false; }
+          else uiqSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateUpgradeIntegrationQualification(c && c.registry, uiqOpts);
+          if (p.length === 0) { fail(`upgrade-integration-qualification: a fixture that must be rejected validated clean (${c && c.note})`); uiqOk = false; }
+          else uiqRejected++;
+        }
+        uiqCoverage = uiqOk;
+      }
+    }
+
+    if (uiqOk && uiqCoverage) {
+      ok('upgrade-integration-qualification: the qualification schema parsed and keyword-checked; '
+       + `${uiqSatisfied} representative fixture(s) satisfied the composition (record envelope, mandatory composed evidence-and-handoff/field-evaluation/task-specification/execution-state schemas required regardless of document content, an always-required sha256-pinned task_journey_ref composed against the REAL evaluateEvidenceAndHandoff, an optional field_evaluation_report_ref composed against the REAL evaluateFieldEvaluation, and exactly three sha256-pinned scenario_classifications entries — one per required neutral scenario — each composed against the REAL evaluateTaskSpecification/evaluateExecutionState and checked against that scenario's own closed task_pattern/lifecycle_stage expectation, plus a recomputed qualification_state with blockers/open_questions each closed to it) covering the decision matrix, and ${uiqRejected} were rejected as declared; the three required neutral scenarios are proven separately by test/upgrade-integration-qualification.test.mjs`);
     }
   }
 }

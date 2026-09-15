@@ -119,6 +119,13 @@ if ! node "$ROOT/test/workspace-compatibility-qualification.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: verifying the upgrade integration qualification contract"
+if ! node "$ROOT/test/upgrade-integration-qualification.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the upgrade integration qualification contract is inconsistent."
+  exit 1
+fi
+
 echo "pre-push: running the Git-environment isolation regression test"
 if ! node "$ROOT/test/pre-push-git-isolation.test.mjs"; then
   echo ""

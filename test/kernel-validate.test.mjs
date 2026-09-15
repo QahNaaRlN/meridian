@@ -533,6 +533,31 @@ function writeWorkspaceCompatibilityQualification(root, { schema = null, bundle 
   }
 }
 
+/*
+ * upgrade-integration-qualification helpers. The contract is a MANDATORY
+ * part of the Kernel, so buildKernel plants the real schema and real
+ * fixtures beside it; the four contracts it composes (evidence-and-handoff,
+ * meridian-field-evaluation, task-specification-contract,
+ * execution-state-model — and their own scoped-record.schema.json /
+ * task-pattern-registry.yaml) are already planted by the writers above.
+ */
+const UIQ_OM = path.join(__dirname, '..', 'registries', 'operating-model');
+const UIQ_OK_LINE = /upgrade-integration-qualification: the qualification schema parsed and keyword-checked; \d+ representative fixture\(s\) satisfied the composition .* and \d+ were rejected as declared/;
+const uiqRealBundle = () => JSON.parse(fs.readFileSync(path.join(UIQ_OM, 'fixtures', 'upgrade-integration-qualification.fixtures.json'), 'utf8'));
+function writeUpgradeIntegrationQualification(root, { schema = null, bundle = null, omitFixtures = false } = {}) {
+  write(root, 'registries/operating-model/upgrade-integration-qualification.schema.json',
+    schema ?? fs.readFileSync(path.join(UIQ_OM, 'upgrade-integration-qualification.schema.json'), 'utf8'));
+  const fxPath = path.join(root, 'registries/operating-model/fixtures/upgrade-integration-qualification.fixtures.json');
+  if (omitFixtures) {
+    fs.rmSync(fxPath, { force: true });
+  } else {
+    write(root, 'registries/operating-model/fixtures/upgrade-integration-qualification.fixtures.json',
+      bundle == null
+        ? fs.readFileSync(path.join(UIQ_OM, 'fixtures', 'upgrade-integration-qualification.fixtures.json'), 'utf8')
+        : JSON.stringify(bundle));
+  }
+}
+
 function buildKernel(root) {
   write(root, 'README.md', `${fm('Synthetic kernel', 'readme')}\n# Synthetic kernel\n\nSee [the note](docs/note.md).\n`);
   writeTopicPool(root);
@@ -577,6 +602,8 @@ function buildKernel(root) {
   writeInstanceCanonicalExport(root);
   /* The mandatory workspace-compatibility-qualification contract, likewise. */
   writeWorkspaceCompatibilityQualification(root);
+  /* The mandatory upgrade-integration-qualification contract, likewise. */
+  writeUpgradeIntegrationQualification(root);
   sh('git', ['init', '-q'], root);
   sh('git', ['add', '-A'], root);
   sh('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', 'commit', '-q', '-m', 'synthetic'], root);
@@ -5195,6 +5222,108 @@ const isrExternal = () => JSON.parse(JSON.stringify(isrRealBundle().valid[3])); 
   check('t277 an invalid workspace-compatibility-qualification fixture the composition accepts clean is a red run', run(kernel, instance), {
     expectExit: 1,
     mustMatch: [/workspace-compatibility-qualification: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
+  });
+}
+
+/*
+ * ===========================================================================
+ * upgrade-integration-qualification — the closed, product-neutral final
+ * verdict composing packages 1-8 of meridian-operating-upgrade (package 9),
+ * is a MANDATORY part of the Kernel (buildKernel plants it). Schema is
+ * Kernel, qualification data is Instance. Removing the schema or the
+ * fixtures is a FAIL; a present schema is parsed, keyword-checked and
+ * exercised against its product-neutral fixtures — the decision matrix
+ * (upgrade-integration-qualification.md §5), a separate, smaller claim than
+ * the three required neutral scenarios (§3, proven by
+ * test/upgrade-integration-qualification.test.mjs, not by this bundle) —
+ * fail-closed on the bundle's own shape. Helpers (UIQ_OM, UIQ_OK_LINE,
+ * uiqRealBundle, writeUpgradeIntegrationQualification) sit next to the other
+ * operating-model contract helpers so buildKernel can call them.
+ * ===========================================================================
+ */
+
+/* t278 — an ordinary synthetic kernel already carries the mandatory contract. */
+{
+  const { kernel, instance } = freshPair('t278');
+  check('t278 the mandatory upgrade-integration-qualification contract is reached and its fixtures classified', run(kernel, instance), {
+    expectExit: 0,
+    mustMatch: [UIQ_OK_LINE],
+    mustNotMatch: [/^FAIL/m],
+  });
+}
+
+/* t279 — the contract is MANDATORY: removing the schema is a red run, not a skip. */
+{
+  const { kernel, instance } = freshPair('t279');
+  fs.rmSync(path.join(kernel, 'registries', 'operating-model', 'upgrade-integration-qualification.schema.json'));
+  commitAll(kernel);
+  check('t279 removing the mandatory upgrade-integration-qualification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: registries\/operating-model\/upgrade-integration-qualification\.schema\.json is missing; the upgrade integration qualification contract is a mandatory part of this Kernel/],
+  });
+}
+
+/* t280 — a schema keyword the in-gate validator does not implement fails loudly. */
+{
+  const { kernel, instance } = freshPair('t280');
+  const s = JSON.parse(fs.readFileSync(path.join(UIQ_OM, 'upgrade-integration-qualification.schema.json'), 'utf8'));
+  s.definitions.payload.patternProperties = { '^x': { type: 'string' } };
+  writeUpgradeIntegrationQualification(kernel, { schema: JSON.stringify(s, null, 2) });
+  commitAll(kernel);
+  check('t280 an unsupported upgrade-integration-qualification schema keyword is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: the schema uses a construct this validator cannot check/],
+  });
+}
+
+/* t281 — a schema that is not valid JSON fails, it is not skipped. */
+{
+  const { kernel, instance } = freshPair('t281');
+  writeUpgradeIntegrationQualification(kernel, { schema: '{ not json' });
+  commitAll(kernel);
+  check('t281 a non-JSON upgrade-integration-qualification schema is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: upgrade-integration-qualification\.schema\.json is not valid JSON/],
+  });
+}
+
+/* t282 — the schema is present but no fixtures sit beside it: a gap, not a skip. */
+{
+  const { kernel, instance } = freshPair('t282');
+  writeUpgradeIntegrationQualification(kernel, { omitFixtures: true });
+  commitAll(kernel);
+  check('t282 an upgrade-integration-qualification schema with no fixtures beside it is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: the schema carries no fixtures/],
+  });
+}
+
+/* t283 — a fixture declared valid that the composition rejects is a red run. */
+{
+  const { kernel, instance } = freshPair('t283');
+  const b = uiqRealBundle();
+  const base = b.valid.find((c) => c.note.includes('QUALIFIED'));
+  const registry = JSON.parse(JSON.stringify(base.registry));
+  registry.qualifications[0].payload.qualification_reason = '';
+  b.valid.push({ note: 'planted qualification with an empty qualification_reason', registry });
+  writeUpgradeIntegrationQualification(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t283 a valid upgrade-integration-qualification fixture the composition rejects is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: a fixture that must be a valid registry was rejected \(planted qualification with an empty qualification_reason\)/],
+  });
+}
+
+/* t284 — a fixture declared invalid that the composition accepts clean is a red run. */
+{
+  const { kernel, instance } = freshPair('t284');
+  const b = uiqRealBundle();
+  b.invalid.push({ note: 'planted well-formed registry in the invalid array', registry: JSON.parse(JSON.stringify(b.valid[0].registry)) });
+  writeUpgradeIntegrationQualification(kernel, { bundle: b });
+  commitAll(kernel);
+  check('t284 an invalid upgrade-integration-qualification fixture the composition accepts clean is a red run', run(kernel, instance), {
+    expectExit: 1,
+    mustMatch: [/upgrade-integration-qualification: a fixture that must be rejected validated clean \(planted well-formed registry in the invalid array\)/],
   });
 }
 

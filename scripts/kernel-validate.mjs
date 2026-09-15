@@ -2336,29 +2336,37 @@ function functionalParityConsistency(rec) {
  * workspace-compatibility-qualification) — the sixth, closing package of the
  * meridian-workspace-compatibility program. Its envelope is validated
  * against the existing scoped-record.schema.json (composition, not a second
- * envelope). The record never embeds any of the three composed records: it
- * carries CLOSED PINNED REFERENCES (workspace_connection_ref, always
- * required; migration_plan_ref/canonical_export_ref, nullable), each
- * resolved through an external boundary this section wires from the
- * fixtures bundle's own connection_record_resolution/plan_record_resolution/
+ * envelope). The record never embeds any composed record: it carries
+ * CLOSED PINNED REFERENCES (workspace_connection_refs, a non-empty array —
+ * one entry per connection scan this record composes — always required;
+ * migration_plan_ref/canonical_export_ref, nullable), each resolved through
+ * an external boundary this section wires from the fixtures bundle's own
+ * connection_record_resolution/plan_record_resolution/
  * export_record_resolution maps, then composed against the REAL
  * evaluateExistingProjectCompatibilityMode/evaluateInstanceDataMigration/
  * evaluateInstanceCanonicalExport — never a raw imported field
  * (raw_excerpt, normalized_text, or a secret-bearing value) persisted in
- * this record. ALL THREE references pin an exact sha256 (the resolved
- * record's own recomputed content digest — computeConnectionDigest for the
+ * this record. EVERY reference pins an exact sha256 (the resolved record's
+ * own recomputed content digest — computeConnectionDigest for each
  * workspace connection, computePlanFingerprint/computeExportDigest for the
  * plan/export — checked by the library, never a bare id/reference an
  * independent resolver could satisfy with different content under the same
- * label); when a canonical export is composed, the library derives its plan
- * boundary itself from the already-resolved, already-pinned plan and
+ * label); no two entries of workspace_connection_refs may declare the same
+ * id or reference. When scope.type is "project-workspace",
+ * payload.workspace_repository_ids is a required, closed, unique list of
+ * repository ids checked to equal EXACTLY the set of payload.repository.id
+ * names carried by every resolved connection — no gap, no extra, no
+ * duplicate. When a canonical export is composed, the library derives its
+ * plan boundary itself from the already-resolved, already-pinned plan and
  * ignores any exportOptions.resolveMigrationPlan this section might
  * otherwise construct — there is deliberately none wired below. A resolved
  * workspace connection that still carries any rule candidate with
  * applicability_state "candidate" additionally forces qualification_state
  * UNVERIFIED — never QUALIFIED — regardless of next_step or migration plan
- * state; the connection's own next_step priority does not look inside
- * rule_candidates, so this section's evaluator closes that gap itself.
+ * state; a connection's own next_step priority does not look inside
+ * rule_candidates, so this section's evaluator closes that gap itself,
+ * aggregated across EVERY declared connection and independent of their
+ * declared order.
  *
  * The composed contracts' schemas (and, for
  * existing-project-compatibility-mode, ITS own composed
@@ -2369,7 +2377,7 @@ function functionalParityConsistency(rec) {
  *
  * qualification_state (QUALIFIED/BLOCKED/UNVERIFIED) is a closed, RECOMPUTED
  * verdict — the DECISION MATRIX documented in
- * workspace-compatibility-qualification.md §4.1 — over the composed
+ * workspace-compatibility-qualification.md §4.1 — over every composed
  * workspace connection's own next_step and, when a migration plan is
  * composed, its own verification.overall_status and whether a plan that
  * mints a migrated/merged record is backed by a composed canonical export;
@@ -2525,7 +2533,7 @@ function functionalParityConsistency(rec) {
 
     if (wcqOk && wcqCoverage) {
       ok('workspace-compatibility-qualification: the qualification schema parsed and keyword-checked; '
-       + `${wcqSatisfied} representative fixture(s) satisfied the composition (record envelope, mandatory composed registry/envelope/source-registry/rule-intake/migration/export schemas required regardless of document content, an always-required workspace_connection_ref and an optional migration_plan_ref/canonical_export_ref — ALL THREE pinned to a recomputed sha256 content digest (computeConnectionDigest/computePlanFingerprint/computeExportDigest) and checked against the REAL evaluateExistingProjectCompatibilityMode/evaluateInstanceDataMigration/evaluateInstanceCanonicalExport — the export's own plan boundary derived from the already-resolved plan, never an independently configured resolver — full scope agreement across every resolved record, and a recomputed qualification_state — the nine-row decision matrix of workspace-compatibility-qualification.md §4.1, closed to the composed connection's own next_step, whether any resolved rule candidate is still an undecided "candidate" (forcing UNVERIFIED, never QUALIFIED, regardless of migration state), and, when a plan is composed, its own verification.overall_status and canonical-export coverage of any minted record — checked against the declared value, with blockers/open_questions each closed to qualification_state) covering all nine decision-matrix rows, and ${wcqRejected} were rejected as declared; the program's eight acceptance scenarios (§4.2) are proven separately by test/workspace-compatibility-qualification.test.mjs — seven fully, and the eighth (migration-applicability-preservation) only in its Kernel part, its product-specific field evidence being the next, separate Instance-repository package's proof (§4.3)`);
+       + `${wcqSatisfied} representative fixture(s) satisfied the composition (record envelope, mandatory composed registry/envelope/source-registry/rule-intake/migration/export schemas required regardless of document content, an always-required non-empty workspace_connection_refs array — with no duplicate declared id/reference, and, for a project-workspace, a workspace_repository_ids set closed to exactly the scanned repositories — and an optional migration_plan_ref/canonical_export_ref — ALL pinned to a recomputed sha256 content digest (computeConnectionDigest/computePlanFingerprint/computeExportDigest) and checked against the REAL evaluateExistingProjectCompatibilityMode/evaluateInstanceDataMigration/evaluateInstanceCanonicalExport — the export's own plan boundary derived from the already-resolved plan, never an independently configured resolver — full scope agreement across every resolved record, and a recomputed qualification_state — the nine-row decision matrix of workspace-compatibility-qualification.md §4.1, closed to every composed connection's own next_step aggregated order-independently, whether any resolved rule candidate on any of them is still an undecided "candidate" (forcing UNVERIFIED, never QUALIFIED, regardless of migration state), and, when a plan is composed, its own verification.overall_status and canonical-export coverage of any minted record — checked against the declared value, with blockers/open_questions each closed to qualification_state) covering all nine decision-matrix rows, and ${wcqRejected} were rejected as declared; the program's eight acceptance scenarios (§4.2) are proven separately by test/workspace-compatibility-qualification.test.mjs — seven fully, and the eighth (migration-applicability-preservation) only in its Kernel part, its product-specific field evidence being the next, separate Instance-repository package's proof (§4.3)`);
     }
   }
 }

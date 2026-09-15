@@ -13,11 +13,23 @@
  *
  * Bounded, not embedded (property: no persisted raw content). A qualification
  * record never carries a composed workspace_connection, migration_plan or
- * canonical_export INLINE — only a closed, pinned reference to each:
+ * canonical_export INLINE — only closed, pinned references:
  *
- *   payload.workspace_connection_ref  — { record_type, id, reference, sha256 }
+ *   payload.workspace_connection_refs — [{ record_type, id, reference, sha256 }, ...] (minItems 1)
  *   payload.migration_plan_ref        — { record_type, id, reference, sha256 } | null
  *   payload.canonical_export_ref      — { record_type, id, reference, sha256 } | null
+ *
+ * A single workspace or repository can be connected through MORE THAN ONE
+ * scan — a multi-repository project-workspace names one scan per repository
+ * it covers (payload.workspace_repository_ids, required exactly when
+ * scope.type is "project-workspace", is the closed, unique set of repository
+ * ids this record claims to have scanned; property below). This is an honest
+ * generalisation of a single connection, not a special case bolted on: every
+ * property this module already held for one connection — sha256 pinning,
+ * scope agreement, independent composition against the real evaluator, and
+ * "no silent QUALIFIED over a pending decision" — is checked for EVERY
+ * declared entry, and the decision matrix reads the WORST signal across all
+ * of them, never only the first.
  *
  * Each reference is resolved through an EXTERNAL boundary this module does
  * not control (resolveConnectionRecord / resolvePlanRecord /
@@ -30,32 +42,48 @@
  * persisted qualification record: only the closed reference does.
  *
  * Exact-version pinning (property: no same-id substitution). A bare id is
- * NEVER proof of identity for any of the three references: each MUST carry
- * `sha256`, checked against the RESOLVED record's own recomputed content
- * digest — computePlanFingerprint / computeExportDigest for the migration
- * plan and canonical export (the same pure functions
- * instance-data-migration.mjs already uses to reject a stale or substituted
- * plan/export), and this module's OWN computeConnectionDigest for the
- * workspace connection scan, which existing-project-compatibility-mode.md
- * carries no analogous fingerprint function for. A resolved record whose
- * content differs from what was pinned — even under the exact same id AND
- * reference string — is rejected: the digest is recomputed from what the
- * resolver actually returns, never trusted on the strength of a matching
- * label (checked requirement, not a documentation promise — see the
- * dedicated "подмена содержимого" test). When a canonical_export_ref is
- * composed, this module does not forward the caller's own
- * resolveMigrationPlan boundary to evaluateInstanceCanonicalExport at all: it
- * builds a NEW, single-entry resolver from the ALREADY-resolved,
- * ALREADY-fingerprint-pinned migration_plan_ref record, so an independently
- * configured resolver map can never substitute a different plan sharing the
- * same id for the export's own plan check.
+ * NEVER proof of identity for any reference: each MUST carry `sha256`,
+ * checked against the RESOLVED record's own recomputed content digest —
+ * computePlanFingerprint / computeExportDigest for the migration plan and
+ * canonical export (the same pure functions instance-data-migration.mjs
+ * already uses to reject a stale or substituted plan/export), and this
+ * module's OWN computeConnectionDigest for each workspace connection scan,
+ * which existing-project-compatibility-mode.md carries no analogous
+ * fingerprint function for. A resolved record whose content differs from
+ * what was pinned — even under the exact same id AND reference string — is
+ * rejected: the digest is recomputed from what the resolver actually
+ * returns, never trusted on the strength of a matching label (checked
+ * requirement, not a documentation promise — see the dedicated "подмена
+ * содержимого" test). When a canonical_export_ref is composed, this module
+ * does not forward the caller's own resolveMigrationPlan boundary to
+ * evaluateInstanceCanonicalExport at all: it builds a NEW, single-entry
+ * resolver from the ALREADY-resolved, ALREADY-fingerprint-pinned
+ * migration_plan_ref record, so an independently configured resolver map can
+ * never substitute a different plan sharing the same id for the export's own
+ * plan check.
+ *
+ * No two declared references may name the same composed record twice
+ * (property: no duplicate scans). Two entries of payload.workspace_connection_refs
+ * sharing an `id` or a `reference` are rejected before resolution is even
+ * attempted — a resolver that happens to fail closed on a genuinely unknown
+ * key is never the only thing standing between a duplicated declaration and
+ * a passing composition.
+ *
+ * No gaps, no extras, no duplicates between declared and scanned
+ * repositories (property: exact repository set for a multi-repository
+ * workspace). When scope.type is "project-workspace", the set of
+ * payload.repository.id names carried by every RESOLVED, sha256-matching
+ * connection must equal payload.workspace_repository_ids exactly: a
+ * repository actually scanned but not declared, a repository declared but
+ * never scanned, and the same repository scanned more than once are each
+ * their own rejected condition.
  *
  * No silent QUALIFIED over a pending decision (property: undecided
  * candidates block full qualification). A workspace connection's own
  * next_step can read "continue-compatibility-mode" while a rule candidate it
  * carries is still applicability_state "candidate" — existing-project-compatibility-mode.md's
  * own next_step priority does not look inside rule_candidates at all, only
- * at findings. This module closes that gap itself: whenever the RESOLVED
+ * at findings. This module closes that gap itself: whenever ANY resolved
  * connection carries at least one rule candidate still "candidate",
  * qualification_state can never be QUALIFIED — it is UNVERIFIED (an
  * unresolved, checkable owner decision is exactly the explicit-unknown case
@@ -64,7 +92,7 @@
  * Decision matrix, not "the eight scenarios" (property: separated concerns).
  * computeQualificationState is a closed, pure PRIORITY FUNCTION with nine
  * mutually exclusive BRANCHES — an internal implementation detail of how one
- * qualification_state is derived from the composed records' own next_step /
+ * qualification_state is derived from the composed records' own next_steps /
  * pending rule-candidate decisions / verification.overall_status /
  * canonical-export coverage. It is not the program's acceptance scenarios:
  * those are a separate, named set (empty-project-no-instance,
@@ -77,6 +105,12 @@
  * never conflated with this function's branch count (workspace-compatibility-qualification.md
  * §4.1 explains why the two counts are not the same claim, and why they no
  * longer even coincide numerically).
+ *
+ * Order never matters (property: array position is not evidence). Neither
+ * the duplicate check, the repository-set check, nor the decision matrix
+ * reads payload.workspace_connection_refs by position: the same set of
+ * declared references, resolved to the same set of records, computes the
+ * same result in any declared order.
  *
  * Closed result axes (property: three, not two). qualification_state,
  * blockers and open_questions are checked as ONE closed relation, not three
@@ -100,9 +134,21 @@ export const RECORD_TYPE = 'workspace-compatibility-qualification';
 export const ALLOWED_SCOPE_TYPES = ['project-workspace', 'repository-scope'];
 
 /**
+ * The closed maximum number of payload.workspace_connection_refs entries a
+ * "repository-scope" record may declare — checked here in addition to the
+ * schema's own conditional maxItems (workspace-compatibility-qualification.schema.json)
+ * so a caller invoking this module directly, without the container schema
+ * pass, still cannot smuggle a second scan of the same single repository
+ * through. Multiple repositories are expressed only through one
+ * "project-workspace" record's workspace_connection_refs (workspace-compatibility-qualification.md
+ * §2), never through several "repository-scope" records.
+ */
+export const REPOSITORY_SCOPE_MAX_CONNECTION_REFS = 1;
+
+/**
  * The qualification record is a technical computation over already-composed
  * records, never itself an act of declaration or an owner decision: its
- * envelope origin is always "derived" (computed from the connection scan it
+ * envelope origin is always "derived" (computed from the connection scans it
  * pins) and its envelope authority is always a run's delegated authority.
  */
 export const REQUIRED_ORIGIN_KIND = 'derived';
@@ -119,10 +165,15 @@ const SHA256_HEX = /^[0-9a-f]{64}$/;
  * Canonical, deterministic origin.source_ref for a qualification record —
  * the same "kind:id" convention canonicalOriginSourceRef
  * (controlled-rule-intake) and deriveExportOriginSourceRef
- * (instance-data-migration) already use for their own composed origin.
+ * (instance-data-migration) already use for their own composed origin,
+ * generalised to a CLOSED SET of connection ids: accepts either one id
+ * (backward-compatible with a single-connection caller) or an array of ids,
+ * always sorted before joining so the declared ORDER of
+ * payload.workspace_connection_refs never changes the expected value.
  */
-export function canonicalConnectionSourceRef(connectionId) {
-  return `workspace-connection-scan:${connectionId}`;
+export function canonicalConnectionSourceRef(connectionIds) {
+  const ids = Array.isArray(connectionIds) ? connectionIds : [connectionIds];
+  return `workspace-connection-scan:${[...ids].sort().join('+')}`;
 }
 
 /**
@@ -145,16 +196,16 @@ function canonicalize(value) {
 
 /**
  * The deterministic content digest of one FULLY RESOLVED workspace-connection-scan
- * record — the fingerprint workspace_connection_ref.sha256 pins.
- * existing-project-compatibility-mode.md defines no fingerprint function of
- * its own to reuse (unlike a migration plan's plan_fingerprint or a
- * canonical export's digest), so this module defines one, over the record's
- * complete meaningful content (id, title, record_type, scope, origin,
- * authority, payload) — nothing is excluded, because a connection scan
- * carries no self-describing bookkeeping field analogous to a migration
- * plan's own verification/plan_fingerprint/idempotency_key. SHA-256 over the
- * canonicalised (recursively sorted-key) JSON projection, insensitive to
- * declaration order.
+ * record — the fingerprint each entry of payload.workspace_connection_refs
+ * pins. existing-project-compatibility-mode.md defines no fingerprint
+ * function of its own to reuse (unlike a migration plan's plan_fingerprint
+ * or a canonical export's digest), so this module defines one, over the
+ * record's complete meaningful content (id, title, record_type, scope,
+ * origin, authority, payload) — nothing is excluded, because a connection
+ * scan carries no self-describing bookkeeping field analogous to a
+ * migration plan's own verification/plan_fingerprint/idempotency_key.
+ * SHA-256 over the canonicalised (recursively sorted-key) JSON projection,
+ * insensitive to declaration order.
  */
 export function computeConnectionDigest(connection) {
   const c = isObject(connection) ? connection : {};
@@ -179,9 +230,9 @@ function sameScope(a, b) {
 
 /**
  * Checks the closed shape of one pinned reference — { record_type, id,
- * reference, sha256 } — never a plain string, never an embedded body. All
- * three references this module resolves (workspace_connection_ref,
- * migration_plan_ref, canonical_export_ref) require `sha256`: a bare id and
+ * reference, sha256 } — never a plain string, never an embedded body. Every
+ * reference this module resolves (each entry of workspace_connection_refs,
+ * migration_plan_ref, canonical_export_ref) requires `sha256`: a bare id and
  * reference string are never proof of identity on their own — each pins the
  * resolved record's own recomputed content digest (computeConnectionDigest /
  * computePlanFingerprint / computeExportDigest).
@@ -220,6 +271,38 @@ function checkPinnedRefShape(problems, at, field, ref) {
 }
 
 /**
+ * Flags a declared pinned reference that repeats another entry's own `id` or
+ * `reference` within the SAME array — checked on the DECLARED references
+ * themselves, before resolution is attempted, so a resolver that fails
+ * closed on an unknown key is never the only thing standing between two
+ * entries secretly naming the same composed scan twice. Reported by array
+ * position for traceability, but the PRESENCE of a duplicate — never its
+ * position — is what the property depends on: the same set in any order
+ * always yields a duplicate report.
+ */
+function checkNoDuplicateRefs(problems, at, field, refs) {
+  const seenIds = new Map();
+  const seenReferences = new Map();
+  refs.forEach((ref, i) => {
+    if (!isObject(ref)) return;
+    if (typeof ref.id === 'string') {
+      if (seenIds.has(ref.id)) {
+        problems.push(`${at} ${field}[${i}].id "${ref.id}" repeats ${field}[${seenIds.get(ref.id)}].id; each declared reference in this array must name a distinct composed record`);
+      } else {
+        seenIds.set(ref.id, i);
+      }
+    }
+    if (typeof ref.reference === 'string') {
+      if (seenReferences.has(ref.reference)) {
+        problems.push(`${at} ${field}[${i}].reference "${ref.reference}" repeats ${field}[${seenReferences.get(ref.reference)}].reference; each declared reference in this array must name a distinct composed record`);
+      } else {
+        seenReferences.set(ref.reference, i);
+      }
+    }
+  });
+}
+
+/**
  * Resolves one pinned reference through an external boundary and checks the
  * resolved response's own record_type/id echo the pinned values — the same
  * "a claimed value with no resolved, matching backing never confirms
@@ -250,22 +333,26 @@ function resolveNamedRecord(problems, at, field, ref, resolve, expectedRecordTyp
  * The closed, pure decision matrix this package adds — nine mutually
  * exclusive BRANCHES of one priority, not the program's acceptance
  * scenarios (see the module-level comment above). It reads five signals off
- * records the composed evaluators have ALREADY checked clean — it never
- * recomputes next_step or overall_status itself (those belong to the
+ * records the composed evaluators have ALREADY checked clean, aggregated
+ * across EVERY declared workspace connection, never only the first — it
+ * never recomputes next_step or overall_status itself (those belong to the
  * contracts that own them) and never reaches into an array by position:
  *
- *   1. a blocking "resolve-conflict"/"resolve-ambiguity" next_step is a
- *      fail-closed ambiguity — BLOCKED, never merely unverified;
- *   2. any other non-"continue-compatibility-mode" next_step (chiefly
- *      "await-owner-decision", and any value this priority does not
+ *   1. any resolved connection's next_step reading "resolve-conflict" or
+ *      "resolve-ambiguity" is a fail-closed ambiguity — BLOCKED, never
+ *      merely unverified, regardless of what any OTHER connection reports;
+ *   2. otherwise, any connection's next_step other than
+ *      "continue-compatibility-mode" (chiefly "await-owner-decision", an
+ *      unresolved/missing connection, and any value this priority does not
  *      otherwise recognise) means the compatibility chain is not yet
  *      resolved — UNVERIFIED, the explicit-unknown default;
- *   3. at least one resolved rule candidate still applicability_state
- *      "candidate" — an owner decision this program's own next_step
- *      priority does not itself look for — is UNVERIFIED, never QUALIFIED,
- *      regardless of migration plan state;
- *   4. "continue-compatibility-mode" with every candidate decided and no
- *      migration plan composed qualifies the workspace as-is — QUALIFIED;
+ *   3. at least one resolved rule candidate, on ANY connection, still
+ *      applicability_state "candidate" — an owner decision this program's
+ *      own next_step priority does not itself look for — is UNVERIFIED,
+ *      never QUALIFIED, regardless of migration plan state;
+ *   4. every connection reads "continue-compatibility-mode", every candidate
+ *      on every connection is decided, and no migration plan is composed —
+ *      QUALIFIED;
  *   5. a composed migration plan's own BLOCKED verification forces BLOCKED
  *      here too — never softened;
  *   6. anything other than a plan's own VERIFIED (chiefly UNVERIFIED, and
@@ -280,14 +367,23 @@ function resolveNamedRecord(problems, at, field, ref, resolve, expectedRecordTyp
  * which is why workspace-compatibility-qualification.md §4.1 tables nine
  * rows over these eight logical steps.)
  *
- * The same input, read through any order of object-key enumeration, always
- * computes the same output.
+ * The same input, read through any order of object-key enumeration or array
+ * declaration, always computes the same output.
+ *
+ * `nextStep` (singular, scalar) is a DEPRECATED backward-compatible alias for
+ * `nextSteps`: a caller still passing the pre-multi-connection scalar form is
+ * read as a one-element array (`[nextStep]`), never silently dropped into an
+ * empty `nextSteps` — dropping it would misread a perfectly good single
+ * "continue-compatibility-mode" call as the empty-array UNVERIFIED default,
+ * a regression a dedicated test below guards against. `nextSteps`, when
+ * itself an array (including `[]`), always takes precedence over `nextStep`.
  */
 export function computeQualificationState({
-  nextStep, hasUndecidedCandidates, hasMigrationPlan, migrationOverallStatus, mintsRecords, hasCanonicalExport,
+  nextSteps, nextStep, hasUndecidedCandidates, hasMigrationPlan, migrationOverallStatus, mintsRecords, hasCanonicalExport,
 } = {}) {
-  if (nextStep === 'resolve-conflict' || nextStep === 'resolve-ambiguity') return 'BLOCKED';
-  if (nextStep !== 'continue-compatibility-mode') return 'UNVERIFIED';
+  const steps = Array.isArray(nextSteps) ? nextSteps : (nextStep !== undefined ? [nextStep] : []);
+  if (steps.some((s) => s === 'resolve-conflict' || s === 'resolve-ambiguity')) return 'BLOCKED';
+  if (steps.length === 0 || steps.some((s) => s !== 'continue-compatibility-mode')) return 'UNVERIFIED';
   if (hasUndecidedCandidates) return 'UNVERIFIED';
   if (!hasMigrationPlan) return 'QUALIFIED';
   if (migrationOverallStatus === 'BLOCKED') return 'BLOCKED';
@@ -307,7 +403,9 @@ function mintsAnyRecord(migrationPlan) {
  * one rule_candidates[] entry whose candidate.payload.applicability_state is
  * still "candidate" — an owner decision genuinely pending. Reads only the
  * named field of each wrapper via Array#some; the result never depends on
- * where in the array that entry sits.
+ * where in the array that entry sits. A non-object (an unresolved
+ * connection) carries no candidates and safely reports false here — its own
+ * missing next_step already forces a non-QUALIFIED result elsewhere.
  */
 function hasUndecidedRuleCandidates(connection) {
   const wrappers = isObject(connection) && isObject(connection.payload) && Array.isArray(connection.payload.rule_candidates)
@@ -319,11 +417,12 @@ function hasUndecidedRuleCandidates(connection) {
 /**
  * The whole composition pipeline for one workspace-compatibility-qualification
  * document: container + payload schema, per-entry envelope schema,
- * resolution of workspace_connection_ref/migration_plan_ref/canonical_export_ref
+ * resolution of workspace_connection_refs[]/migration_plan_ref/canonical_export_ref
  * through the caller-supplied external boundaries, composition of the
  * RESOLVED records against the REAL evaluators of the three contracts they
  * name, then the cross-cutting rules the JSON Schema subset cannot state
- * (exact-version pinning, scope agreement, the recomputed qualification_state,
+ * (exact-version pinning, no duplicate scans, the exact repository set for a
+ * project-workspace, scope agreement, the recomputed qualification_state,
  * and the blockers/open_questions/qualification_state closed relation).
  *
  * `compatOptions` / `migrationOptions` / `exportOptions` carry the composed
@@ -356,7 +455,7 @@ export function evaluateWorkspaceCompatibilityQualification(doc, {
   };
   const missing = Object.keys(namespaceFailures).filter((k) => !namespaceFailures[k]);
   if (missing.length) {
-    return [`workspace-compatibility-qualification composition requires the real composed contract schemas regardless of this document's own content (a workspace_connection_ref is always composed; migration_plan_ref/canonical_export_ref are composed whenever they are not null): missing or not an object — ${missing.join(', ')}`];
+    return [`workspace-compatibility-qualification composition requires the real composed contract schemas regardless of this document's own content (payload.workspace_connection_refs always composes at least one connection scan; migration_plan_ref/canonical_export_ref are composed whenever they are not null): missing or not an object — ${missing.join(', ')}`];
   }
 
   const problems = [];
@@ -401,42 +500,93 @@ export function evaluateWorkspaceCompatibilityQualification(doc, {
     }
 
     const payload = isObject(e.payload) ? e.payload : {};
-    const connectionRef = payload.workspace_connection_ref;
+    const connectionRefs = Array.isArray(payload.workspace_connection_refs) ? payload.workspace_connection_refs : [];
     const migrationRef = payload.migration_plan_ref;
     const exportRef = payload.canonical_export_ref;
 
-    /* --- workspace_connection_ref: always required, never nullable, always
-       sha256-pinned to the resolved record's own recomputed content digest. --- */
-    let connection = null;
-    checkPinnedRefShape(problems, at, 'payload.workspace_connection_ref', connectionRef);
-    if (isObject(connectionRef)) {
-      if (origin.source_ref !== canonicalConnectionSourceRef(connectionRef.id)) {
-        problems.push(`${at} origin.source_ref "${origin.source_ref}" does not equal "${canonicalConnectionSourceRef(connectionRef.id)}"; the envelope and payload must pin the same composed workspace connection`);
-      }
-      if (typeof connectionRef.reference === 'string' && connectionRef.reference !== '') {
-        const resolvedConnection = resolveNamedRecord(problems, at, 'payload.workspace_connection_ref', connectionRef, resolveConnectionRecord, 'workspace-connection-scan');
-        if (resolvedConnection) {
-          const recomputedConnectionDigest = computeConnectionDigest(resolvedConnection);
-          if (connectionRef.sha256 !== recomputedConnectionDigest) {
-            problems.push(`${at} payload.workspace_connection_ref.sha256 "${connectionRef.sha256}" does not equal the resolved connection's own recomputed content digest "${recomputedConnectionDigest}"; a pinned reference names the exact composed version, never a bare id/reference an independent resolver could satisfy with different content under the same label`);
-          } else {
-            connection = resolvedConnection;
-          }
-        }
-      }
+    /* --- payload.workspace_connection_refs: always required, at least one
+       entry, never a bare object, every entry always sha256-pinned to its
+       own resolved record's recomputed content digest. Every declared entry
+       is checked for shape/duplication BEFORE resolution; every entry that
+       resolves and sha256-matches is composed against the REAL
+       evaluateExistingProjectCompatibilityMode in ONE call, so each scan is
+       checked independently by the same contract every single-connection
+       caller already relied on. --- */
+    if (!Array.isArray(payload.workspace_connection_refs) || payload.workspace_connection_refs.length === 0) {
+      problems.push(`${at} payload.workspace_connection_refs is missing or empty; a qualification without at least one pinned, resolvable workspace connection scan does not exist`);
     }
-    if (connection) {
-      if (!sameScope(scope, connection.scope)) {
-        problems.push(`${at} scope does not match the resolved payload.workspace_connection_ref record's scope; a qualification cannot claim a different scope than the connection scan it pins`);
+    if (scope.type === 'repository-scope' && connectionRefs.length > REPOSITORY_SCOPE_MAX_CONNECTION_REFS) {
+      problems.push(`${at} scope.type "repository-scope" names exactly one repository through scope.id, so payload.workspace_connection_refs may carry at most ${REPOSITORY_SCOPE_MAX_CONNECTION_REFS} entry (found ${connectionRefs.length}); a multi-repository workspace is expressed only through one "project-workspace" record's workspace_connection_refs, never through several "repository-scope" records`);
+    }
+    checkNoDuplicateRefs(problems, at, 'payload.workspace_connection_refs', connectionRefs);
+
+    const resolvedConnections = connectionRefs.map((connectionRef, i) => {
+      checkPinnedRefShape(problems, at, `payload.workspace_connection_refs[${i}]`, connectionRef);
+      if (!isObject(connectionRef) || typeof connectionRef.reference !== 'string' || connectionRef.reference === '') return null;
+      const resolvedConnection = resolveNamedRecord(problems, at, `payload.workspace_connection_refs[${i}]`, connectionRef, resolveConnectionRecord, 'workspace-connection-scan');
+      if (!resolvedConnection) return null;
+      const recomputedConnectionDigest = computeConnectionDigest(resolvedConnection);
+      if (connectionRef.sha256 !== recomputedConnectionDigest) {
+        problems.push(`${at} payload.workspace_connection_refs[${i}].sha256 "${connectionRef.sha256}" does not equal the resolved connection's own recomputed content digest "${recomputedConnectionDigest}"; a pinned reference names the exact composed version, never a bare id/reference an independent resolver could satisfy with different content under the same label`);
+        return null;
       }
+      if (!sameScope(scope, resolvedConnection.scope)) {
+        problems.push(`${at} scope does not match the resolved payload.workspace_connection_refs[${i}] record's scope; a qualification cannot claim a different scope than any connection scan it pins`);
+      }
+      return resolvedConnection;
+    });
+
+    const declaredConnectionIds = connectionRefs.filter(isObject).map((r) => r.id).filter((v) => typeof v === 'string');
+    const expectedSourceRef = canonicalConnectionSourceRef(declaredConnectionIds);
+    if (origin.source_ref !== expectedSourceRef) {
+      problems.push(`${at} origin.source_ref "${origin.source_ref}" does not equal "${expectedSourceRef}"; the envelope and payload must pin the SAME set of composed workspace connections`);
+    }
+
+    const validConnections = resolvedConnections.filter(Boolean);
+    if (validConnections.length) {
       const connectionContainer = {
         schema_version: 1,
         registry_id: 'existing-project-compatibility-mode',
-        title: `${id} — composed workspace connection`,
-        workspace_connections: [connection],
+        title: `${id} — composed workspace connections`,
+        workspace_connections: validConnections,
       };
       const connectionProblems = evaluateExistingProjectCompatibilityMode(connectionContainer, compatOptions);
-      problems.push(...connectionProblems.map((p) => `${at} workspace_connection_ref: ${p}`));
+      problems.push(...connectionProblems.map((p) => `${at} workspace_connection_refs: ${p}`));
+    }
+
+    /* --- property: no gaps, no extras, no duplicates between declared and
+       scanned repositories. Repository ids are read only from RESOLVED,
+       sha256-matching connections — an unresolved or substituted reference
+       has already been rejected above on its own terms and contributes
+       nothing here. Duplicate-repository detection applies regardless of
+       scope; the exact-set comparison against payload.workspace_repository_ids
+       applies only for scope.type "project-workspace" (the schema forbids
+       the field entirely otherwise). --- */
+    const scannedRepositoryIds = [];
+    const repositoryIdCounts = new Map();
+    for (const c of validConnections) {
+      const repoId = isObject(c.payload) && isObject(c.payload.repository) ? c.payload.repository.id : undefined;
+      if (typeof repoId !== 'string') continue;
+      scannedRepositoryIds.push(repoId);
+      repositoryIdCounts.set(repoId, (repositoryIdCounts.get(repoId) || 0) + 1);
+    }
+    for (const [repoId, count] of repositoryIdCounts) {
+      if (count > 1) {
+        problems.push(`${at} payload.workspace_connection_refs carries ${count} resolved scans all naming the same payload.repository.id "${repoId}"; each declared repository is scanned at most once`);
+      }
+    }
+    if (scope.type === 'project-workspace') {
+      const declaredRepositoryIds = Array.isArray(payload.workspace_repository_ids) ? payload.workspace_repository_ids : [];
+      const declaredSet = new Set(declaredRepositoryIds);
+      const scannedSet = new Set(scannedRepositoryIds);
+      const missingFromDeclared = [...scannedSet].filter((r) => !declaredSet.has(r));
+      const notActuallyScanned = [...declaredSet].filter((r) => !scannedSet.has(r));
+      if (missingFromDeclared.length) {
+        problems.push(`${at} payload.workspace_repository_ids is missing ${JSON.stringify(missingFromDeclared)}, actually scanned by a resolved connection but not declared`);
+      }
+      if (notActuallyScanned.length) {
+        problems.push(`${at} payload.workspace_repository_ids declares ${JSON.stringify(notActuallyScanned)}, which no resolved connection's payload.repository.id names`);
+      }
     }
 
     /* --- migration_plan_ref: null, or a pinned + fingerprint-checked plan. --- */
@@ -461,7 +611,7 @@ export function evaluateWorkspaceCompatibilityQualification(doc, {
     }
     if (migrationPlan) {
       if (!sameScope(scope, migrationPlan.scope)) {
-        problems.push(`${at} scope does not match the resolved payload.migration_plan_ref record's scope; a composed migration plan must describe the same workspace or repository as the connection it is qualified alongside`);
+        problems.push(`${at} scope does not match the resolved payload.migration_plan_ref record's scope; a composed migration plan must describe the same workspace or repository as the connections it is qualified alongside`);
       }
       const migrationContainer = {
         schema_version: 1,
@@ -542,20 +692,29 @@ export function evaluateWorkspaceCompatibilityQualification(doc, {
       problems.push(...exportProblems.map((p) => `${at} canonical_export_ref: ${p}`));
     }
 
-    /* --- the recomputed decision-matrix verdict (see computeQualificationState). --- */
-    const nextStep = connection && isObject(connection.payload) ? connection.payload.next_step : undefined;
+    /* --- the recomputed decision-matrix verdict (see computeQualificationState),
+       aggregated across EVERY declared connection: one next_step entry per
+       declared reference (undefined for one that failed to resolve or
+       sha256-match, which already forces a non-"continue-compatibility-mode"
+       reading), and "any" undecided candidate across every RESOLVED
+       connection. --- */
+    const nextSteps = connectionRefs.map((_, i) => {
+      const c = resolvedConnections[i];
+      return c && isObject(c.payload) ? c.payload.next_step : undefined;
+    });
+    const hasUndecided = resolvedConnections.some((c) => hasUndecidedRuleCandidates(c));
     const overallStatus = migrationPlan && isObject(migrationPlan.payload) && isObject(migrationPlan.payload.verification)
       ? migrationPlan.payload.verification.overall_status : undefined;
     const expected = computeQualificationState({
-      nextStep,
-      hasUndecidedCandidates: hasUndecidedRuleCandidates(connection),
+      nextSteps,
+      hasUndecidedCandidates: hasUndecided,
       hasMigrationPlan: Boolean(migrationPlan),
       migrationOverallStatus: overallStatus,
       mintsRecords: mintsAnyRecord(migrationPlan),
       hasCanonicalExport: Boolean(canonicalExport),
     });
     if (payload.qualification_state !== expected) {
-      problems.push(`${at} qualification_state is "${payload.qualification_state}", but the closed decision matrix over the composed records' own next_step/pending rule-candidate decisions/verification.overall_status/canonical export coverage computes "${expected}"`);
+      problems.push(`${at} qualification_state is "${payload.qualification_state}", but the closed decision matrix over the composed records' own next_steps/pending rule-candidate decisions/verification.overall_status/canonical export coverage computes "${expected}"`);
     }
 
     /* --- the closed blockers/open_questions/qualification_state relation. --- */

@@ -1,5 +1,5 @@
 {
-  "note": "Product-neutral fixtures for registries/operating-model/workspace-compatibility-qualification.schema.json and scripts/lib/workspace-compatibility-qualification.mjs. Every `valid` registry must pass evaluateWorkspaceCompatibilityQualification with no problem; every `invalid` registry must produce at least one. connection_record_resolution/plan_record_resolution/export_record_resolution are THIS package's own external boundaries (resolveConnectionRecord/resolvePlanRecord/resolveExportRecord), keyed by the opaque `reference` string each pinned_ref carries. migration_resolution/export_resolution are the COMPOSED contracts' own resolution maps (unchanged shape from instance-data-migration.fixtures.json / instance-canonical-export.fixtures.json), reused verbatim so the files never drift silently apart. Every pinned_ref.sha256 (workspace_connection_ref included) is the REAL, recomputed output of computeConnectionDigest/computePlanFingerprint/computeExportDigest over the pinned record's own content — never an arbitrary value. The nine `valid` entries are the nine table rows of the decision matrix (workspace-compatibility-qualification.md §4.1, eight logical steps — resolve-conflict and resolve-ambiguity share one step) — a separate, smaller claim than the program's eight acceptance scenarios (§4.2), which are proven by dedicated, mostly non-fixture tests in test/workspace-compatibility-qualification.test.mjs. No product literals, no absolute machine paths, no dependency on a separate Instance.",
+  "note": "Product-neutral fixtures for registries/operating-model/workspace-compatibility-qualification.schema.json and scripts/lib/workspace-compatibility-qualification.mjs. Every `valid` registry must pass evaluateWorkspaceCompatibilityQualification with no problem; every `invalid` registry must produce at least one. connection_record_resolution/plan_record_resolution/export_record_resolution are THIS package's own external boundaries (resolveConnectionRecord/resolvePlanRecord/resolveExportRecord), keyed by the opaque `reference` string each pinned_ref carries. migration_resolution/export_resolution are the COMPOSED contracts' own resolution maps (unchanged shape from instance-data-migration.fixtures.json / instance-canonical-export.fixtures.json), reused verbatim so the files never drift silently apart. Every pinned_ref.sha256 (each workspace_connection_refs[] entry included) is the REAL, recomputed output of computeConnectionDigest/computePlanFingerprint/computeExportDigest over the pinned record's own content — never an arbitrary value. The nine `valid` entries are the nine table rows of the decision matrix (workspace-compatibility-qualification.md §4.1, eight logical steps — resolve-conflict and resolve-ambiguity share one step) — a separate, smaller claim than the program's eight acceptance scenarios (§4.2), which are proven by dedicated, mostly non-fixture tests in test/workspace-compatibility-qualification.test.mjs. No product literals, no absolute machine paths, no dependency on a separate Instance.",
   "connection_record_resolution": {
     "connection:sample-connection-clean": {
       "$schema": "../scoped-record.schema.json",
@@ -325,6 +325,109 @@
             }
           }
         ],
+        "findings": [],
+        "next_step": "continue-compatibility-mode"
+      }
+    },
+    "connection:sample-connection-clean-two": {
+      "$schema": "../scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-connection-clean-two",
+      "title": "Сканирование — второй репозиторий одного workspace, без спорных находок",
+      "record_type": "workspace-connection-scan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:connect-sample-connection-clean-two"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "existing-project-compatibility-mode-run:sample-connection-clean-two"
+      },
+      "payload": {
+        "connection_mode": "compatibility",
+        "repository": {
+          "id": "sample-project-repository-two",
+          "workspace_id": "sample-project"
+        },
+        "scan_kind": "initial",
+        "discovery_plan": [],
+        "discovered_sources": [],
+        "missing_sources": [],
+        "unreadable_sources": [],
+        "rule_candidates": [],
+        "findings": [],
+        "next_step": "continue-compatibility-mode"
+      }
+    },
+    "connection:sample-connection-other-workspace": {
+      "$schema": "../scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-connection-other-workspace",
+      "title": "Сканирование — репозиторий другого workspace",
+      "record_type": "workspace-connection-scan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project-other"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:connect-sample-connection-other-workspace"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "existing-project-compatibility-mode-run:sample-connection-other-workspace"
+      },
+      "payload": {
+        "connection_mode": "compatibility",
+        "repository": {
+          "id": "sample-project-repository-other",
+          "workspace_id": "sample-project-other"
+        },
+        "scan_kind": "initial",
+        "discovery_plan": [],
+        "discovered_sources": [],
+        "missing_sources": [],
+        "unreadable_sources": [],
+        "rule_candidates": [],
+        "findings": [],
+        "next_step": "continue-compatibility-mode"
+      }
+    },
+    "connection:sample-connection-repo-scope-solo": {
+      "$schema": "../scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-connection-repo-scope-solo",
+      "title": "Сканирование — единственный репозиторий области repository-scope",
+      "record_type": "workspace-connection-scan",
+      "scope": {
+        "type": "repository-scope",
+        "id": "sample-repository-solo",
+        "workspace_id": "sample-workspace-solo"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:connect-sample-connection-repo-scope-solo"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "existing-project-compatibility-mode-run:sample-connection-repo-scope-solo"
+      },
+      "payload": {
+        "connection_mode": "compatibility",
+        "repository": {
+          "id": "sample-repository-solo",
+          "workspace_id": "sample-workspace-solo"
+        },
+        "scan_kind": "initial",
+        "discovery_plan": [],
+        "discovered_sources": [],
+        "missing_sources": [],
+        "unreadable_sources": [],
+        "rule_candidates": [],
         "findings": [],
         "next_step": "continue-compatibility-mode"
       }
@@ -948,12 +1051,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-conflict"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-conflict",
-                "reference": "connection:sample-connection-conflict",
-                "sha256": "3906ff2e4680b42c68c82d0d570350f0d7d30474e7366b61c7c5bd9dee7aa4a1"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-conflict",
+                  "reference": "connection:sample-connection-conflict",
+                  "sha256": "3906ff2e4680b42c68c82d0d570350f0d7d30474e7366b61c7c5bd9dee7aa4a1"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "BLOCKED",
@@ -994,12 +1102,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-ambiguous"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-ambiguous",
-                "reference": "connection:sample-connection-ambiguous",
-                "sha256": "12cd5423e2d7210fe77d0c0cc65883d20c98b07d509109643bc2c54e0dd721cc"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-ambiguous",
+                  "reference": "connection:sample-connection-ambiguous",
+                  "sha256": "12cd5423e2d7210fe77d0c0cc65883d20c98b07d509109643bc2c54e0dd721cc"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "BLOCKED",
@@ -1040,12 +1153,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-pending-decision"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-pending",
-                "reference": "connection:sample-connection-pending",
-                "sha256": "bf2568e2ab709889db9f786d73e6aaf249c1a8fd8d8b8c72a79e06d0d0806a10"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-pending",
+                  "reference": "connection:sample-connection-pending",
+                  "sha256": "bf2568e2ab709889db9f786d73e6aaf249c1a8fd8d8b8c72a79e06d0d0806a10"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "UNVERIFIED",
@@ -1086,12 +1204,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-undecided-candidates"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-undecided",
-                "reference": "connection:sample-connection-undecided",
-                "sha256": "0dc814ca6094ccef65a79c061ab69869c88b5595c8647ee717f8c8fc4dd3033a"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-undecided",
+                  "reference": "connection:sample-connection-undecided",
+                  "sha256": "0dc814ca6094ccef65a79c061ab69869c88b5595c8647ee717f8c8fc4dd3033a"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "UNVERIFIED",
@@ -1133,12 +1256,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -1177,12 +1305,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migration-blocked"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": {
                 "record_type": "instance-migration-plan",
                 "id": "sample-migration-plan-four",
@@ -1228,12 +1361,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migration-unverified"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": {
                 "record_type": "instance-migration-plan",
                 "id": "sample-migration-plan-two",
@@ -1279,12 +1417,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-export-pending"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": {
                 "record_type": "instance-migration-plan",
                 "id": "sample-migration-plan-one",
@@ -1330,12 +1473,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migrated-and-exported"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": {
                 "record_type": "instance-migration-plan",
                 "id": "sample-migration-plan-one",
@@ -1386,12 +1534,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-conflict"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-conflict",
-                "reference": "connection:sample-connection-conflict",
-                "sha256": "3906ff2e4680b42c68c82d0d570350f0d7d30474e7366b61c7c5bd9dee7aa4a1"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-conflict",
+                  "reference": "connection:sample-connection-conflict",
+                  "sha256": "3906ff2e4680b42c68c82d0d570350f0d7d30474e7366b61c7c5bd9dee7aa4a1"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -1430,12 +1583,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-conflict"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-conflict",
-                "reference": "connection:sample-connection-conflict",
-                "sha256": "3906ff2e4680b42c68c82d0d570350f0d7d30474e7366b61c7c5bd9dee7aa4a1"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-conflict",
+                  "reference": "connection:sample-connection-conflict",
+                  "sha256": "3906ff2e4680b42c68c82d0d570350f0d7d30474e7366b61c7c5bd9dee7aa4a1"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "BLOCKED",
@@ -1474,12 +1632,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -1520,12 +1683,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migration-unverified"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": {
                 "record_type": "instance-migration-plan",
                 "id": "sample-migration-plan-two",
@@ -1569,12 +1737,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-undecided-candidates"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-undecided",
-                "reference": "connection:sample-connection-undecided",
-                "sha256": "0dc814ca6094ccef65a79c061ab69869c88b5595c8647ee717f8c8fc4dd3033a"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-undecided",
+                  "reference": "connection:sample-connection-undecided",
+                  "sha256": "0dc814ca6094ccef65a79c061ab69869c88b5595c8647ee717f8c8fc4dd3033a"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -1613,12 +1786,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": {
                 "record_type": "instance-canonical-export",
@@ -1662,12 +1840,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migration-unverified"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": {
                 "record_type": "instance-migration-plan",
                 "id": "sample-migration-plan-two",
@@ -1692,7 +1875,7 @@
       }
     },
     {
-      "note": "workspace_connection_ref.sha256 расходится с фактически пересчитанным digest (заявлен чужой дайджест)",
+      "note": "workspace_connection_refs[0].sha256 расходится с фактически пересчитанным digest (заявлен чужой дайджест)",
       "registry": {
         "$schema": "../workspace-compatibility-qualification.schema.json",
         "schema_version": 1,
@@ -1718,12 +1901,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -1762,12 +1950,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migration-blocked"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": {
                 "record_type": "instance-migration-plan",
                 "id": "sample-migration-plan-four",
@@ -1813,12 +2006,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-migrated-and-exported"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": {
                 "record_type": "instance-migration-plan",
                 "id": "sample-migration-plan-one",
@@ -1867,12 +2065,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -1911,12 +2114,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -1955,12 +2163,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -1973,7 +2186,7 @@
       }
     },
     {
-      "note": "scope конверта расходится со scope разрешённого workspace_connection_ref",
+      "note": "scope конверта расходится со scope разрешённого элемента workspace_connection_refs",
       "registry": {
         "$schema": "../workspace-compatibility-qualification.schema.json",
         "schema_version": 1,
@@ -2000,12 +2213,14 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -2018,7 +2233,7 @@
       }
     },
     {
-      "note": "workspace_connection_ref сам по себе структурно повреждён (лишнее поле)",
+      "note": "элемент workspace_connection_refs сам по себе структурно повреждён (лишнее поле)",
       "registry": {
         "$schema": "../workspace-compatibility-qualification.schema.json",
         "schema_version": 1,
@@ -2044,13 +2259,18 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b",
-                "extra_field": "not allowed"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b",
+                  "extra_field": "not allowed"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -2089,12 +2309,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -2134,12 +2359,17 @@
               "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-compatibility-only"
             },
             "payload": {
-              "workspace_connection_ref": {
-                "record_type": "workspace-connection-scan",
-                "id": "sample-connection-clean",
-                "reference": "connection:sample-connection-clean",
-                "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
-              },
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
               "migration_plan_ref": null,
               "canonical_export_ref": null,
               "qualification_state": "QUALIFIED",
@@ -2147,6 +2377,273 @@
               "blockers": [],
               "open_questions": [],
               "secret_value": "sk-not-a-real-secret-but-shaped-like-one"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "два элемента workspace_connection_refs называют один и тот же reference — отклонено",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-duplicate-connection-ref",
+            "title": "Квалификация — повтор reference в workspace_connection_refs",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean+sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-duplicate-connection-ref"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                },
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "намеренный повтор ссылки на одно и то же сканирование — проверка обязана отклонить",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "workspace_repository_ids называет репозиторий, который ни один разрешённый скан не подтверждает — отклонено",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-repository-ids-mismatch",
+            "title": "Квалификация — лишний репозиторий в workspace_repository_ids",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-repository-ids-mismatch"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository",
+                "phantom-repository-never-scanned"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "намеренно лишний репозиторий в workspace_repository_ids — проверка обязана отклонить",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "sha256 второго из двух элементов workspace_connection_refs расходится с пересчитанным digest — отклонено",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-second-connection-digest-mismatch",
+            "title": "Квалификация — испорченный digest второго сканирования",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean+sample-connection-clean-two"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-second-connection-digest-mismatch"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                },
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean-two",
+                  "reference": "connection:sample-connection-clean-two",
+                  "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository",
+                "sample-project-repository-two"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "намеренно испорченный digest второго сканирования — проверка обязана отклонить",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "второй элемент workspace_connection_refs разрешается в скан ДРУГОГО workspace — отклонено",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-foreign-workspace-connection",
+            "title": "Квалификация — сканирование чужого workspace",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-clean+sample-connection-other-workspace"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-foreign-workspace-connection"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-clean",
+                  "reference": "connection:sample-connection-clean",
+                  "sha256": "a484ada88bc6aa7d9ea366c3d271ae80182fda7e7db04b2046a241c0da90e57b"
+                },
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-other-workspace",
+                  "reference": "connection:sample-connection-other-workspace",
+                  "sha256": "09cc0380756cb02b19fd88a811305de56be0bfb91ce6824636ec7f648c77364e"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-project-repository",
+                "sample-project-repository-other"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "намеренно смешанный workspace во втором сканировании — проверка обязана отклонить",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "repository-scope запись несёт workspace_repository_ids — поле запрещено для этой области, отклонено",
+      "registry": {
+        "$schema": "../workspace-compatibility-qualification.schema.json",
+        "schema_version": 1,
+        "registry_id": "workspace-compatibility-qualification",
+        "title": "Пример реестра объединённой квалификации совместимости рабочих пространств",
+        "qualifications": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-qualification-repo-scope-with-repository-ids",
+            "title": "Квалификация — repository-scope с запрещённым workspace_repository_ids",
+            "record_type": "workspace-compatibility-qualification",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository-solo",
+              "workspace_id": "sample-workspace-solo"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "workspace-connection-scan:sample-connection-repo-scope-solo"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "workspace-compatibility-qualification-run:sample-qualification-repo-scope-with-repository-ids"
+            },
+            "payload": {
+              "workspace_connection_refs": [
+                {
+                  "record_type": "workspace-connection-scan",
+                  "id": "sample-connection-repo-scope-solo",
+                  "reference": "connection:sample-connection-repo-scope-solo",
+                  "sha256": "5b2bb417b40d945ee0f88efe02e215aad977dd2e5562a47c93c2f5eaef19dcf2"
+                }
+              ],
+              "workspace_repository_ids": [
+                "sample-repository-solo"
+              ],
+              "migration_plan_ref": null,
+              "canonical_export_ref": null,
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "намеренно присутствующий запрещённый workspace_repository_ids на repository-scope — проверка обязана отклонить",
+              "blockers": [],
+              "open_questions": []
             }
           }
         ]

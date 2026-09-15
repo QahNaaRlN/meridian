@@ -1,0 +1,147 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/workspace-compatibility-qualification.schema.json",
+  "title": "Meridian workspace compatibility qualification register",
+  "description": "Container for the final, product-neutral qualification (record_type: workspace-compatibility-qualification) of one workspace/repository's run through the meridian-workspace-compatibility program: discovery and rule intake (existing-project-compatibility-mode.schema.json, composing instruction-source-registry.schema.json and controlled-rule-intake.schema.json), an optional migration plan (instance-data-migration.schema.json) and an optional canonical export (instance-canonical-export.schema.json). Each entry is a scoped record: its envelope (identity, scope, origin, authority) is validated against the same scoped-record.schema.json every other operating-model contract composes with, and this schema is not a second envelope schema. The record does NOT embed any composed record: payload.workspace_connection_refs/migration_plan_ref/canonical_export_ref are CLOSED pinned references, resolved through an external boundary at the library level and checked there against the REAL evaluateExistingProjectCompatibilityMode/evaluateInstanceDataMigration/evaluateInstanceCanonicalExport — never a second, competing shape for any of the three, and never a raw imported field (raw_excerpt, normalized_text, or any secret-bearing value) persisted in this record. A workspace can be connected through MORE than one scan: payload.workspace_connection_refs is a non-empty array (minItems 1) of pinned references, one per connection scan, each independently composed against the real evaluator. Every reference pins an exact sha256 content digest of the resolved record — computeConnectionDigest for each workspace connection scan, computePlanFingerprint/computeExportDigest for the migration plan and canonical export — never a bare id/reference an independent resolver could satisfy with different content under the same label; no two entries of workspace_connection_refs may declare the same id or reference. When scope.type is \"project-workspace\", payload.workspace_repository_ids is a REQUIRED, non-empty, unique closed list of repository ids, checked at the library level to equal EXACTLY the set of payload.repository.id names carried by every resolved connection — no repository scanned but undeclared, no repository declared but unscanned, no repository scanned twice; when scope.type is \"repository-scope\" the field is forbidden, and payload.workspace_connection_refs itself is closed to AT MOST ONE entry (maxItems 1) — a repository-scope record names exactly one repository through scope.id, and a multi-repository workspace is expressed only through one project-workspace record's workspace_connection_refs, never through several repository-scope records sharing a workspace_id. payload.qualification_state is a closed, RECOMPUTED verdict — QUALIFIED, BLOCKED or UNVERIFIED — checked at the library level against the composed evaluations' own outcome aggregated across EVERY declared connection (a blocking next_step or an undecided rule candidate on ANY one of them forces the same non-QUALIFIED result as it would alone, regardless of declaration order); a declared state that does not match the recomputed one is rejected, never trusted on its own. blockers/open_questions are closed to qualification_state: blockers is non-empty exactly when BLOCKED, open_questions is non-empty exactly when UNVERIFIED. This package does not migrate, export, scan, or accept any rule; it only qualifies — declares one closed verdict over records produced by the five packages it composes. The contract is a mandatory part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/workspace-compatibility-qualification.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "title", "qualifications"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "registry_id": { "const": "workspace-compatibility-qualification" },
+    "title": { "type": "string", "minLength": 1 },
+    "qualifications": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/entry" }
+    }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "sha256_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "entry": {
+      "type": "object",
+      "required": ["record_type", "payload"],
+      "description": "workspace_repository_ids is required exactly when this entry's own scope.type is \"project-workspace\" and forbidden otherwise (repository-scope names one repository through scope.id itself and carries no separate repository list); payload.workspace_connection_refs itself is closed to at most one entry when scope.type is \"repository-scope\" (one repository, one scan — a second scan of the SAME single repository is never a second legal entry, and multiple repositories are expressed only through scope.type \"project-workspace\", never through several repository-scope records, workspace-compatibility-qualification.md §2) — the one place this schema reads a sibling of `payload` to constrain `payload`'s own required set or array bound, mirroring scoped-record.schema.json's own scope/origin/authority cross-field allOf.",
+      "properties": {
+        "record_type": { "const": "workspace-compatibility-qualification" },
+        "payload": { "$ref": "#/definitions/payload" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "type": "object",
+                "properties": { "type": { "const": "project-workspace" } },
+                "required": ["type"]
+              }
+            },
+            "required": ["scope"]
+          },
+          "then": {
+            "properties": { "payload": { "type": "object", "required": ["workspace_repository_ids"] } }
+          },
+          "else": {
+            "properties": { "payload": { "type": "object", "not": { "required": ["workspace_repository_ids"] } } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "type": "object",
+                "properties": { "type": { "const": "repository-scope" } },
+                "required": ["type"]
+              }
+            },
+            "required": ["scope"]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": { "workspace_connection_refs": { "maxItems": 1 } }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "qualification_state": {
+      "enum": ["QUALIFIED", "BLOCKED", "UNVERIFIED"]
+    },
+    "pinned_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_type", "id", "reference", "sha256"],
+      "description": "A closed reference resolved through an external boundary — never an embedded body. sha256 is mandatory on all three uses of this shape in this schema: the exact composed version's own recomputed content digest (computeConnectionDigest/computePlanFingerprint/computeExportDigest), never a bare id/reference an independent resolver could satisfy with different content under the same label.",
+      "properties": {
+        "record_type": { "$ref": "#/definitions/non_empty" },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "reference": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "$ref": "#/definitions/sha256_hex" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace_connection_refs",
+        "migration_plan_ref",
+        "canonical_export_ref",
+        "qualification_state",
+        "qualification_reason",
+        "blockers",
+        "open_questions"
+      ],
+      "properties": {
+        "workspace_connection_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/pinned_ref" },
+          "description": "Always required, at least one entry: a qualification without at least one pinned, resolvable workspace connection scan does not exist. One entry per connection scan this record composes — a multi-repository project-workspace names one entry per repository it covers. Each entry's sha256 pins that resolved record's own recomputed computeConnectionDigest; no two entries may declare the same id or reference (checked at the library level, since uniqueItems alone would not catch two entries sharing an id or reference under a differing sha256)."
+        },
+        "workspace_repository_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/semantic_id" },
+          "description": "Required exactly when this entry's scope.type is \"project-workspace\", forbidden otherwise (see the entry-level allOf). The closed, unique set of repository ids this record claims workspace_connection_refs covers — checked at the library level to equal EXACTLY the set of payload.repository.id names carried by every resolved connection: no repository scanned but undeclared, no repository declared but unscanned, no repository scanned twice."
+        },
+        "migration_plan_ref": {
+          "anyOf": [
+            { "$ref": "#/definitions/pinned_ref" },
+            { "type": "null" }
+          ],
+          "description": "null when this qualification composes no migration plan; otherwise a pinned reference to one FULL instance-data-migration entry, sha256-pinned to its recomputed plan_fingerprint."
+        },
+        "canonical_export_ref": {
+          "anyOf": [
+            { "$ref": "#/definitions/pinned_ref" },
+            { "type": "null" }
+          ],
+          "description": "null when no canonical export is composed; otherwise a pinned reference to one FULL instance-canonical-export entry, sha256-pinned to its recomputed digest. Present only meaningfully alongside a non-null migration_plan_ref."
+        },
+        "qualification_state": { "$ref": "#/definitions/qualification_state" },
+        "qualification_reason": { "$ref": "#/definitions/non_empty" },
+        "blockers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/non_empty" }
+        },
+        "open_questions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/non_empty" }
+        }
+      }
+    }
+  }
+}

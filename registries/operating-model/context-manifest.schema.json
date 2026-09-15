@@ -1,0 +1,262 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/context-manifest.schema.json",
+  "title": "Meridian bounded context manifest",
+  "description": "The complete schema for the bounded, machine-checkable context manifest of ONE execution run (record_type: context-manifest): the portable, storage-independent list of authoritative inputs and run state that is sufficient to resume the SAME run after a pause, a session change, a participant change or a role change without reconstructing authoritative state from chat history. A record declares THIS schema in its $schema, so a consumer that follows the declaration validates the whole record — the reused scoped-record envelope AND the specialised body — in one pass. The envelope is the SAME contract as registries/operating-model/scoped-record.schema.json; scripts/lib/context-manifest.mjs validates every record against scoped-record.schema.json directly as well, so the canonical envelope check is reused and separately performed. The manifest belongs to EXACTLY ONE run and lives ONLY in scope.type run-state (scope.id identifies the run, scope.workspace_id is mandatory); every other area, and origin.kind built-in, are rejected. Its link to the one run is DETERMINISTIC, not a substring heuristic: execution_run_ref, task_specification_ref and human_control_ref are CLOSED structured pinned references — each carries a record_type, an id, a portable storage-neutral reference and a pin (an exact revision or a SHA-256 digest) — never a plain string and never an embedded record body. scope.id equals execution_run_ref.id exactly; human_control_ref carries run_id equal to execution_run_ref.id; task_specification_ref carries no run_id. run_state_checkpoint is the PINNED authoritative snapshot: it carries its own execution_run_ref, task_specification_ref and human_control_ref that must equal the manifest's field for field, plus scope_revision, lifecycle_stage, work_status, next_action, next_gate, blocker_ids, resolved_norms and completed_checks. The manifest's scope_revision, next_action, next_gate, blockers and completed_checks must agree with the checkpoint; the manifest's task_specification_ref must equal the checkpoint's; and the set of applicable_norms references must equal the checkpoint's resolved_norms — the manifest adds an applicability rationale per norm but cannot substitute the resolved set. An exact revision is a CLOSED set — a full Git SHA (40 or 64 hex), a strict v?X.Y.Z SemVer tag, or a SHA-256 digest; a branch or channel reference (anything with a slash, a bare word, or a known moving token) is floating whatever digits it carries, and any other provider-specific or unknown revision format requires a sha256. It lists only the authoritative sources needed to continue, pins every mutable source the same way, records decisions and open questions separately, completed actions and completed checks separately, known gaps and blockers separately, and states the next allowed step and the next gate explicitly. An unbounded material dump (full file texts, a command log, a transcript, messages, chat history, an arbitrary directory dump) and the full evidence / handoff contract that belongs to a later package are rejected by construction. Chat history is unauthoritative recovery material only; once a tracked manifest exists it does not override it. The rules this JSON Schema subset cannot state live in scripts/lib/context-manifest.mjs (the declared $schema resolves as a LOGICAL address within the Meridian namespace to this file — reused from scripts/lib/task-specification.mjs, no divergent copy; the deterministic single-run link; the closed exact-revision rule applied identically to pinned references, applicable norms and mutable sources; checkpoint-to-manifest agreement including the task specification and the resolved-norm set; no duplicate source, norm, decision, question, action, check, gap or blocker; portability of every reference and prose string; the Russian name). The contract is a MANDATORY part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/bounded-context-manifest.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "id", "title", "record_type", "scope", "origin", "authority", "payload"],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/definitions/semantic_id" },
+    "title": { "type": "string", "minLength": 1 },
+    "record_type": { "const": "context-manifest" },
+    "scope": { "$ref": "#/definitions/scope_ref" },
+    "origin": { "$ref": "#/definitions/origin" },
+    "authority": { "$ref": "#/definitions/authority" },
+    "payload": { "$ref": "#/definitions/payload" }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "portable_ref": { "type": "string", "minLength": 1 },
+    "next_step": {
+      "description": "An executable value (a non-empty string) or an explicit null where there is no continuation. The key is always required, so an absent axis is never read as null.",
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$"
+    },
+    "lifecycle_stage": {
+      "type": "string",
+      "enum": [
+        "intake", "classification", "norm_resolution", "planning", "execution",
+        "verification", "acceptance", "integration", "deployment", "observation",
+        "completion"
+      ]
+    },
+    "work_status": {
+      "type": "string",
+      "enum": ["planned", "ready", "active", "waiting_human", "blocked", "failed", "completed", "cancelled"]
+    },
+    "pinned_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_type", "id", "reference"],
+      "description": "A closed, structured, pinned reference to exactly one record. record_type names which kind of record it is; id is the record's own stable semantic identifier — the identity is this exact string, never a substring of another. reference is a portable, storage-neutral reference. run_id, when present, names the execution run this record belongs to (required for run-human-control, forbidden for task-specification, and for execution-run it equals id). revision and/or sha256 pin the exact edition: at least one must be present, and revision — when it is the only pin — must be a full Git SHA, a strict v?X.Y.Z SemVer tag or a SHA-256 digest (checked in scripts/lib/context-manifest.mjs). No record body is embedded: the object is closed to these fields only.",
+      "properties": {
+        "record_type": { "enum": ["execution-run", "task-specification", "run-human-control"] },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "run_id": { "$ref": "#/definitions/semantic_id" },
+        "reference": { "$ref": "#/definitions/portable_ref" },
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "scope_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "workspace_id"],
+      "description": "A context manifest's area. Only run-state is accepted; every other area of the workspace scope model is rejected here (and in scripts/lib/context-manifest.mjs with the rationale). scope.id identifies the run the manifest belongs to and must equal execution_run_ref.id exactly; workspace_id ties the run to its project workspace (workspace-scope-model.md §1).",
+      "properties": {
+        "type": { "enum": ["run-state"] },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "workspace_id": { "$ref": "#/definitions/semantic_id" }
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "description": "Same contract as scoped-record.schema.json's origin. A manifest is written in a workspace, so kind 'built-in' is additionally rejected by scripts/lib/context-manifest.mjs.",
+      "properties": {
+        "kind": { "enum": ["built-in", "declared", "migrated", "imported", "derived"] },
+        "source_ref": { "$ref": "#/definitions/non_empty" }
+      },
+      "if": { "properties": { "kind": { "const": "built-in" } }, "required": ["kind"] },
+      "then": { "not": { "required": ["source_ref"] } },
+      "else": { "required": ["source_ref"] }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "authority_ref"],
+      "description": "Same contract as scoped-record.schema.json's authority.",
+      "properties": {
+        "kind": {
+          "enum": ["methodology-owner", "user", "organization", "project-owner", "repository-maintainer", "delegated-run"]
+        },
+        "authority_ref": { "$ref": "#/definitions/non_empty" },
+        "decision_ref": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "authoritative_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "reference", "purpose", "mutable"],
+      "description": "One authoritative input the run needs to continue. id is a stable semantic identifier, unique within the manifest. reference is a portable, storage-neutral reference. purpose states why this source is needed to continue — a source not needed is not listed. mutable says whether the source can change under the same reference. A mutable source MUST be pinned the SAME way a pinned_ref is: an exact revision (a full Git SHA, a strict v?X.Y.Z tag or a SHA-256 digest) or a sha256 digest (checked in scripts/lib/context-manifest.mjs). A branch or channel reference is never a pin.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "reference": { "$ref": "#/definitions/portable_ref" },
+        "purpose": { "$ref": "#/definitions/non_empty" },
+        "mutable": { "type": "boolean" },
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "applicable_norm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "reference", "origin", "applicability_rationale"],
+      "description": "One applicable norm, with a portable reference, its origin (provenance), a pin (an exact revision or a sha256 digest — the SAME closed rule as a pinned_ref) and an explanation of why it applies to this run. The SET of applicable_norm references must equal run_state_checkpoint.resolved_norms: the manifest adds the rationale, it does not substitute the resolved set. This is a bounded pointer, not a copy of the norm text and not the future full norm contract.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "reference": { "$ref": "#/definitions/portable_ref" },
+        "origin": { "$ref": "#/definitions/non_empty" },
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "$ref": "#/definitions/sha256" },
+        "applicability_rationale": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "decision_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement"],
+      "description": "One accepted decision. id is a stable semantic identifier, unique within the manifest. statement is the decision. Accepted decisions and open questions are separate lists.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "statement": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "open_question_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "question"],
+      "description": "One open question. id is a stable semantic identifier, unique within the manifest. question is the unresolved point.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "question": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "gap_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description"],
+      "description": "One known gap. id is a stable semantic identifier, unique within the manifest. description states the gap. Known gaps and blockers are separate lists: a gap is an acknowledged incompleteness, a blocker makes continuation impossible until a verifiable external change.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "description": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "resumption_condition"],
+      "description": "One structured blocker. id is a stable semantic identifier, unique within the manifest. description states the condition. resumption_condition is the observable condition under which continuation becomes possible again — not a free phrase. The set of blocker ids agrees with run_state_checkpoint.blocker_ids (checked in scripts/lib/context-manifest.mjs).",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "description": { "$ref": "#/definitions/non_empty" },
+        "resumption_condition": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "run_state_checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_run_ref", "task_specification_ref", "human_control_ref",
+        "scope_revision", "lifecycle_stage", "work_status",
+        "next_action", "next_gate", "blocker_ids", "resolved_norms", "completed_checks"
+      ],
+      "description": "The PINNED authoritative snapshot of the run state — the few axes of execution-state-model a resumption depends on, NOT the run body and NOT its transition history. Its execution_run_ref, task_specification_ref and human_control_ref are pinned_ref objects that must equal the manifest's own fields for field; scope_revision, next_action, next_gate, the blocker-id set and the completed-check set must equal the manifest's; resolved_norms is the authoritative resolved-norm reference set the manifest's applicable_norms must mirror (all checked in scripts/lib/context-manifest.mjs).",
+      "properties": {
+        "execution_run_ref": { "$ref": "#/definitions/pinned_ref" },
+        "task_specification_ref": { "$ref": "#/definitions/pinned_ref" },
+        "human_control_ref": { "$ref": "#/definitions/pinned_ref" },
+        "scope_revision": { "type": "integer", "minimum": 1 },
+        "lifecycle_stage": { "$ref": "#/definitions/lifecycle_stage" },
+        "work_status": { "$ref": "#/definitions/work_status" },
+        "next_action": { "$ref": "#/definitions/next_step" },
+        "next_gate": { "$ref": "#/definitions/next_step" },
+        "blocker_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/semantic_id" }
+        },
+        "resolved_norms": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/portable_ref" }
+        },
+        "completed_checks": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/portable_ref" }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_run_ref", "task_specification_ref", "human_control_ref",
+        "scope_revision", "next_action", "next_gate",
+        "authoritative_sources", "applicable_norms",
+        "decisions", "open_questions",
+        "completed_actions", "completed_checks",
+        "known_gaps", "blockers",
+        "run_state_checkpoint"
+      ],
+      "description": "The bounded body of one run's context manifest, as a CLOSED object. It carries closed structured pinned references to the run, the task specification and the human-control record (never their bodies); the pinned scope revision; the explicit next step and next gate; the authoritative sources (non-empty), the applicable norms, the decisions, the open questions, the completed actions, the completed checks, the known gaps and the blockers — each a bounded list, not an archive; and the run_state_checkpoint. An unbounded material dump or a full evidence / handoff field is rejected by construction.",
+      "properties": {
+        "execution_run_ref": { "$ref": "#/definitions/pinned_ref" },
+        "task_specification_ref": { "$ref": "#/definitions/pinned_ref" },
+        "human_control_ref": { "$ref": "#/definitions/pinned_ref" },
+        "scope_revision": { "type": "integer", "minimum": 1 },
+        "next_action": { "$ref": "#/definitions/next_step" },
+        "next_gate": { "$ref": "#/definitions/next_step" },
+        "authoritative_sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/authoritative_source" }
+        },
+        "applicable_norms": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/applicable_norm" }
+        },
+        "decisions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/decision_item" }
+        },
+        "open_questions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/open_question_item" }
+        },
+        "completed_actions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/portable_ref" }
+        },
+        "completed_checks": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/portable_ref" }
+        },
+        "known_gaps": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/gap_item" }
+        },
+        "blockers": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/blocker" }
+        },
+        "run_state_checkpoint": { "$ref": "#/definitions/run_state_checkpoint" }
+      }
+    }
+  }
+}

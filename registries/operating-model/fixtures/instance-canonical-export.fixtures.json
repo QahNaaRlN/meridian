@@ -1,0 +1,2210 @@
+{
+  "note": "Product-neutral fixtures for registries/operating-model/instance-canonical-export.schema.json and scripts/lib/instance-data-migration.mjs's evaluateInstanceCanonicalExport. Every `valid` registry must pass evaluateInstanceCanonicalExport with no problem; every `invalid` registry must produce at least one, when checked with resolvers built from plan_resolution (makeMigrationPlanResolver, keyed by plan_ref) and source_content_resolution (makeSourceContentResolver, keyed by computeSourceContentKey({repository_ref, revision, unit_refs, merge_rule_ref})) — the two EXTERNAL resolution boundaries this contract checks an export's referenced plan and every exported record's ACTUAL preserved content against. plan_resolution's entries are closed projections of the real, product-neutral instance-data-migration.fixtures.json plans (sample-migration-plan-one, sample-migration-plan-two, sample-migration-plan-three) this file reuses, so the two fixture files never drift silently apart. digest and idempotency_key values are the real, recomputed output of computeExportDigest/computeExportIdempotencyKey over each fixture's own content — a fixture is not free to pick an arbitrary value. No product literals, no absolute machine paths, no dependency on a separate Instance.",
+  "plan_resolution": {
+    "sample-migration-plan-one": {
+      "record_type": "instance-migration-plan",
+      "plan_ref": "sample-migration-plan-one",
+      "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "source": {
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0001",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+        }
+      },
+      "record_units": [
+        {
+          "id": "sample-unit-one",
+          "unit_ref": "sample/path/one.yaml"
+        }
+      ],
+      "mappings": [
+        {
+          "unit_id": "sample-unit-one",
+          "disposition": "migrated",
+          "target": {
+            "id": "sample-migrated-record-one",
+            "record_type": "norm",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "field_basis": {
+              "id": "assigned",
+              "record_type": "preserved",
+              "scope": "preserved",
+              "origin": "assigned",
+              "authority": "assigned",
+              "title": "assigned",
+              "payload": "assigned",
+              "schema_version": "assigned",
+              "$schema": "assigned"
+            },
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:sample-unit-one"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-project-owner",
+              "decision_ref": "owner-decision:migrate-sample-unit-one"
+            },
+            "title": "Перенесённая запись — sample-migrated-record-one",
+            "schema_version": 1,
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+              }
+            },
+            "$schema": "../../registries/operating-model/scoped-record.schema.json"
+          }
+        }
+      ]
+    },
+    "sample-migration-plan-two": {
+      "record_type": "instance-migration-plan",
+      "plan_ref": "sample-migration-plan-two",
+      "plan_fingerprint": "7d0ae722ddbe7e7b4014443fd5e47403047156eb1e76606eb6705cc9474e70de",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample-project"
+      },
+      "source": {
+        "repository_ref": "sample-instance-repository",
+        "revision": "sample-revision-0002",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "e28cce53ba0375063d2c80a40ed81798f5841428305241ad96f33f10cb12407b"
+        }
+      },
+      "record_units": [
+        {
+          "id": "sample-unit-transitional",
+          "unit_ref": "sample/path/transitional.yaml"
+        }
+      ],
+      "mappings": [
+        {
+          "unit_id": "sample-unit-transitional",
+          "disposition": "retained-transitional",
+          "retained_reason": "владелец пока не классифицировал единицу; она остаётся переходным источником"
+        }
+      ]
+    },
+    "sample-migration-plan-three": {
+      "record_type": "instance-migration-plan",
+      "plan_ref": "sample-migration-plan-three",
+      "plan_fingerprint": "3ffadc5510080ea8a1955ad4cafcd7148935bb01a8068cd68bb33224b098797d",
+      "scope": {
+        "type": "repository-scope",
+        "id": "sample-repository",
+        "workspace_id": "sample-workspace"
+      },
+      "source": {
+        "repository_ref": "sample-repository-instance",
+        "revision": "sample-revision-0003",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "58bf02dabe3011e26fd379c9aaf583decfb2e3e5844211095c8df0a970cd2ec7"
+        }
+      },
+      "record_units": [
+        {
+          "id": "sample-unit-a",
+          "unit_ref": "sample/path/a.yaml"
+        },
+        {
+          "id": "sample-unit-b",
+          "unit_ref": "sample/path/b.yaml"
+        }
+      ],
+      "mappings": [
+        {
+          "unit_id": "sample-unit-a",
+          "disposition": "merged",
+          "target": {
+            "id": "sample-merged-record",
+            "record_type": "norm",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "field_basis": {
+              "id": "assigned",
+              "record_type": "preserved",
+              "scope": "assigned",
+              "origin": "assigned",
+              "authority": "assigned",
+              "title": "assigned",
+              "payload": "assigned",
+              "schema_version": "assigned",
+              "$schema": "assigned"
+            },
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-units:sample-unit-a,sample-unit-b"
+            },
+            "authority": {
+              "kind": "repository-maintainer",
+              "authority_ref": "sample-repository-maintainer",
+              "decision_ref": "owner-decision:merge-a-and-b"
+            },
+            "title": "Перенесённая запись — sample-merged-record",
+            "schema_version": 1,
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+              }
+            },
+            "$schema": "../../registries/operating-model/scoped-record.schema.json"
+          },
+          "merge_rule_ref": "merge-rule:combine-a-and-b"
+        },
+        {
+          "unit_id": "sample-unit-b",
+          "disposition": "merged",
+          "target": {
+            "id": "sample-merged-record",
+            "record_type": "norm",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "field_basis": {
+              "id": "assigned",
+              "record_type": "preserved",
+              "scope": "assigned",
+              "origin": "assigned",
+              "authority": "assigned",
+              "title": "assigned",
+              "payload": "assigned",
+              "schema_version": "assigned",
+              "$schema": "assigned"
+            },
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-units:sample-unit-a,sample-unit-b"
+            },
+            "authority": {
+              "kind": "repository-maintainer",
+              "authority_ref": "sample-repository-maintainer",
+              "decision_ref": "owner-decision:merge-a-and-b"
+            },
+            "title": "Перенесённая запись — sample-merged-record",
+            "schema_version": 1,
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+              }
+            },
+            "$schema": "../../registries/operating-model/scoped-record.schema.json"
+          },
+          "merge_rule_ref": "merge-rule:combine-a-and-b"
+        }
+      ]
+    }
+  },
+  "source_content_resolution": {
+    "sample-instance-repository@sample-revision-0001::sample/path/one.yaml": {
+      "record_type": "instance-source-content",
+      "repository_ref": "sample-instance-repository",
+      "revision": "sample-revision-0001",
+      "unit_refs": [
+        "sample/path/one.yaml"
+      ],
+      "media_type": "application/json",
+      "encoding": "utf-8",
+      "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+      "digest": {
+        "algorithm": "sha-256",
+        "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+      }
+    },
+    "sample-repository-instance@sample-revision-0003::sample/path/a.yaml,sample/path/b.yaml::merge-rule:combine-a-and-b": {
+      "record_type": "instance-source-content",
+      "repository_ref": "sample-repository-instance",
+      "revision": "sample-revision-0003",
+      "unit_refs": [
+        "sample/path/a.yaml",
+        "sample/path/b.yaml"
+      ],
+      "media_type": "application/json",
+      "encoding": "utf-8",
+      "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+      "digest": {
+        "algorithm": "sha-256",
+        "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+      },
+      "merge_rule_ref": "merge-rule:combine-a-and-b"
+    }
+  },
+  "valid": [
+    {
+      "note": "empty export registry — no exports declared yet is legal",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": []
+      }
+    },
+    {
+      "note": "minimal migrated-only export — one plan, one record, no retained units",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "retained-only export — no migrated/merged records, one retained unit with the plan's own reason",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-two",
+            "title": "Канонический экспорт — sample-canonical-export-two",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-two"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-two"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-two",
+              "plan_fingerprint": "7d0ae722ddbe7e7b4014443fd5e47403047156eb1e76606eb6705cc9474e70de",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0002",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "e28cce53ba0375063d2c80a40ed81798f5841428305241ad96f33f10cb12407b"
+                }
+              },
+              "records": [],
+              "retained": [
+                {
+                  "unit_id": "sample-unit-transitional",
+                  "reason": "владелец пока не классифицировал единицу; она остаётся переходным источником"
+                }
+              ],
+              "idempotency_key": "f3a7f2d11c97d907ca1cb15f44fd9c2aa240dfd64bad116e18aa46da064fe55c",
+              "digest": "25d8318a7ad4da6d4816850da1fd0fc9f65c5796a2727330ebc90efa19ad7ca1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "many-to-one merge export — two contributing units, one merged record resolved together with the shared merge_rule_ref",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-three",
+            "title": "Канонический экспорт — sample-canonical-export-three",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-three"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-three"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-three",
+              "plan_fingerprint": "3ffadc5510080ea8a1955ad4cafcd7148935bb01a8068cd68bb33224b098797d",
+              "source": {
+                "repository_ref": "sample-repository-instance",
+                "revision": "sample-revision-0003",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "58bf02dabe3011e26fd379c9aaf583decfb2e3e5844211095c8df0a970cd2ec7"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-merged-record",
+                  "title": "Перенесённая запись — sample-merged-record",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-units:sample-unit-a,sample-unit-b"
+                  },
+                  "authority": {
+                    "kind": "repository-maintainer",
+                    "authority_ref": "sample-repository-maintainer",
+                    "decision_ref": "owner-decision:merge-a-and-b"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "949b88adc404cd21a7291c2f55cd461577e3c96fa329a6bfe85306291e931daf",
+              "digest": "6fa2206ff12599bc775efc361639723e793cbccac03ed49d1ab26931534c99cc"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "note": "planted a migrated unit missing from records (empty records for a migrated-only plan)",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted a merged group missing from records",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-three",
+            "title": "Канонический экспорт — sample-canonical-export-three",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-three"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-three"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-three",
+              "plan_fingerprint": "3ffadc5510080ea8a1955ad4cafcd7148935bb01a8068cd68bb33224b098797d",
+              "source": {
+                "repository_ref": "sample-repository-instance",
+                "revision": "sample-revision-0003",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "58bf02dabe3011e26fd379c9aaf583decfb2e3e5844211095c8df0a970cd2ec7"
+                }
+              },
+              "records": [],
+              "retained": [],
+              "idempotency_key": "949b88adc404cd21a7291c2f55cd461577e3c96fa329a6bfe85306291e931daf",
+              "digest": "6fa2206ff12599bc775efc361639723e793cbccac03ed49d1ab26931534c99cc"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an extra exported record for a target the plan never minted",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                },
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "not-a-real-target",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted a duplicated exported record for the same target",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                },
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted a merged group exported more than once",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-three",
+            "title": "Канонический экспорт — sample-canonical-export-three",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repository",
+              "workspace_id": "sample-workspace"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-three"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-three"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-three",
+              "plan_fingerprint": "3ffadc5510080ea8a1955ad4cafcd7148935bb01a8068cd68bb33224b098797d",
+              "source": {
+                "repository_ref": "sample-repository-instance",
+                "revision": "sample-revision-0003",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "58bf02dabe3011e26fd379c9aaf583decfb2e3e5844211095c8df0a970cd2ec7"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-merged-record",
+                  "title": "Перенесённая запись — sample-merged-record",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-units:sample-unit-a,sample-unit-b"
+                  },
+                  "authority": {
+                    "kind": "repository-maintainer",
+                    "authority_ref": "sample-repository-maintainer",
+                    "decision_ref": "owner-decision:merge-a-and-b"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+                    }
+                  }
+                },
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-merged-record",
+                  "title": "Перенесённая запись — sample-merged-record",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "repository-scope",
+                    "id": "sample-repository",
+                    "workspace_id": "sample-workspace"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-units:sample-unit-a,sample-unit-b"
+                  },
+                  "authority": {
+                    "kind": "repository-maintainer",
+                    "authority_ref": "sample-repository-maintainer",
+                    "decision_ref": "owner-decision:merge-a-and-b"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-merged-record\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "3914eab196f12f57866aa52bde12bf21745c17d164e92a8ca1fe9d2a18fbd94e"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "949b88adc404cd21a7291c2f55cd461577e3c96fa329a6bfe85306291e931daf",
+              "digest": "6fa2206ff12599bc775efc361639723e793cbccac03ed49d1ab26931534c99cc"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted a retained-transitional unit misrepresented as an exported record",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-two",
+            "title": "Канонический экспорт — sample-canonical-export-two",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-two"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-two"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-two",
+              "plan_fingerprint": "7d0ae722ddbe7e7b4014443fd5e47403047156eb1e76606eb6705cc9474e70de",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0002",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "e28cce53ba0375063d2c80a40ed81798f5841428305241ad96f33f10cb12407b"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-unit-transitional",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [
+                {
+                  "unit_id": "sample-unit-transitional",
+                  "reason": "владелец пока не классифицировал единицу; она остаётся переходным источником"
+                }
+              ],
+              "idempotency_key": "f3a7f2d11c97d907ca1cb15f44fd9c2aa240dfd64bad116e18aa46da064fe55c",
+              "digest": "25d8318a7ad4da6d4816850da1fd0fc9f65c5796a2727330ebc90efa19ad7ca1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an exported record whose record_type diverges from the plan's own target",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "something-else-entirely",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an exported record whose title diverges from the plan's own target",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "заголовок, никогда не заявленный планом",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an exported record whose payload diverges from the plan's own target and from the resolved source content",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"подменённое содержимое, никогда не подтверждённое резолвером\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "0000000000000000000000000000000000000000000000000000000000000000"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted a stale plan_fingerprint not matching the resolved plan",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an arbitrary idempotency_key not derived from plan_ref/plan_fingerprint",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an incorrect export digest",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted a retained entry naming an unknown source unit",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-two",
+            "title": "Канонический экспорт — sample-canonical-export-two",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-two"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-two"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-two",
+              "plan_fingerprint": "7d0ae722ddbe7e7b4014443fd5e47403047156eb1e76606eb6705cc9474e70de",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0002",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "e28cce53ba0375063d2c80a40ed81798f5841428305241ad96f33f10cb12407b"
+                }
+              },
+              "records": [],
+              "retained": [
+                {
+                  "unit_id": "unknown-source-unit",
+                  "reason": "причина, никогда не заявленная планом"
+                }
+              ],
+              "idempotency_key": "f3a7f2d11c97d907ca1cb15f44fd9c2aa240dfd64bad116e18aa46da064fe55c",
+              "digest": "25d8318a7ad4da6d4816850da1fd0fc9f65c5796a2727330ebc90efa19ad7ca1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted a retained entry whose reason diverges from the plan's own retained_reason",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-two",
+            "title": "Канонический экспорт — sample-canonical-export-two",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-two"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-two"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-two",
+              "plan_fingerprint": "7d0ae722ddbe7e7b4014443fd5e47403047156eb1e76606eb6705cc9474e70de",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0002",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "e28cce53ba0375063d2c80a40ed81798f5841428305241ad96f33f10cb12407b"
+                }
+              },
+              "records": [],
+              "retained": [
+                {
+                  "unit_id": "sample-unit-transitional",
+                  "reason": "причина, отличная от заявленной планом"
+                }
+              ],
+              "idempotency_key": "f3a7f2d11c97d907ca1cb15f44fd9c2aa240dfd64bad116e18aa46da064fe55c",
+              "digest": "25d8318a7ad4da6d4816850da1fd0fc9f65c5796a2727330ebc90efa19ad7ca1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an exported record with an incomplete scoped-record envelope (missing authority)",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an unknown field on the export payload",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c",
+              "exec": "rm -rf /"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an export source that diverges from the resolved plan's own pinned source",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "unregistered-revision",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an export scoped differently from the resolved plan it proves",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "repository-scope",
+              "id": "some-other-repository",
+              "workspace_id": "some-other-workspace"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an export origin.source_ref not tracing to its own plan_ref",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:some-other-plan"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted a plan_ref that does not resolve to a known migration plan",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "unregistered-plan-ref",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "655a5976e62aadee3d549b2f2464fd188fa9e9239a4e058e55d459d7ffa18e0c"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an exported record whose $schema diverges from the plan's own target (export digest correctly recomputed, so the rejection is the $schema divergence itself)",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "some-other-schema-reference-never-declared-by-the-plan",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"note\":\"каноническое содержимое цели sample-migrated-record-one\"}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "4addfc33686d746bc91a77e05505a59641836b0bc998fe579c05d42650656542"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an exported record whose application/json payload content is not valid JSON",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{not valid json",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "aaa1158ea1e8f547ce1f5ef85c5f8e7c2f75259c37836c1073a6345bae89880a"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "planted an exported record whose application/json payload content is not in canonical (sorted-key) form",
+      "registry": {
+        "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+        "schema_version": 1,
+        "registry_id": "instance-canonical-export",
+        "title": "Пример реестра канонического экспорта",
+        "exports": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-canonical-export-one",
+            "title": "Канонический экспорт — sample-canonical-export-one",
+            "record_type": "instance-canonical-export",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample-project"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "migration-plan:sample-migration-plan-one"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "instance-canonical-export-run:sample-canonical-export-one"
+            },
+            "payload": {
+              "plan_ref": "sample-migration-plan-one",
+              "plan_fingerprint": "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae",
+              "source": {
+                "repository_ref": "sample-instance-repository",
+                "revision": "sample-revision-0001",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "702b842879067edacb730c798b5e871e83761cf2e442f7849504df83a69e922c"
+                }
+              },
+              "records": [
+                {
+                  "$schema": "../../registries/operating-model/scoped-record.schema.json",
+                  "schema_version": 1,
+                  "id": "sample-migrated-record-one",
+                  "title": "Перенесённая запись — sample-migrated-record-one",
+                  "record_type": "norm",
+                  "scope": {
+                    "type": "project-workspace",
+                    "id": "sample-project"
+                  },
+                  "origin": {
+                    "kind": "migrated",
+                    "source_ref": "record-unit:sample-unit-one"
+                  },
+                  "authority": {
+                    "kind": "project-owner",
+                    "authority_ref": "sample-project-owner",
+                    "decision_ref": "owner-decision:migrate-sample-unit-one"
+                  },
+                  "payload": {
+                    "media_type": "application/json",
+                    "encoding": "utf-8",
+                    "content": "{\"z-field\":1,\"a-field\":2}",
+                    "digest": {
+                      "algorithm": "sha-256",
+                      "value": "81e28d09821e503198bf2a998324977dfa22c1a0f1e1240105cac0b105d5b873"
+                    }
+                  }
+                }
+              ],
+              "retained": [],
+              "idempotency_key": "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149",
+              "digest": "476ec733da00227eb9270ea81fb76bb9b9fe36a08f730c316094d4de761856b6"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

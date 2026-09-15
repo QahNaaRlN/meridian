@@ -1,0 +1,798 @@
+{
+  "note": "Product-neutral fixtures for registries/operating-model/instruction-source-registry.schema.json and scripts/lib/instruction-source-registry.mjs. Every `valid` registry must pass evaluateInstructionSourceRegistry with no problem; every `invalid` registry must produce at least one. No product literals, no absolute machine paths, no dependency on a separate Instance. Digest values are placeholders that satisfy the SHA-256 shape. Temporal model: recorded_state is the held snapshot; divergence.previous_state is the pre-check snapshot (historical); divergence.current_state is the fresh observation and must agree with recorded_state.",
+  "valid": [
+    {
+      "note": "empty registry — registering nothing is legal",
+      "registry": {
+        "$schema": "../../registries/operating-model/instruction-source-registry.schema.json",
+        "schema_version": 1,
+        "registry_id": "instruction-source-registry",
+        "title": "Пример пустого реестра источников инструкций",
+        "instruction_sources": []
+      }
+    },
+    {
+      "note": "ordinary discoverable source — a repository AGENTS.md, meridian-observed channel, unchanged divergence (previous == current == recorded)",
+      "registry": {
+        "$schema": "../../registries/operating-model/instruction-source-registry.schema.json",
+        "schema_version": 1,
+        "registry_id": "instruction-source-registry",
+        "title": "Пример реестра источников инструкций",
+        "instruction_sources": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-repo-agents-md",
+            "title": "AGENTS.md рабочего репозитория",
+            "record_type": "instruction-source",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "declared", "source_ref": "owner-decision:register-sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+            "payload": {
+              "normative_status": "not-a-norm",
+              "medium": "file",
+              "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+              "recorded_state": {
+                "revision": "rev-000001",
+                "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" },
+                "revision_verified": true,
+                "currency": "current"
+              },
+              "format": "agents-md",
+              "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+              "divergence": {
+                "status": "unchanged",
+                "previous_state": {
+                  "revision": "rev-000001",
+                  "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" },
+                  "verified": true
+                },
+                "current_state": {
+                  "revision": "rev-000001",
+                  "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" },
+                  "verified": true
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "agent-native auto-read source — a CLAUDE.md the agent's own tool loads; changed divergence, recorded_state updated to the fresh observation, so currency is current",
+      "registry": {
+        "$schema": "../../registries/operating-model/instruction-source-registry.schema.json",
+        "schema_version": 1,
+        "registry_id": "instruction-source-registry",
+        "title": "Пример реестра источников инструкций",
+        "instruction_sources": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-repo-claude-md",
+            "title": "CLAUDE.md рабочего репозитория",
+            "record_type": "instruction-source",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "imported", "source_ref": "discovered:CLAUDE.md@sample-repository" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+            "payload": {
+              "normative_status": "not-a-norm",
+              "medium": "file",
+              "location": { "path": "CLAUDE.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+              "recorded_state": {
+                "revision": "2026-09-01",
+                "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" },
+                "revision_verified": true,
+                "currency": "current"
+              },
+              "format": "claude-md",
+              "read_channel": { "kind": "agent-native", "meridian_visibility": "partial", "agent_auto_read": true },
+              "divergence": {
+                "status": "changed",
+                "previous_state": {
+                  "revision": "2026-08-01",
+                  "digest": { "algorithm": "sha-256", "value": "2222222222222222222222222222222222222222222222222222222222222222" },
+                  "verified": true
+                },
+                "current_state": {
+                  "revision": "2026-09-01",
+                  "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" },
+                  "verified": true
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "external-service source — an organisation wiki page, manual channel, unverified state with divergence unknown",
+      "registry": {
+        "$schema": "../../registries/operating-model/instruction-source-registry.schema.json",
+        "schema_version": 1,
+        "registry_id": "instruction-source-registry",
+        "title": "Пример реестра источников инструкций",
+        "instruction_sources": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-org-wiki-conventions",
+            "title": "Соглашения агента в вики организации",
+            "record_type": "instruction-source",
+            "scope": { "type": "organization-profile", "id": "sample-organization" },
+            "origin": { "kind": "declared", "source_ref": "owner-decision:register-org-wiki-conventions" },
+            "authority": { "kind": "organization", "authority_ref": "sample-organization" },
+            "payload": {
+              "normative_status": "not-a-norm",
+              "medium": "external-service",
+              "location": {
+                "service_ref": "sample-wiki",
+                "resource_ref": "spaces/eng/pages/agent-conventions",
+                "missing_behavior": "fail-closed"
+              },
+              "recorded_state": {
+                "revision": "page-version-7",
+                "digest": { "algorithm": "sha-256", "value": "3333333333333333333333333333333333333333333333333333333333333333" },
+                "revision_verified": false,
+                "currency": "unverified"
+              },
+              "format": "markdown-section",
+              "read_channel": { "kind": "manual", "meridian_visibility": "none", "agent_auto_read": false },
+              "divergence": { "status": "unknown" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "source reported missing — a verified last-known snapshot recorded as stale, status source-missing, no current_state",
+      "registry": {
+        "$schema": "../../registries/operating-model/instruction-source-registry.schema.json",
+        "schema_version": 1,
+        "registry_id": "instruction-source-registry",
+        "title": "Пример реестра источников инструкций",
+        "instruction_sources": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-user-cursor-rule",
+            "title": "Правило Cursor в профиле пользователя",
+            "record_type": "instruction-source",
+            "scope": { "type": "user-profile", "id": "sample-user" },
+            "origin": { "kind": "imported", "source_ref": "discovered:.cursor/rules/style.mdc@sample-user" },
+            "authority": { "kind": "user", "authority_ref": "sample-user" },
+            "payload": {
+              "normative_status": "not-a-norm",
+              "medium": "file",
+              "location": { "path": ".cursor/rules/style.mdc", "container_ref": "sample-user-dotfiles", "missing_behavior": "fail-closed" },
+              "recorded_state": {
+                "revision": "rev-00000a",
+                "digest": { "algorithm": "sha-256", "value": "2222222222222222222222222222222222222222222222222222222222222222" },
+                "revision_verified": true,
+                "currency": "stale"
+              },
+              "format": "cursor-rule",
+              "read_channel": { "kind": "agent-native", "meridian_visibility": "none", "agent_auto_read": true },
+              "divergence": {
+                "status": "source-missing",
+                "previous_state": {
+                  "revision": "rev-00000a",
+                  "digest": { "algorithm": "sha-256", "value": "2222222222222222222222222222222222222222222222222222222222222222" },
+                  "verified": true
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "fresh registration — a verified current_state, no previous_state to compare against, so divergence unknown is the honest status while currency is current",
+      "registry": {
+        "$schema": "../../registries/operating-model/instruction-source-registry.schema.json",
+        "schema_version": 1,
+        "registry_id": "instruction-source-registry",
+        "title": "Пример реестра источников инструкций",
+        "instruction_sources": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-repo-agent-notes",
+            "title": "Заметки агента репозитория",
+            "record_type": "instruction-source",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "declared", "source_ref": "owner-decision:register-sample-repo-agent-notes" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+            "payload": {
+              "normative_status": "not-a-norm",
+              "medium": "file",
+              "location": { "path": "docs/agent-notes.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+              "recorded_state": {
+                "revision": "rev-000003",
+                "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" },
+                "revision_verified": true,
+                "currency": "current"
+              },
+              "format": "markdown-section",
+              "read_channel": { "kind": "meridian-observed", "meridian_visibility": "partial", "agent_auto_read": false },
+              "divergence": {
+                "status": "unknown",
+                "current_state": {
+                  "revision": "rev-000003",
+                  "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" },
+                  "verified": true
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "unverified observation — the fresh read could not be verified, and recorded_state.revision_verified matches (both false); status unknown, currency unverified",
+      "registry": {
+        "$schema": "../../registries/operating-model/instruction-source-registry.schema.json",
+        "schema_version": 1,
+        "registry_id": "instruction-source-registry",
+        "title": "Пример реестра источников инструкций",
+        "instruction_sources": [
+          {
+            "$schema": "../../registries/operating-model/scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-repo-agents-md",
+            "title": "AGENTS.md рабочего репозитория",
+            "record_type": "instruction-source",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "declared", "source_ref": "owner-decision:register-sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+            "payload": {
+              "normative_status": "not-a-norm",
+              "medium": "file",
+              "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+              "recorded_state": {
+                "revision": "rev-000001",
+                "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" },
+                "revision_verified": false,
+                "currency": "unverified"
+              },
+              "format": "agents-md",
+              "read_channel": { "kind": "meridian-observed", "meridian_visibility": "partial", "agent_auto_read": false },
+              "divergence": {
+                "status": "unknown",
+                "current_state": {
+                  "revision": "rev-000001",
+                  "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" },
+                  "verified": false
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "note": "unknown scope — a scope type outside the six-scope model",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "team-scope", "id": "sample-team" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "unstable identity — an id that is not a stable semantic identifier",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "AGENTS", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "unstable identity — no human-readable title",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "absolute path — the location leaves any declared medium",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "/etc/agents.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "escape from the scope — a location path that climbs out through ..",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "../outside-repo/AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "file source without container_ref — the opaque medium identity is missing",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "an opaque container reference that is really an absolute machine path",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "/srv/checkouts/sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "wrong digest — not a SHA-256",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-1", "value": "abcdef" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "no revision — the recorded state carries no explicit edition",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "unknown format",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "notion-page", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "unknown read channel",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "telepathy", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "false match without evidence — status unchanged with no previous or current state",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unchanged" } } }
+      ] }
+    },
+    {
+      "note": "false match without proof — status unchanged with an unverified current state",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unchanged",
+              "previous_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true },
+              "current_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": false } } } }
+      ] }
+    },
+    {
+      "note": "status changed while the two verified states are identical",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "changed",
+              "previous_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true },
+              "current_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true } } } }
+      ] }
+    },
+    {
+      "note": "different revision, same digest, declared unchanged",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unchanged",
+              "previous_state": { "revision": "rev-000000", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true },
+              "current_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true } } } }
+      ] }
+    },
+    {
+      "note": "different digest, same revision, declared unchanged",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "2222222222222222222222222222222222222222222222222222222222222222" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unchanged",
+              "previous_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true },
+              "current_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "2222222222222222222222222222222222222222222222222222222222222222" }, "verified": true } } } }
+      ] }
+    },
+    {
+      "note": "unknown declared with two complete verified states",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown",
+              "previous_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true },
+              "current_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true } } } }
+      ] }
+    },
+    {
+      "note": "recorded_state contradicts divergence.current_state — they describe one present observation",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "changed",
+              "previous_state": { "revision": "rev-000000", "digest": { "algorithm": "sha-256", "value": "2222222222222222222222222222222222222222222222222222222222222222" }, "verified": true },
+              "current_state": { "revision": "rev-000002", "digest": { "algorithm": "sha-256", "value": "3333333333333333333333333333333333333333333333333333333333333333" }, "verified": true } } } }
+      ] }
+    },
+    {
+      "note": "source-missing carrying a current_state",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "stale" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "partial", "agent_auto_read": false },
+            "divergence": { "status": "source-missing",
+              "current_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true } } } }
+      ] }
+    },
+    {
+      "note": "currency current together with a source-missing observation",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "partial", "agent_auto_read": false },
+            "divergence": { "status": "source-missing" } } }
+      ] }
+    },
+    {
+      "note": "currency stale without positive evidence the source has gone",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "stale" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unchanged",
+              "previous_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true },
+              "current_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true } } } }
+      ] }
+    },
+    {
+      "note": "unverified revision declared current",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": false, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "unknown format is separate from channel — unknown here is the format axis; declaring the source an accepted norm",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "accepted-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "declaring the source a norm — record_type norm",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "norm",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "undeclared fallback behaviour — the location does not declare what happens when the source is unresolvable",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "hidden fallback resolution — a missing_behavior other than fail-closed",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "resolve-parent" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "an agent-native auto-read source that also claims full Meridian control",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-claude-md", "title": "CLAUDE.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "imported", "source_ref": "discovered:CLAUDE.md@sample-repository" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "CLAUDE.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "claude-md", "read_channel": { "kind": "agent-native", "meridian_visibility": "full", "agent_auto_read": true },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "an agent-native channel that is not marked auto-read",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-claude-md", "title": "CLAUDE.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "imported", "source_ref": "discovered:CLAUDE.md@sample-repository" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "CLAUDE.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "claude-md", "read_channel": { "kind": "agent-native", "meridian_visibility": "partial", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "medium and location disagree — an external-service medium carrying a file path",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-org-wiki-conventions", "title": "Соглашения агента в вики организации", "record_type": "instruction-source",
+          "scope": { "type": "organization-profile", "id": "sample-organization" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "organization", "authority_ref": "sample-organization" },
+          "payload": { "normative_status": "not-a-norm", "medium": "external-service",
+            "location": { "path": "AGENTS.md", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "page-version-7", "digest": { "algorithm": "sha-256", "value": "3333333333333333333333333333333333333333333333333333333333333333" }, "revision_verified": true, "currency": "current" },
+            "format": "markdown-section", "read_channel": { "kind": "manual", "meridian_visibility": "none", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "file source carrying resource_ref — the two location forms are mutually exclusive",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "resource_ref": "spaces/eng/pages/x", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "file source carrying service_ref — the two location forms are mutually exclusive",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "service_ref": "sample-wiki", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "external-service source carrying container_ref — the two location forms are mutually exclusive",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-org-wiki-conventions", "title": "Соглашения агента в вики организации", "record_type": "instruction-source",
+          "scope": { "type": "organization-profile", "id": "sample-organization" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "organization", "authority_ref": "sample-organization" },
+          "payload": { "normative_status": "not-a-norm", "medium": "external-service",
+            "location": { "service_ref": "sample-wiki", "resource_ref": "spaces/eng/pages/agent-conventions", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "page-version-7", "digest": { "algorithm": "sha-256", "value": "3333333333333333333333333333333333333333333333333333333333333333" }, "revision_verified": true, "currency": "current" },
+            "format": "markdown-section", "read_channel": { "kind": "manual", "meridian_visibility": "none", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "external-service source carrying a path — the two location forms are mutually exclusive",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-org-wiki-conventions", "title": "Соглашения агента в вики организации", "record_type": "instruction-source",
+          "scope": { "type": "organization-profile", "id": "sample-organization" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "organization", "authority_ref": "sample-organization" },
+          "payload": { "normative_status": "not-a-norm", "medium": "external-service",
+            "location": { "service_ref": "sample-wiki", "resource_ref": "spaces/eng/pages/agent-conventions", "path": "AGENTS.md", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "page-version-7", "digest": { "algorithm": "sha-256", "value": "3333333333333333333333333333333333333333333333333333333333333333" }, "revision_verified": true, "currency": "current" },
+            "format": "markdown-section", "read_channel": { "kind": "manual", "meridian_visibility": "none", "agent_auto_read": false },
+            "divergence": { "status": "unknown" } } }
+      ] }
+    },
+    {
+      "note": "mismatched verification of one present observation — recorded_state.revision_verified true, current_state.verified false",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": true, "currency": "current" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "partial", "agent_auto_read": false },
+            "divergence": { "status": "unknown",
+              "current_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": false } } } }
+      ] }
+    },
+    {
+      "note": "mismatched verification, the other way — recorded_state.revision_verified false, current_state.verified true",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "revision_verified": false, "currency": "unverified" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "partial", "agent_auto_read": false },
+            "divergence": { "status": "unknown",
+              "current_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true } } } }
+      ] }
+    },
+    {
+      "note": "source-missing with a previous_state whose revision and digest contradict the held recorded_state",
+      "registry": { "$schema": "../../registries/operating-model/instruction-source-registry.schema.json", "schema_version": 1, "registry_id": "instruction-source-registry", "title": "Пример реестра источников инструкций", "instruction_sources": [
+        { "$schema": "../../registries/operating-model/scoped-record.schema.json", "schema_version": 1, "id": "sample-repo-agents-md", "title": "AGENTS.md рабочего репозитория", "record_type": "instruction-source",
+          "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+          "origin": { "kind": "declared", "source_ref": "owner-decision:x" },
+          "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer" },
+          "payload": { "normative_status": "not-a-norm", "medium": "file",
+            "location": { "path": "AGENTS.md", "container_ref": "sample-repository", "missing_behavior": "fail-closed" },
+            "recorded_state": { "revision": "rev-000002", "digest": { "algorithm": "sha-256", "value": "2222222222222222222222222222222222222222222222222222222222222222" }, "revision_verified": true, "currency": "stale" },
+            "format": "agents-md", "read_channel": { "kind": "meridian-observed", "meridian_visibility": "partial", "agent_auto_read": false },
+            "divergence": { "status": "source-missing",
+              "previous_state": { "revision": "rev-000001", "digest": { "algorithm": "sha-256", "value": "1111111111111111111111111111111111111111111111111111111111111111" }, "verified": true } } } }
+      ] }
+    }
+  ]
+}

@@ -1,0 +1,326 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/instance-data-migration.schema.json",
+  "title": "Meridian instance-data migration register",
+  "description": "Container for migration plans (record_type: instance-migration-plan) — the product-neutral, storage-neutral contract that describes, verifies and reproducibly applies the migration of a transitional Instance's records into Meridian's logical scope areas (workspace-scope-model.md) without choosing a persistent store. Each entry is a scoped record: its envelope (identity, scope, origin, authority) is validated separately against scoped-record.schema.json, and this schema is not a second envelope schema. payload.source pins an explicit revision, a SHA-256 digest and a repository_ref and declares whether the source qualifies as a reproducible base (working_tree_clean required true for 'reproducible'); a 'reproducible' claim is additionally checked at the library level against a snapshot resolved through an EXTERNAL boundary (resolveSourceSnapshot) keyed by (repository_ref, revision) — a claimed value with no resolved, matching snapshot never confirms reproducibility, and a dirty, incomplete, ambiguous or changed source is never accepted as reproducible. payload.record_units and payload.mappings each require at least one entry — an empty migration plan is never valid, though an empty registry container still is. payload.mappings gives each declared unit exactly one correspondence decision — migrated, retained-transitional, or merged (many-to-one, with an explicit shared merge_rule_ref, checked as a GROUP so an undeclared implicit multi-unit 'migrated' is rejected too) — never derived from a file path alone. A migrated or merged target carries an explicit field_basis (preserved vs assigned) for id/record_type/scope/origin/authority, a mandatory origin (kind pinned 'migrated', source_ref checked at the library level to trace to the group's ACTUAL contributing record_unit id(s) — never freely asserted, and field_basis.origin checked to always be 'assigned') and an owner decision; every mapping sharing one target must describe a structurally identical target record; the target's scope carries the SAME structural constraints as workspace-scope-model.md's own scope envelope (built-in-methodology fixes id, repository-scope/run-state require workspace_id); its permanent authority is checked against the closed owner-authority table for its own scope, and the delegated-run authority that carries out the migration itself can never mint a target's permanent authority. payload.rollback is mandatory on every plan and is closed to two MUTUALLY EXCLUSIVE variants (deterministic-reconstruction requires deterministic_plan_ref and FORBIDS restoration_evidence_ref; verified-restoration requires restoration_evidence_ref and FORBIDS deterministic_plan_ref — an inactive ref for the other variant is a schema violation, never silently ignored); it is checked at the library level, not merely schema-shaped: source_snapshot_ref is resolved through an EXTERNAL boundary (resolveRollbackSnapshot) and checked to name THIS plan's own source repository_ref/revision/digest; the concrete plan (deterministic-reconstruction's deterministic_plan_ref via resolveDeterministicPlan, or verified-restoration's restoration_evidence_ref via resolveRestorationEvidence) is resolved and checked to name THIS plan's own id AND its own RECOMPUTED plan_fingerprint, plus rollback.source_snapshot_ref — a bare non-empty ref string, invented, cross-plan, cross-snapshot or pinned to a STALE version of this plan's own content, never backs a rollback claim; rewrites_published_history is pinned to the literal false. payload.verification distinguishes a claimed overall_status from actual coverage and applicability-preservation SUB-VERDICTS, each independently checked at the library level: a 'verified' sub-verdict's evidence_ref is resolved through an EXTERNAL boundary (resolveEvidence) and the resolved record must actually confirm THIS plan's id AND its own RECOMPUTED plan_fingerprint (not merely its id) AND THIS kind of result — a non-empty evidence_ref string alone, or one pinned to a stale fingerprint of a plan whose mapping/target/owner_decision has since changed, never backs a verified claim; a not-reproducible source always forces BLOCKED. payload.plan_fingerprint is a documented canonical projection of source/record_units/mappings/rollback, recomputed and checked at the library level — this SAME recomputed fingerprint is what every evidence/rollback proof above is pinned to; payload.idempotency_key is DERIVED from the plan's own scope and the canonical identity of its pinned source — repository_ref, revision AND the full digest, not revision alone, so two different source repositories sharing a revision TEXT never collide (never an arbitrary free-form string) — and unique across the container, so two independently authored plans over one pinned input collide rather than passing as unrelated records; a superseding plan is checked to share its predecessor's FULL scope and SAME source repository_ref and pin a changed source revision — in-document directly, or, when the predecessor is not present in this document, through an EXTERNAL boundary (resolveSupersededPlan) that NEVER accepts an unknown or unresolved predecessor id automatically. The contract is a mandatory part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The rules JSON Schema cannot state live in scripts/lib/instance-data-migration.mjs. The normative document is standards/workspace/instance-data-migration.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "title", "migration_plans"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "registry_id": { "const": "instance-data-migration" },
+    "title": { "type": "string", "minLength": 1 },
+    "migration_plans": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/entry" }
+    }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "sha256_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "sha256_digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "const": "sha-256" },
+        "value": { "$ref": "#/definitions/sha256_hex" }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "required": ["record_type", "payload"],
+      "properties": {
+        "record_type": { "const": "instance-migration-plan" },
+        "payload": { "$ref": "#/definitions/payload" }
+      }
+    },
+    "source_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "digest", "repository_ref", "working_tree_clean", "qualification"],
+      "description": "The exact, pinned source revision this plan reads from. repository_ref is an opaque identifier of the source Instance, never a filesystem path — property 1 (storage neutrality) and property 2 (precise source): the physical path is never the identity. A 'reproducible' qualification is checked at the library level against a snapshot resolved through an external boundary keyed by (repository_ref, revision); the resolved repository_ref must match (a snapshot resolved for a different repository never confirms this one's reproducibility) and the resolved digest is checked in its full closed form (an extra or missing field inside digest is rejected); a claimed value with no resolved, matching snapshot never confirms reproducibility.",
+      "properties": {
+        "revision": { "$ref": "#/definitions/non_empty" },
+        "digest": { "$ref": "#/definitions/sha256_digest" },
+        "repository_ref": { "$ref": "#/definitions/non_empty" },
+        "working_tree_clean": { "type": "boolean" },
+        "qualification": { "enum": ["reproducible", "not-reproducible"] },
+        "qualification_reason": { "$ref": "#/definitions/non_empty" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "qualification": { "const": "reproducible" } }, "required": ["qualification"] },
+          "then": {
+            "properties": { "working_tree_clean": { "const": true } },
+            "required": ["working_tree_clean"],
+            "not": { "required": ["qualification_reason"] }
+          },
+          "else": { "required": ["qualification_reason"] }
+        }
+      ]
+    },
+    "record_unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "unit_ref", "classification_basis"],
+      "description": "One declared source unit this plan accounts for. classification_basis is an explicit, human-authored justification of the chosen correspondence — checked at the library level to differ from unit_ref itself, so classification is never claimed to be derived from the path or reference alone.",
+      "properties": {
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "unit_ref": { "$ref": "#/definitions/non_empty" },
+        "classification_basis": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "field_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["$schema", "id", "title", "record_type", "scope", "schema_version", "origin", "authority", "payload"],
+      "description": "Explicit, per-field basis for every field semantics preservation requires (workspace-scope-model.md §2), now closed to the FULL canonical envelope a target must be sufficient to construct (property: full migration target) — including the target's own declared $schema (property: full migration target / target $schema): 'preserved' when the old record already carried it, 'assigned' when the migration itself supplies it. A field the old format never carried can never be silently claimed 'preserved' — $schema, title, payload and schema_version are required here exactly like the five pre-existing fields, so none of the four can appear on a target without an explicit basis. origin is checked at the library level to always be 'assigned': a pre-Meridian record never carried this canonical origin shape.",
+      "properties": {
+        "$schema": { "enum": ["preserved", "assigned"] },
+        "id": { "enum": ["preserved", "assigned"] },
+        "title": { "enum": ["preserved", "assigned"] },
+        "record_type": { "enum": ["preserved", "assigned"] },
+        "scope": { "enum": ["preserved", "assigned"] },
+        "schema_version": { "enum": ["preserved", "assigned"] },
+        "origin": { "enum": ["preserved", "assigned"] },
+        "authority": { "enum": ["preserved", "assigned"] },
+        "payload": { "enum": ["preserved", "assigned"] }
+      }
+    },
+    "content_envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["media_type", "encoding", "content", "digest"],
+      "description": "A target's payload is never an untyped blob: it is closed to an explicit, checkable content representation (property: content preservation). media_type names the represented kind (\"application/json\" or a \"+json\" suffix for a canonicalised structured JSON fragment, \"text/*\" for a whole text file, an opaque binary media type otherwise); encoding is closed to \"utf-8\" (required for JSON and text/* media types) or \"base64\" (required for every other, binary media type — explicitly and safely encoded, never raw bytes); digest is the full closed SHA-256 form of the represented content. This shape is checked in TWO independent, composed ways, neither of which alone is sufficient: schema-level shape here, and — critically — SEMANTIC content-level checking at the library level (checkContentEnvelope, scripts/lib/instance-data-migration.mjs), applied identically to a migration target's own payload, a canonical export's exported record payload, and the response of the external resolveSourceContent boundary. checkContentEnvelope never trusts a declared or resolver-returned digest: it independently recomputes SHA-256 over the ACTUAL represented bytes (the UTF-8 byte sequence of content, or the bytes base64-decodes to) and rejects any digest.value that does not match — including a digest that is internally self-consistent across target, export and resolver but simply false. It rejects JSON media types whose content fails to parse or is not already in canonical form (recursively sorted object keys, no incidental whitespace — the same canonicalisation computePlanFingerprint/computeExportDigest use), text/* or JSON media types declared with encoding \"base64\", any other (binary) media type declared with encoding \"utf-8\", and content that is not well-formed canonical base64 (wrong alphabet, non-canonical padding, or a string that does not round-trip through decode-then-re-encode) whenever encoding is \"base64\". A structurally well-formed envelope whose content or digest is nonetheless fabricated is never itself accepted as proof of preservation — for a migration target, checkContentEnvelope alone catches it; for an exported record, resolveAndCheckSourceContent (instance-canonical-export.schema.json) additionally resolves the ACTUAL content of the contributing source unit(s) through the external resolveSourceContent boundary and checks this envelope against it field-for-field, and checkContentEnvelope is applied a third time to the resolver's own response before it is trusted as a comparison baseline.",
+      "properties": {
+        "media_type": { "$ref": "#/definitions/non_empty" },
+        "encoding": { "enum": ["utf-8", "base64"] },
+        "content": { "$ref": "#/definitions/non_empty" },
+        "digest": { "$ref": "#/definitions/sha256_digest" }
+      }
+    },
+    "target_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "description": "The SAME structural constraints as workspace-scope-model.md's own scope envelope (scoped-record.schema.json definitions.scope_ref) — not a diverging simplified copy: built-in-methodology fixes id; repository-scope and run-state require workspace_id; only project-workspace may carry organization_profile_id.",
+      "properties": {
+        "type": {
+          "enum": [
+            "built-in-methodology",
+            "user-profile",
+            "organization-profile",
+            "project-workspace",
+            "repository-scope",
+            "run-state"
+          ]
+        },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "workspace_id": { "$ref": "#/definitions/semantic_id" },
+        "organization_profile_id": { "$ref": "#/definitions/semantic_id" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "built-in-methodology" } }, "required": ["type"] },
+          "then": { "properties": { "id": { "const": "built-in-methodology" } } }
+        },
+        {
+          "if": {
+            "properties": { "type": { "enum": ["repository-scope", "run-state"] } },
+            "required": ["type"]
+          },
+          "then": { "required": ["workspace_id"] },
+          "else": { "not": { "required": ["workspace_id"] } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "project-workspace" } }, "required": ["type"] },
+          "else": { "not": { "required": ["organization_profile_id"] } }
+        }
+      ]
+    },
+    "target_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "authority_ref", "decision_ref"],
+      "description": "A migrated or merged target's own authority. decision_ref is always required — semantics preservation carries an explicit owner decision, never an implied one (property 4).",
+      "properties": {
+        "kind": {
+          "enum": ["methodology-owner", "user", "organization", "project-owner", "repository-maintainer", "delegated-run"]
+        },
+        "authority_ref": { "$ref": "#/definitions/non_empty" },
+        "decision_ref": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "target_origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "source_ref"],
+      "description": "A migrated or merged target's own origin, in the SAME canonical shape as the record envelope's own origin (scoped-record.schema.json definitions.origin). kind is pinned to 'migrated' — a target minted by this contract is always data migrated from a source, never built-in, declared, imported or derived. source_ref is checked at the library level to trace to the canonical reference of the ACTUAL record_unit id(s) contributing to this target — never a freely asserted string (property 4).",
+      "properties": {
+        "kind": { "const": "migrated" },
+        "source_ref": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "target_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["$schema", "id", "title", "record_type", "scope", "schema_version", "field_basis", "origin", "authority", "payload"],
+      "description": "The FULL canonical envelope a migrated or merged target is sufficient to build a complete scoped-record from (property: full migration target) — $schema, id, title, record_type, scope, schema_version, origin, authority and payload: every one of the nine fields scoped-record.schema.json requires of a record. $schema is EXPLICIT DATA the target itself declares, not a value the library derives or infers; a canonical export's own exported record is checked at the library level (checkExportCompleteness, instance-canonical-export.schema.json) to carry the IDENTICAL $schema this target declares — an arbitrary or diverging $schema on the exported record is rejected. A target that carried only id/record_type/scope/origin/authority — the pre-extension shape — could never reconstruct $schema, title or payload, the fields that actually let a consumer validate the resulting record as a whole and carry its human-readable identity and domain content.",
+      "properties": {
+        "$schema": { "$ref": "#/definitions/non_empty" },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "title": { "$ref": "#/definitions/non_empty" },
+        "record_type": { "$ref": "#/definitions/semantic_id" },
+        "scope": { "$ref": "#/definitions/target_scope" },
+        "schema_version": { "const": 1 },
+        "field_basis": { "$ref": "#/definitions/field_basis" },
+        "origin": { "$ref": "#/definitions/target_origin" },
+        "authority": { "$ref": "#/definitions/target_authority" },
+        "payload": { "$ref": "#/definitions/content_envelope" }
+      }
+    },
+    "owner_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision_ref", "decided_at", "reason"],
+      "properties": {
+        "decision_ref": { "$ref": "#/definitions/non_empty" },
+        "decided_at": { "type": "string", "format": "date" },
+        "reason": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit_id", "disposition"],
+      "description": "One record unit's correspondence decision. 'migrated' and 'merged' mint a target and require an owner_decision; 'merged' additionally requires an explicit merge_rule_ref shared by every mapping merging into the same target (checked at the library level to actually be many-to-one); 'retained-transitional' keeps the unit as a transitional source and requires an explicit retained_reason instead of a target.",
+      "properties": {
+        "unit_id": { "$ref": "#/definitions/semantic_id" },
+        "disposition": { "enum": ["migrated", "retained-transitional", "merged"] },
+        "target": { "$ref": "#/definitions/target_record" },
+        "merge_rule_ref": { "$ref": "#/definitions/non_empty" },
+        "retained_reason": { "$ref": "#/definitions/non_empty" },
+        "owner_decision": { "$ref": "#/definitions/owner_decision" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "disposition": { "const": "migrated" } }, "required": ["disposition"] },
+          "then": {
+            "required": ["target", "owner_decision"],
+            "not": { "required": ["merge_rule_ref", "retained_reason"] }
+          }
+        },
+        {
+          "if": { "properties": { "disposition": { "const": "merged" } }, "required": ["disposition"] },
+          "then": {
+            "required": ["target", "owner_decision", "merge_rule_ref"],
+            "not": { "required": ["retained_reason"] }
+          }
+        },
+        {
+          "if": { "properties": { "disposition": { "const": "retained-transitional" } }, "required": ["disposition"] },
+          "then": {
+            "required": ["retained_reason"],
+            "not": { "required": ["target", "merge_rule_ref", "owner_decision"] }
+          }
+        }
+      ]
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_snapshot_ref", "plan", "rewrites_published_history"],
+      "description": "Mandatory on every plan (property 5: reversibility by default). plan is closed to exactly two mutually EXCLUSIVE variants: deterministic-reconstruction requires deterministic_plan_ref and forbids restoration_evidence_ref; verified-restoration requires restoration_evidence_ref and forbids deterministic_plan_ref — an inactive ref for the other variant is never silently tolerated, it is a schema violation. The library level (scripts/lib/instance-data-migration.mjs) additionally resolves source_snapshot_ref, deterministic_plan_ref and restoration_evidence_ref through their own EXTERNAL boundaries and checks each against THIS plan's own source, id and exact content (plan_fingerprint) — a bare non-empty ref string is never itself accepted as proof of reversibility. rewrites_published_history is pinned to the literal false — a rollback plan is never a rewrite of published history.",
+      "properties": {
+        "source_snapshot_ref": { "$ref": "#/definitions/non_empty" },
+        "plan": { "enum": ["deterministic-reconstruction", "verified-restoration"] },
+        "deterministic_plan_ref": { "$ref": "#/definitions/non_empty" },
+        "restoration_evidence_ref": { "$ref": "#/definitions/non_empty" },
+        "rewrites_published_history": { "const": false }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "plan": { "const": "deterministic-reconstruction" } }, "required": ["plan"] },
+          "then": {
+            "required": ["deterministic_plan_ref"],
+            "not": { "required": ["restoration_evidence_ref"] }
+          }
+        },
+        {
+          "if": { "properties": { "plan": { "const": "verified-restoration" } }, "required": ["plan"] },
+          "then": {
+            "required": ["restoration_evidence_ref"],
+            "not": { "required": ["deterministic_plan_ref"] }
+          }
+        }
+      ]
+    },
+    "sub_verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["verified", "unverified"] },
+        "evidence_ref": { "$ref": "#/definitions/non_empty" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "verified" } }, "required": ["status"] },
+          "then": { "required": ["evidence_ref"] },
+          "else": { "not": { "required": ["evidence_ref"] } }
+        }
+      ]
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coverage", "applicability_preservation", "overall_status"],
+      "description": "Distinguishes a claimed result from actual evidence (property 6): overall_status VERIFIED is checked at the library level against BOTH sub-verdicts and against source.qualification — never merely asserted.",
+      "properties": {
+        "coverage": { "$ref": "#/definitions/sub_verdict" },
+        "applicability_preservation": { "$ref": "#/definitions/sub_verdict" },
+        "overall_status": { "enum": ["VERIFIED", "UNVERIFIED", "BLOCKED"] }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "record_units",
+        "mappings",
+        "rollback",
+        "verification",
+        "plan_fingerprint",
+        "idempotency_key"
+      ],
+      "properties": {
+        "source": { "$ref": "#/definitions/source_state" },
+        "record_units": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/record_unit" }
+        },
+        "mappings": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/mapping" }
+        },
+        "rollback": { "$ref": "#/definitions/rollback" },
+        "verification": { "$ref": "#/definitions/verification" },
+        "plan_fingerprint": { "$ref": "#/definitions/sha256_hex" },
+        "idempotency_key": { "$ref": "#/definitions/sha256_hex" },
+        "supersedes": { "$ref": "#/definitions/non_empty" }
+      }
+    }
+  }
+}

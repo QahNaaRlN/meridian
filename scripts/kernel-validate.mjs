@@ -32,12 +32,20 @@
 //                          the record-level inference rules JSON Schema cannot
 //                          express — classifies its product-neutral fixtures:
 //                          every valid one satisfied, every invalid one rejected.
+//   6d. instruction-source-registry — the source-snapshot schema parses, uses
+//                          only implemented keywords, and — with the divergence,
+//                          temporal-state and location rules JSON Schema cannot
+//                          state — classifies its product-neutral fixtures. Schema
+//                          is Kernel, data is Instance. MANDATORY: a missing
+//                          schema or missing fixtures is a FAIL, not a skip.
 //   7. sha-provenance    — installed skill matches its pinned SHA-256.
 //   8. ext-dependencies  — declared external dependencies are resolvable, or
 //                          are explicitly and legibly unresolved.
 //   9. inventory-git     — recorded revision/ref/dirty state is compared with
 //                          the repository's actual current state.
 //  10. instruction-topics — the two halves of the topic pool agree.
+//  10a. operating-foundation — machine identities and human signatures of
+//                          universal terms and principles agree.
 //  10b. stack-profiles  — the two halves of the stack profile pool agree, and
 //                          every inventoried repository declares a profile from
 //                          the pool that its own manifest supports.
@@ -81,6 +89,28 @@ import { fileURLToPath } from 'node:url';
 // sit inline here.
 import { yamlParse } from './lib/yaml.mjs';
 import { validate, assertSupportedDeep } from './lib/json-schema.mjs';
+import {
+  evaluateTaskPatternRegistry, checkRuleResolutionBugfixConsistency,
+  WORK_KINDS as TPR_WORK_KINDS, CHANGE_CLASSES as TPR_CHANGE_CLASSES,
+} from './lib/task-pattern-registry.mjs';
+import { evaluateInstructionSourceRegistry } from './lib/instruction-source-registry.mjs';
+import { evaluateTaskSpecification } from './lib/task-specification.mjs';
+import { evaluateExecutionState } from './lib/execution-state.mjs';
+import { evaluateRoleRegistry, evaluateHumanControl } from './lib/role-and-human-control.mjs';
+import { evaluateContextManifest, makeRecordResolver } from './lib/context-manifest.mjs';
+import { evaluateEvidenceAndHandoff } from './lib/evidence-and-handoff.mjs';
+import { evaluateFieldEvaluation } from './lib/field-evaluation.mjs';
+import { evaluateControlledRuleIntake } from './lib/controlled-rule-intake.mjs';
+import { evaluateExistingProjectCompatibilityMode } from './lib/existing-project-compatibility-mode.mjs';
+import {
+  evaluateInstanceDataMigration, makeSourceSnapshotResolver, makeEvidenceResolver,
+  makeRollbackSnapshotResolver, makeDeterministicPlanResolver, makeRestorationEvidenceResolver,
+  makeSupersededPlanResolver,
+  evaluateInstanceCanonicalExport, makeMigrationPlanResolver, makeSourceContentResolver,
+  makeRefResolver,
+} from './lib/instance-data-migration.mjs';
+import { evaluateWorkspaceCompatibilityQualification } from './lib/workspace-compatibility-qualification.mjs';
+import { evaluateUpgradeIntegrationQualification } from './lib/upgrade-integration-qualification.mjs';
 import { markedRegion, instructionRegions } from './lib/regions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -909,6 +939,1778 @@ function functionalParityConsistency(rec) {
 }
 
 // ---------------------------------------------------------------------------
+// task-pattern-registry: the built-in universal task-type catalog (MANDATORY)
+// ---------------------------------------------------------------------------
+// standards/workspace/task-pattern-registry.yaml is a required part of this
+// Kernel: its absence, or a missing schema or fixtures beside it, is a FAIL,
+// not an informational skip. Its container shape and the pattern body in each
+// entry's payload are validated against task-pattern-registry.schema.json; the
+// record ENVELOPE (identity, scope, origin, authority) is validated against the
+// existing scoped-record.schema.json — composition, not a second envelope
+// schema. The cross-record rules the draft-07 subset cannot state, and the
+// path-confinement rule for every `status: present` canonical link, live in
+// scripts/lib/task-pattern-registry.mjs so the gate and the standalone set
+// (test/task-pattern-registry.test.mjs) call one implementation. Protocols,
+// ways of carrying work out (skills) and evidence contracts are three separate
+// axes; a skill package may sit only in applicable_skills. The bundled
+// product-neutral fixtures are classified the same way. A text guard also
+// keeps rule-resolution.md from re-asserting that BUGFIX routes to a Kernel
+// *protocol* — bugfix-protocol is a skill, and no BUGFIX protocol exists.
+{
+  const TPR_YAML_REL = 'standards/workspace/task-pattern-registry.yaml';
+  const TPR_REG_SCHEMA_REL = 'registries/operating-model/task-pattern-registry.schema.json';
+  const TPR_ENV_SCHEMA_REL = 'registries/operating-model/scoped-record.schema.json';
+  const TPR_FX_REL = 'registries/operating-model/fixtures/task-pattern-registry.fixtures.json';
+  const tprTracked = new Set(relKernelFiles);
+  const isTracked = (rel) => tprTracked.has(rel);
+
+  const tprYamlRaw = readIfExists(path.join(KERNEL_ROOT, TPR_YAML_REL));
+  if (tprYamlRaw === null) {
+    fail(`task-pattern-registry: ${TPR_YAML_REL} is missing; the built-in task-type catalog is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let tprOk = true;
+    const schemas = {};
+    for (const [id, rel] of [['registry', TPR_REG_SCHEMA_REL], ['envelope', TPR_ENV_SCHEMA_REL]]) {
+      const raw = readIfExists(path.join(KERNEL_ROOT, rel));
+      if (raw === null) { fail(`task-pattern-registry: ${rel} is missing; the mandatory catalog cannot be checked without its ${id} schema`); tprOk = false; continue; }
+      try { schemas[id] = JSON.parse(raw); }
+      catch (e) { fail(`task-pattern-registry: ${rel} is not valid JSON: ${e.message}`); tprOk = false; continue; }
+      try { assertSupportedDeep(schemas[id], id); }
+      catch (e) { fail(`task-pattern-registry: the ${id} schema uses a construct this validator cannot check: ${e.message}`); tprOk = false; }
+    }
+
+    if (tprOk) {
+      // The catalog reuses the existing work_kind / change_class pools; it must
+      // not quietly grow a second vocabulary (rule-resolution.md §2–§3).
+      const wkEnum = schemas.registry?.definitions?.payload?.properties?.work_kind?.enum;
+      const ccEnum = schemas.registry?.definitions?.payload?.properties?.change_class?.enum;
+      if (JSON.stringify(wkEnum) !== JSON.stringify(TPR_WORK_KINDS)) {
+        fail(`task-pattern-registry: the schema's work_kind pool ${JSON.stringify(wkEnum)} diverges from the canonical four (rule-resolution.md §2)`);
+        tprOk = false;
+      }
+      if (JSON.stringify(ccEnum) !== JSON.stringify(TPR_CHANGE_CLASSES)) {
+        fail(`task-pattern-registry: the schema's change_class pool ${JSON.stringify(ccEnum)} diverges from the canonical four (rule-resolution.md §3)`);
+        tprOk = false;
+      }
+    }
+
+    const evalOpts = () => ({
+      registrySchema: schemas.registry, envelopeSchema: schemas.envelope,
+      kernelRoot: KERNEL_ROOT, isTracked,
+    });
+
+    let tprDoc = null;
+    if (tprOk) {
+      try { tprDoc = yamlParse(tprYamlRaw); }
+      catch (e) { fail(`task-pattern-registry: cannot parse ${TPR_YAML_REL}: ${e.message}`); tprOk = false; }
+    }
+    if (tprOk && tprDoc) {
+      const problems = evaluateTaskPatternRegistry(tprDoc, evalOpts());
+      if (problems.length) {
+        problems.slice(0, 10).forEach((p) => fail(`task-pattern-registry: ${p}`));
+        tprOk = false;
+      }
+    }
+
+    // The catalog treats skills/bugfix-protocol/SKILL.md as a `skill` and
+    // records that no separate BUGFIX `protocol` document exists (owner
+    // decision). rule-resolution.md must not, at the same time, still call
+    // `BUGFIX → bugfix-protocol` a route to a Kernel protocol.
+    const rrRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'rule-resolution.md'));
+    if (rrRaw !== null) {
+      for (const p of checkRuleResolutionBugfixConsistency(rrRaw)) {
+        fail(`task-pattern-registry: ${p}`);
+        tprOk = false;
+      }
+    }
+
+    let tprSatisfied = 0;
+    let tprRejected = 0;
+    let tprCoverage = false;
+    const tprFxRaw = readIfExists(path.join(KERNEL_ROOT, TPR_FX_REL));
+    if (tprFxRaw === null) {
+      fail(`task-pattern-registry: the mandatory catalog carries no fixtures (${TPR_FX_REL}); a schema no run exercises is not one this gate has reached`);
+      tprOk = false;
+    } else if (tprOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(tprFxRaw); }
+      catch (e) { bundleOk = false; fail(`task-pattern-registry: the fixtures file is not valid JSON: ${e.message}`); }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle?.[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`task-pattern-registry: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        tprOk = false;
+      } else {
+        for (const c of bundle.valid) {
+          const p = evaluateTaskPatternRegistry(c && c.registry, evalOpts());
+          if (p.length) { fail(`task-pattern-registry: a fixture that must be a valid catalog was rejected (${c && c.note}): ${p[0]}`); tprOk = false; }
+          else tprSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateTaskPatternRegistry(c && c.registry, evalOpts());
+          if (p.length === 0) { fail(`task-pattern-registry: a fixture that must be rejected validated clean (${c && c.note})`); tprOk = false; }
+          else tprRejected++;
+        }
+        tprCoverage = tprOk;
+      }
+    }
+
+    if (tprOk && tprCoverage) {
+      ok('task-pattern-registry: the mandatory catalog and its specialised schema parsed and keyword-checked; '
+       + `seven built-in patterns validated against the envelope, the pattern-body contract and link confinement, and ${tprSatisfied} representative fixture(s) satisfied the composition while ${tprRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// instruction-source-registry: the portable source-snapshot contract (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/instruction-source-registry.schema.json is the
+// specialised payload schema for a registered instruction source — a bearer of
+// agent instructions with a verifiable identity, scope, location, revision,
+// SHA-256 digest, format, read channel and divergence state. Registering a
+// source grants its text no norm authority. Registry DATA is Instance, like the
+// intake register: the Kernel ships the schema, the product-neutral fixtures
+// and one checkable implementation (scripts/lib/instruction-source-registry.mjs),
+// not a canonical data file. The contract is a MANDATORY part of this Kernel:
+// a missing schema or missing fixtures is a FAIL, not an informational skip.
+// The generic $schema pass never reaches a JSON Schema file or a .json fixtures
+// bundle, so — as with the task-pattern-registry block — the schema is parsed,
+// walked for unsupported keywords, and exercised against its bundled fixtures
+// here. Fail-closed on the bundle's own shape: the success line prints only when
+// the bundle is an object with a non-empty `valid` and `invalid`, and every
+// fixture behaved as declared.
+{
+  const isrDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const isrSchemaName = 'instruction-source-registry.schema.json';
+  const isrSchemaRaw = readIfExists(path.join(isrDir, isrSchemaName));
+  if (isrSchemaRaw === null) {
+    fail(`instruction-source-registry: registries/operating-model/${isrSchemaName} is missing; the instruction source registry contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let isrOk = true;
+    let isrSchema = null;
+    let isrEnv = null;
+    try { isrSchema = JSON.parse(isrSchemaRaw); }
+    catch (e) { fail(`instruction-source-registry: ${isrSchemaName} is not valid JSON: ${e.message}`); isrOk = false; }
+
+    const isrEnvRaw = readIfExists(path.join(isrDir, 'scoped-record.schema.json'));
+    if (isrEnvRaw === null) {
+      fail('instruction-source-registry: registries/operating-model/scoped-record.schema.json is missing; the source snapshot composes with the record envelope and cannot be checked without it');
+      isrOk = false;
+    } else {
+      try { isrEnv = JSON.parse(isrEnvRaw); }
+      catch (e) { fail(`instruction-source-registry: scoped-record.schema.json is not valid JSON: ${e.message}`); isrOk = false; }
+    }
+
+    if (isrSchema) {
+      try { assertSupportedDeep(isrSchema, isrSchemaName); }
+      catch (e) { fail(`instruction-source-registry: the schema uses a construct this validator cannot check: ${e.message}`); isrOk = false; }
+    }
+
+    let isrSatisfied = 0;
+    let isrRejected = 0;
+    let isrCoverage = false;
+    const fxRaw = readIfExists(path.join(isrDir, 'fixtures', 'instruction-source-registry.fixtures.json'));
+    if (fxRaw === null) {
+      fail('instruction-source-registry: the schema carries no fixtures (registries/operating-model/fixtures/instruction-source-registry.fixtures.json); a schema no run exercises is not one this gate has reached');
+      isrOk = false;
+    } else if (isrOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(fxRaw); }
+      catch (e) { bundleOk = false; fail(`instruction-source-registry: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('instruction-source-registry: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`instruction-source-registry: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        isrOk = false;
+      } else {
+        const opts = { registrySchema: isrSchema, envelopeSchema: isrEnv };
+        for (const c of bundle.valid) {
+          const p = evaluateInstructionSourceRegistry(c && c.registry, opts);
+          if (p.length) { fail(`instruction-source-registry: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); isrOk = false; }
+          else isrSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateInstructionSourceRegistry(c && c.registry, opts);
+          if (p.length === 0) { fail(`instruction-source-registry: a fixture that must be rejected validated clean (${c && c.note})`); isrOk = false; }
+          else isrRejected++;
+        }
+        isrCoverage = isrOk;
+      }
+    }
+
+    if (isrOk && isrCoverage) {
+      ok('instruction-source-registry: the source-registry schema parsed and keyword-checked; '
+       + `${isrSatisfied} representative fixture(s) satisfied the composition (record envelope, source snapshot, location confinement, revision and digest, read channel and divergence) and ${isrRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// task-specification-contract: the portable statement of one concrete work item (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/task-specification.schema.json is the specialised
+// payload schema for one task specification (record_type: task-specification) —
+// a portable human- and machine-readable statement of one concrete piece of
+// work: goal, an explicit initial state, an explicit target model, a reference
+// to one existing task pattern, a non-empty constraints list and a non-empty
+// list of verifiable acceptance criteria. Its envelope is validated against the
+// existing scoped-record.schema.json (composition, not a second envelope). The
+// task specification states the REQUIRED CONTENT of the work; run state belongs
+// to execution-state-model. Specification DATA is Instance, like the intake
+// register: the Kernel ships the schema, the product-neutral fixtures and one
+// checkable implementation (scripts/lib/task-specification.mjs), not a canonical
+// data file. The contract is a MANDATORY part of this Kernel: a missing schema,
+// a missing task-pattern catalogue (the reference target) or missing fixtures
+// is a FAIL, not an informational skip. The generic $schema pass never reaches
+// a JSON Schema file or a .json fixtures bundle, so — as with the
+// task-pattern-registry and instruction-source-registry blocks — the schema is
+// parsed, walked for unsupported keywords, and exercised against its bundled
+// fixtures here, fail-closed on the bundle's own shape.
+{
+  const tscDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const tscSchemaName = 'task-specification.schema.json';
+  const tscSchemaRaw = readIfExists(path.join(tscDir, tscSchemaName));
+  if (tscSchemaRaw === null) {
+    fail(`task-specification-contract: registries/operating-model/${tscSchemaName} is missing; the task specification contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let tscOk = true;
+    let tscSchema = null;
+    let tscEnv = null;
+    try { tscSchema = JSON.parse(tscSchemaRaw); }
+    catch (e) { fail(`task-specification-contract: ${tscSchemaName} is not valid JSON: ${e.message}`); tscOk = false; }
+
+    const tscEnvRaw = readIfExists(path.join(tscDir, 'scoped-record.schema.json'));
+    if (tscEnvRaw === null) {
+      fail('task-specification-contract: registries/operating-model/scoped-record.schema.json is missing; the specification composes with the record envelope and cannot be checked without it');
+      tscOk = false;
+    } else {
+      try { tscEnv = JSON.parse(tscEnvRaw); }
+      catch (e) { fail(`task-specification-contract: scoped-record.schema.json is not valid JSON: ${e.message}`); tscOk = false; }
+    }
+
+    if (tscSchema) {
+      try { assertSupportedDeep(tscSchema, tscSchemaName); }
+      catch (e) { fail(`task-specification-contract: the schema uses a construct this validator cannot check: ${e.message}`); tscOk = false; }
+    }
+
+    // The task_pattern reference is resolved against the built-in catalogue, so
+    // the catalogue must be readable here too.
+    let tscPatterns = null;
+    const tscTprRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'task-pattern-registry.yaml'));
+    if (tscTprRaw === null) {
+      fail('task-specification-contract: standards/workspace/task-pattern-registry.yaml is missing; the specification\'s task-pattern reference cannot be resolved without the catalogue');
+      tscOk = false;
+    } else {
+      try {
+        const tprDoc = yamlParse(tscTprRaw);
+        tscPatterns = (Array.isArray(tprDoc && tprDoc.task_patterns) ? tprDoc.task_patterns : []).map((p) => ({
+          id: p && p.id,
+          work_kind: p && p.payload && p.payload.work_kind,
+          change_class: (p && p.payload && p.payload.change_class) ?? null,
+        }));
+      } catch (e) { fail(`task-specification-contract: cannot parse task-pattern-registry.yaml: ${e.message}`); tscOk = false; }
+    }
+
+    let tscSatisfied = 0;
+    let tscRejected = 0;
+    let tscCoverage = false;
+    const fxRaw = readIfExists(path.join(tscDir, 'fixtures', 'task-specification.fixtures.json'));
+    if (fxRaw === null) {
+      fail('task-specification-contract: the schema carries no fixtures (registries/operating-model/fixtures/task-specification.fixtures.json); a schema no run exercises is not one this gate has reached');
+      tscOk = false;
+    } else if (tscOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(fxRaw); }
+      catch (e) { bundleOk = false; fail(`task-specification-contract: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('task-specification-contract: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`task-specification-contract: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        tscOk = false;
+      } else {
+        const opts = { recordSchema: tscSchema, envelopeSchema: tscEnv, taskPatterns: tscPatterns };
+        for (const c of bundle.valid) {
+          const p = evaluateTaskSpecification(c && c.spec, opts);
+          if (p.length) { fail(`task-specification-contract: a fixture that must be a valid specification was rejected (${c && c.note}): ${p[0]}`); tscOk = false; }
+          else tscSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateTaskSpecification(c && c.spec, opts);
+          if (p.length === 0) { fail(`task-specification-contract: a fixture that must be rejected validated clean (${c && c.note})`); tscOk = false; }
+          else tscRejected++;
+        }
+        tscCoverage = tscOk;
+      }
+    }
+
+    if (tscOk && tscCoverage) {
+      ok('task-specification-contract: the task-specification schema parsed and keyword-checked; '
+       + `${tscSatisfied} representative fixture(s) satisfied the composition (record envelope, goal, initial state, target model, task-pattern resolution, constraints and verifiable acceptance criteria) and ${tscRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// execution-state-model: the portable state of one execution run (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/execution-state.schema.json is the specialised
+// schema for the state of ONE execution run (record_type: execution-run) — a
+// portable, storage-independent snapshot of one attempt to carry out a task
+// specification: the independent axes (lifecycle_stage, work_status,
+// scope_revision, current_actor, resolved_norms, completed_checks, blockers,
+// next_action, next_gate) and an ordered transition_history. Its envelope is
+// validated against the existing scoped-record.schema.json (composition, not a
+// second envelope). The run references EXACTLY ONE task specification by a
+// portable task_specification_ref and never embeds it; a role, a supervision
+// mode, a communication mode, a full context manifest or a full evidence /
+// handoff contract belong to later packages, not here. Run-state DATA is
+// Instance, like the task specification: the Kernel ships the schema, the
+// product-neutral fixtures and one checkable implementation
+// (scripts/lib/execution-state.mjs), not a canonical data file. The contract is
+// a MANDATORY part of this Kernel: a missing schema or missing fixtures is a
+// FAIL, not an informational skip. The generic $schema pass never reaches a
+// JSON Schema file or a .json fixtures bundle, so — as with the
+// task-specification-contract block — the schema is parsed, walked for
+// unsupported keywords, and exercised against its bundled fixtures here,
+// fail-closed on the bundle's own shape.
+{
+  const esmDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const esmSchemaName = 'execution-state.schema.json';
+  const esmSchemaRaw = readIfExists(path.join(esmDir, esmSchemaName));
+  if (esmSchemaRaw === null) {
+    fail(`execution-state-model: registries/operating-model/${esmSchemaName} is missing; the execution state model contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let esmOk = true;
+    let esmSchema = null;
+    let esmEnv = null;
+    try { esmSchema = JSON.parse(esmSchemaRaw); }
+    catch (e) { fail(`execution-state-model: ${esmSchemaName} is not valid JSON: ${e.message}`); esmOk = false; }
+
+    const esmEnvRaw = readIfExists(path.join(esmDir, 'scoped-record.schema.json'));
+    if (esmEnvRaw === null) {
+      fail('execution-state-model: registries/operating-model/scoped-record.schema.json is missing; the run record composes with the record envelope and cannot be checked without it');
+      esmOk = false;
+    } else {
+      try { esmEnv = JSON.parse(esmEnvRaw); }
+      catch (e) { fail(`execution-state-model: scoped-record.schema.json is not valid JSON: ${e.message}`); esmOk = false; }
+    }
+
+    if (esmSchema) {
+      try { assertSupportedDeep(esmSchema, esmSchemaName); }
+      catch (e) { fail(`execution-state-model: the schema uses a construct this validator cannot check: ${e.message}`); esmOk = false; }
+    }
+
+    let esmSatisfied = 0;
+    let esmRejected = 0;
+    let esmCoverage = false;
+    const fxRaw = readIfExists(path.join(esmDir, 'fixtures', 'execution-state.fixtures.json'));
+    if (fxRaw === null) {
+      fail('execution-state-model: the schema carries no fixtures (registries/operating-model/fixtures/execution-state.fixtures.json); a schema no run exercises is not one this gate has reached');
+      esmOk = false;
+    } else if (esmOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(fxRaw); }
+      catch (e) { bundleOk = false; fail(`execution-state-model: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('execution-state-model: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`execution-state-model: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        esmOk = false;
+      } else {
+        const esmOpts = { recordSchema: esmSchema, envelopeSchema: esmEnv };
+        for (const c of bundle.valid) {
+          const p = evaluateExecutionState(c && c.spec, esmOpts);
+          if (p.length) { fail(`execution-state-model: a fixture that must be a valid run record was rejected (${c && c.note}): ${p[0]}`); esmOk = false; }
+          else esmSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateExecutionState(c && c.spec, esmOpts);
+          if (p.length === 0) { fail(`execution-state-model: a fixture that must be rejected validated clean (${c && c.note})`); esmOk = false; }
+          else esmRejected++;
+        }
+        esmCoverage = esmOk;
+      }
+    }
+
+    if (esmOk && esmCoverage) {
+      ok('execution-state-model: the execution-state schema parsed and keyword-checked; '
+       + `${esmSatisfied} representative fixture(s) satisfied the composition (record envelope, run identity, run-state scope, task-specification reference, independent axes and ordered transition history) and ${esmRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// role-and-human-control: universal roles and human control of one run (MANDATORY)
+// ---------------------------------------------------------------------------
+// Two product-neutral Kernel contracts checked by one implementation
+// (scripts/lib/role-and-human-control.mjs), exactly as the execution-state-model
+// block above: the generic $schema pass never reaches a JSON Schema file or a
+// .json fixtures bundle, so both schemas are parsed, walked for unsupported
+// keywords, and exercised against their bundled product-neutral fixtures here,
+// fail-closed on the bundle's own shape.
+//   1. role-registry.schema.json — the built-in catalogue of the seven
+//      universal roles (owner, operator, executor, reviewer, verifier,
+//      git_integrator, deployer). It lives ONLY in built-in-methodology; a
+//      concrete run's assignments are a different record. The catalogue itself
+//      is standards/workspace/role-registry.yaml (validated by the generic
+//      $schema pass and again here).
+//   2. human-control.schema.json — one execution run's human-control state in
+//      run-state: role assignments, the permanent human-in-command posture, the
+//      switchable supervision mode (human-in-the-loop / human-on-the-loop), the
+//      communication mode, an optional independent-review requirement and the
+//      ordered switch history. Concrete records are Instance data; the Kernel
+//      ships the schema, the fixtures and the checkable implementation.
+// A missing schema, catalogue or fixtures is a FAIL, not an informational skip.
+{
+  const rhcDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const rhcRegistrySchemaName = 'role-registry.schema.json';
+  const rhcControlSchemaName = 'human-control.schema.json';
+  const rhcRegistrySchemaRaw = readIfExists(path.join(rhcDir, rhcRegistrySchemaName));
+  const rhcControlSchemaRaw = readIfExists(path.join(rhcDir, rhcControlSchemaName));
+  const rhcCatalogueRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'role-registry.yaml'));
+  if (rhcRegistrySchemaRaw === null || rhcControlSchemaRaw === null) {
+    fail(`role-and-human-control: registries/operating-model/${rhcRegistrySchemaRaw === null ? rhcRegistrySchemaName : rhcControlSchemaName} is missing; the role and human control contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else if (rhcCatalogueRaw === null) {
+    fail('role-and-human-control: standards/workspace/role-registry.yaml is missing; the built-in universal-role catalogue is a mandatory part of this Kernel');
+  } else {
+    let rhcOk = true;
+    let rhcRegistrySchema = null;
+    let rhcControlSchema = null;
+    let rhcEnv = null;
+    let rhcCatalogue = null;
+    try { rhcRegistrySchema = JSON.parse(rhcRegistrySchemaRaw); }
+    catch (e) { fail(`role-and-human-control: ${rhcRegistrySchemaName} is not valid JSON: ${e.message}`); rhcOk = false; }
+    try { rhcControlSchema = JSON.parse(rhcControlSchemaRaw); }
+    catch (e) { fail(`role-and-human-control: ${rhcControlSchemaName} is not valid JSON: ${e.message}`); rhcOk = false; }
+    try { rhcCatalogue = yamlParse(rhcCatalogueRaw); }
+    catch (e) { fail(`role-and-human-control: cannot parse role-registry.yaml: ${e.message}`); rhcOk = false; }
+
+    const rhcEnvRaw = readIfExists(path.join(rhcDir, 'scoped-record.schema.json'));
+    if (rhcEnvRaw === null) {
+      fail('role-and-human-control: registries/operating-model/scoped-record.schema.json is missing; each record composes with the record envelope and cannot be checked without it');
+      rhcOk = false;
+    } else {
+      try { rhcEnv = JSON.parse(rhcEnvRaw); }
+      catch (e) { fail(`role-and-human-control: scoped-record.schema.json is not valid JSON: ${e.message}`); rhcOk = false; }
+    }
+
+    for (const [s, name] of [[rhcRegistrySchema, rhcRegistrySchemaName], [rhcControlSchema, rhcControlSchemaName]]) {
+      if (!s) continue;
+      try { assertSupportedDeep(s, name); }
+      catch (e) { fail(`role-and-human-control: the schema uses a construct this validator cannot check: ${e.message}`); rhcOk = false; }
+    }
+
+    let rhcRegistrySatisfied = 0;
+    let rhcRegistryRejected = 0;
+    let rhcControlSatisfied = 0;
+    let rhcControlRejected = 0;
+    let rhcCoverage = false;
+    const rhcFxRaw = readIfExists(path.join(rhcDir, 'fixtures', 'role-and-human-control.fixtures.json'));
+    if (rhcFxRaw === null) {
+      fail('role-and-human-control: the schemas carry no fixtures (registries/operating-model/fixtures/role-and-human-control.fixtures.json); a schema no run exercises is not one this gate has reached');
+      rhcOk = false;
+    } else if (rhcOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(rhcFxRaw); }
+      catch (e) { bundleOk = false; fail(`role-and-human-control: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('role-and-human-control: the fixtures file must be an object carrying "registry" and "control" groups, each with non-empty "valid" and "invalid" arrays');
+      }
+      for (const group of ['registry', 'control']) {
+        if (bundleOk && (typeof bundle[group] !== 'object' || bundle[group] === null)) {
+          bundleOk = false;
+          fail(`role-and-human-control: the fixtures file has no "${group}" group`);
+        }
+        for (const key of ['valid', 'invalid']) {
+          if (bundleOk && !(Array.isArray(bundle[group][key]) && bundle[group][key].length > 0)) {
+            bundleOk = false;
+            fail(`role-and-human-control: the fixtures "${group}" group has no non-empty "${key}" array`);
+          }
+        }
+      }
+      if (!bundleOk) {
+        rhcOk = false;
+      } else {
+        const regOpts = { registrySchema: rhcRegistrySchema, envelopeSchema: rhcEnv };
+        for (const c of bundle.registry.valid) {
+          const p = evaluateRoleRegistry(c && c.spec, regOpts);
+          if (p.length) { fail(`role-and-human-control: a fixture that must be a valid role registry was rejected (${c && c.note}): ${p[0]}`); rhcOk = false; }
+          else rhcRegistrySatisfied++;
+        }
+        for (const c of bundle.registry.invalid) {
+          const p = evaluateRoleRegistry(c && c.spec, regOpts);
+          if (p.length === 0) { fail(`role-and-human-control: a role registry fixture that must be rejected validated clean (${c && c.note})`); rhcOk = false; }
+          else rhcRegistryRejected++;
+        }
+        const ctlOpts = { recordSchema: rhcControlSchema, envelopeSchema: rhcEnv };
+        for (const c of bundle.control.valid) {
+          const p = evaluateHumanControl(c && c.spec, ctlOpts);
+          if (p.length) { fail(`role-and-human-control: a fixture that must be a valid human-control record was rejected (${c && c.note}): ${p[0]}`); rhcOk = false; }
+          else rhcControlSatisfied++;
+        }
+        for (const c of bundle.control.invalid) {
+          const p = evaluateHumanControl(c && c.spec, ctlOpts);
+          if (p.length === 0) { fail(`role-and-human-control: a human-control fixture that must be rejected validated clean (${c && c.note})`); rhcOk = false; }
+          else rhcControlRejected++;
+        }
+        // the shipped catalogue itself is the canonical valid role registry.
+        if (rhcOk) {
+          const p = evaluateRoleRegistry(rhcCatalogue, regOpts);
+          if (p.length) { fail(`role-and-human-control: standards/workspace/role-registry.yaml is not a valid role registry: ${p[0]}`); rhcOk = false; }
+        }
+        rhcCoverage = rhcOk;
+      }
+    }
+
+    if (rhcOk && rhcCoverage) {
+      ok('role-and-human-control: the role-registry and human-control schemas parsed and keyword-checked; '
+       + `the built-in catalogue carries the seven universal roles; ${rhcRegistrySatisfied} role-registry fixture(s) satisfied the composition and ${rhcRegistryRejected} were rejected as declared; ${rhcControlSatisfied} human-control fixture(s) satisfied it (permanent human-in-command, switchable HITL/HOTL, role assignments with combined roles, optional independent review and the ordered switch history) and ${rhcControlRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// bounded-context-manifest: the bounded, resumable context of one run (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/context-manifest.schema.json is the specialised
+// schema for the bounded context manifest of ONE execution run
+// (record_type: context-manifest) — the portable, storage-independent list of
+// authoritative inputs and run state that is enough to resume that same run
+// after a pause, a session change, a participant change or a role change
+// without rebuilding authoritative state from chat history. Its envelope is
+// validated against the existing scoped-record.schema.json (composition, not a
+// second envelope). The manifest carries PORTABLE REFERENCES to the task
+// specification, the execution run and the human-control record and never
+// embeds their bodies or a second role model; every mutable source is pinned by
+// an exact revision, a SHA-256 digest or both; the run_state_checkpoint is
+// RESOLVED through a boundary external to the manifest (the fixtures' companion
+// "resolution" set) and its axes checked against the actual execution-run
+// record's own state — not against a second in-document copy; an unbounded
+// material dump and the full evidence /
+// handoff contract that belongs to a later package are rejected. Manifest DATA
+// is Instance, like the task specification and the human-control record: the
+// Kernel ships the schema, the product-neutral fixtures and one checkable
+// implementation (scripts/lib/context-manifest.mjs), not a canonical data file.
+// The contract is a MANDATORY part of this Kernel: a missing schema or missing
+// fixtures is a FAIL, not an informational skip. The generic $schema pass never
+// reaches a JSON Schema file or a .json fixtures bundle, so — as with the
+// execution-state-model block — the schema is parsed, walked for unsupported
+// keywords, and exercised against its bundled fixtures here, fail-closed on the
+// bundle's own shape.
+{
+  const cmDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const cmSchemaName = 'context-manifest.schema.json';
+  const cmSchemaRaw = readIfExists(path.join(cmDir, cmSchemaName));
+  if (cmSchemaRaw === null) {
+    fail(`bounded-context-manifest: registries/operating-model/${cmSchemaName} is missing; the bounded context manifest contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let cmOk = true;
+    let cmSchema = null;
+    let cmEnv = null;
+    try { cmSchema = JSON.parse(cmSchemaRaw); }
+    catch (e) { fail(`bounded-context-manifest: ${cmSchemaName} is not valid JSON: ${e.message}`); cmOk = false; }
+
+    const cmEnvRaw = readIfExists(path.join(cmDir, 'scoped-record.schema.json'));
+    if (cmEnvRaw === null) {
+      fail('bounded-context-manifest: registries/operating-model/scoped-record.schema.json is missing; the manifest record composes with the record envelope and cannot be checked without it');
+      cmOk = false;
+    } else {
+      try { cmEnv = JSON.parse(cmEnvRaw); }
+      catch (e) { fail(`bounded-context-manifest: scoped-record.schema.json is not valid JSON: ${e.message}`); cmOk = false; }
+    }
+
+    if (cmSchema) {
+      try { assertSupportedDeep(cmSchema, cmSchemaName); }
+      catch (e) { fail(`bounded-context-manifest: the schema uses a construct this validator cannot check: ${e.message}`); cmOk = false; }
+    }
+
+    let cmSatisfied = 0;
+    let cmRejected = 0;
+    let cmCoverage = false;
+    const fxRaw = readIfExists(path.join(cmDir, 'fixtures', 'context-manifest.fixtures.json'));
+    if (fxRaw === null) {
+      fail('bounded-context-manifest: the schema carries no fixtures (registries/operating-model/fixtures/context-manifest.fixtures.json); a schema no run exercises is not one this gate has reached');
+      cmOk = false;
+    } else if (cmOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(fxRaw); }
+      catch (e) { bundleOk = false; fail(`bounded-context-manifest: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('bounded-context-manifest: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`bounded-context-manifest: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (bundleOk && (typeof bundle.resolution !== 'object' || bundle.resolution === null || Array.isArray(bundle.resolution))) {
+        bundleOk = false;
+        fail('bounded-context-manifest: the fixtures file carries no "resolution" object; the pinned execution-run, task-specification and run-human-control records are resolved OUTSIDE the manifest, and a bundle that resolves nothing cannot exercise the checkpoint against its actual run');
+      }
+      if (!bundleOk) {
+        cmOk = false;
+      } else {
+        const cmOpts = {
+          recordSchema: cmSchema,
+          envelopeSchema: cmEnv,
+          resolveRecords: makeRecordResolver(bundle.resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateContextManifest(c && c.spec, cmOpts);
+          if (p.length) { fail(`bounded-context-manifest: a fixture that must be a valid context manifest was rejected (${c && c.note}): ${p[0]}`); cmOk = false; }
+          else cmSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateContextManifest(c && c.spec, cmOpts);
+          if (p.length === 0) { fail(`bounded-context-manifest: a fixture that must be rejected validated clean (${c && c.note})`); cmOk = false; }
+          else cmRejected++;
+        }
+        cmCoverage = cmOk;
+      }
+    }
+
+    if (cmOk && cmCoverage) {
+      ok('bounded-context-manifest: the context-manifest schema parsed and keyword-checked; '
+       + `${cmSatisfied} representative fixture(s) satisfied the composition (record envelope, run-state scope, the deterministic single-run link via closed structured pinned references, the closed exact-revision rule for pinned references / applicable norms / mutable sources, separate decision / question / action / check / gap / blocker lists, and the run_state_checkpoint resolved through the external boundary and checked against the actual execution-run record's own state) and ${cmRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// evidence-and-handoff-contract: the state and result handoff of one run (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/evidence-and-handoff.schema.json is the specialised
+// schema for the portable handoff of the STATE and RESULT of ONE execution run
+// (record_type: evidence-and-handoff) — what result is claimed, which assertions
+// are actually verified and by which pinned+resolved evidence, which mandatory
+// checks passed / failed / could-not-run and with what result evidence, which
+// acceptance criteria of the resolved task specification are covered, the pinned
+// source and result revisions (same repository set), the changes and external
+// effects, the remaining deviations, the required owner decisions, the closing
+// state of the temporary Git worktree, and the next step. Its envelope is
+// validated against the existing scoped-record.schema.json (composition, not a
+// second envelope). The handoff carries PORTABLE PINNED references to the task
+// specification, the execution run, the human-control record and the context
+// manifest and never embeds their bodies; claimed results, verifiable assertions
+// and evidence are separate id-linked lists so a narrow evidence entry is not
+// widened and an unverified assertion stays unverified; the four pinned records
+// AND every evidence entry are RESOLVED through a boundary external to the
+// handoff (the fixtures' companion "resolution" set), and the handoff's axes —
+// the verified assertions, the mandatory-check verdicts, the acceptance-criteria
+// coverage and the "complete" outcome — are checked against the actual
+// execution-run / task-specification / evidence-result records' own state; an
+// unbounded material dump, a full specialised-evidence body and a
+// field-evaluation field are rejected. Handoff DATA is Instance, like the task specification and the
+// context manifest: the Kernel ships the schema, the product-neutral fixtures
+// and one checkable implementation (scripts/lib/evidence-and-handoff.mjs), not a
+// canonical data file. The contract is a MANDATORY part of this Kernel: a
+// missing schema or missing fixtures is a FAIL, not an informational skip. As
+// with the bounded-context-manifest block, the schema is parsed, walked for
+// unsupported keywords, and exercised against its bundled fixtures here,
+// fail-closed on the bundle's own shape.
+{
+  const ehDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const ehSchemaName = 'evidence-and-handoff.schema.json';
+  const ehSchemaRaw = readIfExists(path.join(ehDir, ehSchemaName));
+  if (ehSchemaRaw === null) {
+    fail(`evidence-and-handoff-contract: registries/operating-model/${ehSchemaName} is missing; the evidence and handoff contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let ehOk = true;
+    let ehSchema = null;
+    let ehEnv = null;
+    try { ehSchema = JSON.parse(ehSchemaRaw); }
+    catch (e) { fail(`evidence-and-handoff-contract: ${ehSchemaName} is not valid JSON: ${e.message}`); ehOk = false; }
+
+    const ehEnvRaw = readIfExists(path.join(ehDir, 'scoped-record.schema.json'));
+    if (ehEnvRaw === null) {
+      fail('evidence-and-handoff-contract: registries/operating-model/scoped-record.schema.json is missing; the handoff record composes with the record envelope and cannot be checked without it');
+      ehOk = false;
+    } else {
+      try { ehEnv = JSON.parse(ehEnvRaw); }
+      catch (e) { fail(`evidence-and-handoff-contract: scoped-record.schema.json is not valid JSON: ${e.message}`); ehOk = false; }
+    }
+
+    if (ehSchema) {
+      try { assertSupportedDeep(ehSchema, ehSchemaName); }
+      catch (e) { fail(`evidence-and-handoff-contract: the schema uses a construct this validator cannot check: ${e.message}`); ehOk = false; }
+    }
+
+    let ehSatisfied = 0;
+    let ehRejected = 0;
+    let ehCoverage = false;
+    const ehFxRaw = readIfExists(path.join(ehDir, 'fixtures', 'evidence-and-handoff.fixtures.json'));
+    if (ehFxRaw === null) {
+      fail('evidence-and-handoff-contract: the schema carries no fixtures (registries/operating-model/fixtures/evidence-and-handoff.fixtures.json); a schema no run exercises is not one this gate has reached');
+      ehOk = false;
+    } else if (ehOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(ehFxRaw); }
+      catch (e) { bundleOk = false; fail(`evidence-and-handoff-contract: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('evidence-and-handoff-contract: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`evidence-and-handoff-contract: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (bundleOk && (typeof bundle.resolution !== 'object' || bundle.resolution === null || Array.isArray(bundle.resolution))) {
+        bundleOk = false;
+        fail('evidence-and-handoff-contract: the fixtures file carries no "resolution" object; the pinned execution-run, task-specification, run-human-control and context-manifest records AND every evidence entry are resolved OUTSIDE the handoff, and a bundle that resolves nothing cannot exercise the handoff against its actual run and evidence');
+      }
+      if (!bundleOk) {
+        ehOk = false;
+      } else {
+        const ehOpts = {
+          recordSchema: ehSchema,
+          envelopeSchema: ehEnv,
+          resolveRecords: makeRecordResolver(bundle.resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateEvidenceAndHandoff(c && c.spec, ehOpts);
+          if (p.length) { fail(`evidence-and-handoff-contract: a fixture that must be a valid handoff was rejected (${c && c.note}): ${p[0]}`); ehOk = false; }
+          else ehSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateEvidenceAndHandoff(c && c.spec, ehOpts);
+          if (p.length === 0) { fail(`evidence-and-handoff-contract: a fixture that must be rejected validated clean (${c && c.note})`); ehOk = false; }
+          else ehRejected++;
+        }
+        ehCoverage = ehOk;
+      }
+    }
+
+    if (ehOk && ehCoverage) {
+      ok('evidence-and-handoff-contract: the evidence-and-handoff schema parsed and keyword-checked; '
+       + `${ehSatisfied} representative fixture(s) satisfied the composition (record envelope, run-state scope, the deterministic single-run link via four closed structured pinned references, the reused closed exact-revision rule for pinned references / repository states / evidence entries, claimed results / verifiable assertions / evidence as separate id-linked lists where a verified assertion needs a resolved confirming evidence entry whose transformer-confirmed covers binds it and a claimed result's status is two-sided, acceptance-criteria coverage closed against the resolved task specification's NON-EMPTY criterion set, the FULL mandatory_checks set closed against the specification's own minimal machine list, the three distinct mandatory-check statuses each backed by resolved result evidence that records THAT check's check_ref, completed_checks confirming the fact a passed OR failed check ran, source and result states pinning the same repository set, the closed worktree-disposition set, outcome.status "complete" as the whole run finished, and the four pinned records plus every evidence entry resolved through the external boundary and checked against the actual execution-run record's own state) and ${ehRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// meridian-field-evaluation: practical evaluation of Meridian's own mechanisms (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/field-evaluation.schema.json is the specialised
+// schema for TWO record types — field-evaluation-observation (one measured
+// data point about ONE of the eight characteristics of
+// meridian-operating-upgrade-plan.md §10 for ONE execution run, run-state
+// scoped, pinned to that run) and field-evaluation-report (a deterministic
+// aggregation over a pinned, externally-resolved set of observations,
+// project-workspace scoped, never one rolled-up score). Which body applies is
+// selected by record_type inside the one schema file, not by a second schema.
+// Its envelope is validated against the existing scoped-record.schema.json.
+// An observation's measurement kind and (for classification) outcome pool are
+// fixed per metric_id; status "observed" requires pinned evidence RESOLVED
+// through a boundary external to the record to a closed evidence-result
+// confirming observed_result "confirmed" AND a metric_ref naming this
+// observation's own metric. A report's included/excluded observations are
+// resolved the same way, checked for the same workspace and the same
+// reporting period, checked for no double counting (a repeated id, or a
+// superseded+superseding pair both included), required to represent all
+// eight metrics exactly once, and — the central check — each per_metric
+// aggregate is RECOMPUTED from the resolved, named sample and compared
+// EXACTLY against the report's own stated aggregate. The contract is a
+// MANDATORY part of this Kernel: a missing schema or missing fixtures is a
+// FAIL, not an informational skip. As with the other operating-model blocks,
+// the schema is parsed, walked for unsupported keywords, and exercised
+// against its bundled fixtures here, fail-closed on the bundle's own shape.
+{
+  const feDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const feSchemaName = 'field-evaluation.schema.json';
+  const feSchemaRaw = readIfExists(path.join(feDir, feSchemaName));
+  if (feSchemaRaw === null) {
+    fail(`meridian-field-evaluation: registries/operating-model/${feSchemaName} is missing; the field-evaluation contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let feOk = true;
+    let feSchema = null;
+    let feEnv = null;
+    try { feSchema = JSON.parse(feSchemaRaw); }
+    catch (e) { fail(`meridian-field-evaluation: ${feSchemaName} is not valid JSON: ${e.message}`); feOk = false; }
+
+    const feEnvRaw = readIfExists(path.join(feDir, 'scoped-record.schema.json'));
+    if (feEnvRaw === null) {
+      fail('meridian-field-evaluation: registries/operating-model/scoped-record.schema.json is missing; the observation and report records compose with the record envelope and cannot be checked without it');
+      feOk = false;
+    } else {
+      try { feEnv = JSON.parse(feEnvRaw); }
+      catch (e) { fail(`meridian-field-evaluation: scoped-record.schema.json is not valid JSON: ${e.message}`); feOk = false; }
+    }
+
+    if (feSchema) {
+      try { assertSupportedDeep(feSchema, feSchemaName); }
+      catch (e) { fail(`meridian-field-evaluation: the schema uses a construct this validator cannot check: ${e.message}`); feOk = false; }
+    }
+
+    let feSatisfied = 0;
+    let feRejected = 0;
+    let feCoverage = false;
+    const feFxRaw = readIfExists(path.join(feDir, 'fixtures', 'field-evaluation.fixtures.json'));
+    if (feFxRaw === null) {
+      fail('meridian-field-evaluation: the schema carries no fixtures (registries/operating-model/fixtures/field-evaluation.fixtures.json); a schema no run exercises is not one this gate has reached');
+      feOk = false;
+    } else if (feOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(feFxRaw); }
+      catch (e) { bundleOk = false; fail(`meridian-field-evaluation: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('meridian-field-evaluation: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`meridian-field-evaluation: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (bundleOk && (typeof bundle.resolution !== 'object' || bundle.resolution === null || Array.isArray(bundle.resolution))) {
+        bundleOk = false;
+        fail('meridian-field-evaluation: the fixtures file carries no "resolution" object; the pinned execution-run / observation records AND every evidence entry are resolved OUTSIDE the record, and a bundle that resolves nothing cannot exercise the contract against its actual runs and evidence');
+      }
+      if (!bundleOk) {
+        feOk = false;
+      } else {
+        const feOpts = {
+          recordSchema: feSchema,
+          envelopeSchema: feEnv,
+          resolveRecords: makeRecordResolver(bundle.resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateFieldEvaluation(c && c.spec, feOpts);
+          if (p.length) { fail(`meridian-field-evaluation: a fixture that must be valid was rejected (${c && c.note}): ${p[0]}`); feOk = false; }
+          else feSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateFieldEvaluation(c && c.spec, feOpts);
+          if (p.length === 0) { fail(`meridian-field-evaluation: a fixture that must be rejected validated clean (${c && c.note})`); feOk = false; }
+          else feRejected++;
+        }
+        feCoverage = feOk;
+      }
+    }
+
+    if (feOk && feCoverage) {
+      ok('meridian-field-evaluation: the field-evaluation schema parsed and keyword-checked; '
+       + `${feSatisfied} representative fixture(s) satisfied the composition (record envelope, record_type-selected observation/report body, the eight characteristics each with a metric-fixed measurement kind and — for classification — a metric-closed outcome pool, the four distinct observation statuses each but "observed" carrying a reason and forbidding a measurement, pinned evidence resolved through the external boundary to a closed evidence-result confirming observed_result AND a metric_ref naming the observation's own metric, the supersedes/correction_reason correction pair, and for a report the resolved same-workspace/same-period comparability rules, the rejection of double counting including a superseded+superseding pair, eight-of-eight per_metric completeness, and the exact recomputation of every aggregate from the resolved, named sample) and ${feRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// controlled-rule-intake: candidate → registered source → owner decision → normalized record (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/controlled-rule-intake.schema.json is the
+// specialised payload schema for a rule candidate (record_type: rule-candidate)
+// — text parsed out of a registered instruction source
+// (instruction-source-registry.md) and proposed as a possible rule. Its
+// envelope is validated against the existing scoped-record.schema.json
+// (composition, not a second envelope). Discovering or reading a source grants
+// a candidate no norm authority: payload.source_ref pins ONE
+// instruction-source-registry entry by id, an explicit revision AND a SHA-256
+// digest (both mandatory), RESOLVED through a boundary external to this record
+// (the fixtures' companion "resolution" set) and checked against that entry's
+// own recorded_state, INCLUDING recorded_state.currency (accepted /
+// not-applicable require "current"; "stale" never counts as current; "unverified"
+// is always rejected) and a minimal read_channel projection checked with the
+// SAME coherence rule instruction-source-registry.mjs applies to its own
+// read_channel — an unknown source, an unverified revision, or a
+// revision/digest mismatch are all rejected. The envelope's origin.kind/
+// origin.source_ref must name the SAME source as payload.source_ref, and
+// accepted/not-applicable require the ONE human owner authority closed to the
+// record's scope ("delegated-run" never decides applicability, even with a
+// matching decision_ref). Semantically duplicate candidates
+// found through different origins are clustered by an EXPLICITLY asserted
+// semantic_key (never by id or read order) and share one classification and
+// one decision; conflicts_with is declared symmetrically and evaluated as a
+// graph over the WHOLE candidate set at once, so the result does not depend on
+// which record is read first. applicability_state is the closed minimal
+// three-value state — candidate / accepted / not-applicable — and an
+// unresolved conflict, an ambiguous cluster or an unevidenced not-applicable
+// reason all fail the run closed. Candidate DATA is Instance, like the source
+// registry and the intake register: the Kernel ships the schema, the
+// product-neutral fixtures and one checkable implementation
+// (scripts/lib/controlled-rule-intake.mjs), not a canonical data file. The
+// contract is a MANDATORY part of this Kernel: a missing schema or missing
+// fixtures is a FAIL, not an informational skip. The generic $schema pass
+// never reaches a JSON Schema file or a .json fixtures bundle, so — as with
+// the bounded-context-manifest and meridian-field-evaluation blocks — the
+// schema is parsed, walked for unsupported keywords, and exercised against its
+// bundled fixtures here, fail-closed on the bundle's own shape.
+{
+  const criDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const criSchemaName = 'controlled-rule-intake.schema.json';
+  const criSchemaRaw = readIfExists(path.join(criDir, criSchemaName));
+  if (criSchemaRaw === null) {
+    fail(`controlled-rule-intake: registries/operating-model/${criSchemaName} is missing; the controlled rule intake contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let criOk = true;
+    let criSchema = null;
+    let criEnv = null;
+    try { criSchema = JSON.parse(criSchemaRaw); }
+    catch (e) { fail(`controlled-rule-intake: ${criSchemaName} is not valid JSON: ${e.message}`); criOk = false; }
+
+    const criEnvRaw = readIfExists(path.join(criDir, 'scoped-record.schema.json'));
+    if (criEnvRaw === null) {
+      fail('controlled-rule-intake: registries/operating-model/scoped-record.schema.json is missing; the candidate record composes with the record envelope and cannot be checked without it');
+      criOk = false;
+    } else {
+      try { criEnv = JSON.parse(criEnvRaw); }
+      catch (e) { fail(`controlled-rule-intake: scoped-record.schema.json is not valid JSON: ${e.message}`); criOk = false; }
+    }
+
+    if (criSchema) {
+      try { assertSupportedDeep(criSchema, criSchemaName); }
+      catch (e) { fail(`controlled-rule-intake: the schema uses a construct this validator cannot check: ${e.message}`); criOk = false; }
+    }
+
+    let criSatisfied = 0;
+    let criRejected = 0;
+    let criCoverage = false;
+    const criFxRaw = readIfExists(path.join(criDir, 'fixtures', 'controlled-rule-intake.fixtures.json'));
+    if (criFxRaw === null) {
+      fail('controlled-rule-intake: the schema carries no fixtures (registries/operating-model/fixtures/controlled-rule-intake.fixtures.json); a schema no run exercises is not one this gate has reached');
+      criOk = false;
+    } else if (criOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(criFxRaw); }
+      catch (e) { bundleOk = false; fail(`controlled-rule-intake: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('controlled-rule-intake: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`controlled-rule-intake: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (bundleOk && (typeof bundle.resolution !== 'object' || bundle.resolution === null || Array.isArray(bundle.resolution))) {
+        bundleOk = false;
+        fail('controlled-rule-intake: the fixtures file carries no "resolution" object; every candidate\'s source_ref is resolved OUTSIDE the record, and a bundle that resolves nothing cannot exercise the contract against an actual instruction source snapshot');
+      }
+      if (!bundleOk) {
+        criOk = false;
+      } else {
+        const criOpts = {
+          registrySchema: criSchema,
+          envelopeSchema: criEnv,
+          resolveSource: makeRecordResolver(bundle.resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateControlledRuleIntake(c && c.registry, criOpts);
+          if (p.length) { fail(`controlled-rule-intake: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); criOk = false; }
+          else criSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateControlledRuleIntake(c && c.registry, criOpts);
+          if (p.length === 0) { fail(`controlled-rule-intake: a fixture that must be rejected validated clean (${c && c.note})`); criOk = false; }
+          else criRejected++;
+        }
+        criCoverage = criOk;
+      }
+    }
+
+    if (criOk && criCoverage) {
+      ok('controlled-rule-intake: the rule-intake schema parsed and keyword-checked; '
+       + `${criSatisfied} representative fixture(s) satisfied the composition (record envelope, pinned source_ref resolved through the external boundary and checked against the instruction source's own recorded_state INCLUDING currency and a minimal read_channel projection, origin.kind/origin.source_ref naming the same source as payload.source_ref, boundary provenance, explicit semantic-key clustering with consistent classification and decision across origins, a symmetric order-independent conflict graph, the closed candidate / accepted / not-applicable applicability state with an evidenced reason, and accepted/not-applicable decided only by the scope's own human owner authority) and ${criRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// existing-project-compatibility-mode: bounded discovery plan → registered
+// source → rule candidate, zero writes to the connected project (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/existing-project-compatibility-mode.schema.json
+// is the specialised payload schema for a workspace connection scan
+// (record_type: workspace-connection-scan). Its envelope is validated against
+// the existing scoped-record.schema.json (composition, not a second envelope).
+// Discovery is bounded to an explicit discovery_plan — never a recursive
+// guess over a project's tree — and every discovered/missing/unreadable
+// record and location-bearing finding traces back to one plan slot's stable
+// id; every declared slot carries EXACTLY ONE outcome across the three
+// arrays (an omitted, duplicated or overlapping outcome is rejected). The
+// registry, envelope, source-registry and rule-intake schemas are all
+// mandatory composition dependencies regardless of the document's own
+// content — an absent or inapplicable one fails the whole evaluation closed,
+// even when discovered_sources or rule_candidates are empty. A discovered
+// source is a FULL instruction-source-registry entry,
+// checked here by calling the REAL evaluateInstructionSourceRegistry against
+// the REAL instruction-source-registry.schema.json (never a second competing
+// source format); a rule candidate is a FULL controlled-rule-intake record,
+// checked by calling the REAL evaluateControlledRuleIntake against the REAL
+// controlled-rule-intake.schema.json, resolved through a boundary this
+// module builds from the SAME scan's own discovered sources. Discovery mints
+// no decision: a candidate first found by THIS scan (discovery_status "new")
+// must stay "candidate"; only a "carried-over" candidate may hold a decided
+// applicability_state, and even then it is independently re-checked by the
+// composed controlled-rule-intake evaluation. A source found changed,
+// missing or unreadable relative to a prior scan must carry a matching
+// finding — never a silent overwrite of an earlier snapshot or decision.
+// next_step is computed by one closed priority: a blocking "conflict"
+// finding, else a blocking "ambiguous-scope" finding, else any other
+// blocking finding, else nothing blocking — the same findings set, in any
+// order, always computes the same value. connection_mode defaults to
+// "compatibility"; "managed" never activates
+// automatically and requires a separate, verifiable managed_mode_decision.
+// Scan DATA is Instance, like the source registry and the intake register:
+// the Kernel ships the schema, the product-neutral fixtures and one
+// checkable implementation
+// (scripts/lib/existing-project-compatibility-mode.mjs), not a canonical
+// data file. The contract is a MANDATORY part of this Kernel: a missing
+// schema or missing fixtures is a FAIL, not an informational skip. As with
+// the other operating-model contracts, the schema is parsed, walked for
+// unsupported keywords, and exercised against its bundled fixtures here,
+// fail-closed on the bundle's own shape.
+{
+  const epcmDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const epcmSchemaName = 'existing-project-compatibility-mode.schema.json';
+  const epcmSchemaRaw = readIfExists(path.join(epcmDir, epcmSchemaName));
+  if (epcmSchemaRaw === null) {
+    fail(`existing-project-compatibility-mode: registries/operating-model/${epcmSchemaName} is missing; the existing-project compatibility mode contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let epcmOk = true;
+    let epcmSchema = null;
+    let epcmEnv = null;
+    let epcmSourceSchema = null;
+    let epcmRuleIntakeSchema = null;
+    try { epcmSchema = JSON.parse(epcmSchemaRaw); }
+    catch (e) { fail(`existing-project-compatibility-mode: ${epcmSchemaName} is not valid JSON: ${e.message}`); epcmOk = false; }
+
+    const epcmEnvRaw = readIfExists(path.join(epcmDir, 'scoped-record.schema.json'));
+    if (epcmEnvRaw === null) {
+      fail('existing-project-compatibility-mode: registries/operating-model/scoped-record.schema.json is missing; the scan record composes with the record envelope and cannot be checked without it');
+      epcmOk = false;
+    } else {
+      try { epcmEnv = JSON.parse(epcmEnvRaw); }
+      catch (e) { fail(`existing-project-compatibility-mode: scoped-record.schema.json is not valid JSON: ${e.message}`); epcmOk = false; }
+    }
+
+    const epcmSourceRaw = readIfExists(path.join(epcmDir, 'instruction-source-registry.schema.json'));
+    if (epcmSourceRaw === null) {
+      fail('existing-project-compatibility-mode: registries/operating-model/instruction-source-registry.schema.json is missing; discovered sources compose with that contract and cannot be checked without it');
+      epcmOk = false;
+    } else {
+      try { epcmSourceSchema = JSON.parse(epcmSourceRaw); }
+      catch (e) { fail(`existing-project-compatibility-mode: instruction-source-registry.schema.json is not valid JSON: ${e.message}`); epcmOk = false; }
+    }
+
+    const epcmRuleIntakeRaw = readIfExists(path.join(epcmDir, 'controlled-rule-intake.schema.json'));
+    if (epcmRuleIntakeRaw === null) {
+      fail('existing-project-compatibility-mode: registries/operating-model/controlled-rule-intake.schema.json is missing; rule candidates compose with that contract and cannot be checked without it');
+      epcmOk = false;
+    } else {
+      try { epcmRuleIntakeSchema = JSON.parse(epcmRuleIntakeRaw); }
+      catch (e) { fail(`existing-project-compatibility-mode: controlled-rule-intake.schema.json is not valid JSON: ${e.message}`); epcmOk = false; }
+    }
+
+    if (epcmSchema) {
+      try { assertSupportedDeep(epcmSchema, epcmSchemaName); }
+      catch (e) { fail(`existing-project-compatibility-mode: the schema uses a construct this validator cannot check: ${e.message}`); epcmOk = false; }
+    }
+
+    let epcmSatisfied = 0;
+    let epcmRejected = 0;
+    let epcmCoverage = false;
+    const epcmFxRaw = readIfExists(path.join(epcmDir, 'fixtures', 'existing-project-compatibility-mode.fixtures.json'));
+    if (epcmFxRaw === null) {
+      fail('existing-project-compatibility-mode: the schema carries no fixtures (registries/operating-model/fixtures/existing-project-compatibility-mode.fixtures.json); a schema no run exercises is not one this gate has reached');
+      epcmOk = false;
+    } else if (epcmOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(epcmFxRaw); }
+      catch (e) { bundleOk = false; fail(`existing-project-compatibility-mode: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('existing-project-compatibility-mode: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`existing-project-compatibility-mode: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        epcmOk = false;
+      } else {
+        const epcmOpts = {
+          registrySchema: epcmSchema,
+          envelopeSchema: epcmEnv,
+          sourceRegistrySchema: epcmSourceSchema,
+          ruleIntakeSchema: epcmRuleIntakeSchema,
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateExistingProjectCompatibilityMode(c && c.registry, epcmOpts);
+          if (p.length) { fail(`existing-project-compatibility-mode: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); epcmOk = false; }
+          else epcmSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateExistingProjectCompatibilityMode(c && c.registry, epcmOpts);
+          if (p.length === 0) { fail(`existing-project-compatibility-mode: a fixture that must be rejected validated clean (${c && c.note})`); epcmOk = false; }
+          else epcmRejected++;
+        }
+        epcmCoverage = epcmOk;
+      }
+    }
+
+    if (epcmOk && epcmCoverage) {
+      ok('existing-project-compatibility-mode: the compatibility-mode schema parsed and keyword-checked; '
+       + `${epcmSatisfied} representative fixture(s) satisfied the composition (record envelope, mandatory registry/envelope/source-registry/rule-intake schemas required regardless of document content, a bounded discovery plan whose slots trace every discovered/missing/unreadable record and location-bearing finding by a stable id and carry EXACTLY ONE outcome each — never omitted, duplicated or overlapping, discovered sources resolved through the REAL instruction-source-registry composition, rule candidates resolved through the REAL controlled-rule-intake composition against a resolver built from this scan's own discovered sources, a newly discovered candidate barred from any decided applicability_state, a required finding for every changed, previously-known-missing or unreadable source, and a next_step computed by the one closed priority — blocking conflict, else blocking ambiguous-scope, else any other blocking finding, else continue) and ${epcmRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// instance-data-migration: storage-neutral migration plan for a transitional
+// Instance's records into Meridian's logical scope areas (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/instance-data-migration.schema.json is the
+// specialised payload schema for a migration plan (record_type:
+// instance-migration-plan). Its envelope is validated against the existing
+// scoped-record.schema.json (composition, not a second envelope). The
+// contract pins an exact source revision and digest and requires an explicit
+// reproducibility qualification (a dirty, incomplete or ambiguous source is
+// never accepted as a reproducible base); gives every declared record unit
+// EXACTLY ONE correspondence decision — migrated, retained-transitional, or
+// an explicit many-to-one merged (never fewer than two units, one shared
+// merge_rule_ref); requires an explicit, per-field preserved/assigned basis
+// and an owner decision for every migrated or merged target, whose
+// PERMANENT authority is checked against the closed owner-authority table
+// for its own scope — the delegated-run authority carrying out the
+// migration itself can never mint a target's permanent authority; makes
+// rollback mandatory on every plan and actually checks it: the source
+// snapshot ref, the deterministic-reconstruction plan ref or the
+// verified-restoration evidence ref (whichever the declared rollback.plan
+// requires) is each resolved through its own external boundary and checked
+// to name THIS plan's own source and id, and rewrites_published_history is
+// pinned to the literal false; distinguishes a
+// claimed VERIFIED result from actual coverage/applicability-preservation
+// evidence and forces BLOCKED whenever the source itself is not
+// reproducible; and recomputes plan_fingerprint as a deterministic function
+// of a plan's own pinned content, alongside a container-wide unique
+// idempotency_key, so a rerun over the same pinned input recomputes the same
+// plan and never mints a duplicate record. Plan DATA is Instance, like every
+// other operating-model register: the Kernel ships the schema, the
+// product-neutral fixtures and one checkable implementation
+// (scripts/lib/instance-data-migration.mjs), not a canonical data file. The
+// contract is a MANDATORY part of this Kernel: a missing schema or missing
+// fixtures is a FAIL, not an informational skip. As with the other
+// operating-model contracts, the schema is parsed, walked for unsupported
+// keywords, and exercised against its bundled fixtures here, fail-closed on
+// the bundle's own shape.
+{
+  const idmDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const idmSchemaName = 'instance-data-migration.schema.json';
+  const idmSchemaRaw = readIfExists(path.join(idmDir, idmSchemaName));
+  if (idmSchemaRaw === null) {
+    fail(`instance-data-migration: registries/operating-model/${idmSchemaName} is missing; the instance-data migration contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let idmOk = true;
+    let idmSchema = null;
+    let idmEnv = null;
+    try { idmSchema = JSON.parse(idmSchemaRaw); }
+    catch (e) { fail(`instance-data-migration: ${idmSchemaName} is not valid JSON: ${e.message}`); idmOk = false; }
+
+    const idmEnvRaw = readIfExists(path.join(idmDir, 'scoped-record.schema.json'));
+    if (idmEnvRaw === null) {
+      fail('instance-data-migration: registries/operating-model/scoped-record.schema.json is missing; the migration plan composes with the record envelope and cannot be checked without it');
+      idmOk = false;
+    } else {
+      try { idmEnv = JSON.parse(idmEnvRaw); }
+      catch (e) { fail(`instance-data-migration: scoped-record.schema.json is not valid JSON: ${e.message}`); idmOk = false; }
+    }
+
+    if (idmSchema) {
+      try { assertSupportedDeep(idmSchema, idmSchemaName); }
+      catch (e) { fail(`instance-data-migration: the schema uses a construct this validator cannot check: ${e.message}`); idmOk = false; }
+    }
+
+    let idmSatisfied = 0;
+    let idmRejected = 0;
+    let idmCoverage = false;
+    const idmFxRaw = readIfExists(path.join(idmDir, 'fixtures', 'instance-data-migration.fixtures.json'));
+    if (idmFxRaw === null) {
+      fail('instance-data-migration: the schema carries no fixtures (registries/operating-model/fixtures/instance-data-migration.fixtures.json); a schema no run exercises is not one this gate has reached');
+      idmOk = false;
+    } else if (idmOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(idmFxRaw); }
+      catch (e) { bundleOk = false; fail(`instance-data-migration: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('instance-data-migration: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`instance-data-migration: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        idmOk = false;
+      } else {
+        const idmOpts = {
+          registrySchema: idmSchema,
+          envelopeSchema: idmEnv,
+          resolveSourceSnapshot: makeSourceSnapshotResolver(bundle.source_snapshot_resolution),
+          resolveEvidence: makeEvidenceResolver(bundle.evidence_resolution),
+          resolveRollbackSnapshot: makeRollbackSnapshotResolver(bundle.rollback_snapshot_resolution),
+          resolveDeterministicPlan: makeDeterministicPlanResolver(bundle.deterministic_plan_resolution),
+          resolveRestorationEvidence: makeRestorationEvidenceResolver(bundle.restoration_evidence_resolution),
+          resolveSupersededPlan: makeSupersededPlanResolver(bundle.superseded_plan_resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateInstanceDataMigration(c && c.registry, idmOpts);
+          if (p.length) { fail(`instance-data-migration: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); idmOk = false; }
+          else idmSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateInstanceDataMigration(c && c.registry, idmOpts);
+          if (p.length === 0) { fail(`instance-data-migration: a fixture that must be rejected validated clean (${c && c.note})`); idmOk = false; }
+          else idmRejected++;
+        }
+        idmCoverage = idmOk;
+      }
+    }
+
+    if (idmOk && idmCoverage) {
+      ok('instance-data-migration: the migration-plan schema parsed and keyword-checked; '
+       + `${idmSatisfied} representative fixture(s) satisfied the composition (record envelope, a pinned source repository_ref/revision/digest whose "reproducible" qualification is checked against a snapshot resolved through an external boundary and closed to this plan's own repository_ref and full digest, complete unit-to-mapping coverage with target groups closed to an explicit many-to-one merge sharing one rule and one structurally identical target, a migrated/merged target's mandatory origin traced to its actual contributing unit(s) and field_basis.origin always "assigned", permanent authority checked against the closed owner-authority table for its own scope — never the delegated-run authority carrying out the migration itself, mandatory rollback closed to two MUTUALLY EXCLUSIVE plan variants whose source-snapshot/deterministic-plan/restoration-evidence refs are each resolved through their own external boundary and checked to name this plan's own source, id AND its own recomputed plan_fingerprint (never a bare ref string, and never one pinned to a stale version of this plan) with rewrites_published_history pinned to false, a claimed VERIFIED result checked against actual coverage/applicability-preservation sub-verdicts each resolved through an external evidence boundary and pinned to this plan's own id AND recomputed plan_fingerprint, forced BLOCKED for a non-reproducible source, a recomputed deterministic plan_fingerprint and an idempotency_key derived from scope and the full source identity (repository_ref, revision, digest), and a supersedes checked against the predecessor's full scope and source repository_ref — in-document directly, or through an external boundary that never accepts an unknown or unresolved predecessor automatically — and ${idmRejected} were rejected as declared`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// instance-canonical-export: storage-neutral, checkable proof that an
+// accepted instance-data-migration plan's migrated/merged targets and
+// retained-transitional units are fully and faithfully accounted for
+// (MANDATORY)
+// ---------------------------------------------------------------------------
+// registries/operating-model/instance-canonical-export.schema.json is the
+// specialised payload schema for a canonical export (record_type:
+// instance-canonical-export). Its envelope, and every exported record inside
+// it, compose with the SAME scoped-record.schema.json a migration plan's own
+// envelope composes with — not a second envelope schema. The contract closes
+// the gap a migration plan's target alone cannot close: it resolves the
+// referenced plan through an external boundary and checks the export's
+// plan_fingerprint/source against the plan's own RECOMPUTED fingerprint (a
+// stale export is rejected, never accepted as still current); checks that
+// every migrated unit and every merged group has EXACTLY ONE structurally
+// identical exported record and that every retained-transitional unit is
+// listed exactly once with the plan's own reason (never an extra, missing,
+// duplicated or misclassified entry); and — never trusting
+// classification_basis, unit_ref or a matching record COUNT alone — resolves
+// the ACTUAL content of every record's contributing source unit(s) (and, for
+// a merge, its own merge_rule_ref) through a second external boundary and
+// checks the exported payload against it field for field. plan DATA is
+// Instance, like every other operating-model register: the Kernel ships the
+// schema, the product-neutral fixtures and one checkable implementation
+// (scripts/lib/instance-data-migration.mjs), not a canonical export of any
+// actual product. The contract is a MANDATORY part of this Kernel: a missing
+// schema or missing fixtures is a FAIL, not an informational skip.
+{
+  const iceDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const iceSchemaName = 'instance-canonical-export.schema.json';
+  const iceSchemaRaw = readIfExists(path.join(iceDir, iceSchemaName));
+  if (iceSchemaRaw === null) {
+    fail(`instance-canonical-export: registries/operating-model/${iceSchemaName} is missing; the canonical export contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let iceOk = true;
+    let iceSchema = null;
+    let iceEnv = null;
+    try { iceSchema = JSON.parse(iceSchemaRaw); }
+    catch (e) { fail(`instance-canonical-export: ${iceSchemaName} is not valid JSON: ${e.message}`); iceOk = false; }
+
+    const iceEnvRaw = readIfExists(path.join(iceDir, 'scoped-record.schema.json'));
+    if (iceEnvRaw === null) {
+      fail('instance-canonical-export: registries/operating-model/scoped-record.schema.json is missing; a canonical export composes with the record envelope and cannot be checked without it');
+      iceOk = false;
+    } else {
+      try { iceEnv = JSON.parse(iceEnvRaw); }
+      catch (e) { fail(`instance-canonical-export: scoped-record.schema.json is not valid JSON: ${e.message}`); iceOk = false; }
+    }
+
+    if (iceSchema) {
+      try { assertSupportedDeep(iceSchema, iceSchemaName); }
+      catch (e) { fail(`instance-canonical-export: the schema uses a construct this validator cannot check: ${e.message}`); iceOk = false; }
+    }
+
+    let iceSatisfied = 0;
+    let iceRejected = 0;
+    let iceCoverage = false;
+    const iceFxRaw = readIfExists(path.join(iceDir, 'fixtures', 'instance-canonical-export.fixtures.json'));
+    if (iceFxRaw === null) {
+      fail('instance-canonical-export: the schema carries no fixtures (registries/operating-model/fixtures/instance-canonical-export.fixtures.json); a schema no run exercises is not one this gate has reached');
+      iceOk = false;
+    } else if (iceOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(iceFxRaw); }
+      catch (e) { bundleOk = false; fail(`instance-canonical-export: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('instance-canonical-export: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`instance-canonical-export: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        iceOk = false;
+      } else {
+        const iceOpts = {
+          registrySchema: iceSchema,
+          envelopeSchema: iceEnv,
+          resolveMigrationPlan: makeMigrationPlanResolver(bundle.plan_resolution),
+          resolveSourceContent: makeSourceContentResolver(bundle.source_content_resolution),
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateInstanceCanonicalExport(c && c.registry, iceOpts);
+          if (p.length) { fail(`instance-canonical-export: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); iceOk = false; }
+          else iceSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateInstanceCanonicalExport(c && c.registry, iceOpts);
+          if (p.length === 0) { fail(`instance-canonical-export: a fixture that must be rejected validated clean (${c && c.note})`); iceOk = false; }
+          else iceRejected++;
+        }
+        iceCoverage = iceOk;
+      }
+    }
+
+    if (iceOk && iceCoverage) {
+      ok('instance-canonical-export: the canonical-export schema parsed and keyword-checked; '
+       + `${iceSatisfied} representative fixture(s) satisfied the composition (record envelope for the export AND for every exported record, a referenced migration plan resolved through an external boundary and checked to name this export's own plan_ref, RECOMPUTED plan_fingerprint and pinned source — a stale export is rejected, complete unit/group-to-record coverage with exactly one structurally identical record per migrated unit and per merged group and exactly one correctly-reasoned retained entry per retained-transitional unit — never an extra, missing, duplicated or misclassified entry on either side, every exported payload checked against the ACTUAL content of its contributing source unit(s) — and, for a merge, its own merge_rule_ref — resolved through a second external boundary and compared field for field, a recomputed deterministic export digest insensitive to the declaration order of records/retained, and an idempotency_key derived from plan_ref and plan_fingerprint unique across the container) and ${iceRejected} were rejected as declared`);
+    }
+  }
+}
+
+/*
+ * workspace-compatibility-qualification: the closed, product-neutral final
+ * verdict over one workspace/repository's run through the
+ * meridian-workspace-compatibility program (MANDATORY).
+ *
+ * registries/operating-model/workspace-compatibility-qualification.schema.json
+ * is the specialised payload schema for a qualification record (record_type:
+ * workspace-compatibility-qualification) — the sixth, closing package of the
+ * meridian-workspace-compatibility program. Its envelope is validated
+ * against the existing scoped-record.schema.json (composition, not a second
+ * envelope). The record never embeds any composed record: it carries
+ * CLOSED PINNED REFERENCES (workspace_connection_refs, a non-empty array —
+ * one entry per connection scan this record composes — always required;
+ * migration_plan_ref/canonical_export_ref, nullable), each resolved through
+ * an external boundary this section wires from the fixtures bundle's own
+ * connection_record_resolution/plan_record_resolution/
+ * export_record_resolution maps, then composed against the REAL
+ * evaluateExistingProjectCompatibilityMode/evaluateInstanceDataMigration/
+ * evaluateInstanceCanonicalExport — never a raw imported field
+ * (raw_excerpt, normalized_text, or a secret-bearing value) persisted in
+ * this record. EVERY reference pins an exact sha256 (the resolved record's
+ * own recomputed content digest — computeConnectionDigest for each
+ * workspace connection, computePlanFingerprint/computeExportDigest for the
+ * plan/export — checked by the library, never a bare id/reference an
+ * independent resolver could satisfy with different content under the same
+ * label); no two entries of workspace_connection_refs may declare the same
+ * id or reference. When scope.type is "project-workspace",
+ * payload.workspace_repository_ids is a required, closed, unique list of
+ * repository ids checked to equal EXACTLY the set of payload.repository.id
+ * names carried by every resolved connection — no gap, no extra, no
+ * duplicate. When a canonical export is composed, the library derives its
+ * plan boundary itself from the already-resolved, already-pinned plan and
+ * ignores any exportOptions.resolveMigrationPlan this section might
+ * otherwise construct — there is deliberately none wired below. A resolved
+ * workspace connection that still carries any rule candidate with
+ * applicability_state "candidate" additionally forces qualification_state
+ * UNVERIFIED — never QUALIFIED — regardless of next_step or migration plan
+ * state; a connection's own next_step priority does not look inside
+ * rule_candidates, so this section's evaluator closes that gap itself,
+ * aggregated across EVERY declared connection and independent of their
+ * declared order.
+ *
+ * The composed contracts' schemas (and, for
+ * existing-project-compatibility-mode, ITS own composed
+ * instruction-source-registry/controlled-rule-intake schemas) are mandatory
+ * composition dependencies regardless of a given record's own content — an
+ * absent one fails the whole evaluation closed even when
+ * migration_plan_ref/canonical_export_ref are null.
+ *
+ * qualification_state (QUALIFIED/BLOCKED/UNVERIFIED) is a closed, RECOMPUTED
+ * verdict — the DECISION MATRIX documented in
+ * workspace-compatibility-qualification.md §4.1 — over every composed
+ * workspace connection's own next_step and, when a migration plan is
+ * composed, its own verification.overall_status and whether a plan that
+ * mints a migrated/merged record is backed by a composed canonical export;
+ * never a value trusted on its own, never one this evaluator derives from
+ * array order. blockers/open_questions are each checked closed to
+ * qualification_state (blockers non-empty exactly at BLOCKED, open_questions
+ * non-empty exactly at UNVERIFIED). This decision matrix is a SEPARATE,
+ * smaller claim than the program's eight ACCEPTANCE SCENARIOS
+ * (workspace-compatibility-qualification.md §4.2 —
+ * empty-project-no-instance, existing-project-zero-write,
+ * duplicate-rule-provenance, conflict-order-independent,
+ * source-change-no-silent-replacement, agent-native-partial-visibility,
+ * multi-repository-workspace, migration-applicability-preservation), which
+ * are proven by dedicated, mostly non-fixture tests in
+ * test/workspace-compatibility-qualification.test.mjs — not by this bundle
+ * of fixtures, and not conflated with the decision matrix's own nine table
+ * rows (eight logical steps; resolve-conflict and resolve-ambiguity share
+ * one), which is a different, smaller claim entirely. Seven of the eight
+ * scenarios are fully closed by this Kernel slice; the eighth,
+ * migration-applicability-preservation, is closed only in its KERNEL part
+ * (applicability_preservation accepted as verified only with evidence
+ * resolved through an external boundary, never asserted on its word) —
+ * whether the actual set of applicable norms is equal before/after a real
+ * migration is product-specific field evidence this product-neutral Kernel
+ * cannot supply, and remains the next, separate Instance-repository
+ * package's proof (workspace-compatibility-qualification.md §4.3).
+ *
+ * Qualification DATA is Instance, like every other operating-model
+ * register: the Kernel ships the schema, the product-neutral fixtures
+ * (covering the nine decision-matrix rows) and one checkable
+ * implementation (scripts/lib/workspace-compatibility-qualification.mjs),
+ * not a canonical qualification of any actual product. The contract is a
+ * MANDATORY part of this Kernel: a missing schema or missing fixtures is a
+ * FAIL, not an informational skip.
+ */
+{
+  const wcqDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const wcqSchemaName = 'workspace-compatibility-qualification.schema.json';
+  const wcqSchemaRaw = readIfExists(path.join(wcqDir, wcqSchemaName));
+  if (wcqSchemaRaw === null) {
+    fail(`workspace-compatibility-qualification: registries/operating-model/${wcqSchemaName} is missing; the workspace compatibility qualification contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let wcqOk = true;
+    let wcqSchema = null;
+    let wcqEnv = null;
+    let wcqCompatSchema = null;
+    let wcqSourceRegistrySchema = null;
+    let wcqRuleIntakeSchema = null;
+    let wcqMigrationSchema = null;
+    let wcqExportSchema = null;
+    try { wcqSchema = JSON.parse(wcqSchemaRaw); }
+    catch (e) { fail(`workspace-compatibility-qualification: ${wcqSchemaName} is not valid JSON: ${e.message}`); wcqOk = false; }
+
+    const composedSchemaFiles = {
+      wcqEnv: ['scoped-record.schema.json', 'the composed records\' envelope'],
+      wcqCompatSchema: ['existing-project-compatibility-mode.schema.json', 'the composed workspace connection'],
+      wcqSourceRegistrySchema: ['instruction-source-registry.schema.json', 'the composed workspace connection\'s own discovered sources'],
+      wcqRuleIntakeSchema: ['controlled-rule-intake.schema.json', 'the composed workspace connection\'s own rule candidates'],
+      wcqMigrationSchema: ['instance-data-migration.schema.json', 'a composed migration plan'],
+      wcqExportSchema: ['instance-canonical-export.schema.json', 'a composed canonical export'],
+    };
+    const loaded = {};
+    for (const [varName, [fileName, reason]] of Object.entries(composedSchemaFiles)) {
+      const raw = readIfExists(path.join(wcqDir, fileName));
+      if (raw === null) {
+        fail(`workspace-compatibility-qualification: registries/operating-model/${fileName} is missing; ${reason} cannot be checked without it`);
+        wcqOk = false;
+      } else {
+        try { loaded[varName] = JSON.parse(raw); }
+        catch (e) { fail(`workspace-compatibility-qualification: ${fileName} is not valid JSON: ${e.message}`); wcqOk = false; }
+      }
+    }
+    wcqEnv = loaded.wcqEnv ?? null;
+    wcqCompatSchema = loaded.wcqCompatSchema ?? null;
+    wcqSourceRegistrySchema = loaded.wcqSourceRegistrySchema ?? null;
+    wcqRuleIntakeSchema = loaded.wcqRuleIntakeSchema ?? null;
+    wcqMigrationSchema = loaded.wcqMigrationSchema ?? null;
+    wcqExportSchema = loaded.wcqExportSchema ?? null;
+
+    if (wcqSchema) {
+      try { assertSupportedDeep(wcqSchema, wcqSchemaName); }
+      catch (e) { fail(`workspace-compatibility-qualification: the schema uses a construct this validator cannot check: ${e.message}`); wcqOk = false; }
+    }
+
+    let wcqSatisfied = 0;
+    let wcqRejected = 0;
+    let wcqCoverage = false;
+    const wcqFxRaw = readIfExists(path.join(wcqDir, 'fixtures', 'workspace-compatibility-qualification.fixtures.json'));
+    if (wcqFxRaw === null) {
+      fail('workspace-compatibility-qualification: the schema carries no fixtures (registries/operating-model/fixtures/workspace-compatibility-qualification.fixtures.json); a schema no run exercises is not one this gate has reached');
+      wcqOk = false;
+    } else if (wcqOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(wcqFxRaw); }
+      catch (e) { bundleOk = false; fail(`workspace-compatibility-qualification: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('workspace-compatibility-qualification: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`workspace-compatibility-qualification: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        wcqOk = false;
+      } else {
+        const mr = bundle.migration_resolution || {};
+        const er = bundle.export_resolution || {};
+        const wcqOpts = {
+          registrySchema: wcqSchema,
+          envelopeSchema: wcqEnv,
+          resolveConnectionRecord: makeRefResolver(bundle.connection_record_resolution),
+          resolvePlanRecord: makeRefResolver(bundle.plan_record_resolution),
+          resolveExportRecord: makeRefResolver(bundle.export_record_resolution),
+          compatOptions: {
+            registrySchema: wcqCompatSchema,
+            envelopeSchema: wcqEnv,
+            sourceRegistrySchema: wcqSourceRegistrySchema,
+            ruleIntakeSchema: wcqRuleIntakeSchema,
+          },
+          migrationOptions: {
+            registrySchema: wcqMigrationSchema,
+            envelopeSchema: wcqEnv,
+            resolveSourceSnapshot: makeSourceSnapshotResolver(mr.source_snapshot_resolution),
+            resolveEvidence: makeEvidenceResolver(mr.evidence_resolution),
+            resolveRollbackSnapshot: makeRollbackSnapshotResolver(mr.rollback_snapshot_resolution),
+            resolveDeterministicPlan: makeDeterministicPlanResolver(mr.deterministic_plan_resolution),
+            resolveRestorationEvidence: makeRestorationEvidenceResolver(mr.restoration_evidence_resolution),
+            resolveSupersededPlan: makeSupersededPlanResolver(mr.superseded_plan_resolution),
+          },
+          exportOptions: {
+            registrySchema: wcqExportSchema,
+            envelopeSchema: wcqEnv,
+            resolveSourceContent: makeSourceContentResolver(er.source_content_resolution),
+          },
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateWorkspaceCompatibilityQualification(c && c.registry, wcqOpts);
+          if (p.length) { fail(`workspace-compatibility-qualification: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); wcqOk = false; }
+          else wcqSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateWorkspaceCompatibilityQualification(c && c.registry, wcqOpts);
+          if (p.length === 0) { fail(`workspace-compatibility-qualification: a fixture that must be rejected validated clean (${c && c.note})`); wcqOk = false; }
+          else wcqRejected++;
+        }
+        wcqCoverage = wcqOk;
+      }
+    }
+
+    if (wcqOk && wcqCoverage) {
+      ok('workspace-compatibility-qualification: the qualification schema parsed and keyword-checked; '
+       + `${wcqSatisfied} representative fixture(s) satisfied the composition (record envelope, mandatory composed registry/envelope/source-registry/rule-intake/migration/export schemas required regardless of document content, an always-required non-empty workspace_connection_refs array — with no duplicate declared id/reference, and, for a project-workspace, a workspace_repository_ids set closed to exactly the scanned repositories — and an optional migration_plan_ref/canonical_export_ref — ALL pinned to a recomputed sha256 content digest (computeConnectionDigest/computePlanFingerprint/computeExportDigest) and checked against the REAL evaluateExistingProjectCompatibilityMode/evaluateInstanceDataMigration/evaluateInstanceCanonicalExport — the export's own plan boundary derived from the already-resolved plan, never an independently configured resolver — full scope agreement across every resolved record, and a recomputed qualification_state — the nine-row decision matrix of workspace-compatibility-qualification.md §4.1, closed to every composed connection's own next_step aggregated order-independently, whether any resolved rule candidate on any of them is still an undecided "candidate" (forcing UNVERIFIED, never QUALIFIED, regardless of migration state), and, when a plan is composed, its own verification.overall_status and canonical-export coverage of any minted record — checked against the declared value, with blockers/open_questions each closed to qualification_state) covering all nine decision-matrix rows, and ${wcqRejected} were rejected as declared; the program's eight acceptance scenarios (§4.2) are proven separately by test/workspace-compatibility-qualification.test.mjs — seven fully, and the eighth (migration-applicability-preservation) only in its Kernel part, its product-specific field evidence being the next, separate Instance-repository package's proof (§4.3)`);
+    }
+  }
+}
+
+/**
+ * upgrade-integration-qualification: the closed, product-neutral final
+ * qualification (record_type: upgrade-integration-qualification) of one
+ * workspace's run through packages 1-8 of the meridian-operating-upgrade
+ * program — meridian-operating-foundation, task-pattern-registry,
+ * task-specification-contract, execution-state-model, role-and-human-control,
+ * bounded-context-manifest, evidence-and-handoff-contract and
+ * meridian-field-evaluation. This is package 9 — the ninth, penultimate
+ * package before meridian-operating-upgrade-release (package 10). It
+ * composes, never duplicates: payload.task_journey_ref pins one FULL
+ * evidence-and-handoff record — the terminal point that already composes
+ * execution-state-model, role-and-human-control, bounded-context-manifest
+ * and, transitively, task-specification-contract/task-pattern-registry
+ * (evidence-and-handoff-contract.md §4, §12) — checked against the REAL
+ * evaluateEvidenceAndHandoff; payload.field_evaluation_report_ref (nullable)
+ * pins one FULL field-evaluation-report record (package 8), checked against
+ * the REAL evaluateFieldEvaluation; payload.scenario_classifications pins
+ * exactly three FULL task-specification/execution-run record pairs, one per
+ * required neutral scenario (single-module-refactor,
+ * multi-repository-decomposition, language-change-limit-case —
+ * upgrade-integration-qualification.md §3), checked against the REAL
+ * evaluateTaskSpecification/evaluateExecutionState and against that
+ * scenario's own closed expectation (task_pattern id, and, for the two
+ * initiative-shaped scenarios, lifecycle_stage relative to "classification").
+ * payload.workspace_transition_compatibility is a required, closed,
+ * product-neutral Kernel-side template requirement recording that the
+ * Kernel/Instance transition to the new operating-model workspace model is
+ * documented — never any specific product's filled transition evidence,
+ * which is the subject of a separate, later Instance package.
+ * payload.qualification_state is a closed, RECOMPUTED verdict — QUALIFIED,
+ * BLOCKED or UNVERIFIED (upgrade-integration-qualification.md §5) — checked
+ * here against the composed evaluations' own outcome; blockers/open_questions
+ * are each closed to qualification_state. The tests proving the decision
+ * matrix (fixtures) and the three required neutral scenarios live in
+ * test/upgrade-integration-qualification.test.mjs — not by this bundle
+ * (schema/keyword-check/fixture-coverage) alone. The contract is a MANDATORY
+ * part of this Kernel: a missing schema or missing fixtures is a FAIL, not an
+ * informational skip.
+ */
+{
+  const uiqDir = path.join(KERNEL_ROOT, 'registries', 'operating-model');
+  const uiqSchemaName = 'upgrade-integration-qualification.schema.json';
+  const uiqSchemaRaw = readIfExists(path.join(uiqDir, uiqSchemaName));
+  if (uiqSchemaRaw === null) {
+    fail(`upgrade-integration-qualification: registries/operating-model/${uiqSchemaName} is missing; the upgrade integration qualification contract is a mandatory part of this Kernel, not an optional add-on`);
+  } else {
+    let uiqOk = true;
+    let uiqSchema = null;
+    try { uiqSchema = JSON.parse(uiqSchemaRaw); }
+    catch (e) { fail(`upgrade-integration-qualification: ${uiqSchemaName} is not valid JSON: ${e.message}`); uiqOk = false; }
+
+    const composedSchemaFiles = {
+      uiqEnv: ['scoped-record.schema.json', 'the composed records\' envelope'],
+      uiqEhSchema: ['evidence-and-handoff.schema.json', 'the composed task journey'],
+      uiqFeSchema: ['field-evaluation.schema.json', 'a composed field-evaluation report'],
+      uiqTsSchema: ['task-specification.schema.json', 'a composed scenario task specification'],
+      uiqEsSchema: ['execution-state.schema.json', 'a composed scenario execution run'],
+    };
+    const loaded = {};
+    for (const [varName, [fileName, reason]] of Object.entries(composedSchemaFiles)) {
+      const raw = readIfExists(path.join(uiqDir, fileName));
+      if (raw === null) {
+        fail(`upgrade-integration-qualification: registries/operating-model/${fileName} is missing; ${reason} cannot be checked without it`);
+        uiqOk = false;
+      } else {
+        try { loaded[varName] = JSON.parse(raw); }
+        catch (e) { fail(`upgrade-integration-qualification: ${fileName} is not valid JSON: ${e.message}`); uiqOk = false; }
+      }
+    }
+    const uiqEnv = loaded.uiqEnv ?? null;
+    const uiqEhSchema = loaded.uiqEhSchema ?? null;
+    const uiqFeSchema = loaded.uiqFeSchema ?? null;
+    const uiqTsSchema = loaded.uiqTsSchema ?? null;
+    const uiqEsSchema = loaded.uiqEsSchema ?? null;
+
+    if (uiqSchema) {
+      try { assertSupportedDeep(uiqSchema, uiqSchemaName); }
+      catch (e) { fail(`upgrade-integration-qualification: the schema uses a construct this validator cannot check: ${e.message}`); uiqOk = false; }
+    }
+
+    // The scenario_classifications' task_pattern reference is resolved
+    // against the same built-in catalogue task-specification-contract uses.
+    let uiqTaskPatterns = null;
+    const uiqTprRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'task-pattern-registry.yaml'));
+    if (uiqTprRaw === null) {
+      fail('upgrade-integration-qualification: standards/workspace/task-pattern-registry.yaml is missing; a scenario\'s task-pattern reference cannot be resolved without the catalogue');
+      uiqOk = false;
+    } else {
+      try {
+        const tprDoc = yamlParse(uiqTprRaw);
+        uiqTaskPatterns = (Array.isArray(tprDoc && tprDoc.task_patterns) ? tprDoc.task_patterns : []).map((p) => ({
+          id: p && p.id,
+          work_kind: p && p.payload && p.payload.work_kind,
+          change_class: (p && p.payload && p.payload.change_class) ?? null,
+        }));
+      } catch (e) { fail(`upgrade-integration-qualification: cannot parse task-pattern-registry.yaml: ${e.message}`); uiqOk = false; }
+    }
+
+    let uiqSatisfied = 0;
+    let uiqRejected = 0;
+    let uiqCoverage = false;
+    const uiqFxRaw = readIfExists(path.join(uiqDir, 'fixtures', 'upgrade-integration-qualification.fixtures.json'));
+    if (uiqFxRaw === null) {
+      fail('upgrade-integration-qualification: the schema carries no fixtures (registries/operating-model/fixtures/upgrade-integration-qualification.fixtures.json); a schema no run exercises is not one this gate has reached');
+      uiqOk = false;
+    } else if (uiqOk) {
+      let bundle;
+      let bundleOk = true;
+      try { bundle = JSON.parse(uiqFxRaw); }
+      catch (e) { bundleOk = false; fail(`upgrade-integration-qualification: the fixtures file is not valid JSON: ${e.message}`); }
+      if (bundleOk && (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle))) {
+        bundleOk = false;
+        fail('upgrade-integration-qualification: the fixtures file must be an object with non-empty "valid" and "invalid" arrays');
+      }
+      for (const key of ['valid', 'invalid']) {
+        if (bundleOk && !(Array.isArray(bundle[key]) && bundle[key].length > 0)) {
+          bundleOk = false;
+          fail(`upgrade-integration-qualification: the fixtures file has no non-empty "${key}" array`);
+        }
+      }
+      if (!bundleOk) {
+        uiqOk = false;
+      } else {
+        const uiqOpts = {
+          registrySchema: uiqSchema,
+          envelopeSchema: uiqEnv,
+          resolveTaskJourney: makeRefResolver(bundle.task_journey_resolution),
+          resolveFieldEvaluationReport: makeRefResolver(bundle.field_evaluation_resolution),
+          resolveTaskSpecification: makeRefResolver(bundle.task_specification_resolution),
+          resolveExecutionState: makeRefResolver(bundle.execution_state_resolution),
+          taskJourneyOptions: {
+            recordSchema: uiqEhSchema,
+            envelopeSchema: uiqEnv,
+            resolveRecords: makeRecordResolver(bundle.task_journey_nested_resolution),
+          },
+          fieldEvaluationOptions: {
+            recordSchema: uiqFeSchema,
+            envelopeSchema: uiqEnv,
+            resolveRecords: makeRecordResolver(bundle.field_evaluation_nested_resolution),
+          },
+          taskSpecificationOptions: {
+            recordSchema: uiqTsSchema,
+            envelopeSchema: uiqEnv,
+            taskPatterns: uiqTaskPatterns,
+          },
+          executionStateOptions: {
+            recordSchema: uiqEsSchema,
+            envelopeSchema: uiqEnv,
+          },
+        };
+        for (const c of bundle.valid) {
+          const p = evaluateUpgradeIntegrationQualification(c && c.registry, uiqOpts);
+          if (p.length) { fail(`upgrade-integration-qualification: a fixture that must be a valid registry was rejected (${c && c.note}): ${p[0]}`); uiqOk = false; }
+          else uiqSatisfied++;
+        }
+        for (const c of bundle.invalid) {
+          const p = evaluateUpgradeIntegrationQualification(c && c.registry, uiqOpts);
+          if (p.length === 0) { fail(`upgrade-integration-qualification: a fixture that must be rejected validated clean (${c && c.note})`); uiqOk = false; }
+          else uiqRejected++;
+        }
+        uiqCoverage = uiqOk;
+      }
+    }
+
+    if (uiqOk && uiqCoverage) {
+      ok('upgrade-integration-qualification: the qualification schema parsed and keyword-checked; '
+       + `${uiqSatisfied} representative fixture(s) satisfied the composition (record envelope, mandatory composed evidence-and-handoff/field-evaluation/task-specification/execution-state schemas required regardless of document content, an always-required sha256-pinned task_journey_ref composed against the REAL evaluateEvidenceAndHandoff, an optional field_evaluation_report_ref composed against the REAL evaluateFieldEvaluation, and exactly three sha256-pinned scenario_classifications entries — one per required neutral scenario — each composed against the REAL evaluateTaskSpecification/evaluateExecutionState and checked against that scenario's own closed task_pattern/lifecycle_stage expectation, plus a recomputed qualification_state with blockers/open_questions each closed to it) covering the decision matrix, and ${uiqRejected} were rejected as declared; the three required neutral scenarios are proven separately by test/upgrade-integration-qualification.test.mjs`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // SHA provenance
 // ---------------------------------------------------------------------------
 // Every vendored skill carries a PIN.yaml next to it. The pin is verified by
@@ -1215,6 +3017,106 @@ if (topicsYamlRaw === null || topicsMdRaw === null) {
     } else {
       TOPIC_POOL = declared;
       ok(`instruction-topics: ${declared.size} topics; names and signatures agree`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// operating foundation: one machine pool, two human-readable signature sets
+// ---------------------------------------------------------------------------
+// The data supplies stable identities and bilingual names. The documents
+// supply definitions and normative consequences. Neither half is accepted on
+// its own: a machine-only term is not understandable to the owner, while a
+// prose-only term cannot be referenced deterministically by a schema or run.
+const foundationYamlRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'operating-foundation.yaml'));
+const glossaryMdRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'operating-glossary.md'));
+const principlesMdRaw = readIfExists(path.join(KERNEL_ROOT, 'standards', 'workspace', 'operating-principles.md'));
+let foundationFailures = 0;
+const foundationFail = (message) => { foundationFailures++; fail(message); };
+
+if (foundationYamlRaw === null || glossaryMdRaw === null || principlesMdRaw === null) {
+  const missing = [
+    foundationYamlRaw === null ? 'standards/workspace/operating-foundation.yaml' : null,
+    glossaryMdRaw === null ? 'standards/workspace/operating-glossary.md' : null,
+    principlesMdRaw === null ? 'standards/workspace/operating-principles.md' : null,
+  ].filter(Boolean);
+  foundationFail(`operating-foundation: the canonical pool is incomplete (${missing.join(', ')}); machine identities and human signatures are one contract`);
+} else {
+  let foundation = null;
+  try { foundation = yamlParse(foundationYamlRaw); }
+  catch (e) { foundationFail(`operating-foundation: ${e.message}`); }
+
+  const readRows = (raw, regionId, label, bodyLabel) => {
+    const region = markedRegion(raw, regionId);
+    if (region.error) {
+      foundationFail(`operating-foundation: the ${label} region is not readable — ${region.error}`);
+      return [];
+    }
+    const rows = [...region.text.matchAll(/^\|\s*`([a-z][a-z0-9]*(?:-[a-z0-9]+)*)`\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|/gm)]
+      .map((match) => ({ id: match[1], ru: match[2].trim(), en: match[3].trim(), body: match[4].trim() }));
+    const emptyBodies = rows.filter((row) => !row.body).map((row) => row.id);
+    if (emptyBodies.length) {
+      foundationFail(`operating-foundation: ${label} rows without ${bodyLabel}: ${emptyBodies.join(', ')}`);
+    }
+    return rows;
+  };
+
+  const comparePool = (entries, rows, label, ruField, enField, machineNamesField = null) => {
+    if (!Array.isArray(entries)) {
+      foundationFail(`operating-foundation: ${label} is not an array`);
+      return;
+    }
+    const duplicateData = entries.map((entry) => String(entry?.id ?? ''))
+      .filter((id, index, all) => id && all.indexOf(id) !== index);
+    const duplicateDocs = rows.map((row) => row.id)
+      .filter((id, index, all) => all.indexOf(id) !== index);
+    if (duplicateData.length) foundationFail(`operating-foundation: duplicate ${label} id in data: ${[...new Set(duplicateData)].join(', ')}`);
+    if (duplicateDocs.length) foundationFail(`operating-foundation: duplicate ${label} id in documentation: ${[...new Set(duplicateDocs)].join(', ')}`);
+
+    if (machineNamesField) {
+      const owners = new Map();
+      const collisions = new Set();
+      for (const entry of entries) {
+        for (const name of Array.isArray(entry?.[machineNamesField]) ? entry[machineNamesField] : []) {
+          const priorOwner = owners.get(name);
+          if (priorOwner && priorOwner !== entry.id) collisions.add(name);
+          else owners.set(name, entry.id);
+        }
+      }
+      if (collisions.size) {
+        foundationFail(`operating-foundation: machine names assigned to more than one ${label}: ${[...collisions].join(', ')}`);
+      }
+    }
+
+    const data = new Map(entries.map((entry) => [String(entry?.id ?? ''), entry]));
+    const docs = new Map(rows.map((row) => [row.id, row]));
+    const undocumented = [...data.keys()].filter((id) => id && !docs.has(id));
+    const unlisted = [...docs.keys()].filter((id) => !data.has(id));
+    if (undocumented.length || unlisted.length) {
+      const parts = [];
+      if (undocumented.length) parts.push(`named in data but absent from documentation: ${undocumented.join(', ')}`);
+      if (unlisted.length) parts.push(`documented but absent from data: ${unlisted.join(', ')}`);
+      foundationFail(`operating-foundation: ${label} halves disagree — ${parts.join('; ')}`);
+    }
+
+    for (const [id, entry] of data) {
+      const row = docs.get(id);
+      if (!row) continue;
+      const expectedRu = String(entry?.[ruField] ?? '');
+      const expectedEn = String(entry?.[enField] ?? '');
+      if (row.ru !== expectedRu || row.en !== expectedEn) {
+        foundationFail(`operating-foundation: ${label} "${id}" has different bilingual names in data and documentation`);
+      }
+    }
+  };
+
+  if (foundation) {
+    const termRows = readRows(glossaryMdRaw, 'operating-term-pool', 'term-pool', 'a definition');
+    const principleRows = readRows(principlesMdRaw, 'operating-principle-pool', 'principle-pool', 'a mandatory consequence');
+    comparePool(foundation.terms, termRows, 'term', 'canonical_ru', 'canonical_en', 'machine_names');
+    comparePool(foundation.principles, principleRows, 'principle', 'title_ru', 'title_en');
+    if (foundationFailures === 0) {
+      ok(`operating-foundation: ${foundation.terms.length} terms and ${foundation.principles.length} principles; data and signatures agree`);
     }
   }
 }

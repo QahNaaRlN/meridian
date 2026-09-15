@@ -1,0 +1,36 @@
+$schema: ../../registries/operating-model/workspace-scope-model.schema.json
+schema_version: 1
+model_id: workspace-scope-model
+title: Модель областей рабочих данных Meridian
+
+scope_types:
+  - id: built-in-methodology
+    title: Встроенная методология
+    subject: meridian
+    cardinality: one-per-installation
+    allowed_parent_types: []
+  - id: user-profile
+    title: Профиль пользователя
+    subject: user
+    cardinality: many
+    allowed_parent_types: []
+  - id: organization-profile
+    title: Профиль организации
+    subject: organization
+    cardinality: many
+    allowed_parent_types: []
+  - id: project-workspace
+    title: Рабочее пространство проекта
+    subject: project
+    cardinality: many
+    allowed_parent_types: [organization-profile]
+  - id: repository-scope
+    title: Локальная область репозитория
+    subject: repository
+    cardinality: many
+    allowed_parent_types: [project-workspace]
+  - id: run-state
+    title: Состояние запуска
+    subject: execution-run
+    cardinality: many
+    allowed_parent_types: [project-workspace]

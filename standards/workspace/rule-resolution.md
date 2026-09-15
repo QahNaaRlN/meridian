@@ -332,9 +332,19 @@ applicability-записи. Норма, чей `scope` не решён дете�
 
 Модель хранения маршрута решена так:
 
-- Kernel хранит универсальные маршруты (класс работы → протокол ядра): например
-  `BUGFIX → bugfix-protocol` и `REFACTOR → refactor-protocol`
-  (`../../verification/functional-parity/refactor-protocol.md`);
+- Kernel хранит универсальные маршруты класса работы к его каноническому
+  порядку исполнения. Для `REFACTOR` носитель этого порядка — настоящий
+  протокол `refactor-protocol`
+  (`../../verification/functional-parity/refactor-protocol.md`,
+  `document_type: protocol`). Для `BUGFIX` отдельного документа класса
+  `protocol` в Ядре нет: канонический порядок исправления несёт **способ
+  выполнения** `bugfix-protocol` (`../../skills/bugfix-protocol/SKILL.md` —
+  `skill` в терминах `operating-glossary.md`, не `protocol`) вместе с
+  регрессионным маршрутом `../../verification/regression-testing/README.md`.
+  Запись `applicable_protocols` резолвера с `routed_from: BUGFIX` обозначает
+  этот канонический порядок исполнения класса, а не наличие в Ядре
+  протокольного документа для `BUGFIX`; уточнение семантики этой записи —
+  предмет отдельного пакета, и этим правилом оно не расширяется;
 - Instance/repository вправе добавить product- или repository-specific
   маршрут для того же класса;
 - локальная запись маршрута не вправе молча переопределить универсальный

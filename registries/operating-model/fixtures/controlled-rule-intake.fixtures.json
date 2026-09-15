@@ -1,0 +1,1783 @@
+{
+  "resolution": {
+    "instruction-source-registry:sample-repo-agents-md@rev-000001": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-agents-md",
+      "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001",
+      "recorded_state": {
+        "revision": "rev-000001",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-claude-md@rev-000002": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-claude-md",
+      "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002",
+      "recorded_state": {
+        "revision": "rev-000002",
+        "digest": { "algorithm": "sha-256", "value": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-wiki-page@rev-3": {
+      "record_type": "instruction-source",
+      "id": "sample-wiki-page",
+      "reference": "instruction-source-registry:sample-wiki-page@rev-3",
+      "recorded_state": {
+        "revision": "rev-3",
+        "digest": { "algorithm": "sha-256", "value": "cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-unverified@rev-000009": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-unverified",
+      "reference": "instruction-source-registry:sample-repo-unverified@rev-000009",
+      "recorded_state": {
+        "revision": "rev-000009",
+        "digest": { "algorithm": "sha-256", "value": "dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444" },
+        "revision_verified": false,
+        "currency": "unverified"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-moved@rev-000010": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-moved",
+      "reference": "instruction-source-registry:sample-repo-moved@rev-000010",
+      "recorded_state": {
+        "revision": "rev-000011",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-rehashed@rev-000012": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-rehashed",
+      "reference": "instruction-source-registry:sample-repo-rehashed@rev-000012",
+      "recorded_state": {
+        "revision": "rev-000012",
+        "digest": { "algorithm": "sha-256", "value": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-stale@rev-000013": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-stale",
+      "reference": "instruction-source-registry:sample-repo-stale@rev-000013",
+      "recorded_state": {
+        "revision": "rev-000013",
+        "digest": { "algorithm": "sha-256", "value": "eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555" },
+        "revision_verified": true,
+        "currency": "stale"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-agent-native@rev-000014": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-agent-native",
+      "reference": "instruction-source-registry:sample-repo-agent-native@rev-000014",
+      "recorded_state": {
+        "revision": "rev-000014",
+        "digest": { "algorithm": "sha-256", "value": "ffff6666ffff6666ffff6666ffff6666ffff6666ffff6666ffff6666ffff6666" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "agent-native", "meridian_visibility": "partial", "agent_auto_read": true }
+    },
+    "instruction-source-registry:sample-repo-agent-native-full-claim@rev-000015": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-agent-native-full-claim",
+      "reference": "instruction-source-registry:sample-repo-agent-native-full-claim@rev-000015",
+      "recorded_state": {
+        "revision": "rev-000015",
+        "digest": { "algorithm": "sha-256", "value": "1111777711117777111177771111777711117777111177771111777711117777" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "agent-native", "meridian_visibility": "full", "agent_auto_read": true }
+    },
+    "instruction-source-registry:sample-repo-bad-channel-kind@rev-000016": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-bad-channel-kind",
+      "reference": "instruction-source-registry:sample-repo-bad-channel-kind@rev-000016",
+      "recorded_state": {
+        "revision": "rev-000016",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "invented-channel", "meridian_visibility": "partial", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-bad-visibility@rev-000017": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-bad-visibility",
+      "reference": "instruction-source-registry:sample-repo-bad-visibility@rev-000017",
+      "recorded_state": {
+        "revision": "rev-000017",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "invented-visibility", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-bad-auto-read@rev-000018": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-bad-auto-read",
+      "reference": "instruction-source-registry:sample-repo-bad-auto-read@rev-000018",
+      "recorded_state": {
+        "revision": "rev-000018",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": "false" }
+    },
+    "instruction-source-registry:sample-repo-bad-currency@rev-000019": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-bad-currency",
+      "reference": "instruction-source-registry:sample-repo-bad-currency@rev-000019",
+      "recorded_state": {
+        "revision": "rev-000019",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "invented-currency"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-bad-verified-type@rev-000020": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-bad-verified-type",
+      "reference": "instruction-source-registry:sample-repo-bad-verified-type@rev-000020",
+      "recorded_state": {
+        "revision": "rev-000020",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": "true",
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-no-reference@rev-000021": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-no-reference",
+      "reference": "",
+      "recorded_state": {
+        "revision": "rev-000021",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-bad-revision-type@rev-000022": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-bad-revision-type",
+      "reference": "instruction-source-registry:sample-repo-bad-revision-type@rev-000022",
+      "recorded_state": {
+        "revision": 22,
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-digest-missing-value@rev-000023": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-digest-missing-value",
+      "reference": "instruction-source-registry:sample-repo-digest-missing-value@rev-000023",
+      "recorded_state": {
+        "revision": "rev-000023",
+        "digest": { "algorithm": "sha-256" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-digest-bad-value@rev-000024": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-digest-bad-value",
+      "reference": "instruction-source-registry:sample-repo-digest-bad-value@rev-000024",
+      "recorded_state": {
+        "revision": "rev-000024",
+        "digest": { "algorithm": "sha-256", "value": "not-a-real-digest" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-empty-revision@rev-000025": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-empty-revision",
+      "reference": "instruction-source-registry:sample-repo-empty-revision@rev-000025",
+      "recorded_state": {
+        "revision": "",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-digest-missing-algorithm@rev-000026": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-digest-missing-algorithm",
+      "reference": "instruction-source-registry:sample-repo-digest-missing-algorithm@rev-000026",
+      "recorded_state": {
+        "revision": "rev-000026",
+        "digest": { "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-bad-algorithm@rev-000027": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-bad-algorithm",
+      "reference": "instruction-source-registry:sample-repo-bad-algorithm@rev-000027",
+      "recorded_state": {
+        "revision": "rev-000027",
+        "digest": { "algorithm": "md5", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-digest-wrong-length@rev-000028": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-digest-wrong-length",
+      "reference": "instruction-source-registry:sample-repo-digest-wrong-length@rev-000028",
+      "recorded_state": {
+        "revision": "rev-000028",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-digest-non-hex@rev-000029": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-digest-non-hex",
+      "reference": "instruction-source-registry:sample-repo-digest-non-hex@rev-000029",
+      "recorded_state": {
+        "revision": "rev-000029",
+        "digest": { "algorithm": "sha-256", "value": "zzzz1111zzzz1111zzzz1111zzzz1111zzzz1111zzzz1111zzzz1111zzzz1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-digest-uppercase@rev-000030": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-digest-uppercase",
+      "reference": "instruction-source-registry:sample-repo-digest-uppercase@rev-000030",
+      "recorded_state": {
+        "revision": "rev-000030",
+        "digest": { "algorithm": "sha-256", "value": "AAAA1111AAAA1111AAAA1111AAAA1111AAAA1111AAAA1111AAAA1111AAAA1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-reference-mismatch@rev-000031": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-reference-mismatch",
+      "reference": "instruction-source-registry:sample-repo-reference-mismatch@rev-000099",
+      "recorded_state": {
+        "revision": "rev-000031",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false }
+    },
+    "instruction-source-registry:sample-repo-unknown-top-level-field@rev-000032": {
+      "record_type": "instruction-source",
+      "id": "sample-repo-unknown-top-level-field",
+      "reference": "instruction-source-registry:sample-repo-unknown-top-level-field@rev-000032",
+      "recorded_state": {
+        "revision": "rev-000032",
+        "digest": { "algorithm": "sha-256", "value": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+        "revision_verified": true,
+        "currency": "current"
+      },
+      "read_channel": { "kind": "meridian-observed", "meridian_visibility": "full", "agent_auto_read": false },
+      "extra_top_level_field": true
+    }
+  },
+  "valid": [
+    {
+      "note": "обычный неразрешённый кандидат из наблюдаемого Meridian источника",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json",
+        "schema_version": 1,
+        "registry_id": "controlled-rule-intake",
+        "title": "Пример реестра приёма правил",
+        "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-agents-md-branch-naming-candidate",
+            "title": "Кандидат: правило именования веток",
+            "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:sample-pass-1" },
+            "payload": {
+              "source_ref": {
+                "record_type": "instruction-source",
+                "id": "sample-repo-agents-md",
+                "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001",
+                "revision": "rev-000001",
+                "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+              },
+              "boundary": { "unit": "agents-md-section", "region": "branch-naming" },
+              "raw_excerpt": "Branches follow feature/<slug>.",
+              "normalized_text": "branches follow feature slug",
+              "semantic_key": "branch-naming-feature-slug",
+              "classification_basis": "участок объявлен владельцем репозитория и действует только для этого репозитория",
+              "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "принятый кандидат с согласованным решением владельца в конверте и в payload",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json",
+        "schema_version": 1,
+        "registry_id": "controlled-rule-intake",
+        "title": "Пример реестра приёма правил",
+        "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-agents-md-branch-naming-accepted",
+            "title": "Принятый кандидат: правило именования веток",
+            "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:2026-09-13-accept-branch-naming" },
+            "payload": {
+              "source_ref": {
+                "record_type": "instruction-source",
+                "id": "sample-repo-agents-md",
+                "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001",
+                "revision": "rev-000001",
+                "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+              },
+              "boundary": { "unit": "whole-source" },
+              "raw_excerpt": "Branches follow feature/<slug>.",
+              "normalized_text": "branches follow feature slug",
+              "semantic_key": "branch-naming-feature-slug-accepted",
+              "classification_basis": "участок объявлен владельцем репозитория и действует только для этого репозитория",
+              "applicability_state": "accepted",
+              "owner_decision": {
+                "decision_ref": "owner-decision:2026-09-13-accept-branch-naming",
+                "decided_at": "2026-09-13",
+                "reason": "правило совпадает с уже принятой практикой репозитория"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "два происхождения одного семантического кластера — общая классификация и решение, разные origin",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json",
+        "schema_version": 1,
+        "registry_id": "controlled-rule-intake",
+        "title": "Пример реестра приёма правил",
+        "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-cluster-agents-md",
+            "title": "Кандидат из AGENTS.md",
+            "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:2026-09-13-accept-line-length" },
+            "payload": {
+              "source_ref": {
+                "record_type": "instruction-source",
+                "id": "sample-repo-agents-md",
+                "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001",
+                "revision": "rev-000001",
+                "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+              },
+              "boundary": { "unit": "line-range", "start": 10, "end": 12 },
+              "raw_excerpt": "Keep lines under 100 characters.",
+              "normalized_text": "line length under 100",
+              "semantic_key": "line-length-under-100",
+              "classification_basis": "участок объявлен владельцем репозитория",
+              "conflicts_with": [],
+              "applicability_state": "accepted",
+              "owner_decision": {
+                "decision_ref": "owner-decision:2026-09-13-accept-line-length",
+                "decided_at": "2026-09-13",
+                "reason": "уже действующая практика форматирования"
+              }
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-cluster-claude-md",
+            "title": "Кандидат из CLAUDE.md — то же правило",
+            "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:2026-09-13-accept-line-length" },
+            "payload": {
+              "source_ref": {
+                "record_type": "instruction-source",
+                "id": "sample-repo-claude-md",
+                "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002",
+                "revision": "rev-000002",
+                "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222"
+              },
+              "boundary": { "unit": "byte-range", "start": 200, "end": 240 },
+              "raw_excerpt": "Lines should stay under 100 chars.",
+              "normalized_text": "line length under 100",
+              "semantic_key": "line-length-under-100",
+              "classification_basis": "участок объявлен владельцем репозитория",
+              "conflicts_with": [],
+              "applicability_state": "accepted",
+              "owner_decision": {
+                "decision_ref": "owner-decision:2026-09-13-accept-line-length",
+                "decided_at": "2026-09-13",
+                "reason": "уже действующая практика форматирования"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "симметричный конфликт, разрешённый владельцем — один принят, другой проиграл конфликт",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json",
+        "schema_version": 1,
+        "registry_id": "controlled-rule-intake",
+        "title": "Пример реестра приёма правил",
+        "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-conflict-winner",
+            "title": "Принятое правило форматирования отступов",
+            "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:2026-09-13-indent-two-spaces" },
+            "payload": {
+              "source_ref": {
+                "record_type": "instruction-source",
+                "id": "sample-repo-agents-md",
+                "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001",
+                "revision": "rev-000001",
+                "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+              },
+              "boundary": { "unit": "agents-md-section", "region": "indentation" },
+              "raw_excerpt": "Indent with two spaces.",
+              "normalized_text": "indent two spaces",
+              "semantic_key": "indent-two-spaces",
+              "classification_basis": "участок объявлен владельцем репозитория",
+              "conflicts_with": ["indent-four-spaces"],
+              "applicability_state": "accepted",
+              "owner_decision": {
+                "decision_ref": "owner-decision:2026-09-13-indent-two-spaces",
+                "decided_at": "2026-09-13",
+                "reason": "владелец выбрал двухпробельный отступ"
+              }
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-conflict-loser",
+            "title": "Отклонённое правило форматирования отступов",
+            "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-wiki-page" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:2026-09-13-indent-two-spaces" },
+            "payload": {
+              "source_ref": {
+                "record_type": "instruction-source",
+                "id": "sample-wiki-page",
+                "reference": "instruction-source-registry:sample-wiki-page@rev-3",
+                "revision": "rev-3",
+                "sha256": "cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333"
+              },
+              "boundary": { "unit": "whole-source" },
+              "raw_excerpt": "Indent with four spaces.",
+              "normalized_text": "indent four spaces",
+              "semantic_key": "indent-four-spaces",
+              "classification_basis": "документ вики описывает практику того же репозитория",
+              "conflicts_with": ["indent-two-spaces"],
+              "applicability_state": "not-applicable",
+              "not_applicable_reason": "lost-conflicting-decision",
+              "owner_decision": {
+                "decision_ref": "owner-decision:2026-09-13-indent-two-spaces",
+                "decided_at": "2026-09-13",
+                "reason": "владелец выбрал конфликтующее правило indent-two-spaces вместо этого"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "владелец отклонил кандидата по существу — без конфликта",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json",
+        "schema_version": 1,
+        "registry_id": "controlled-rule-intake",
+        "title": "Пример реестра приёма правил",
+        "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json",
+            "schema_version": 1,
+            "id": "sample-rejected-candidate",
+            "title": "Отклонённый кандидат",
+            "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:2026-09-13-reject-tabs" },
+            "payload": {
+              "source_ref": {
+                "record_type": "instruction-source",
+                "id": "sample-repo-agents-md",
+                "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001",
+                "revision": "rev-000001",
+                "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111"
+              },
+              "boundary": { "unit": "agents-md-section", "region": "tabs" },
+              "raw_excerpt": "Use tabs, not spaces.",
+              "normalized_text": "use tabs not spaces",
+              "semantic_key": "use-tabs",
+              "classification_basis": "участок объявлен владельцем репозитория",
+              "applicability_state": "not-applicable",
+              "not_applicable_reason": "owner-rejected",
+              "owner_decision": {
+                "decision_ref": "owner-decision:2026-09-13-reject-tabs",
+                "decided_at": "2026-09-13",
+                "reason": "репозиторий уже стандартизирован на пробелы"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "кандидат хранит stale-снимок как историческую находку — остаётся candidate, применимости не получает — свойство 2/4",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-stale-historical-finding",
+            "title": "Историческая находка из пропавшего источника", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-stale" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-stale", "reference": "instruction-source-registry:sample-repo-stale@rev-000013", "revision": "rev-000013", "sha256": "eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "stale-historical-finding",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "принятый кандидат из корректного agent-native источника с partial-видимостью — свойство 10",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-agent-native-accepted",
+            "title": "Принятый кандидат из agent-native источника", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agent-native" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:2026-09-13-accept-agent-native" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agent-native", "reference": "instruction-source-registry:sample-repo-agent-native@rev-000014", "revision": "rev-000014", "sha256": "ffff6666ffff6666ffff6666ffff6666ffff6666ffff6666ffff6666ffff6666" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "agent-native-accepted",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": {
+                "decision_ref": "owner-decision:2026-09-13-accept-agent-native",
+                "decided_at": "2026-09-13",
+                "reason": "владелец согласился на содержимое источника, который инструмент агента читает сам"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "note": "неизвестный источник — ссылка не разрешается резолвером",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-unknown-source",
+            "title": "Кандидат из неизвестного источника", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:unknown" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "unknown-source", "reference": "instruction-source-registry:unknown-source@rev-1", "revision": "rev-1", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "unknown-x",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "разрешённый источник непроверен — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-unverified-source",
+            "title": "Кандидат из непроверенного источника", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-unverified" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-unverified", "reference": "instruction-source-registry:sample-repo-unverified@rev-000009", "revision": "rev-000009", "sha256": "dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "unverified-x",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "источник с тех пор сменил редакцию — pinned revision устарела",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-moved-source",
+            "title": "Кандидат из изменившегося источника", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-moved" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-moved", "reference": "instruction-source-registry:sample-repo-moved@rev-000010", "revision": "rev-000010", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "moved-x",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "источник с тех пор изменил дайджест — pinned содержимое устарело",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-rehashed-source",
+            "title": "Кандидат из перезаписанного источника", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-rehashed" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-rehashed", "reference": "instruction-source-registry:sample-repo-rehashed@rev-000012", "revision": "rev-000012", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "rehashed-x",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "candidate несёт owner_decision — свойство 1/8",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-candidate-with-decision",
+            "title": "Кандидат с преждевременным решением", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "premature-x",
+              "classification_basis": "x", "applicability_state": "candidate",
+              "owner_decision": { "decision_ref": "owner-decision:x", "decided_at": "2026-09-13", "reason": "x" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "accepted без owner_decision — свойство 8",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-accepted-no-decision",
+            "title": "Принят без решения", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "project-owner", "authority_ref": "workspace-owner" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "no-decision-x",
+              "classification_basis": "x", "applicability_state": "accepted"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "not-applicable без not_applicable_reason — свойство 8",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-not-applicable-no-reason",
+            "title": "Не применяется без причины", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "project-owner", "authority_ref": "workspace-owner", "decision_ref": "owner-decision:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "no-reason-x",
+              "classification_basis": "x", "applicability_state": "not-applicable",
+              "owner_decision": { "decision_ref": "owner-decision:x", "decided_at": "2026-09-13", "reason": "x" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "один семантический кластер, две разные области — свойство 5/7",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-scope-a",
+            "title": "Кластер A", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "ambiguous-scope-x",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-scope-b",
+            "title": "Кластер B — та же семантика, другая область", "record_type": "rule-candidate",
+            "scope": { "type": "user-profile", "id": "sample-user" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "ambiguous-scope-x",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "один семантический кластер, разные applicability_state — свойство 5/7",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-state-a",
+            "title": "Кластер, происхождение A — кандидат", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "ambiguous-state-x",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-state-b",
+            "title": "Кластер, происхождение B — уже принят", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "project-owner", "authority_ref": "workspace-owner", "decision_ref": "owner-decision:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "ambiguous-state-x",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:x", "decided_at": "2026-09-13", "reason": "x" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "асимметрично объявленный конфликт — свойство 6",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-asymmetric-a",
+            "title": "A называет B конфликтующим", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "asym-a",
+              "classification_basis": "x", "conflicts_with": ["asym-b"], "applicability_state": "candidate"
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-asymmetric-b",
+            "title": "B не называет A в ответ", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "asym-b",
+              "classification_basis": "x", "conflicts_with": [], "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "оба конфликтующих кластера приняты одновременно — свойство 7",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-both-accepted-a",
+            "title": "Принят A", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "project-owner", "authority_ref": "workspace-owner", "decision_ref": "owner-decision:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "both-accepted-a",
+              "classification_basis": "x", "conflicts_with": ["both-accepted-b"], "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:x", "decided_at": "2026-09-13", "reason": "x" }
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-both-accepted-b",
+            "title": "Принят B — конфликтует с A", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "project-owner", "authority_ref": "workspace-owner", "decision_ref": "owner-decision:y" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "both-accepted-b",
+              "classification_basis": "x", "conflicts_with": ["both-accepted-a"], "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:y", "decided_at": "2026-09-13", "reason": "y" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "lost-conflicting-decision без действительно принятого оппонента — свойство 8",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-unevidenced-loser",
+            "title": "Заявляет проигрыш без принятого оппонента", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "project-owner", "authority_ref": "workspace-owner", "decision_ref": "owner-decision:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "unevidenced-loser",
+              "classification_basis": "x", "conflicts_with": ["unevidenced-winner"], "applicability_state": "not-applicable",
+              "not_applicable_reason": "lost-conflicting-decision",
+              "owner_decision": { "decision_ref": "owner-decision:x", "decided_at": "2026-09-13", "reason": "x" }
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-unevidenced-winner",
+            "title": "Оппонент — тоже не принят", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "unevidenced-winner",
+              "classification_basis": "x", "conflicts_with": ["unevidenced-loser"], "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "участок AGENTS.md несёт start/end одновременно с region — взаимоисключающие формы boundary",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-boundary-mixed",
+            "title": "Смешанная форма границы", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "agents-md-section", "region": "x", "start": 1, "end": 2 },
+              "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "mixed-boundary-x",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "диапазон строк с start не меньше end — свойство 3",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-boundary-inverted-range",
+            "title": "Перевёрнутый диапазон", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "line-range", "start": 10, "end": 10 },
+              "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "inverted-range-x",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "authority.decision_ref конверта расходится с payload.owner_decision.decision_ref — свойство 9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-decision-mismatch",
+            "title": "Расходящееся решение", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "project-owner", "authority_ref": "workspace-owner", "decision_ref": "owner-decision:envelope" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "decision-mismatch-x",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:payload", "decided_at": "2026-09-13", "reason": "x" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "conflicts_with называет несуществующий семантический ключ — свойство 6",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-dangling-conflict",
+            "title": "Конфликт с несуществующим кластером", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "dangling-a",
+              "classification_basis": "x", "conflicts_with": ["nowhere"], "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "два кандидата с одинаковым id — свойство 9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-duplicate-id",
+            "title": "Первая запись", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "dup-id-1",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-duplicate-id",
+            "title": "Вторая запись с тем же id", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "dup-id-2",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "origin.source_ref называет другой источник, чем payload.source_ref.id — свойство 2/9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-origin-source-mismatch",
+            "title": "Конверт называет не тот источник", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "origin-source-mismatch",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "origin.kind не derived для кандидата правила — свойство 9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-origin-kind-invalid",
+            "title": "Недопустимый origin.kind", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "imported", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "origin-kind-invalid",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "origin не несёт source_ref, хотя payload.source_ref его пинует — отсутствующая требуемая связь, свойство 2/9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-origin-link-missing",
+            "title": "Отсутствующая связь origin/source_ref", "record_type": "rule-candidate",
+            "scope": { "type": "built-in-methodology", "id": "built-in-methodology" },
+            "origin": { "kind": "built-in" },
+            "authority": { "kind": "methodology-owner", "authority_ref": "meridian-methodology" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "origin-link-missing",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "accepted авторизован delegated-run — полномочие запуска не решает применимость, свойство 9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-accepted-delegated-run",
+            "title": "Принят полномочием запуска", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x", "decision_ref": "owner-decision:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "accepted-delegated-run",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:x", "decided_at": "2026-09-13", "reason": "x" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "not-applicable авторизован delegated-run — полномочие запуска не решает применимость, свойство 9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-not-applicable-delegated-run",
+            "title": "Отклонён полномочием запуска", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x", "decision_ref": "owner-decision:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "not-applicable-delegated-run",
+              "classification_basis": "x", "applicability_state": "not-applicable", "not_applicable_reason": "owner-rejected",
+              "owner_decision": { "decision_ref": "owner-decision:x", "decided_at": "2026-09-13", "reason": "x" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "authority.kind не соответствует области записи — свойство 9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-authority-scope-mismatch",
+            "title": "Полномочие не по области", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "project-owner", "authority_ref": "workspace-owner", "decision_ref": "owner-decision:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "authority-scope-mismatch",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:x", "decided_at": "2026-09-13", "reason": "x" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "accepted опирается на stale-снимок — проверенное прошлое молча не считается текущим, свойство 2/4",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-accepted-stale",
+            "title": "Принят из устаревшего снимка", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-stale" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-stale", "reference": "instruction-source-registry:sample-repo-stale@rev-000013", "revision": "rev-000013", "sha256": "eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "accepted-stale",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:x", "decided_at": "2026-09-13", "reason": "x" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "not-applicable опирается на stale-снимок — свойство 2/4",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-not-applicable-stale",
+            "title": "Отклонён из устаревшего снимка", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-stale" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-stale", "reference": "instruction-source-registry:sample-repo-stale@rev-000013", "revision": "rev-000013", "sha256": "eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "not-applicable-stale",
+              "classification_basis": "x", "applicability_state": "not-applicable", "not_applicable_reason": "owner-rejected",
+              "owner_decision": { "decision_ref": "owner-decision:x", "decided_at": "2026-09-13", "reason": "x" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер заявляет полный контроль над agent-native каналом — свойство 10",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-agent-native-full-claim",
+            "title": "Заявленный полный контроль над agent-native", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agent-native-full-claim" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agent-native-full-claim", "reference": "instruction-source-registry:sample-repo-agent-native-full-claim@rev-000015", "revision": "rev-000015", "sha256": "1111777711117777111177771111777711117777111177771111777711117777" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "agent-native-full-claim",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает read_channel.kind вне закрытого пула — свойство 10",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-bad-channel-kind",
+            "title": "Неизвестный read_channel.kind", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-bad-channel-kind" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-bad-channel-kind", "reference": "instruction-source-registry:sample-repo-bad-channel-kind@rev-000016", "revision": "rev-000016", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "bad-channel-kind",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает read_channel.meridian_visibility вне закрытого пула — свойство 10",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-bad-visibility",
+            "title": "Неизвестная meridian_visibility", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-bad-visibility" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-bad-visibility", "reference": "instruction-source-registry:sample-repo-bad-visibility@rev-000017", "revision": "rev-000017", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "bad-visibility",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает read_channel.agent_auto_read строкой, не boolean — свойство 10",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-bad-auto-read",
+            "title": "agent_auto_read не boolean", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-bad-auto-read" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-bad-auto-read", "reference": "instruction-source-registry:sample-repo-bad-auto-read@rev-000018", "revision": "rev-000018", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "bad-auto-read",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает recorded_state.currency вне закрытого пула — свойство 2/4",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-bad-currency",
+            "title": "Неизвестная currency", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-bad-currency" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-bad-currency", "reference": "instruction-source-registry:sample-repo-bad-currency@rev-000019", "revision": "rev-000019", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "bad-currency",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает recorded_state.revision_verified строкой, не boolean — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-bad-verified-type",
+            "title": "revision_verified не boolean", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-bad-verified-type" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-bad-verified-type", "reference": "instruction-source-registry:sample-repo-bad-verified-type@rev-000020", "revision": "rev-000020", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "bad-verified-type",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает пустой reference — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-no-reference",
+            "title": "Отсутствующий reference в ответе резолвера", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-no-reference" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-no-reference", "reference": "instruction-source-registry:sample-repo-no-reference@rev-000021", "revision": "rev-000021", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "no-reference",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает recorded_state.revision неверного типа — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-bad-revision-type",
+            "title": "revision не строка", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-bad-revision-type" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-bad-revision-type", "reference": "instruction-source-registry:sample-repo-bad-revision-type@rev-000022", "revision": "rev-000022", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "bad-revision-type",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает digest без value — неполная форма — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-digest-missing-value",
+            "title": "digest без value", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-digest-missing-value" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-digest-missing-value", "reference": "instruction-source-registry:sample-repo-digest-missing-value@rev-000023", "revision": "rev-000023", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "digest-missing-value",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает digest.value не 64 hex-символа — неверная форма — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-digest-bad-value",
+            "title": "digest.value неверной формы", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-digest-bad-value" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-digest-bad-value", "reference": "instruction-source-registry:sample-repo-digest-bad-value@rev-000024", "revision": "rev-000024", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "digest-bad-value",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "решённый кластер с одинаковым owner_decision, но разными authority_ref — свойство 5/9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-ref-a",
+            "title": "Кластер, происхождение A", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:cluster-authority-shared" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-ref-mismatch",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-authority-shared", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-ref-b",
+            "title": "Кластер, происхождение B — другой authority_ref", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-other-maintainer", "decision_ref": "owner-decision:cluster-authority-shared" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-ref-mismatch",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-authority-shared", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "решённый кластер с разными authority.kind — свойство 5/9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-kind-a",
+            "title": "Кластер, происхождение A", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:cluster-authority-kind" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-kind-mismatch",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-authority-kind", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-kind-b",
+            "title": "Кластер, происхождение B — другое authority.kind", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "project-owner", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:cluster-authority-kind" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-kind-mismatch",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-authority-kind", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "решённый кластер с разными authority.decision_ref — свойство 5/9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-decision-a",
+            "title": "Кластер, происхождение A", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:cluster-decision-ref-a" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-decision-mismatch",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-decision-ref-a", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-decision-b",
+            "title": "Кластер, происхождение B — другой authority.decision_ref", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:cluster-decision-ref-b" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-decision-mismatch",
+              "classification_basis": "x", "applicability_state": "accepted",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-decision-ref-a", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает пустую recorded_state.revision — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-empty-revision",
+            "title": "Пустая revision в ответе резолвера", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-empty-revision" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-empty-revision", "reference": "instruction-source-registry:sample-repo-empty-revision@rev-000025", "revision": "rev-000025", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "empty-revision",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает digest без algorithm — неполная форма — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-digest-missing-algorithm",
+            "title": "digest без algorithm", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-digest-missing-algorithm" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-digest-missing-algorithm", "reference": "instruction-source-registry:sample-repo-digest-missing-algorithm@rev-000026", "revision": "rev-000026", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "digest-missing-algorithm",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает digest.algorithm, отличный от sha-256 — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-bad-algorithm",
+            "title": "digest.algorithm не sha-256", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-bad-algorithm" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-bad-algorithm", "reference": "instruction-source-registry:sample-repo-bad-algorithm@rev-000027", "revision": "rev-000027", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "bad-algorithm",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает digest.value неправильной длины — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-digest-wrong-length",
+            "title": "digest.value неправильной длины", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-digest-wrong-length" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-digest-wrong-length", "reference": "instruction-source-registry:sample-repo-digest-wrong-length@rev-000028", "revision": "rev-000028", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "digest-wrong-length",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает digest.value с не-hex символами — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-digest-non-hex",
+            "title": "digest.value с не-hex символами", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-digest-non-hex" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-digest-non-hex", "reference": "instruction-source-registry:sample-repo-digest-non-hex@rev-000029", "revision": "rev-000029", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "digest-non-hex",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает digest.value с верхним регистром — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-digest-uppercase",
+            "title": "digest.value верхним регистром", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-digest-uppercase" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-digest-uppercase", "reference": "instruction-source-registry:sample-repo-digest-uppercase@rev-000030", "revision": "rev-000030", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "digest-uppercase",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "резолвер возвращает reference, не совпадающий с payload.source_ref.reference — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-reference-mismatch",
+            "title": "reference не совпадает с payload.source_ref.reference", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-reference-mismatch" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-reference-mismatch", "reference": "instruction-source-registry:sample-repo-reference-mismatch@rev-000031", "revision": "rev-000031", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "reference-mismatch",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "верхний ответ резолвера несёт неизвестное поле — свойство 2",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-unknown-top-level-field",
+            "title": "Неизвестное поле верхнего ответа резолвера", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-unknown-top-level-field" },
+            "authority": { "kind": "delegated-run", "authority_ref": "controlled-rule-intake-run:x" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-unknown-top-level-field", "reference": "instruction-source-registry:sample-repo-unknown-top-level-field@rev-000032", "revision": "rev-000032", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "unknown-top-level-field",
+              "classification_basis": "x", "applicability_state": "candidate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "решённый кластер not-applicable с одинаковым owner_decision, но разными authority_ref — свойство 5/9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-ref-na-a",
+            "title": "Кластер not-applicable, происхождение A", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:cluster-na-authority-shared" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-ref-na-mismatch",
+              "classification_basis": "x", "applicability_state": "not-applicable", "not_applicable_reason": "owner-rejected",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-na-authority-shared", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-ref-na-b",
+            "title": "Кластер not-applicable, происхождение B — другой authority_ref", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-other-maintainer", "decision_ref": "owner-decision:cluster-na-authority-shared" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-ref-na-mismatch",
+              "classification_basis": "x", "applicability_state": "not-applicable", "not_applicable_reason": "owner-rejected",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-na-authority-shared", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "решённый кластер not-applicable с разными authority.kind — свойство 5/9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-kind-na-a",
+            "title": "Кластер not-applicable, происхождение A", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:cluster-na-authority-kind" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-kind-na-mismatch",
+              "classification_basis": "x", "applicability_state": "not-applicable", "not_applicable_reason": "owner-rejected",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-na-authority-kind", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-kind-na-b",
+            "title": "Кластер not-applicable, происхождение B — другое authority.kind", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "project-owner", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:cluster-na-authority-kind" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-kind-na-mismatch",
+              "classification_basis": "x", "applicability_state": "not-applicable", "not_applicable_reason": "owner-rejected",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-na-authority-kind", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "решённый кластер not-applicable с разными authority.decision_ref — свойство 5/9",
+      "registry": {
+        "$schema": "../controlled-rule-intake.schema.json", "schema_version": 1, "registry_id": "controlled-rule-intake",
+        "title": "Пример", "rule_candidates": [
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-decision-na-a",
+            "title": "Кластер not-applicable, происхождение A", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-agents-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:cluster-na-decision-ref-a" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-agents-md", "reference": "instruction-source-registry:sample-repo-agents-md@rev-000001", "revision": "rev-000001", "sha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-decision-na-mismatch",
+              "classification_basis": "x", "applicability_state": "not-applicable", "not_applicable_reason": "owner-rejected",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-na-decision-ref-a", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          },
+          {
+            "$schema": "../scoped-record.schema.json", "schema_version": 1, "id": "sample-cluster-authority-decision-na-b",
+            "title": "Кластер not-applicable, происхождение B — другой authority.decision_ref", "record_type": "rule-candidate",
+            "scope": { "type": "repository-scope", "id": "sample-repository", "workspace_id": "sample-workspace" },
+            "origin": { "kind": "derived", "source_ref": "instruction-source:sample-repo-claude-md" },
+            "authority": { "kind": "repository-maintainer", "authority_ref": "sample-repository-maintainer", "decision_ref": "owner-decision:cluster-na-decision-ref-b" },
+            "payload": {
+              "source_ref": { "record_type": "instruction-source", "id": "sample-repo-claude-md", "reference": "instruction-source-registry:sample-repo-claude-md@rev-000002", "revision": "rev-000002", "sha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222" },
+              "boundary": { "unit": "whole-source" }, "raw_excerpt": "x", "normalized_text": "x", "semantic_key": "cluster-authority-decision-na-mismatch",
+              "classification_basis": "x", "applicability_state": "not-applicable", "not_applicable_reason": "owner-rejected",
+              "owner_decision": { "decision_ref": "owner-decision:cluster-na-decision-ref-a", "decided_at": "2026-09-13", "reason": "shared" }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

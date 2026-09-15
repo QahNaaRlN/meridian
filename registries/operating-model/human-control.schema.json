@@ -1,0 +1,227 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/human-control.schema.json",
+  "title": "Meridian run human-control record",
+  "description": "The complete schema for the human-control state of ONE execution run (record_type: run-human-control): a portable, storage-independent record of who is assigned which universal role, who acts now, who holds the permanent human-in-command posture, the switchable supervision mode, the communication mode, an optional independent-review requirement, and the ORDERED HISTORY of changes to every mutable control axis. It declares THIS schema in its $schema and composes the reused scoped-record.schema.json envelope with a specialised body, so a consumer that follows the declaration validates the whole record in one pass; scripts/lib/role-and-human-control.mjs additionally validates every record against scoped-record.schema.json directly, so the canonical envelope check is reused and separately performed. The record lives ONLY in scope.type run-state (scope.id identifies the run, scope.workspace_id is mandatory); project-workspace, repository-scope, built-in-methodology, user-profile and organization-profile are rejected, and origin.kind built-in is rejected. It references EXACTLY ONE execution run by a portable execution_run_ref and never embeds run state that belongs to execution-state-model — no lifecycle_stage, work_status, blockers, next step or run transition history. The independent axes: human_authority.posture is the constant human-in-command — the permanent basis, never a switchable mode and never disabled — and human_authority.holder names the participant who holds it, who MUST be assigned the owner role. supervision_mode is the closed switchable pool human-in-the-loop | human-on-the-loop; human-in-the-loop requires an hitl block (a concrete required_human_action and a declared gate) and FORBIDS an hotl block; human-on-the-loop requires an hotl block (non-empty autonomy_bounds and a stated intervention capability) and FORBIDS an hitl block; full removal of human authority is not representable. role_assignments is a non-empty list of { actor, roles } where roles is drawn from the closed pool owner, operator, executor, reviewer, verifier, git_integrator, deployer; one actor may hold several roles; an empty roles list, a blank actor, a duplicate actor and a duplicate (actor, role) pair are rejected. acting_actor names the participant acting now and MUST be one of the assigned actors. review_independence is optional: the base owner-plus-one-executor model needs no reviewer; when required is true, both reviewer_actor and reviewed_actor must be named, must differ, and the reviewer must be a separate participant assigned a reviewing role; when required is false, neither reference may be present; any reference that IS present is checked for portability whatever the value of required. communication_mode is the closed pool owner_relayed | direct, modelled separately from role and supervision. switch_history is ordered by a strictly increasing sequence; its first record states the initial establishment (from_supervision_mode, from_communication_mode, from_acting_actor and from_role_assignments are all null); every later record continues the previous record on EACH mutable axis with no break; every record states a reason (its basis) and a checkpoint_ref (the verifiable checkpoint a change preserves); every record's to_acting_actor is one of its own to_role_assignments; and the LAST record matches the whole current control state — supervision_mode, communication_mode, acting_actor AND role_assignments — not only the supervision mode. A change of mode, role, actor or communication never opens a new run. Every reference and prose string is portable. The contract is a mandatory part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/role-and-human-control.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "id", "title", "record_type", "scope", "origin", "authority", "payload"],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/definitions/semantic_id" },
+    "title": { "type": "string", "minLength": 1 },
+    "record_type": { "const": "run-human-control" },
+    "scope": { "$ref": "#/definitions/scope_ref" },
+    "origin": { "$ref": "#/definitions/origin" },
+    "authority": { "$ref": "#/definitions/authority" },
+    "payload": { "$ref": "#/definitions/payload" }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "portable_ref": { "type": "string", "minLength": 1 },
+    "role_id": {
+      "type": "string",
+      "enum": ["owner", "operator", "executor", "reviewer", "verifier", "git_integrator", "deployer"]
+    },
+    "supervision_mode": {
+      "type": "string",
+      "enum": ["human-in-the-loop", "human-on-the-loop"]
+    },
+    "supervision_mode_or_null": {
+      "type": ["string", "null"],
+      "enum": ["human-in-the-loop", "human-on-the-loop", null]
+    },
+    "communication_mode": {
+      "type": "string",
+      "enum": ["owner_relayed", "direct"]
+    },
+    "communication_mode_or_null": {
+      "type": ["string", "null"],
+      "enum": ["owner_relayed", "direct", null]
+    },
+    "scope_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "workspace_id"],
+      "description": "A run's human-control area. Only run-state is accepted; every other area is rejected here and in scripts/lib/role-and-human-control.mjs with the rationale. scope.id identifies the run; workspace_id ties it to the project workspace (workspace-scope-model.md §1).",
+      "properties": {
+        "type": { "enum": ["run-state"] },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "workspace_id": { "$ref": "#/definitions/semantic_id" }
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "description": "Same contract as scoped-record.schema.json's origin. A run's control state is established in a workspace, so kind 'built-in' is additionally rejected by scripts/lib/role-and-human-control.mjs.",
+      "properties": {
+        "kind": { "enum": ["built-in", "declared", "migrated", "imported", "derived"] },
+        "source_ref": { "$ref": "#/definitions/non_empty" }
+      },
+      "if": { "properties": { "kind": { "const": "built-in" } }, "required": ["kind"] },
+      "then": { "not": { "required": ["source_ref"] } },
+      "else": { "required": ["source_ref"] }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "authority_ref"],
+      "description": "Same contract as scoped-record.schema.json's authority.",
+      "properties": {
+        "kind": {
+          "enum": ["methodology-owner", "user", "organization", "project-owner", "repository-maintainer", "delegated-run"]
+        },
+        "authority_ref": { "$ref": "#/definitions/non_empty" },
+        "decision_ref": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "human_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["posture", "holder"],
+      "description": "The human command posture and the participant who holds it. posture is the constant human-in-command: the owner sets the goal, the bounds of authority and the acceptable risk. It is not a member of supervision_mode and cannot be switched off. holder is a portable reference to the participant who holds it; that participant MUST be assigned the owner role in role_assignments (checked in scripts/lib/role-and-human-control.mjs).",
+      "properties": {
+        "posture": { "const": "human-in-command" },
+        "holder": { "$ref": "#/definitions/portable_ref" }
+      }
+    },
+    "hitl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_human_action", "gate"],
+      "description": "Required when supervision_mode is human-in-the-loop and FORBIDDEN otherwise: a declared gate cannot be passed without an explicit human action, named here as a concrete action and the gate it stands before.",
+      "properties": {
+        "required_human_action": { "$ref": "#/definitions/non_empty" },
+        "gate": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "hotl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["autonomy_bounds", "intervention"],
+      "description": "Required when supervision_mode is human-on-the-loop and FORBIDDEN otherwise: bounded autonomous execution runs only inside pre-set bounds and with a standing intervention capability.",
+      "properties": {
+        "autonomy_bounds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/non_empty" }
+        },
+        "intervention": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "role_assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor", "roles"],
+      "description": "One participant and the roles they hold. actor is a portable opaque participant reference. roles is a non-empty subset of the closed pool; one actor may hold several roles. A blank actor, an empty roles list, a duplicate actor and a duplicate (actor, role) pair are rejected (the last two in scripts/lib/role-and-human-control.mjs).",
+      "properties": {
+        "actor": { "$ref": "#/definitions/portable_ref" },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/role_id" }
+        }
+      }
+    },
+    "review_independence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required"],
+      "description": "Optional. The base owner-plus-one-executor model needs no reviewer. When required is true, reviewer_actor and reviewed_actor must both be named, must differ, and reviewer_actor must be a separate participant assigned a reviewing role. When required is false, neither reference may be present. Any reference that IS present is checked for portability regardless of required.",
+      "properties": {
+        "required": { "type": "boolean" },
+        "reviewer_actor": { "$ref": "#/definitions/portable_ref" },
+        "reviewed_actor": { "$ref": "#/definitions/portable_ref" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "required": { "const": true } }, "required": ["required"] },
+          "then": { "required": ["reviewer_actor", "reviewed_actor"] }
+        },
+        {
+          "if": { "properties": { "required": { "const": false } }, "required": ["required"] },
+          "then": { "not": { "anyOf": [{ "required": ["reviewer_actor"] }, { "required": ["reviewed_actor"] }] } }
+        }
+      ]
+    },
+    "control_switch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "from_supervision_mode", "to_supervision_mode",
+        "from_communication_mode", "to_communication_mode",
+        "from_acting_actor", "to_acting_actor",
+        "from_role_assignments", "to_role_assignments",
+        "checkpoint_ref", "reason"
+      ],
+      "description": "One entry in the ordered history of control changes. sequence is the explicit ordinal (strictly increasing, never repeated or decreasing). The first entry states the initial establishment: from_supervision_mode, from_communication_mode, from_acting_actor and from_role_assignments are all null. Every later entry continues the previous entry on EACH mutable axis with no break — from_X equals the previous entry's to_X for supervision mode, communication mode, acting actor and the whole role-assignment set. to_role_assignments is a full, valid assignment set; to_acting_actor is one of its actors. reason is the mandatory basis. checkpoint_ref is the verifiable checkpoint the change preserves — a change of mode, role, actor or communication never opens a new run and never drops the run's verifiable state.",
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 1 },
+        "from_supervision_mode": { "$ref": "#/definitions/supervision_mode_or_null" },
+        "to_supervision_mode": { "$ref": "#/definitions/supervision_mode" },
+        "from_communication_mode": { "$ref": "#/definitions/communication_mode_or_null" },
+        "to_communication_mode": { "$ref": "#/definitions/communication_mode" },
+        "from_acting_actor": { "type": ["string", "null"], "minLength": 1 },
+        "to_acting_actor": { "$ref": "#/definitions/portable_ref" },
+        "from_role_assignments": {
+          "type": ["array", "null"],
+          "items": { "$ref": "#/definitions/role_assignment" }
+        },
+        "to_role_assignments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/role_assignment" }
+        },
+        "checkpoint_ref": { "$ref": "#/definitions/non_empty" },
+        "reason": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_run_ref", "human_authority", "supervision_mode",
+        "acting_actor", "role_assignments", "communication_mode", "switch_history"
+      ],
+      "description": "The independent axes of one run's human-control state, as a CLOSED object. human_authority (permanent HIC plus its holder), supervision_mode (switchable HITL/HOTL), acting_actor, role_assignments, communication_mode and switch_history are separate axes and none is derived from another. hitl is required when supervision_mode is human-in-the-loop and forbidden otherwise; hotl is required when it is human-on-the-loop and forbidden otherwise.",
+      "properties": {
+        "execution_run_ref": { "$ref": "#/definitions/portable_ref" },
+        "human_authority": { "$ref": "#/definitions/human_authority" },
+        "supervision_mode": { "$ref": "#/definitions/supervision_mode" },
+        "hitl": { "$ref": "#/definitions/hitl" },
+        "hotl": { "$ref": "#/definitions/hotl" },
+        "acting_actor": { "$ref": "#/definitions/portable_ref" },
+        "role_assignments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/role_assignment" }
+        },
+        "review_independence": { "$ref": "#/definitions/review_independence" },
+        "communication_mode": { "$ref": "#/definitions/communication_mode" },
+        "switch_history": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/control_switch" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "supervision_mode": { "const": "human-in-the-loop" } }, "required": ["supervision_mode"] },
+          "then": { "required": ["hitl"], "not": { "required": ["hotl"] } }
+        },
+        {
+          "if": { "properties": { "supervision_mode": { "const": "human-on-the-loop" } }, "required": ["supervision_mode"] },
+          "then": { "required": ["hotl"], "not": { "required": ["hitl"] } }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,1485 @@
+{
+  "note": "Product-neutral fixtures for registries/operating-model/task-specification.schema.json and scripts/lib/task-specification.mjs. Every `valid` spec must pass evaluateTaskSpecification with no problem; every `invalid` spec must produce at least one. One model everywhere: each record declares $schema = ../../registries/operating-model/task-specification.schema.json — a portable relative reference that, resolved INSIDE THE MERIDIAN NAMESPACE from the canonical logical base CANONICAL_RECORD_BASE (the logical address records/task-specification), lands exactly on the specialised schema's logical address (the complete schema that composes the reused scoped-record envelope with the body). That base is a logical address, not a filesystem directory, a repository or a storage mechanism — a storage adapter maps it onto an actual resource (the Kernel's built-in schema, a local store, a remote service, or the transitional Instance), and moving a record between storage mechanisms changes neither its id, scope, origin, authority nor the meaning of its $schema. A bare basename, a reference into a namespace segment that is not there, and a right-basename/wrong-segment reference all resolve elsewhere and are rejected. scope is only project-workspace or repository-scope; no rooted machine path anywhere in the text or in the envelope reference strings (origin.source_ref, authority.authority_ref, authority.decision_ref) — a rooted POSIX path is caught whatever separator precedes it and whatever its first segment contains (the first segment is matched with NO allow-list: /@scope, /$private, /~service, /💾, /Проект, /数据 all count), while ordinary relative paths with scoped or dollar-prefixed segments (packages/@scope/module, relative/$private/file) are NOT flagged — no file://, no product literals, no dependency on a separate Instance. task_pattern.id values resolve against the built-in catalogue standards/workspace/task-pattern-registry.yaml (assess-existing-state, operate-environment-action, decompose-initiative, fix-defect, add-capability, change-behavior, refactor-preserving-behavior).",
+  "valid": [
+    {
+      "note": "BUGFIX specification — full envelope, portable, verifiable criteria",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-clarify-null-handling",
+        "title": "Уточнить обработку пустого значения в разборе конфигурации",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-clarify-null-handling" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Разбор конфигурации должен явно и предсказуемо обрабатывать отсутствующее значение поля вместо неявного падения.",
+          "initial_state": "При отсутствии поля разбор завершается необработанным исключением; поведение нигде не описано и не покрыто проверкой.",
+          "target_model": "Отсутствующее поле даёт объявленное значение по умолчанию, факт применения умолчания фиксируется в журнале, поведение описано и покрыто проверкой.",
+          "task_pattern": { "id": "fix-defect", "work_kind": "change", "change_class": "BUGFIX" },
+          "constraints": [
+            "Наблюдаемое поведение при заданном значении поля не меняется.",
+            "Изменение ограничено модулем разбора конфигурации."
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "default-applied",
+              "statement": "Отсутствующее поле приводит к объявленному значению по умолчанию.",
+              "verification": {
+                "method": "Автотест разбора конфигурации без поля.",
+                "expected_result": "Возвращается объявленное умолчание; исключение не возникает."
+              }
+            },
+            {
+              "id": "default-logged",
+              "statement": "Применение умолчания фиксируется в журнале на уровне INFO.",
+              "verification": {
+                "method": "Автотест проверяет запись журнала при отсутствующем поле.",
+                "expected_result": "Одна запись INFO с именем поля и значением умолчания."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "note": "assessment specification — task_pattern reference without the optional classifier fields",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-assess-logging-coverage",
+        "title": "Оценить покрытие журналированием пути обработки заказа",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-assess-logging-coverage" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Получить проверяемое суждение о том, где путь обработки заказа не оставляет записей в журнале.",
+          "initial_state": "Состав точек журналирования на пути обработки заказа неизвестен и нигде не описан.",
+          "target_model": "Существует перечень точек пути с признаком наличия записи и обоснованием по каждой, с явным списком непроверенного.",
+          "task_pattern": { "id": "assess-existing-state" },
+          "constraints": [
+            "Состояние системы не изменяется — только наблюдение и суждение."
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "points-enumerated",
+              "statement": "Все точки пути обработки заказа перечислены с признаком наличия записи в журнале.",
+              "verification": {
+                "method": "Ревью перечня против исходного кода пути обработки заказа.",
+                "expected_result": "Каждая точка ветвления пути присутствует в перечне ровно один раз."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "note": "operation specification",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rotate-service-token",
+        "title": "Провести плановую ротацию сервисного токена интеграции",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rotate-service-token" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Заменить действующий сервисный токен интеграции на новый без перерыва обслуживания.",
+          "initial_state": "Действует прежний токен; срок его действия приближается к пределу политики.",
+          "target_model": "Действует новый токен, прежний отозван, обслуживание не прерывалось.",
+          "task_pattern": { "id": "operate-environment-action", "work_kind": "operation" },
+          "constraints": [
+            "Ротация выполняется в согласованное окно и обратима до момента отзыва прежнего токена."
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "new-token-live",
+              "statement": "Интеграция работает на новом токене.",
+              "verification": {
+                "method": "Проверочный вызов интеграции после замены токена.",
+                "expected_result": "Вызов успешен и выполнен с новым идентификатором токена."
+              }
+            },
+            {
+              "id": "old-token-revoked",
+              "statement": "Прежний токен отозван.",
+              "verification": {
+                "method": "Попытка вызова с прежним токеном.",
+                "expected_result": "Вызов отклонён как неавторизованный."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "note": "initiative specification — matching work_kind",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-split-monolith-reporting",
+        "title": "Разделить подсистему отчётности на самостоятельно отслеживаемые единицы работы",
+        "record_type": "task-specification",
+        "scope": { "type": "project-workspace", "id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-split-monolith-reporting" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Крупная цель разделения подсистемы отчётности приведена к явной декомпозиции на отдельные единицы работы.",
+          "initial_state": "Подсистема отчётности описана одной общей целью без декомпозиции и критериев готовности частей.",
+          "target_model": "Существует перечень самостоятельно отслеживаемых единиц работы с зависимостями и критериями приёмки каждой.",
+          "task_pattern": { "id": "decompose-initiative", "work_kind": "initiative" },
+          "constraints": [
+            "Декомпозиция не начинает реализацию ни одной из выделенных единиц работы."
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "units-listed",
+              "statement": "Каждая единица работы декомпозиции имеет идентичность, цель и критерии приёмки.",
+              "verification": {
+                "method": "Ревью перечня единиц работы против шаблона постановки.",
+                "expected_result": "Ни одна единица не остаётся без цели или без критериев приёмки."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "note": "FEATURE specification",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-add-export-endpoint",
+        "title": "Добавить конечную точку выгрузки отчёта в формате CSV",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-add-export-endpoint" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Появляется новая возможность: выгрузка отчёта в формате CSV через отдельную конечную точку.",
+          "initial_state": "Выгрузка отчёта в формате CSV недоступна; отчёт доступен только в человекочитаемом виде.",
+          "target_model": "Конечная точка выгрузки возвращает отчёт в формате CSV с объявленным набором колонок и покрыта проверкой.",
+          "task_pattern": { "id": "add-capability", "work_kind": "change", "change_class": "FEATURE" },
+          "constraints": [
+            "Существующие конечные точки отчёта не меняют поведение.",
+            "Набор колонок выгрузки объявлен и зафиксирован в контракте."
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "csv-shape",
+              "statement": "Ответ конечной точки соответствует объявленному набору колонок CSV.",
+              "verification": {
+                "method": "Автотест конечной точки сравнивает заголовок и строки с эталоном.",
+                "expected_result": "Заголовок и порядок колонок совпадают с объявленным контрактом."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "note": "BEHAVIOR_CHANGE specification",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-change-rounding-rule",
+        "title": "Изменить правило округления итоговой суммы на намеренно иное",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-change-rounding-rule" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Правило округления итоговой суммы намеренно меняется с округления вниз на округление к ближайшему.",
+          "initial_state": "Итоговая сумма округляется вниз; это поведение описано и покрыто проверкой.",
+          "target_model": "Итоговая сумма округляется к ближайшему значению; описание и проверки обновлены под новое поведение.",
+          "task_pattern": { "id": "change-behavior", "work_kind": "change", "change_class": "BEHAVIOR_CHANGE" },
+          "constraints": [
+            "Изменение затрагивает только правило округления итоговой суммы и его описание."
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "new-rounding-applied",
+              "statement": "Итоговая сумма округляется к ближайшему значению.",
+              "verification": {
+                "method": "Автотест на граничных значениях округления.",
+                "expected_result": "На каждом граничном значении результат соответствует округлению к ближайшему."
+              }
+            },
+            {
+              "id": "docs-updated",
+              "statement": "Описание правила округления отражает новое поведение.",
+              "verification": {
+                "method": "Ревью описания правила округления.",
+                "expected_result": "В описании указано округление к ближайшему и отсутствует прежняя формулировка."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "note": "REFACTOR specification — matching work_kind and change_class",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-extract-parser-module",
+        "title": "Выделить разбор конфигурации в отдельный модуль без изменения поведения",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-extract-parser-module" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Разбор конфигурации выделен в отдельный модуль с сохранением наблюдаемого поведения.",
+          "initial_state": "Разбор конфигурации перемешан с загрузкой приложения в одном файле.",
+          "target_model": "Разбор конфигурации живёт в отдельном модуле с тем же наблюдаемым поведением и теми же проверками.",
+          "task_pattern": { "id": "refactor-preserving-behavior", "work_kind": "change", "change_class": "REFACTOR" },
+          "constraints": [
+            "Наблюдаемое поведение разбора конфигурации не меняется.",
+            "Публичные имена, на которые опираются вызывающие, сохраняются."
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "behavior-parity",
+              "statement": "Наблюдаемое поведение разбора конфигурации совпадает до и после выделения модуля.",
+              "verification": {
+                "method": "Прогон существующего набора проверок разбора конфигурации до и после изменения.",
+                "expected_result": "Оба прогона дают идентичный результат."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "note": "minimal well-formed specification — one constraint, one criterion, repository scope",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-minimal-spec",
+        "title": "Минимальная корректная постановка",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-minimal-spec" },
+        "authority": { "kind": "repository-maintainer", "authority_ref": "example-repository-maintainer" },
+        "payload": {
+          "goal": "Единственная проверяемая цель минимальной постановки достигнута.",
+          "initial_state": "Цель не достигнута и её достижение нигде не зафиксировано.",
+          "target_model": "Цель достигнута и её достижение подтверждено проверкой.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": [
+            "Изменение ограничено предметом цели."
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "goal-met",
+              "statement": "Цель постановки выполнена.",
+              "verification": {
+                "method": "Проверка результата против формулировки цели.",
+                "expected_result": "Результат соответствует формулировке цели."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "note": "specification scoped to a project workspace with user authority and a decision reference",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-workspace-scoped-spec",
+        "title": "Постановка в области рабочего пространства проекта",
+        "record_type": "task-specification",
+        "scope": { "type": "project-workspace", "id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-workspace-scoped-spec" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner", "decision_ref": "owner-decision:2026-09-08:example" },
+        "payload": {
+          "goal": "Общий для рабочего пространства признак готовности выражен одной проверяемой постановкой.",
+          "initial_state": "Признак готовности обсуждается устно и нигде не зафиксирован.",
+          "target_model": "Признак готовности записан как постановка с критериями приёмки и известной областью.",
+          "task_pattern": { "id": "assess-existing-state", "work_kind": "assessment" },
+          "constraints": [
+            "Постановка не вводит новых норм рабочего пространства."
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "criteria-recorded",
+              "statement": "Признак готовности записан с проверяемыми критериями.",
+              "verification": {
+                "method": "Ревью записанной постановки против этого контракта.",
+                "expected_result": "Каждый критерий имеет метод и ожидаемый результат."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "note": "portable envelope references — opaque identifiers in source_ref, authority_ref and decision_ref",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-portable-envelope-refs",
+        "title": "Постановка с переносимыми ссылочными строками конверта",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-portable-envelope-refs" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner", "decision_ref": "owner-decision:2026-09-09:example" },
+        "payload": {
+          "goal": "Ссылочные строки конверта постановки записаны непрозрачными идентификаторами и остаются переносимыми.",
+          "initial_state": "Происхождение и полномочие ссылаются на решение владельца, но форма ссылки не зафиксирована.",
+          "target_model": "Происхождение и полномочие ссылаются на решение владельца непрозрачным идентификатором без машинного пути.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": [
+            "Изменение ограничено формой ссылочных строк конверта."
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "refs-opaque",
+              "statement": "Каждая ссылочная строка конверта является непрозрачным идентификатором.",
+              "verification": {
+                "method": "Проверка source_ref, authority_ref и decision_ref функцией переносимости.",
+                "expected_result": "Функция переносимости не возвращает ни одной причины для трёх ссылочных строк."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "note": "relative paths with scoped or \"$\"-prefixed segments are portable — only a rooted \"/\" is not",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-scoped-relative-paths",
+        "title": "Постановка со scoped относительными путями в тексте",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scoped-relative-paths" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Относительные пути со scoped-сегментами в тексте постановки не считаются непереносимыми.",
+          "initial_state": "Модуль packages/@scope/module и файл relative/$private/file упоминаются как относительные пути.",
+          "target_model": "Те же относительные пути сохранены; корневых машинных путей в тексте нет.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": [
+            "В тексте используются только относительные пути (src/config/parser, packages/@scope/module)."
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "relative-only",
+              "statement": "Все упомянутые пути относительные, включая scoped-сегменты.",
+              "verification": {
+                "method": "Прогон текста постановки через функцию переносимости.",
+                "expected_result": "Функция не возвращает причины для packages/@scope/module и relative/$private/file."
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "note": "unknown task pattern id",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-unknown-pattern",
+        "title": "Постановка с несуществующим шаблоном типа задачи",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-unknown-pattern" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "no-such-pattern" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "work_kind disagrees with the resolved pattern",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-workkind-mismatch",
+        "title": "Постановка с несогласованным work_kind",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-workkind-mismatch" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect", "work_kind": "assessment" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "change_class disagrees with the resolved pattern",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-changeclass-mismatch",
+        "title": "Постановка с несогласованным change_class",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-changeclass-mismatch" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect", "work_kind": "change", "change_class": "FEATURE" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "change_class supplied for a pattern that has none",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-changeclass-on-assessment",
+        "title": "Постановка с change_class у оценочного шаблона",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-changeclass-on-assessment" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "assess-existing-state", "work_kind": "assessment", "change_class": "BUGFIX" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "no goal",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-no-goal",
+        "title": "Постановка без цели",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-no-goal" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "no initial_state",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-no-initial-state",
+        "title": "Постановка без исходного состояния",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-no-initial-state" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "no target_model",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-no-target-model",
+        "title": "Постановка без целевой модели",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-no-target-model" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "empty constraints",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-empty-constraints",
+        "title": "Постановка с пустым набором ограничений",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-empty-constraints" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": [],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "empty acceptance criteria",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-empty-criteria",
+        "title": "Постановка с пустым набором критериев приёмки",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-empty-criteria" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": []
+        }
+      }
+    },
+    {
+      "note": "duplicate acceptance criterion id",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-duplicate-criterion-id",
+        "title": "Постановка с повторяющимся идентификатором критерия",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-duplicate-criterion-id" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "same", "statement": "Первое условие.", "verification": { "method": "Метод.", "expected_result": "Результат один." } },
+            { "id": "same", "statement": "Второе условие.", "verification": { "method": "Метод.", "expected_result": "Результат два." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "criterion identifier is not a semantic id",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-criterion-bad-id",
+        "title": "Постановка с неустойчивым идентификатором критерия",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-criterion-bad-id" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "1bad", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "criterion verification is a free phrase, not a method plus expected result",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-criterion-free-phrase",
+        "title": "Постановка с непроверяемым критерием приёмки",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-criterion-free-phrase" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": "всё должно работать хорошо" }
+          ]
+        }
+      }
+    },
+    {
+      "note": "run state leaks into the payload (next_action)",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-run-state-leak",
+        "title": "Постановка с данными состояния запуска внутри",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-run-state-leak" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ],
+          "next_action": "implement-approved-slice"
+        }
+      }
+    },
+    {
+      "note": "an absolute machine path in a mandatory field breaks portability",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-absolute-path",
+        "title": "Постановка с абсолютным машинным путём в поле",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-absolute-path" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Разбор конфигурации живёт в /home/example/project/src/config и падает при отсутствии поля.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "wrong record_type",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-wrong-record-type",
+        "title": "Постановка с неверным типом записи",
+        "record_type": "task-pattern",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-wrong-record-type" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "record_type duplicated inside the payload",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-record-type-duplicated",
+        "title": "Постановка с дублирующимся типом записи",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-record-type-duplicated" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "record_type": "task-specification",
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "scoped-record envelope violation — no authority",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-no-authority",
+        "title": "Постановка без блока полномочия",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-no-authority" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a concrete specification must not be scoped to built-in methodology",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-builtin-scope",
+        "title": "Постановка в области встроенной методологии",
+        "record_type": "task-specification",
+        "scope": { "type": "built-in-methodology", "id": "built-in-methodology" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-builtin-scope" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "the human-readable name is not stated in Russian",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-latin-title",
+        "title": "Clarify null handling in configuration parsing",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-latin-title" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a repeated constraint",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-repeated-constraint",
+        "title": "Постановка с повторяющимся ограничением",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-repeated-constraint" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Одно и то же ограничение.", "Одно и то же ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "whitespace-only goal is not a stated goal",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-whitespace-goal",
+        "title": "Постановка с пробельной целью",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-whitespace-goal" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "   ",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "a criterion with an empty expected_result is not verifiable",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-empty-expected-result",
+        "title": "Постановка с критерием без ожидаемого результата",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-empty-expected-result" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "" } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "no task_pattern reference at all",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-no-task-pattern",
+        "title": "Постановка без ссылки на шаблон типа задачи",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-no-task-pattern" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "$schema is absent — a consumer would not reach the specialised contract",
+      "spec": {
+        "schema_version": 1,
+        "id": "example-schema-absent",
+        "title": "Постановка без объявленной схемы",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-schema-absent" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "$schema names a schema that is neither the envelope nor the specialised contract",
+      "spec": {
+        "$schema": "../../registries/operating-model/some-other.schema.json",
+        "schema_version": 1,
+        "id": "example-schema-wrong",
+        "title": "Постановка с неверной объявленной схемой",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-schema-wrong" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "$schema points only at the record envelope, so the body would not be checked",
+      "spec": {
+        "$schema": "../../registries/operating-model/scoped-record.schema.json",
+        "schema_version": 1,
+        "id": "example-schema-envelope-only",
+        "title": "Постановка со схемой только конверта записи",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-schema-envelope-only" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "$schema is an absolute machine path, not a portable relative reference",
+      "spec": {
+        "$schema": "/opt/meridian/registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-schema-absolute",
+        "title": "Постановка с абсолютным путём в объявленной схеме",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-schema-absolute" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "forbidden scope: user-profile",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-scope-user-profile",
+        "title": "Постановка в области профиля пользователя",
+        "record_type": "task-specification",
+        "scope": { "type": "user-profile", "id": "example-user" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-user-profile" },
+        "authority": { "kind": "user", "authority_ref": "example-user" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "forbidden scope: organization-profile",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-scope-organization-profile",
+        "title": "Постановка в области профиля организации",
+        "record_type": "task-specification",
+        "scope": { "type": "organization-profile", "id": "example-organization" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-organization-profile" },
+        "authority": { "kind": "organization", "authority_ref": "example-organization" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "forbidden scope: run-state",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-scope-run-state",
+        "title": "Постановка в области состояния запуска",
+        "record_type": "task-specification",
+        "scope": { "type": "run-state", "id": "example-run", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-scope-run-state" },
+        "authority": { "kind": "delegated-run", "authority_ref": "example-run" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "rooted POSIX path with a non-standard first directory: /data/private/build",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rooted-path-data",
+        "title": "Постановка с корневым путём /data",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-path-data" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Артефакты сборки лежат в /data/private/build и не воспроизводятся.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "rooted POSIX path with a non-standard first directory: /workspace/project",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rooted-path-workspace",
+        "title": "Постановка с корневым путём /workspace",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-path-workspace" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Целевая модель есть.",
+          "target_model": "Сборка ожидает исходники в /workspace/project вместо относительного каталога.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "rooted POSIX path with a non-standard first directory: /nix/store/example",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rooted-path-nix",
+        "title": "Постановка с корневым путём /nix",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-path-nix" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Путь до инструмента зашит как /nix/store/example и не переносится."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "rooted POSIX path with a non-standard first directory: /custom/root/file",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rooted-path-custom",
+        "title": "Постановка с корневым путём /custom",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-path-custom" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "rooted-file", "statement": "Файл читается из /custom/root/file.", "verification": { "method": "Проверка.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "$schema points into a directory that is not there — the reference does not resolve to the specialised schema",
+      "spec": {
+        "$schema": "missing/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-schema-missing-directory",
+        "title": "Постановка со ссылкой на схему в отсутствующем каталоге",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-schema-missing-directory" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "$schema is a bare basename with no relative path — it does not resolve from the canonical record location",
+      "spec": {
+        "$schema": "task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-schema-bare-basename",
+        "title": "Постановка со ссылкой на схему одним базовым именем",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-schema-bare-basename" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "$schema has the right basename but resolves under a different directory",
+      "spec": {
+        "$schema": "../../registries/other-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-schema-wrong-directory",
+        "title": "Постановка со ссылкой на схему в другом каталоге",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-schema-wrong-directory" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "origin.source_ref carries a file:// URL — an envelope reference must stay portable",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-source-ref-file-url",
+        "title": "Постановка с file:// в origin.source_ref",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "file:///owner/decisions/example" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "authority.authority_ref carries a rooted machine path — an envelope reference must stay portable",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-authority-ref-rooted-path",
+        "title": "Постановка с корневым машинным путём в authority.authority_ref",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-authority-ref-rooted-path" },
+        "authority": { "kind": "project-owner", "authority_ref": "/home/ci/owners/example-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "authority.decision_ref carries a file:// URL — the optional envelope reference must stay portable too",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-decision-ref-file-url",
+        "title": "Постановка с file:// в authority.decision_ref",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-decision-ref-file-url" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner", "decision_ref": "file://decisions/example" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "rooted POSIX path whose first segment is Cyrillic — an absolute path is caught whatever its alphabet",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rooted-path-cyrillic-segment",
+        "title": "Постановка с абсолютным путём и кириллическим первым сегментом",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-path-cyrillic-segment" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Артефакт лежит в /Проект/сборка и не воспроизводится на другой машине.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "rooted POSIX path whose first segment is a CJK character — carried inside a constraint",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rooted-path-cjk-segment",
+        "title": "Постановка с абсолютным путём и первым сегментом из иероглифов",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-path-cjk-segment" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Путь /数据/文件 не зашивается в шаг постановки."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "rooted POSIX path with a non-ASCII first segment inside an envelope reference string (origin.source_ref)",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-source-ref-rooted-nonascii",
+        "title": "Постановка с абсолютным не-ASCII путём в origin.source_ref",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "/данные/решения/пример" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "rooted POSIX path whose first segment starts with \"@\" — the first segment is matched with no allow-list",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rooted-path-scope-segment",
+        "title": "Постановка с абсолютным путём и первым сегментом на @",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-path-scope-segment" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Конфиг читается из /@scope/config во время запуска.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "rooted POSIX path whose first segment starts with \"$\" — carried inside a constraint",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rooted-path-dollar-segment",
+        "title": "Постановка с абсолютным путём и первым сегментом на $",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-path-dollar-segment" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Путь /$private/file не зашивается в шаг постановки."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "rooted POSIX path whose first segment is an emoji — no allow-list on the first segment",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rooted-path-emoji-segment",
+        "title": "Постановка с абсолютным путём и первым сегментом-эмодзи",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-path-emoji-segment" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Исходное состояние есть.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Кэш читается из /💾/cache.", "verification": { "method": "Проверка.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "\"~service\"-led rooted path is a rooted POSIX path, not a \"~/\" home reference",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rooted-path-tilde-service",
+        "title": "Постановка с абсолютным путём вида /~service",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-path-tilde-service" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Служба читает состояние из /~service/state при старте.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    },
+    {
+      "note": "the ordinary relative path with a scoped segment (packages/@scope/module) is valid — this fixture is INVALID only because a rooted /$env/x sits beside it",
+      "spec": {
+        "$schema": "../../registries/operating-model/task-specification.schema.json",
+        "schema_version": 1,
+        "id": "example-rooted-beside-scoped-relative",
+        "title": "Постановка с корневым путём рядом с относительным scoped-путём",
+        "record_type": "task-specification",
+        "scope": { "type": "repository-scope", "id": "example-repository", "workspace_id": "example-workspace" },
+        "origin": { "kind": "declared", "source_ref": "owner-decision:example-rooted-beside-scoped-relative" },
+        "authority": { "kind": "project-owner", "authority_ref": "example-workspace-owner" },
+        "payload": {
+          "goal": "Цель есть.",
+          "initial_state": "Модуль packages/@scope/module читает базу из /$env/base — относительный путь допустим, корневой нет.",
+          "target_model": "Целевая модель есть.",
+          "task_pattern": { "id": "fix-defect" },
+          "constraints": ["Единственное ограничение."],
+          "acceptance_criteria": [
+            { "id": "c1", "statement": "Условие.", "verification": { "method": "Метод.", "expected_result": "Результат." } }
+          ]
+        }
+      }
+    }
+  ]
+}

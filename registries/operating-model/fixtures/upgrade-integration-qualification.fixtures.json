@@ -1,0 +1,3969 @@
+{
+  "note": "Product-neutral fixtures for upgrade-integration-qualification (package 9 of meridian-operating-upgrade). Every \"spec\" here is a full upgrade-integration-qualification registry, exactly as scripts/kernel-validate.mjs and test/upgrade-integration-qualification.test.mjs load it.",
+  "valid": [
+    {
+      "note": "complete task journey + composed field-evaluation report + all three scenarios classify cleanly -> QUALIFIED",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-qualified-example",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-qualified-example"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "Задачный путь завершён (outcome.status: complete), отчёт полевой оценки составлен, все три нейтральных сценария классифицированы корректно.",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "handed_off_incomplete task journey -> UNVERIFIED, even though a field-evaluation report is composed",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-unverified-handed-off-incomplete",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-unverified-handed-off-incomplete"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-001",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-001",
+                "sha256": "735fbac62f40928036aef2639b22d0395869959cd1e81cff2060901a58c7368d"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "UNVERIFIED",
+              "qualification_reason": "Задачный путь передан намеренно до завершения (outcome.status: handed_off_incomplete); это открытый вопрос владельца, а не блокировка.",
+              "blockers": [],
+              "open_questions": [
+                "Задачный путь передан до завершения (outcome.status: handed_off_incomplete); требуется решение владельца о продолжении."
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "complete task journey but no field-evaluation report composed yet (null) -> UNVERIFIED",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-unverified-no-field-evaluation",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-unverified-no-field-evaluation"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "field_evaluation_report_ref": null,
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "UNVERIFIED",
+              "qualification_reason": "Задачный путь завершён, но отчёт полевой оценки ещё не составлен; владелец не получает понятного отчёта о возможностях и пределах.",
+              "blockers": [],
+              "open_questions": [
+                "Отчёт полевой оценки (field-evaluation-report) ещё не составлен для этого задачного пути."
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "blocked task journey -> BLOCKED regardless of scenario/field-evaluation state",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-blocked-task-journey",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-blocked-task-journey"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-blocked",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-blocked",
+                "sha256": "16138e1fe272bcf79e8230b08499a889c63946a6a7c12fd294b047fbcad4e497"
+              },
+              "field_evaluation_report_ref": null,
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "Разрешённый задачный путь несёт outcome.status: blocked; объединённая квалификация не может быть QUALIFIED или UNVERIFIED поверх заблокированного запуска.",
+              "blockers": [
+                "Разрешённый задачный путь (task_journey_ref) несёт outcome.status: blocked."
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "note": "declared QUALIFIED over a blocked task journey is rejected",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-declared-qualified-over-blocked",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-declared-qualified-over-blocked"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-blocked",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-blocked",
+                "sha256": "16138e1fe272bcf79e8230b08499a889c63946a6a7c12fd294b047fbcad4e497"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "Заявлено QUALIFIED поверх заблокированного задачного пути.",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "task_journey_ref does not resolve through the external boundary",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-unresolved-task-journey",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-unresolved-task-journey"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:does-not-exist",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "task_journey_ref не разрешается.",
+              "blockers": [
+                "task_journey_ref не разрешается через внешнюю границу."
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "task_journey_ref.sha256 does not equal the resolved record's recomputed content digest",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-tampered-sha256",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-tampered-sha256"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "sha256 испорчен.",
+              "blockers": [
+                "task_journey_ref.sha256 не совпадает с пересчитанным дайджестом."
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "only two scenario_classifications entries (language-change-limit-case missing) is rejected",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-incomplete-scenario-coverage",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-incomplete-scenario-coverage"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "Покрытие сценариев не полно.",
+              "blockers": [
+                "payload.scenario_classifications несёт 2 записи, не ровно 3."
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "duplicate scenario_id (single-module-refactor declared twice) is rejected",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-duplicate-scenario-id",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-duplicate-scenario-id"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "scenario_id \"single-module-refactor\" объявлен дважды; \"multi-repository-decomposition\" отсутствует.",
+              "blockers": [
+                "scenario_id \"single-module-refactor\" объявлен 2 раза."
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "single-module-refactor scenario resolves the wrong task_pattern (decompose-initiative instead of refactor-preserving-behavior)",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-scenario-pattern-mismatch",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-scenario-pattern-mismatch"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "Сценарий single-module-refactor разрешает постановку с шаблоном decompose-initiative, не refactor-preserving-behavior.",
+              "blockers": [
+                "Сценарий \"single-module-refactor\" не соответствует ожидаемому task_pattern."
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "multi-repository-decomposition scenario resolves an execution-run at lifecycle_stage classification, not past it",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-decomposition-not-past-classification",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-decomposition-not-past-classification"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "Сценарий multi-repository-decomposition разрешает запуск, не прошедший дальше classification.",
+              "blockers": [
+                "Сценарий \"multi-repository-decomposition\" не демонстрирует фактического продвижения декомпозиции."
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "language-change-limit-case scenario resolves an execution-run past lifecycle_stage classification (execution proceeded)",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-language-change-executed",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-language-change-executed"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "Сценарий language-change-limit-case разрешает запуск, прошедший дальше classification — исполнение продуктового переписывания недопустимо для этого предельного случая.",
+              "blockers": [
+                "Сценарий \"language-change-limit-case\" демонстрирует исполнение за пределами классификации."
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "field_evaluation_report_ref key entirely absent (not even explicit null) is rejected by the schema",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-missing-field-evaluation-key",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-missing-field-evaluation-key"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "UNVERIFIED",
+              "qualification_reason": "Ключ field_evaluation_report_ref отсутствует.",
+              "blockers": [],
+              "open_questions": [
+                "field_evaluation_report_ref не заявлен."
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "workspace_transition_compatibility.status is not the single legal Kernel-slice value \"kernel-template-only\"",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-workspace-transition-status",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-workspace-transition-status"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "instance-verified",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "workspace_transition_compatibility.status заявлен как instance-verified.",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "scope.type is repository-scope, not project-workspace; origin.kind is declared, not derived; authority.kind is project-owner, not delegated-run",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-envelope",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "repository-scope",
+              "id": "uiq-invalid-envelope",
+              "workspace_id": "uiq-invalid-envelope-ws"
+            },
+            "origin": {
+              "kind": "declared",
+              "source_ref": "owner-decision:uiq-invalid-envelope"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "workspace-owner"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "Конверт записи некорректен.",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "task_journey_ref carries an unknown extra field; a pinned reference is closed to { record_type, id, reference, sha256 }",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-pinned-ref-extra-field",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-pinned-ref-extra-field"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050",
+                "note": "not a legal field"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "task_journey_ref несёт лишнее поле.",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "multi-repository-decomposition scenario resolves an execution-run whose own task_specification_ref names a different specification",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-scenario-run-belongs-to-different-spec",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-scenario-run-belongs-to-different-spec"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete",
+                "sha256": "3003f447e686c3f3ae6f3827265c81ebe1a7741986702484e676182c12ff9050"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001-clone",
+                    "reference": "execution-run:example-run-walkthrough-001-clone",
+                    "sha256": "0eab237234e43ac0bcde376286e81fe6292a29fb1a0f920a890d956c53c07a75"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "BLOCKED",
+              "qualification_reason": "Сценарий multi-repository-decomposition разрешает запуск, чей task_specification_ref называет другую постановку (example-extract-parser-module, не example-split-monolith-reporting).",
+              "blockers": [
+                "Разрешённый запуск сценария \"multi-repository-decomposition\" принадлежит другой постановке."
+              ],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "note": "resolved task_journey_ref belongs to a different workspace than the qualification and its other composed records",
+      "registry": {
+        "schema_version": 1,
+        "registry_id": "upgrade-integration-qualification",
+        "title": "Реестр объединённой квалификации (фикстура)",
+        "qualifications": [
+          {
+            "$schema": "../../registries/operating-model/upgrade-integration-qualification.schema.json",
+            "schema_version": 1,
+            "id": "uiq-invalid-cross-workspace-task-journey",
+            "title": "Объединённая квалификация обновления операционной модели",
+            "record_type": "upgrade-integration-qualification",
+            "scope": {
+              "type": "project-workspace",
+              "id": "ws-meridian"
+            },
+            "origin": {
+              "kind": "derived",
+              "source_ref": "upgrade-integration-qualification:uiq-invalid-cross-workspace-task-journey"
+            },
+            "authority": {
+              "kind": "delegated-run",
+              "authority_ref": "delegated-run:upgrade-integration-qualification"
+            },
+            "payload": {
+              "task_journey_ref": {
+                "record_type": "evidence-and-handoff",
+                "id": "example-handoff-clarify-null-handling-complete-cross-ws",
+                "reference": "evidence-and-handoff:example-handoff-clarify-null-handling-complete-cross-ws",
+                "sha256": "8b678413086a199dcbd2954d5c7a1866cc0b9b21ccbbdb0c30a86419b027806a"
+              },
+              "field_evaluation_report_ref": {
+                "record_type": "field-evaluation-report",
+                "id": "report-2026-08",
+                "reference": "field-evaluation-report:report-2026-08",
+                "sha256": "69a4627035293243f6e2cd73922a25c6c2067f5d6781f766aa3d0a00ea50283f"
+              },
+              "scenario_classifications": [
+                {
+                  "scenario_id": "single-module-refactor",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-extract-parser-module",
+                    "reference": "task-specification:example-extract-parser-module",
+                    "sha256": "70208d06936b77dbadbe1af209fdb677c76cdf6d3e80ba1948c2cbf1d6cb5efd"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-walkthrough-001",
+                    "reference": "execution-run:example-run-walkthrough-001",
+                    "sha256": "b8468cfe3868887e201820f6c4c8c7b60f55943f5631043e72c6a562d7ad431b"
+                  }
+                },
+                {
+                  "scenario_id": "multi-repository-decomposition",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "example-split-monolith-reporting",
+                    "reference": "task-specification:example-split-monolith-reporting",
+                    "sha256": "41f5fcdedd5a855ff1d0f1aadd5caefc76a1f314cc00a9e53531ef8817bdd954"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-clarify-null-handling-002",
+                    "reference": "execution-run:example-run-clarify-null-handling-002",
+                    "sha256": "526b79af4a1865c1fdb8ecbdde15480243fd0f1c3ba121f782dbb0f693566279"
+                  }
+                },
+                {
+                  "scenario_id": "language-change-limit-case",
+                  "task_specification_ref": {
+                    "record_type": "task-specification",
+                    "id": "uiq-scenario-language-change-classify",
+                    "reference": "task-specification:uiq-scenario-language-change-classify",
+                    "sha256": "14b93c8269a22e5404d91956c4c3c69ad966d34d9a1c84dd05ac98e9bd031be6"
+                  },
+                  "execution_state_ref": {
+                    "record_type": "execution-run",
+                    "id": "example-run-relative-paths-001",
+                    "reference": "execution-run:example-run-relative-paths-001",
+                    "sha256": "04dac82759c43294c2d8564dca0f12adbba9c74be28455cec0518f908a916e2a"
+                  }
+                }
+              ],
+              "workspace_transition_compatibility": {
+                "status": "kernel-template-only",
+                "notes": "Kernel-side template requirement only; product-specific transition evidence is the subject of a separate, later Instance package."
+              },
+              "qualification_state": "QUALIFIED",
+              "qualification_reason": "Разрешённый задачный путь принадлежит рабочему пространству \"other-workspace\", не \"ws-meridian\".",
+              "blockers": [],
+              "open_questions": []
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "task_journey_resolution": {
+    "evidence-and-handoff:example-handoff-clarify-null-handling-complete": {
+      "$schema": "../../registries/operating-model/evidence-and-handoff.schema.json",
+      "schema_version": 1,
+      "id": "example-handoff-clarify-null-handling-complete",
+      "title": "Передача результата запуска об обработке пустого значения — попытка 1",
+      "record_type": "evidence-and-handoff",
+      "scope": {
+        "type": "run-state",
+        "id": "example-run-eh-complete",
+        "workspace_id": "ws-meridian"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:example-start-run-eh-001"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "example-workspace-owner",
+        "decision_ref": "owner-decision:example-start-run-eh-001"
+      },
+      "payload": {
+        "execution_run_ref": {
+          "record_type": "execution-run",
+          "id": "example-run-eh-complete",
+          "reference": "records/execution-run/example-run-eh-complete",
+          "revision": "v0.5.0"
+        },
+        "task_specification_ref": {
+          "record_type": "task-specification",
+          "id": "example-null-handling-complete",
+          "reference": "records/task-specification/example-null-handling-complete",
+          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "human_control_ref": {
+          "record_type": "run-human-control",
+          "id": "example-run-human-control-eh-complete",
+          "run_id": "example-run-eh-complete",
+          "reference": "records/run-human-control/example-run-eh-complete",
+          "revision": "v0.5.0"
+        },
+        "context_manifest_ref": {
+          "record_type": "context-manifest",
+          "id": "example-manifest-eh-complete",
+          "run_id": "example-run-eh-complete",
+          "reference": "records/context-manifest/example-run-eh-complete",
+          "revision": "v0.5.0"
+        },
+        "outcome": {
+          "statement": "Изменение реализовано, проверено и принято; дальнейших шагов нет.",
+          "status": "complete"
+        },
+        "claimed_results": [
+          {
+            "id": "null-handling-implemented",
+            "statement": "Разбор конфигурации при отсутствующем поле возвращает объявленное умолчание.",
+            "status": "established"
+          },
+          {
+            "id": "behaviour-preserved",
+            "statement": "Поведение при заданном значении поля не изменилось.",
+            "status": "established"
+          }
+        ],
+        "verifiable_assertions": [
+          {
+            "id": "default-returned",
+            "statement": "Для записанного входа без поля возвращается объявленное умолчание, а не исключение.",
+            "claimed_result_id": "null-handling-implemented",
+            "status": "verified"
+          },
+          {
+            "id": "default-logged",
+            "statement": "Применение умолчания фиксируется одной записью журнала уровня INFO.",
+            "claimed_result_id": "null-handling-implemented",
+            "status": "verified"
+          },
+          {
+            "id": "set-value-unchanged",
+            "statement": "Для записанных входов с заданным полем возвращаемое значение байт-идентично исходному.",
+            "claimed_result_id": "behaviour-preserved",
+            "status": "verified"
+          }
+        ],
+        "evidence": [
+          {
+            "id": "unit-default",
+            "kind": "check-run",
+            "reference": "check:example-parser-default",
+            "revision": "v0.5.0",
+            "summary": "Автотест разбора без поля: возвращено умолчание, исключения нет.",
+            "covers": [
+              "default-returned",
+              "default-logged"
+            ],
+            "limitations": [
+              "Покрывает только записанные входы, не всю область значений."
+            ]
+          },
+          {
+            "id": "parity-diff",
+            "kind": "artifact-inspection",
+            "reference": "artifact:example-parity-diff",
+            "revision": "v0.5.0",
+            "summary": "Сравнение вывода до и после изменения для записанных входов с заданным полем — расхождений нет.",
+            "covers": [
+              "set-value-unchanged"
+            ],
+            "limitations": []
+          },
+          {
+            "id": "parity-record",
+            "kind": "specialised-evidence-record",
+            "reference": "records/functional-parity-evidence/example-null-handling",
+            "revision": "v0.5.0",
+            "summary": "Запись доказательств функционального паритета для этого рефакторинга.",
+            "covers": [
+              "set-value-unchanged"
+            ],
+            "limitations": [],
+            "specialised_contract": "functional-parity-evidence-contract",
+            "recorded_verdict": "VERIFIED"
+          },
+          {
+            "id": "kv-run",
+            "kind": "check-run",
+            "reference": "check:example-kernel-validate-run",
+            "revision": "v0.5.0",
+            "summary": "Прогон Kernel validate (synthetic instance): 0 ошибок.",
+            "covers": [],
+            "limitations": []
+          },
+          {
+            "id": "suite-run",
+            "kind": "check-run",
+            "reference": "check:example-handoff-suite-run",
+            "revision": "v0.5.0",
+            "summary": "Прогон набора контракта передачи: все проверки зелёные.",
+            "covers": [],
+            "limitations": []
+          }
+        ],
+        "mandatory_checks": [
+          {
+            "id": "kernel-validate",
+            "name": "Kernel validate (synthetic instance)",
+            "check_ref": "check:example-kernel-validate",
+            "status": "passed",
+            "result_evidence_id": "kv-run"
+          },
+          {
+            "id": "handoff-suite",
+            "name": "evidence and handoff contract suite",
+            "check_ref": "check:example-evidence-handoff-suite",
+            "status": "passed",
+            "result_evidence_id": "suite-run"
+          },
+          {
+            "id": "parity",
+            "name": "functional parity evidence record",
+            "check_ref": "check:example-parity",
+            "status": "passed",
+            "result_evidence_id": "parity-record"
+          }
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "default-applied",
+            "status": "covered",
+            "addressed_by": [
+              "default-returned"
+            ]
+          },
+          {
+            "id": "default-logged-info",
+            "status": "covered",
+            "addressed_by": [
+              "default-logged"
+            ]
+          }
+        ],
+        "source_state": [
+          {
+            "repository_ref": "repo:example-service",
+            "revision": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1"
+          }
+        ],
+        "result_state": [
+          {
+            "repository_ref": "repo:example-service",
+            "revision": "c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2"
+          }
+        ],
+        "changed_paths": [
+          {
+            "id": "parser-module",
+            "repository_ref": "repo:example-service",
+            "path": "src/config/parser.ext",
+            "change_kind": "modified"
+          },
+          {
+            "id": "parser-test",
+            "repository_ref": "repo:example-service",
+            "path": "test/config/parser.test.ext",
+            "change_kind": "added"
+          }
+        ],
+        "external_effects": [],
+        "deviations": [],
+        "open_gaps": [],
+        "required_owner_decisions": [],
+        "blockers": [],
+        "worktree_disposition": {
+          "state": "removed"
+        },
+        "next_step": {
+          "action": null,
+          "gate": null,
+          "actor_ref": null
+        }
+      }
+    },
+    "evidence-and-handoff:example-handoff-clarify-null-handling-blocked": {
+      "$schema": "../../registries/operating-model/evidence-and-handoff.schema.json",
+      "schema_version": 1,
+      "id": "example-handoff-clarify-null-handling-blocked",
+      "title": "Передача результата запуска об обработке пустого значения — попытка 1",
+      "record_type": "evidence-and-handoff",
+      "scope": {
+        "type": "run-state",
+        "id": "example-run-eh-blocked",
+        "workspace_id": "ws-meridian"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:example-start-run-eh-001"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "example-workspace-owner",
+        "decision_ref": "owner-decision:example-start-run-eh-001"
+      },
+      "payload": {
+        "execution_run_ref": {
+          "record_type": "execution-run",
+          "id": "example-run-eh-blocked",
+          "reference": "records/execution-run/example-run-eh-blocked",
+          "revision": "v0.5.0"
+        },
+        "task_specification_ref": {
+          "record_type": "task-specification",
+          "id": "example-clarify-null-handling",
+          "reference": "records/task-specification/example-clarify-null-handling",
+          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "human_control_ref": {
+          "record_type": "run-human-control",
+          "id": "example-run-human-control-eh-blocked",
+          "run_id": "example-run-eh-blocked",
+          "reference": "records/run-human-control/example-run-eh-blocked",
+          "revision": "v0.5.0"
+        },
+        "context_manifest_ref": {
+          "record_type": "context-manifest",
+          "id": "example-manifest-eh-blocked",
+          "run_id": "example-run-eh-blocked",
+          "reference": "records/context-manifest/example-run-eh-blocked",
+          "revision": "v0.5.0"
+        },
+        "outcome": {
+          "statement": "Реализация не завершена: заблокирована незакрытым дефектом вышестоящей зависимости.",
+          "status": "blocked"
+        },
+        "claimed_results": [
+          {
+            "id": "null-handling-implemented",
+            "statement": "Разбор при отсутствующем поле возвращает объявленное умолчание.",
+            "status": "not_established"
+          }
+        ],
+        "verifiable_assertions": [
+          {
+            "id": "default-returned",
+            "statement": "Для записанного входа без поля возвращается умолчание.",
+            "claimed_result_id": "null-handling-implemented",
+            "status": "unverified",
+            "unverified_reason": "Проверка не выполнена: вышестоящая зависимость не собирается."
+          }
+        ],
+        "evidence": [
+          {
+            "id": "kv-run",
+            "kind": "check-run",
+            "reference": "check:example-kernel-validate-run",
+            "revision": "v0.5.0",
+            "summary": "Прогон Kernel validate (synthetic instance): 0 ошибок.",
+            "covers": [],
+            "limitations": []
+          },
+          {
+            "id": "suite-fail-run",
+            "kind": "check-run",
+            "reference": "check:example-handoff-suite-fail",
+            "revision": "v0.5.0",
+            "summary": "Прогон набора контракта передачи: одна проверка провалена.",
+            "covers": [],
+            "limitations": []
+          }
+        ],
+        "mandatory_checks": [
+          {
+            "id": "kernel-validate",
+            "name": "Kernel validate (synthetic instance)",
+            "check_ref": "check:example-kernel-validate",
+            "status": "passed",
+            "result_evidence_id": "kv-run"
+          },
+          {
+            "id": "handoff-suite",
+            "name": "evidence and handoff contract suite",
+            "check_ref": "check:example-evidence-handoff-suite",
+            "status": "failed",
+            "reason": "Набор не запускается: вышестоящая зависимость не собирается.",
+            "result_evidence_id": "suite-fail-run"
+          }
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "default-applied",
+            "status": "uncovered",
+            "addressed_by": [],
+            "uncovered_reason": "Проверка не выполнена: вышестоящая зависимость не собирается."
+          },
+          {
+            "id": "default-logged-info",
+            "status": "uncovered",
+            "addressed_by": [],
+            "uncovered_reason": "Проверка не выполнена: вышестоящая зависимость не собирается."
+          }
+        ],
+        "source_state": [
+          {
+            "repository_ref": "repo:example-service",
+            "revision": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1"
+          }
+        ],
+        "result_state": [
+          {
+            "repository_ref": "repo:example-service",
+            "revision": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1"
+          }
+        ],
+        "changed_paths": [],
+        "external_effects": [],
+        "deviations": [],
+        "open_gaps": [],
+        "required_owner_decisions": [],
+        "blockers": [
+          {
+            "id": "upstream-dependency",
+            "description": "Вышестоящая зависимость не собирается на закреплённой ревизии.",
+            "resumption_condition": "Опубликована ревизия зависимости, проходящая её собственный сборочный рубеж."
+          }
+        ],
+        "worktree_disposition": {
+          "state": "retained",
+          "reason": "Держит проверенное состояние до устранения блокера.",
+          "responsible": "git-integrator",
+          "cleanup_condition": "После снятия блокера и слияния или отмены пакета."
+        },
+        "next_step": {
+          "action": "await-upstream-fix",
+          "gate": "verification",
+          "actor_ref": "actor:example-executor"
+        }
+      }
+    },
+    "evidence-and-handoff:example-handoff-clarify-null-handling-001": {
+      "$schema": "../../registries/operating-model/evidence-and-handoff.schema.json",
+      "schema_version": 1,
+      "id": "example-handoff-clarify-null-handling-001",
+      "title": "Передача результата запуска об обработке пустого значения — попытка 1",
+      "record_type": "evidence-and-handoff",
+      "scope": {
+        "type": "run-state",
+        "id": "example-run-eh-001",
+        "workspace_id": "ws-meridian"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:example-start-run-eh-001"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "example-workspace-owner",
+        "decision_ref": "owner-decision:example-start-run-eh-001"
+      },
+      "payload": {
+        "execution_run_ref": {
+          "record_type": "execution-run",
+          "id": "example-run-eh-001",
+          "reference": "records/execution-run/example-run-eh-001",
+          "revision": "v0.5.0"
+        },
+        "task_specification_ref": {
+          "record_type": "task-specification",
+          "id": "example-clarify-null-handling",
+          "reference": "records/task-specification/example-clarify-null-handling",
+          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "human_control_ref": {
+          "record_type": "run-human-control",
+          "id": "example-run-human-control-eh-001",
+          "run_id": "example-run-eh-001",
+          "reference": "records/run-human-control/example-run-eh-001",
+          "revision": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"
+        },
+        "context_manifest_ref": {
+          "record_type": "context-manifest",
+          "id": "example-manifest-eh-001",
+          "run_id": "example-run-eh-001",
+          "reference": "records/context-manifest/example-run-eh-001",
+          "revision": "v0.5.0"
+        },
+        "outcome": {
+          "statement": "Обработка пустого значения реализована и проверена; ожидается решение владельца о приёмке.",
+          "status": "handed_off_incomplete"
+        },
+        "claimed_results": [
+          {
+            "id": "null-handling-implemented",
+            "statement": "Разбор конфигурации при отсутствующем поле возвращает объявленное умолчание.",
+            "status": "established"
+          },
+          {
+            "id": "behaviour-preserved",
+            "statement": "Поведение при заданном значении поля не изменилось.",
+            "status": "established"
+          }
+        ],
+        "verifiable_assertions": [
+          {
+            "id": "default-returned",
+            "statement": "Для записанного входа без поля возвращается объявленное умолчание, а не исключение.",
+            "claimed_result_id": "null-handling-implemented",
+            "status": "verified"
+          },
+          {
+            "id": "default-logged",
+            "statement": "Применение умолчания фиксируется одной записью журнала уровня INFO.",
+            "claimed_result_id": "null-handling-implemented",
+            "status": "verified"
+          },
+          {
+            "id": "set-value-unchanged",
+            "statement": "Для записанных входов с заданным полем возвращаемое значение байт-идентично исходному.",
+            "claimed_result_id": "behaviour-preserved",
+            "status": "verified"
+          }
+        ],
+        "evidence": [
+          {
+            "id": "unit-default",
+            "kind": "check-run",
+            "reference": "check:example-parser-default",
+            "revision": "v0.5.0",
+            "summary": "Автотест разбора без поля: возвращено умолчание, исключения нет.",
+            "covers": [
+              "default-returned",
+              "default-logged"
+            ],
+            "limitations": [
+              "Покрывает только записанные входы, не всю область значений."
+            ]
+          },
+          {
+            "id": "parity-diff",
+            "kind": "artifact-inspection",
+            "reference": "artifact:example-parity-diff",
+            "revision": "v0.5.0",
+            "summary": "Сравнение вывода до и после изменения для записанных входов с заданным полем — расхождений нет.",
+            "covers": [
+              "set-value-unchanged"
+            ],
+            "limitations": []
+          },
+          {
+            "id": "kv-run",
+            "kind": "check-run",
+            "reference": "check:example-kernel-validate-run",
+            "revision": "v0.5.0",
+            "summary": "Прогон Kernel validate (synthetic instance): 0 ошибок.",
+            "covers": [],
+            "limitations": []
+          },
+          {
+            "id": "suite-run",
+            "kind": "check-run",
+            "reference": "check:example-handoff-suite-run",
+            "revision": "v0.5.0",
+            "summary": "Прогон набора контракта передачи: все проверки зелёные.",
+            "covers": [],
+            "limitations": []
+          }
+        ],
+        "mandatory_checks": [
+          {
+            "id": "kernel-validate",
+            "name": "Kernel validate (synthetic instance)",
+            "check_ref": "check:example-kernel-validate",
+            "status": "passed",
+            "result_evidence_id": "kv-run"
+          },
+          {
+            "id": "handoff-suite",
+            "name": "evidence and handoff contract suite",
+            "check_ref": "check:example-evidence-handoff-suite",
+            "status": "passed",
+            "result_evidence_id": "suite-run"
+          }
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "default-applied",
+            "status": "covered",
+            "addressed_by": [
+              "default-returned"
+            ]
+          },
+          {
+            "id": "default-logged-info",
+            "status": "covered",
+            "addressed_by": [
+              "default-logged"
+            ]
+          }
+        ],
+        "source_state": [
+          {
+            "repository_ref": "repo:example-service",
+            "revision": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1"
+          }
+        ],
+        "result_state": [
+          {
+            "repository_ref": "repo:example-service",
+            "revision": "c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2"
+          }
+        ],
+        "changed_paths": [
+          {
+            "id": "parser-module",
+            "repository_ref": "repo:example-service",
+            "path": "src/config/parser.ext",
+            "change_kind": "modified"
+          },
+          {
+            "id": "parser-test",
+            "repository_ref": "repo:example-service",
+            "path": "test/config/parser.test.ext",
+            "change_kind": "added"
+          }
+        ],
+        "external_effects": [],
+        "deviations": [
+          {
+            "id": "log-level-review",
+            "description": "Уровень журнала выбран INFO без отдельного согласования формата сообщения.",
+            "severity": "non_blocking",
+            "disposition": "Вынесено на ревью; функциональность не затрагивает."
+          }
+        ],
+        "open_gaps": [
+          {
+            "id": "no-load-test",
+            "description": "Влияние на производительность горячего пути разбора не измерялось."
+          }
+        ],
+        "required_owner_decisions": [
+          {
+            "id": "accept-null-handling",
+            "question": "Принять поведение умолчания и уровень журнала INFO как окончательные?",
+            "blocking": true
+          }
+        ],
+        "blockers": [],
+        "worktree_disposition": {
+          "state": "retained",
+          "reason": "Ветвь приёмки ещё не создана интегратором; рабочее дерево держит проверенное состояние.",
+          "responsible": "git-integrator",
+          "cleanup_condition": "После создания коммита пакета в feature-ветви и подтверждения его достижимости."
+        },
+        "next_step": {
+          "action": "record-owner-acceptance",
+          "gate": "acceptance",
+          "actor_ref": "actor:example-owner"
+        }
+      }
+    },
+    "evidence-and-handoff:example-handoff-clarify-null-handling-complete-cross-ws": {
+      "$schema": "../../registries/operating-model/evidence-and-handoff.schema.json",
+      "schema_version": 1,
+      "id": "example-handoff-clarify-null-handling-complete-cross-ws",
+      "title": "Передача результата запуска об обработке пустого значения — попытка 1",
+      "record_type": "evidence-and-handoff",
+      "scope": {
+        "type": "run-state",
+        "id": "example-run-eh-complete",
+        "workspace_id": "other-workspace"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:example-start-run-eh-001"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "example-workspace-owner",
+        "decision_ref": "owner-decision:example-start-run-eh-001"
+      },
+      "payload": {
+        "execution_run_ref": {
+          "record_type": "execution-run",
+          "id": "example-run-eh-complete",
+          "reference": "records/execution-run/example-run-eh-complete",
+          "revision": "v0.5.0"
+        },
+        "task_specification_ref": {
+          "record_type": "task-specification",
+          "id": "example-null-handling-complete",
+          "reference": "records/task-specification/example-null-handling-complete",
+          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "human_control_ref": {
+          "record_type": "run-human-control",
+          "id": "example-run-human-control-eh-complete",
+          "run_id": "example-run-eh-complete",
+          "reference": "records/run-human-control/example-run-eh-complete",
+          "revision": "v0.5.0"
+        },
+        "context_manifest_ref": {
+          "record_type": "context-manifest",
+          "id": "example-manifest-eh-complete",
+          "run_id": "example-run-eh-complete",
+          "reference": "records/context-manifest/example-run-eh-complete",
+          "revision": "v0.5.0"
+        },
+        "outcome": {
+          "statement": "Изменение реализовано, проверено и принято; дальнейших шагов нет.",
+          "status": "complete"
+        },
+        "claimed_results": [
+          {
+            "id": "null-handling-implemented",
+            "statement": "Разбор конфигурации при отсутствующем поле возвращает объявленное умолчание.",
+            "status": "established"
+          },
+          {
+            "id": "behaviour-preserved",
+            "statement": "Поведение при заданном значении поля не изменилось.",
+            "status": "established"
+          }
+        ],
+        "verifiable_assertions": [
+          {
+            "id": "default-returned",
+            "statement": "Для записанного входа без поля возвращается объявленное умолчание, а не исключение.",
+            "claimed_result_id": "null-handling-implemented",
+            "status": "verified"
+          },
+          {
+            "id": "default-logged",
+            "statement": "Применение умолчания фиксируется одной записью журнала уровня INFO.",
+            "claimed_result_id": "null-handling-implemented",
+            "status": "verified"
+          },
+          {
+            "id": "set-value-unchanged",
+            "statement": "Для записанных входов с заданным полем возвращаемое значение байт-идентично исходному.",
+            "claimed_result_id": "behaviour-preserved",
+            "status": "verified"
+          }
+        ],
+        "evidence": [
+          {
+            "id": "unit-default",
+            "kind": "check-run",
+            "reference": "check:example-parser-default",
+            "revision": "v0.5.0",
+            "summary": "Автотест разбора без поля: возвращено умолчание, исключения нет.",
+            "covers": [
+              "default-returned",
+              "default-logged"
+            ],
+            "limitations": [
+              "Покрывает только записанные входы, не всю область значений."
+            ]
+          },
+          {
+            "id": "parity-diff",
+            "kind": "artifact-inspection",
+            "reference": "artifact:example-parity-diff",
+            "revision": "v0.5.0",
+            "summary": "Сравнение вывода до и после изменения для записанных входов с заданным полем — расхождений нет.",
+            "covers": [
+              "set-value-unchanged"
+            ],
+            "limitations": []
+          },
+          {
+            "id": "parity-record",
+            "kind": "specialised-evidence-record",
+            "reference": "records/functional-parity-evidence/example-null-handling",
+            "revision": "v0.5.0",
+            "summary": "Запись доказательств функционального паритета для этого рефакторинга.",
+            "covers": [
+              "set-value-unchanged"
+            ],
+            "limitations": [],
+            "specialised_contract": "functional-parity-evidence-contract",
+            "recorded_verdict": "VERIFIED"
+          },
+          {
+            "id": "kv-run",
+            "kind": "check-run",
+            "reference": "check:example-kernel-validate-run",
+            "revision": "v0.5.0",
+            "summary": "Прогон Kernel validate (synthetic instance): 0 ошибок.",
+            "covers": [],
+            "limitations": []
+          },
+          {
+            "id": "suite-run",
+            "kind": "check-run",
+            "reference": "check:example-handoff-suite-run",
+            "revision": "v0.5.0",
+            "summary": "Прогон набора контракта передачи: все проверки зелёные.",
+            "covers": [],
+            "limitations": []
+          }
+        ],
+        "mandatory_checks": [
+          {
+            "id": "kernel-validate",
+            "name": "Kernel validate (synthetic instance)",
+            "check_ref": "check:example-kernel-validate",
+            "status": "passed",
+            "result_evidence_id": "kv-run"
+          },
+          {
+            "id": "handoff-suite",
+            "name": "evidence and handoff contract suite",
+            "check_ref": "check:example-evidence-handoff-suite",
+            "status": "passed",
+            "result_evidence_id": "suite-run"
+          },
+          {
+            "id": "parity",
+            "name": "functional parity evidence record",
+            "check_ref": "check:example-parity",
+            "status": "passed",
+            "result_evidence_id": "parity-record"
+          }
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "default-applied",
+            "status": "covered",
+            "addressed_by": [
+              "default-returned"
+            ]
+          },
+          {
+            "id": "default-logged-info",
+            "status": "covered",
+            "addressed_by": [
+              "default-logged"
+            ]
+          }
+        ],
+        "source_state": [
+          {
+            "repository_ref": "repo:example-service",
+            "revision": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1"
+          }
+        ],
+        "result_state": [
+          {
+            "repository_ref": "repo:example-service",
+            "revision": "c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2"
+          }
+        ],
+        "changed_paths": [
+          {
+            "id": "parser-module",
+            "repository_ref": "repo:example-service",
+            "path": "src/config/parser.ext",
+            "change_kind": "modified"
+          },
+          {
+            "id": "parser-test",
+            "repository_ref": "repo:example-service",
+            "path": "test/config/parser.test.ext",
+            "change_kind": "added"
+          }
+        ],
+        "external_effects": [],
+        "deviations": [],
+        "open_gaps": [],
+        "required_owner_decisions": [],
+        "blockers": [],
+        "worktree_disposition": {
+          "state": "removed"
+        },
+        "next_step": {
+          "action": null,
+          "gate": null,
+          "actor_ref": null
+        }
+      }
+    }
+  },
+  "task_journey_nested_resolution": {
+    "records/execution-run/example-run-eh-complete": {
+      "reference": "records/execution-run/example-run-eh-complete",
+      "record_type": "execution-run",
+      "id": "example-run-eh-complete",
+      "revision": "v0.5.0",
+      "resolved_state": {
+        "task_specification_ref": "records/task-specification/example-null-handling-complete",
+        "scope_revision": 5,
+        "lifecycle_stage": "completion",
+        "work_status": "completed",
+        "next_action": null,
+        "next_gate": null,
+        "blocker_ids": [],
+        "resolved_norms": [
+          "standards/workspace/rule-resolution.md"
+        ],
+        "completed_checks": [
+          "check:example-kernel-validate",
+          "check:example-evidence-handoff-suite",
+          "check:example-parity"
+        ]
+      }
+    },
+    "records/task-specification/example-null-handling-complete": {
+      "reference": "records/task-specification/example-null-handling-complete",
+      "record_type": "task-specification",
+      "id": "example-null-handling-complete",
+      "content_digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "acceptance_criteria": [
+        "default-applied",
+        "default-logged-info"
+      ],
+      "mandatory_checks": [
+        "check:example-kernel-validate",
+        "check:example-evidence-handoff-suite",
+        "check:example-parity"
+      ]
+    },
+    "records/run-human-control/example-run-eh-complete": {
+      "reference": "records/run-human-control/example-run-eh-complete",
+      "record_type": "run-human-control",
+      "id": "example-run-human-control-eh-complete",
+      "revision": "v0.5.0",
+      "linked_run_ref": "records/execution-run/example-run-eh-complete"
+    },
+    "records/context-manifest/example-run-eh-complete": {
+      "reference": "records/context-manifest/example-run-eh-complete",
+      "record_type": "context-manifest",
+      "id": "example-manifest-eh-complete",
+      "revision": "v0.5.0",
+      "linked_run_ref": "records/execution-run/example-run-eh-complete"
+    },
+    "check:example-parser-default": {
+      "reference": "check:example-parser-default",
+      "record_type": "evidence-result",
+      "id": "unit-default",
+      "revision": "v0.5.0",
+      "observed_result": "confirmed",
+      "covers": [
+        "default-returned",
+        "default-logged"
+      ]
+    },
+    "artifact:example-parity-diff": {
+      "reference": "artifact:example-parity-diff",
+      "record_type": "evidence-result",
+      "id": "parity-diff",
+      "revision": "v0.5.0",
+      "observed_result": "confirmed",
+      "covers": [
+        "set-value-unchanged"
+      ]
+    },
+    "records/functional-parity-evidence/example-null-handling": {
+      "reference": "records/functional-parity-evidence/example-null-handling",
+      "record_type": "evidence-result",
+      "id": "parity-record",
+      "revision": "v0.5.0",
+      "observed_result": "confirmed",
+      "specialised_contract": "functional-parity-evidence-contract",
+      "recorded_verdict": "VERIFIED",
+      "covers": [
+        "set-value-unchanged"
+      ],
+      "check_ref": "check:example-parity"
+    },
+    "check:example-kernel-validate-run": {
+      "reference": "check:example-kernel-validate-run",
+      "record_type": "evidence-result",
+      "id": "kv-run",
+      "revision": "v0.5.0",
+      "observed_result": "confirmed",
+      "check_ref": "check:example-kernel-validate"
+    },
+    "check:example-handoff-suite-run": {
+      "reference": "check:example-handoff-suite-run",
+      "record_type": "evidence-result",
+      "id": "suite-run",
+      "revision": "v0.5.0",
+      "observed_result": "confirmed",
+      "check_ref": "check:example-evidence-handoff-suite"
+    },
+    "records/execution-run/example-run-eh-blocked": {
+      "reference": "records/execution-run/example-run-eh-blocked",
+      "record_type": "execution-run",
+      "id": "example-run-eh-blocked",
+      "revision": "v0.5.0",
+      "resolved_state": {
+        "task_specification_ref": "records/task-specification/example-clarify-null-handling",
+        "scope_revision": 2,
+        "lifecycle_stage": "execution",
+        "work_status": "blocked",
+        "next_action": "await-upstream-fix",
+        "next_gate": "verification",
+        "blocker_ids": [
+          "upstream-dependency"
+        ],
+        "resolved_norms": [
+          "standards/workspace/rule-resolution.md"
+        ],
+        "completed_checks": [
+          "check:example-kernel-validate",
+          "check:example-evidence-handoff-suite"
+        ]
+      }
+    },
+    "records/task-specification/example-clarify-null-handling": {
+      "reference": "records/task-specification/example-clarify-null-handling",
+      "record_type": "task-specification",
+      "id": "example-clarify-null-handling",
+      "content_digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "acceptance_criteria": [
+        "default-applied",
+        "default-logged-info"
+      ],
+      "mandatory_checks": [
+        "check:example-kernel-validate",
+        "check:example-evidence-handoff-suite"
+      ]
+    },
+    "records/run-human-control/example-run-eh-blocked": {
+      "reference": "records/run-human-control/example-run-eh-blocked",
+      "record_type": "run-human-control",
+      "id": "example-run-human-control-eh-blocked",
+      "revision": "v0.5.0",
+      "linked_run_ref": "records/execution-run/example-run-eh-blocked"
+    },
+    "records/context-manifest/example-run-eh-blocked": {
+      "reference": "records/context-manifest/example-run-eh-blocked",
+      "record_type": "context-manifest",
+      "id": "example-manifest-eh-blocked",
+      "revision": "v0.5.0",
+      "linked_run_ref": "records/execution-run/example-run-eh-blocked"
+    },
+    "check:example-handoff-suite-fail": {
+      "reference": "check:example-handoff-suite-fail",
+      "record_type": "evidence-result",
+      "id": "suite-fail-run",
+      "revision": "v0.5.0",
+      "observed_result": "contradicted",
+      "check_ref": "check:example-evidence-handoff-suite"
+    },
+    "records/execution-run/example-run-eh-001": {
+      "reference": "records/execution-run/example-run-eh-001",
+      "record_type": "execution-run",
+      "id": "example-run-eh-001",
+      "revision": "v0.5.0",
+      "resolved_state": {
+        "task_specification_ref": "records/task-specification/example-clarify-null-handling",
+        "scope_revision": 3,
+        "lifecycle_stage": "verification",
+        "work_status": "active",
+        "next_action": "record-owner-acceptance",
+        "next_gate": "acceptance",
+        "blocker_ids": [],
+        "resolved_norms": [
+          "standards/workspace/rule-resolution.md"
+        ],
+        "completed_checks": [
+          "check:example-kernel-validate",
+          "check:example-evidence-handoff-suite"
+        ]
+      }
+    },
+    "records/run-human-control/example-run-eh-001": {
+      "reference": "records/run-human-control/example-run-eh-001",
+      "record_type": "run-human-control",
+      "id": "example-run-human-control-eh-001",
+      "revision": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+      "linked_run_ref": "records/execution-run/example-run-eh-001"
+    },
+    "records/context-manifest/example-run-eh-001": {
+      "reference": "records/context-manifest/example-run-eh-001",
+      "record_type": "context-manifest",
+      "id": "example-manifest-eh-001",
+      "revision": "v0.5.0",
+      "linked_run_ref": "records/execution-run/example-run-eh-001"
+    }
+  },
+  "field_evaluation_resolution": {
+    "field-evaluation-report:report-2026-08": {
+      "$schema": "../../registries/operating-model/field-evaluation.schema.json",
+      "schema_version": 1,
+      "id": "report-2026-08",
+      "title": "Отчёт практической оценки за август 2026",
+      "record_type": "field-evaluation-report",
+      "scope": {
+        "type": "project-workspace",
+        "id": "report-2026-08"
+      },
+      "origin": {
+        "kind": "derived",
+        "source_ref": "field-evaluation:observations"
+      },
+      "authority": {
+        "kind": "project-owner",
+        "authority_ref": "workspace-owner"
+      },
+      "payload": {
+        "workspace_id": "ws-meridian",
+        "period": {
+          "start_date": "2026-08-01",
+          "end_date": "2026-08-31"
+        },
+        "included_observations": [
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-context-time-1",
+            "reference": "field-evaluation/observations/obs-context-time-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-context-time-2",
+            "reference": "field-evaluation/observations/obs-context-time-2",
+            "sha256": "2000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-correction-fix",
+            "reference": "field-evaluation/observations/obs-correction-fix",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-defects-1",
+            "reference": "field-evaluation/observations/obs-defects-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-defects-2",
+            "reference": "field-evaluation/observations/obs-defects-2",
+            "sha256": "2000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-mech-correct-1",
+            "reference": "field-evaluation/observations/obs-mech-correct-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-mech-incorrect-1",
+            "reference": "field-evaluation/observations/obs-mech-incorrect-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-missed-missed-1",
+            "reference": "field-evaluation/observations/obs-missed-missed-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-missed-notmissed-1",
+            "reference": "field-evaluation/observations/obs-missed-notmissed-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-not-applicable-1",
+            "reference": "field-evaluation/observations/obs-not-applicable-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-owner-cost-1",
+            "reference": "field-evaluation/observations/obs-owner-cost-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-resumption-1",
+            "reference": "field-evaluation/observations/obs-resumption-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-rework-1",
+            "reference": "field-evaluation/observations/obs-rework-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-rework-2",
+            "reference": "field-evaluation/observations/obs-rework-2",
+            "sha256": "2000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-stop-correct-1",
+            "reference": "field-evaluation/observations/obs-stop-correct-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-stop-false-1",
+            "reference": "field-evaluation/observations/obs-stop-false-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-unknown-1",
+            "reference": "field-evaluation/observations/obs-unknown-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "record_type": "field-evaluation-observation",
+            "id": "obs-unmeasurable-1",
+            "reference": "field-evaluation/observations/obs-unmeasurable-1",
+            "sha256": "1000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "excluded_observations": [
+          {
+            "ref": {
+              "record_type": "field-evaluation-observation",
+              "id": "obs-mech-correct-2",
+              "reference": "field-evaluation/observations/obs-mech-correct-2",
+              "sha256": "2000000000000000000000000000000000000000000000000000000000000000"
+            },
+            "exclusion_reason": "повторный прогон того же сценария в тот же день — не даёт независимой точки данных"
+          }
+        ],
+        "per_metric": [
+          {
+            "metric_id": "mechanism-correctness",
+            "status": "known",
+            "aggregate": {
+              "kind": "classification",
+              "counts": {
+                "correct": 2,
+                "incorrect": 1,
+                "unknown": 0
+              },
+              "total": 3,
+              "rate": {
+                "numerator": 2,
+                "denominator": 3,
+                "outcome": "correct",
+                "note": "доля наблюдений с исходом \"correct\" среди 3 классифицированных; ноль в знаменателе не даёт процента",
+                "percentage": 66.67
+              }
+            },
+            "sample_observation_ids": [
+              "obs-correction-fix",
+              "obs-mech-correct-1",
+              "obs-mech-incorrect-1",
+              "obs-unknown-1"
+            ],
+            "limitations": [
+              "по показателю \"mechanism-correctness\" есть явно исключённое наблюдение; состав выборки указан в excluded_observations"
+            ]
+          },
+          {
+            "metric_id": "context-entry-time",
+            "status": "known",
+            "aggregate": {
+              "kind": "duration",
+              "calendar": {
+                "sample_count": 1,
+                "total_seconds": 600,
+                "mean_seconds": 600
+              },
+              "active": {
+                "sample_count": 1,
+                "total_seconds": 400,
+                "mean_seconds": 400
+              }
+            },
+            "sample_observation_ids": [
+              "obs-context-time-1",
+              "obs-context-time-2",
+              "obs-unmeasurable-1"
+            ],
+            "limitations": []
+          },
+          {
+            "metric_id": "rework-returns",
+            "status": "known",
+            "aggregate": {
+              "kind": "count",
+              "sample_count": 2,
+              "total": 2,
+              "mean": 1
+            },
+            "sample_observation_ids": [
+              "obs-rework-1",
+              "obs-rework-2"
+            ],
+            "limitations": []
+          },
+          {
+            "metric_id": "stop-correctness",
+            "status": "known",
+            "aggregate": {
+              "kind": "classification",
+              "counts": {
+                "correct_stop": 1,
+                "false_stop": 1,
+                "unknown": 0
+              },
+              "total": 2,
+              "rate": {
+                "numerator": 1,
+                "denominator": 2,
+                "outcome": "false_stop",
+                "note": "доля наблюдений с исходом \"false_stop\" среди 2 классифицированных; ноль в знаменателе не даёт процента",
+                "percentage": 50
+              }
+            },
+            "sample_observation_ids": [
+              "obs-stop-correct-1",
+              "obs-stop-false-1"
+            ],
+            "limitations": []
+          },
+          {
+            "metric_id": "missed-norms",
+            "status": "known",
+            "aggregate": {
+              "kind": "classification",
+              "counts": {
+                "missed": 1,
+                "not_missed": 1,
+                "unknown": 0
+              },
+              "total": 2,
+              "rate": {
+                "numerator": 1,
+                "denominator": 2,
+                "outcome": "missed",
+                "note": "доля наблюдений с исходом \"missed\" среди 2 классифицированных; ноль в знаменателе не даёт процента",
+                "percentage": 50
+              }
+            },
+            "sample_observation_ids": [
+              "obs-missed-missed-1",
+              "obs-missed-notmissed-1"
+            ],
+            "limitations": []
+          },
+          {
+            "metric_id": "resumption-success",
+            "status": "known",
+            "aggregate": {
+              "kind": "classification",
+              "counts": {
+                "successful": 1,
+                "unsuccessful": 0,
+                "unknown": 0
+              },
+              "total": 1,
+              "rate": {
+                "numerator": 1,
+                "denominator": 1,
+                "outcome": "successful",
+                "note": "доля наблюдений с исходом \"successful\" среди 1 классифицированных; ноль в знаменателе не даёт процента",
+                "percentage": 100
+              }
+            },
+            "sample_observation_ids": [
+              "obs-resumption-1"
+            ],
+            "limitations": []
+          },
+          {
+            "metric_id": "owner-cost",
+            "status": "known",
+            "aggregate": {
+              "kind": "duration",
+              "calendar": {
+                "sample_count": 1,
+                "total_seconds": 1800,
+                "mean_seconds": 1800
+              },
+              "active": {
+                "sample_count": 0,
+                "total_seconds": 0
+              }
+            },
+            "sample_observation_ids": [
+              "obs-not-applicable-1",
+              "obs-owner-cost-1"
+            ],
+            "limitations": []
+          },
+          {
+            "metric_id": "post-acceptance-defects",
+            "status": "known",
+            "aggregate": {
+              "kind": "count",
+              "sample_count": 2,
+              "total": 1,
+              "mean": 0.5,
+              "observation_window": {
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-31"
+              },
+              "coverage": "mixed"
+            },
+            "sample_observation_ids": [
+              "obs-defects-1",
+              "obs-defects-2"
+            ],
+            "limitations": []
+          }
+        ]
+      }
+    }
+  },
+  "field_evaluation_nested_resolution": {
+    "field-evaluation/observations/obs-context-time-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-context-time-1",
+      "reference": "field-evaluation/observations/obs-context-time-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "context-entry-time",
+      "status": "observed",
+      "measurement": {
+        "kind": "duration",
+        "duration_kind": "calendar",
+        "unit": "seconds",
+        "seconds": 600
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-03",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-context-time-2": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-context-time-2",
+      "reference": "field-evaluation/observations/obs-context-time-2",
+      "content_digest": "2000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "context-entry-time",
+      "status": "observed",
+      "measurement": {
+        "kind": "duration",
+        "duration_kind": "active",
+        "unit": "seconds",
+        "seconds": 400
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-10",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-correction-fix": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-correction-fix",
+      "reference": "field-evaluation/observations/obs-correction-fix",
+      "content_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "mechanism-correctness",
+      "status": "observed",
+      "measurement": {
+        "kind": "classification",
+        "outcome": "correct",
+        "basis": "повторный разбор подтвердил корректный исход механизма"
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-07",
+      "supersedes_id": "obs-correction-original"
+    },
+    "field-evaluation/observations/obs-defects-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-defects-1",
+      "reference": "field-evaluation/observations/obs-defects-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "post-acceptance-defects",
+      "status": "observed",
+      "measurement": {
+        "kind": "count",
+        "unit": "count",
+        "value": 0
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-16",
+      "supersedes_id": null,
+      "observation_period": {
+        "start_date": "2026-08-01",
+        "end_date": "2026-08-15"
+      },
+      "coverage": "complete"
+    },
+    "field-evaluation/observations/obs-defects-2": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-defects-2",
+      "reference": "field-evaluation/observations/obs-defects-2",
+      "content_digest": "2000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "post-acceptance-defects",
+      "status": "observed",
+      "measurement": {
+        "kind": "count",
+        "unit": "count",
+        "value": 1
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-31",
+      "supersedes_id": null,
+      "observation_period": {
+        "start_date": "2026-08-16",
+        "end_date": "2026-08-31"
+      },
+      "coverage": "partial"
+    },
+    "field-evaluation/observations/obs-mech-correct-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-mech-correct-1",
+      "reference": "field-evaluation/observations/obs-mech-correct-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "mechanism-correctness",
+      "status": "observed",
+      "measurement": {
+        "kind": "classification",
+        "outcome": "correct",
+        "basis": "gate прошёл ожидаемо на синтетическом сценарии"
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-03",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-mech-incorrect-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-mech-incorrect-1",
+      "reference": "field-evaluation/observations/obs-mech-incorrect-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "mechanism-correctness",
+      "status": "observed",
+      "measurement": {
+        "kind": "classification",
+        "outcome": "incorrect",
+        "basis": "gate пропустил заведомо некорректный фикстур"
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-10",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-missed-missed-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-missed-missed-1",
+      "reference": "field-evaluation/observations/obs-missed-missed-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "missed-norms",
+      "status": "observed",
+      "measurement": {
+        "kind": "classification",
+        "outcome": "missed",
+        "basis": "применимая норма версионирования не была учтена"
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-10",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-missed-notmissed-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-missed-notmissed-1",
+      "reference": "field-evaluation/observations/obs-missed-notmissed-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "missed-norms",
+      "status": "observed",
+      "measurement": {
+        "kind": "classification",
+        "outcome": "not_missed",
+        "basis": "все применимые нормы разрешены и применены"
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-03",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-not-applicable-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-not-applicable-1",
+      "reference": "field-evaluation/observations/obs-not-applicable-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "owner-cost",
+      "status": "not_applicable",
+      "measurement": null,
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-20",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-owner-cost-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-owner-cost-1",
+      "reference": "field-evaluation/observations/obs-owner-cost-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "owner-cost",
+      "status": "observed",
+      "measurement": {
+        "kind": "duration",
+        "duration_kind": "calendar",
+        "unit": "seconds",
+        "seconds": 1800,
+        "paused_seconds": 300
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-03",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-resumption-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-resumption-1",
+      "reference": "field-evaluation/observations/obs-resumption-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "resumption-success",
+      "status": "observed",
+      "measurement": {
+        "kind": "classification",
+        "outcome": "successful",
+        "basis": "запуск продолжен из манифеста контекста без потери состояния"
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-04",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-rework-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-rework-1",
+      "reference": "field-evaluation/observations/obs-rework-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "rework-returns",
+      "status": "observed",
+      "measurement": {
+        "kind": "count",
+        "unit": "count",
+        "value": 0
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-03",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-rework-2": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-rework-2",
+      "reference": "field-evaluation/observations/obs-rework-2",
+      "content_digest": "2000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "rework-returns",
+      "status": "observed",
+      "measurement": {
+        "kind": "count",
+        "unit": "count",
+        "value": 2
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-10",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-stop-correct-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-stop-correct-1",
+      "reference": "field-evaluation/observations/obs-stop-correct-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "stop-correctness",
+      "status": "observed",
+      "measurement": {
+        "kind": "classification",
+        "outcome": "correct_stop",
+        "basis": "остановка перед разрушительной операцией без подтверждения владельца"
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-03",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-stop-false-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-stop-false-1",
+      "reference": "field-evaluation/observations/obs-stop-false-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "stop-correctness",
+      "status": "observed",
+      "measurement": {
+        "kind": "classification",
+        "outcome": "false_stop",
+        "basis": "остановка на безопасном шаге без реального препятствия"
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-10",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-unknown-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-unknown-1",
+      "reference": "field-evaluation/observations/obs-unknown-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "mechanism-correctness",
+      "status": "unknown",
+      "measurement": null,
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-20",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-unmeasurable-1": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-unmeasurable-1",
+      "reference": "field-evaluation/observations/obs-unmeasurable-1",
+      "content_digest": "1000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "context-entry-time",
+      "status": "unmeasurable",
+      "measurement": null,
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-21",
+      "supersedes_id": null
+    },
+    "field-evaluation/observations/obs-mech-correct-2": {
+      "record_type": "field-evaluation-observation",
+      "id": "obs-mech-correct-2",
+      "reference": "field-evaluation/observations/obs-mech-correct-2",
+      "content_digest": "2000000000000000000000000000000000000000000000000000000000000000",
+      "metric_id": "mechanism-correctness",
+      "status": "observed",
+      "measurement": {
+        "kind": "classification",
+        "outcome": "correct",
+        "basis": "повторный прогон того же сценария"
+      },
+      "workspace_id": "ws-meridian",
+      "observed_at": "2026-08-05",
+      "supersedes_id": null
+    }
+  },
+  "task_specification_resolution": {
+    "task-specification:example-extract-parser-module": {
+      "$schema": "../../registries/operating-model/task-specification.schema.json",
+      "schema_version": 1,
+      "id": "example-extract-parser-module",
+      "title": "Выделить разбор конфигурации в отдельный модуль без изменения поведения",
+      "record_type": "task-specification",
+      "scope": {
+        "type": "repository-scope",
+        "id": "example-repository",
+        "workspace_id": "ws-meridian"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:example-extract-parser-module"
+      },
+      "authority": {
+        "kind": "project-owner",
+        "authority_ref": "example-workspace-owner"
+      },
+      "payload": {
+        "goal": "Разбор конфигурации выделен в отдельный модуль с сохранением наблюдаемого поведения.",
+        "initial_state": "Разбор конфигурации перемешан с загрузкой приложения в одном файле.",
+        "target_model": "Разбор конфигурации живёт в отдельном модуле с тем же наблюдаемым поведением и теми же проверками.",
+        "task_pattern": {
+          "id": "refactor-preserving-behavior",
+          "work_kind": "change",
+          "change_class": "REFACTOR"
+        },
+        "constraints": [
+          "Наблюдаемое поведение разбора конфигурации не меняется.",
+          "Публичные имена, на которые опираются вызывающие, сохраняются."
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "behavior-parity",
+            "statement": "Наблюдаемое поведение разбора конфигурации совпадает до и после выделения модуля.",
+            "verification": {
+              "method": "Прогон существующего набора проверок разбора конфигурации до и после изменения.",
+              "expected_result": "Оба прогона дают идентичный результат."
+            }
+          }
+        ]
+      }
+    },
+    "task-specification:example-split-monolith-reporting": {
+      "$schema": "../../registries/operating-model/task-specification.schema.json",
+      "schema_version": 1,
+      "id": "example-split-monolith-reporting",
+      "title": "Разделить подсистему отчётности на самостоятельно отслеживаемые единицы работы",
+      "record_type": "task-specification",
+      "scope": {
+        "type": "project-workspace",
+        "id": "ws-meridian"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:example-split-monolith-reporting"
+      },
+      "authority": {
+        "kind": "project-owner",
+        "authority_ref": "example-workspace-owner"
+      },
+      "payload": {
+        "goal": "Крупная цель разделения подсистемы отчётности приведена к явной декомпозиции на отдельные единицы работы.",
+        "initial_state": "Подсистема отчётности описана одной общей целью без декомпозиции и критериев готовности частей.",
+        "target_model": "Существует перечень самостоятельно отслеживаемых единиц работы с зависимостями и критериями приёмки каждой.",
+        "task_pattern": {
+          "id": "decompose-initiative",
+          "work_kind": "initiative"
+        },
+        "constraints": [
+          "Декомпозиция не начинает реализацию ни одной из выделенных единиц работы."
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "units-listed",
+            "statement": "Каждая единица работы декомпозиции имеет идентичность, цель и критерии приёмки.",
+            "verification": {
+              "method": "Ревью перечня единиц работы против шаблона постановки.",
+              "expected_result": "Ни одна единица не остаётся без цели или без критериев приёмки."
+            }
+          }
+        ]
+      }
+    },
+    "task-specification:uiq-scenario-language-change-classify": {
+      "$schema": "../../registries/operating-model/task-specification.schema.json",
+      "schema_version": 1,
+      "id": "uiq-scenario-language-change-classify",
+      "title": "Классифицировать предельную постановку о смене языка реализации",
+      "record_type": "task-specification",
+      "scope": {
+        "type": "project-workspace",
+        "id": "ws-meridian"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:uiq-scenario-language-change-classify"
+      },
+      "authority": {
+        "kind": "project-owner",
+        "authority_ref": "uiq-scenario-workspace-owner"
+      },
+      "payload": {
+        "goal": "Предельная постановка о смене языка реализации продукта классифицирована по действующему каталогу типов задач, без начала исполнения.",
+        "initial_state": "Продукт реализован на одном языке; постановка о смене языка существует только как намерение владельца, ещё не классифицированное.",
+        "target_model": "Постановка классифицирована как инициатива, требующая декомпозиции; ни одна единица работы декомпозиции не начата и не выполнена.",
+        "task_pattern": {
+          "id": "decompose-initiative",
+          "work_kind": "initiative"
+        },
+        "constraints": [
+          "Классификация не начинает и не выполняет ни одной единицы продуктового переписывания.",
+          "Классификация не назначает конкретный целевой язык реализации — это решение владельца за пределами этой постановки."
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "classified-as-initiative",
+            "statement": "Постановка классифицирована по каталогу типов задач как initiative, требующая декомпозиции.",
+            "verification": {
+              "method": "Разрешение payload.task_pattern против действующего task-pattern-registry.",
+              "expected_result": "Разрешённый шаблон несёт work_kind: initiative и decomposition_required: true."
+            }
+          },
+          {
+            "id": "no-execution-performed",
+            "statement": "Ни одна единица продуктового переписывания не начата и не выполнена этой классификацией.",
+            "verification": {
+              "method": "Проверка этапа жизненного цикла связанного запуска.",
+              "expected_result": "lifecycle_stage связанного запуска не проходит дальше classification."
+            }
+          }
+        ]
+      }
+    }
+  },
+  "execution_state_resolution": {
+    "execution-run:example-run-walkthrough-001": {
+      "$schema": "../../registries/operating-model/execution-state.schema.json",
+      "schema_version": 1,
+      "id": "example-run-walkthrough-001",
+      "title": "Сквозной запуск через все этапы до завершения",
+      "record_type": "execution-run",
+      "scope": {
+        "type": "run-state",
+        "id": "example-run-walkthrough",
+        "workspace_id": "ws-meridian"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:example-start-walkthrough"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "example-workspace-owner"
+      },
+      "payload": {
+        "task_specification_ref": "task-specification:example-extract-parser-module",
+        "lifecycle_stage": "completion",
+        "work_status": "completed",
+        "scope_revision": 1,
+        "current_actor": "actor:example-executor-agent",
+        "resolved_norms": [
+          "norm:example-endpoint-contract"
+        ],
+        "completed_checks": [
+          "check:example-endpoint-shape",
+          "check:example-post-merge-gate"
+        ],
+        "blockers": [],
+        "next_action": null,
+        "next_gate": null,
+        "transition_history": [
+          {
+            "sequence": 1,
+            "from_stage": null,
+            "from_status": null,
+            "to_stage": "intake",
+            "to_status": "planned",
+            "scope_revision": 1,
+            "reason": "Постановка принята в работу."
+          },
+          {
+            "sequence": 2,
+            "from_stage": "intake",
+            "from_status": "planned",
+            "to_stage": "classification",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Начата классификация."
+          },
+          {
+            "sequence": 3,
+            "from_stage": "classification",
+            "from_status": "active",
+            "to_stage": "norm_resolution",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Начато разрешение норм."
+          },
+          {
+            "sequence": 4,
+            "from_stage": "norm_resolution",
+            "from_status": "active",
+            "to_stage": "planning",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Начато планирование."
+          },
+          {
+            "sequence": 5,
+            "from_stage": "planning",
+            "from_status": "active",
+            "to_stage": "execution",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Начато исполнение."
+          },
+          {
+            "sequence": 6,
+            "from_stage": "execution",
+            "from_status": "active",
+            "to_stage": "verification",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Изменение готово; начата проверка."
+          },
+          {
+            "sequence": 7,
+            "from_stage": "verification",
+            "from_status": "active",
+            "to_stage": "acceptance",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Проверки пройдены; начата приёмка."
+          },
+          {
+            "sequence": 8,
+            "from_stage": "acceptance",
+            "from_status": "active",
+            "to_stage": "integration",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Результат принят; начата интеграция."
+          },
+          {
+            "sequence": 9,
+            "from_stage": "integration",
+            "from_status": "active",
+            "to_stage": "deployment",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Интеграция завершена; начато развёртывание."
+          },
+          {
+            "sequence": 10,
+            "from_stage": "deployment",
+            "from_status": "active",
+            "to_stage": "observation",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Развёрнуто; начато наблюдение."
+          },
+          {
+            "sequence": 11,
+            "from_stage": "observation",
+            "from_status": "active",
+            "to_stage": "completion",
+            "to_status": "completed",
+            "scope_revision": 1,
+            "reason": "Окно наблюдения закрыто без отклонений; запуск завершён."
+          }
+        ]
+      }
+    },
+    "execution-run:example-run-walkthrough-001-clone": {
+      "$schema": "../../registries/operating-model/execution-state.schema.json",
+      "schema_version": 1,
+      "id": "example-run-walkthrough-001-clone",
+      "title": "Сквозной запуск через все этапы до завершения",
+      "record_type": "execution-run",
+      "scope": {
+        "type": "run-state",
+        "id": "example-run-walkthrough",
+        "workspace_id": "ws-meridian"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:example-start-walkthrough"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "example-workspace-owner"
+      },
+      "payload": {
+        "task_specification_ref": "task-specification:example-extract-parser-module",
+        "lifecycle_stage": "completion",
+        "work_status": "completed",
+        "scope_revision": 1,
+        "current_actor": "actor:example-executor-agent",
+        "resolved_norms": [
+          "norm:example-endpoint-contract"
+        ],
+        "completed_checks": [
+          "check:example-endpoint-shape",
+          "check:example-post-merge-gate"
+        ],
+        "blockers": [],
+        "next_action": null,
+        "next_gate": null,
+        "transition_history": [
+          {
+            "sequence": 1,
+            "from_stage": null,
+            "from_status": null,
+            "to_stage": "intake",
+            "to_status": "planned",
+            "scope_revision": 1,
+            "reason": "Постановка принята в работу."
+          },
+          {
+            "sequence": 2,
+            "from_stage": "intake",
+            "from_status": "planned",
+            "to_stage": "classification",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Начата классификация."
+          },
+          {
+            "sequence": 3,
+            "from_stage": "classification",
+            "from_status": "active",
+            "to_stage": "norm_resolution",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Начато разрешение норм."
+          },
+          {
+            "sequence": 4,
+            "from_stage": "norm_resolution",
+            "from_status": "active",
+            "to_stage": "planning",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Начато планирование."
+          },
+          {
+            "sequence": 5,
+            "from_stage": "planning",
+            "from_status": "active",
+            "to_stage": "execution",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Начато исполнение."
+          },
+          {
+            "sequence": 6,
+            "from_stage": "execution",
+            "from_status": "active",
+            "to_stage": "verification",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Изменение готово; начата проверка."
+          },
+          {
+            "sequence": 7,
+            "from_stage": "verification",
+            "from_status": "active",
+            "to_stage": "acceptance",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Проверки пройдены; начата приёмка."
+          },
+          {
+            "sequence": 8,
+            "from_stage": "acceptance",
+            "from_status": "active",
+            "to_stage": "integration",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Результат принят; начата интеграция."
+          },
+          {
+            "sequence": 9,
+            "from_stage": "integration",
+            "from_status": "active",
+            "to_stage": "deployment",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Интеграция завершена; начато развёртывание."
+          },
+          {
+            "sequence": 10,
+            "from_stage": "deployment",
+            "from_status": "active",
+            "to_stage": "observation",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Развёрнуто; начато наблюдение."
+          },
+          {
+            "sequence": 11,
+            "from_stage": "observation",
+            "from_status": "active",
+            "to_stage": "completion",
+            "to_status": "completed",
+            "scope_revision": 1,
+            "reason": "Окно наблюдения закрыто без отклонений; запуск завершён."
+          }
+        ]
+      }
+    },
+    "execution-run:example-run-clarify-null-handling-002": {
+      "$schema": "../../registries/operating-model/execution-state.schema.json",
+      "schema_version": 1,
+      "id": "example-run-clarify-null-handling-002",
+      "title": "Запуск постановки об обработке пустого значения — попытка 2",
+      "record_type": "execution-run",
+      "scope": {
+        "type": "run-state",
+        "id": "example-run-002",
+        "workspace_id": "ws-meridian"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:example-start-run-002"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "example-workspace-owner"
+      },
+      "payload": {
+        "task_specification_ref": "task-specification:example-split-monolith-reporting",
+        "lifecycle_stage": "planning",
+        "work_status": "active",
+        "scope_revision": 1,
+        "current_actor": "actor:example-second-executor-agent",
+        "resolved_norms": [
+          "norm:example-regression-route"
+        ],
+        "completed_checks": [],
+        "blockers": [],
+        "next_action": "finish-plan-for-approved-scope",
+        "next_gate": "verification",
+        "transition_history": [
+          {
+            "sequence": 1,
+            "from_stage": null,
+            "from_status": null,
+            "to_stage": "intake",
+            "to_status": "planned",
+            "scope_revision": 1,
+            "reason": "Та же постановка перезапущена после первой попытки."
+          },
+          {
+            "sequence": 2,
+            "from_stage": "intake",
+            "from_status": "planned",
+            "to_stage": "classification",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Начата классификация."
+          },
+          {
+            "sequence": 3,
+            "from_stage": "classification",
+            "from_status": "active",
+            "to_stage": "norm_resolution",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Начато разрешение норм."
+          },
+          {
+            "sequence": 4,
+            "from_stage": "norm_resolution",
+            "from_status": "active",
+            "to_stage": "planning",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Начато планирование."
+          }
+        ]
+      }
+    },
+    "execution-run:example-run-relative-paths-001": {
+      "$schema": "../../registries/operating-model/execution-state.schema.json",
+      "schema_version": 1,
+      "id": "example-run-relative-paths-001",
+      "title": "Запуск с относительными путями в тексте причин переходов",
+      "record_type": "execution-run",
+      "scope": {
+        "type": "run-state",
+        "id": "example-run-relative-paths",
+        "workspace_id": "ws-meridian"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-decision:example-start-relative-paths"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "example-workspace-owner"
+      },
+      "payload": {
+        "task_specification_ref": "task-specification:uiq-scenario-language-change-classify",
+        "lifecycle_stage": "classification",
+        "work_status": "active",
+        "scope_revision": 1,
+        "current_actor": "actor:example-executor-agent",
+        "resolved_norms": [
+          "norm:example-config-parser-locality"
+        ],
+        "completed_checks": [],
+        "blockers": [],
+        "next_action": "continue-classification",
+        "next_gate": "planning",
+        "transition_history": [
+          {
+            "sequence": 1,
+            "from_stage": null,
+            "from_status": null,
+            "to_stage": "intake",
+            "to_status": "planned",
+            "scope_revision": 1,
+            "reason": "Постановка о модуле src/config/parser принята в работу."
+          },
+          {
+            "sequence": 2,
+            "from_stage": "intake",
+            "from_status": "planned",
+            "to_stage": "classification",
+            "to_status": "active",
+            "scope_revision": 1,
+            "reason": "Классификация: изменение затрагивает только packages/@scope/module и relative/$private/file."
+          }
+        ]
+      }
+    }
+  }
+}

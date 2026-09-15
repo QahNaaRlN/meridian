@@ -154,6 +154,7 @@ function buildSyntheticKernel(name, { dropSourcingLine = false, dropKernelPin = 
     'test/evidence-and-handoff.test.mjs',
     'test/field-evaluation.test.mjs',
     'test/workspace-compatibility-qualification.test.mjs',
+    'test/upgrade-integration-qualification.test.mjs',
     'test/pre-push-git-isolation.test.mjs',
     'scripts/kernel-validate.mjs',
     'scripts/validate-and-log.mjs',

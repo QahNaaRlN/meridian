@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meridian.invalid/registries/operating-model/upgrade-integration-qualification.schema.json",
+  "title": "Meridian upgrade integration qualification register",
+  "description": "Container for the final, product-neutral qualification (record_type: upgrade-integration-qualification) of one workspace's run through packages 1-8 of the meridian-operating-upgrade program (meridian-operating-foundation, task-pattern-registry, task-specification-contract, execution-state-model, role-and-human-control, bounded-context-manifest, evidence-and-handoff-contract, meridian-field-evaluation). This is the ninth, penultimate package: it does not classify a task, run a task, resolve a norm, manage context, record evidence, hand off a result or observe a metric itself - it only QUALIFIES already-composed records produced by those eight packages, exactly the way workspace-compatibility-qualification.schema.json qualifies the meridian-workspace-compatibility program without duplicating any of its five composed contracts. payload.task_journey_ref is a CLOSED pinned reference to one FULL evidence-and-handoff record (record_type evidence-and-handoff), resolved through an external boundary at the library level and checked there against the REAL evaluateEvidenceAndHandoff - never a second, competing shape. A resolved evidence-and-handoff record already composes execution-state-model, role-and-human-control, bounded-context-manifest and, transitively, task-specification-contract and task-pattern-registry (evidence-and-handoff-contract.md SS4, SS12), so this is the single terminal composition point for packages 2-7; this schema does not resolve those four packages a second time. payload.field_evaluation_report_ref is a CLOSED pinned reference to one FULL field-evaluation-report record (package 8), or null when no report has been composed yet - field-evaluation-report carries eight separate characteristics with NO collapse into one score (meridian-field-evaluation.md SS3), so it is composed as its own terminal reference, never folded into task_journey_ref's verdict. payload.scenario_classifications is a CLOSED, exactly-three-element array, one entry per required neutral scenario (single-module-refactor, multi-repository-decomposition, language-change-limit-case - upgrade-integration-qualification.md SS4), each pinning a FULL task-specification record and a FULL execution-run record, both resolved through an external boundary and checked against the REAL evaluateTaskSpecification/evaluateExecutionState. payload.workspace_transition_compatibility is a required, closed, product-neutral template requirement recording that a compatibility record for the Kernel/Instance transition to the new operating-model workspace model exists as a Kernel-side template (status is closed to the single legal value \"kernel-template-only\" in this Kernel slice) - it never carries any product-specific evidence, which is the subject of a separate, later Instance package. payload.qualification_state is a closed, RECOMPUTED verdict - QUALIFIED, BLOCKED or UNVERIFIED - checked at the library level against the composed evaluations' own outcome; a declared state that does not match the recomputed one is rejected, never trusted on its own. blockers/open_questions are closed to qualification_state: blockers is non-empty exactly when BLOCKED, open_questions is non-empty exactly when UNVERIFIED. This package does not classify, run, resolve, manage context, record evidence, hand off, or observe metrics for any actual product; it only qualifies - declares one closed verdict over records produced by the eight packages it composes. The contract is a mandatory part of the Kernel: an absent schema or absent fixtures is a validator FAIL, not an informational skip. The normative document is standards/workspace/upgrade-integration-qualification.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "title", "qualifications"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "registry_id": { "const": "upgrade-integration-qualification" },
+    "title": { "type": "string", "minLength": 1 },
+    "qualifications": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/entry" }
+    }
+  },
+  "definitions": {
+    "semantic_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "non_empty": { "type": "string", "minLength": 1 },
+    "sha256_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "entry": {
+      "type": "object",
+      "required": ["record_type", "payload"],
+      "properties": {
+        "record_type": { "const": "upgrade-integration-qualification" },
+        "payload": { "$ref": "#/definitions/payload" }
+      }
+    },
+    "qualification_state": {
+      "enum": ["QUALIFIED", "BLOCKED", "UNVERIFIED"]
+    },
+    "scenario_id": {
+      "enum": ["single-module-refactor", "multi-repository-decomposition", "language-change-limit-case"]
+    },
+    "pinned_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_type", "id", "reference", "sha256"],
+      "description": "A closed reference resolved through an external boundary - never an embedded body. sha256 is mandatory: the exact composed version's own recomputed content digest (computeContentDigest), never a bare id/reference an independent resolver could satisfy with different content under the same label.",
+      "properties": {
+        "record_type": { "$ref": "#/definitions/non_empty" },
+        "id": { "$ref": "#/definitions/semantic_id" },
+        "reference": { "$ref": "#/definitions/non_empty" },
+        "sha256": { "$ref": "#/definitions/sha256_hex" }
+      }
+    },
+    "scenario_classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario_id", "task_specification_ref", "execution_state_ref"],
+      "properties": {
+        "scenario_id": { "$ref": "#/definitions/scenario_id" },
+        "task_specification_ref": { "$ref": "#/definitions/pinned_ref" },
+        "execution_state_ref": { "$ref": "#/definitions/pinned_ref" }
+      }
+    },
+    "workspace_transition_compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "notes"],
+      "description": "A product-neutral Kernel template requirement, not a filled Instance record. status is closed to \"kernel-template-only\" in this Kernel slice: the actual Kernel/Instance transition evidence for a real product's workspace model is the subject of a separate, later Instance package and is never written here.",
+      "properties": {
+        "status": { "const": "kernel-template-only" },
+        "notes": { "$ref": "#/definitions/non_empty" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_journey_ref",
+        "field_evaluation_report_ref",
+        "scenario_classifications",
+        "workspace_transition_compatibility",
+        "qualification_state",
+        "qualification_reason",
+        "blockers",
+        "open_questions"
+      ],
+      "properties": {
+        "task_journey_ref": {
+          "$ref": "#/definitions/pinned_ref",
+          "description": "Always required: a qualification without a pinned, resolvable evidence-and-handoff record (the terminal composition point of packages 2-7) does not exist."
+        },
+        "field_evaluation_report_ref": {
+          "anyOf": [
+            { "$ref": "#/definitions/pinned_ref" },
+            { "type": "null" }
+          ],
+          "description": "null when no field-evaluation-report has been composed yet for this task journey; otherwise a pinned reference to one FULL field-evaluation-report entry (package 8), sha256-pinned to its recomputed content digest."
+        },
+        "scenario_classifications": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/scenario_classification" },
+          "description": "Exactly three entries, one per required neutral scenario (single-module-refactor, multi-repository-decomposition, language-change-limit-case) - checked at the library level for exact scenario_id coverage (no gap, no duplicate, no extra) and for each entry's task_specification_ref/execution_state_ref resolving, sha256-matching and classifying as that scenario requires."
+        },
+        "workspace_transition_compatibility": { "$ref": "#/definitions/workspace_transition_compatibility" },
+        "qualification_state": { "$ref": "#/definitions/qualification_state" },
+        "qualification_reason": { "$ref": "#/definitions/non_empty" },
+        "blockers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/non_empty" }
+        },
+        "open_questions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/non_empty" }
+        }
+      }
+    }
+  }
+}

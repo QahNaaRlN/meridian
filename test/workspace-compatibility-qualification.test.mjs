@@ -1122,7 +1122,7 @@ check('scenario:existing-project-zero-write — реальное сканиро�
     return a.size === b.size && [...a].every((id) => b.has(id));
   }
 
-  check('scenario:migration-applicability-preservation — Kernel-механизм: applicability_preservation подтверждена реальным разрешённым evidence; покрытие целей миграции каноническим экспортом совпадает (фактическое сохранение норм для CBS — предмет отдельного Instance-среза, §4.3)', () => {
+  check('scenario:migration-applicability-preservation — Kernel-механизм: applicability_preservation подтверждена реальным разрешённым evidence; покрытие целей миграции каноническим экспортом совпадает (фактическое сохранение норм конкретного продукта — предмет отдельного Instance-среза, §4.3)', () => {
     assert(planOne.payload.verification.coverage.status === 'verified');
     assert(planOne.payload.verification.applicability_preservation.status === 'verified');
     assert(planOne.payload.verification.overall_status === 'VERIFIED');

@@ -126,6 +126,14 @@ if ! node "$ROOT/test/upgrade-integration-qualification.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: verifying the conformance harness"
+if ! node "$ROOT/test/conformance-harness.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the conformance harness regression suite failed."
+  echo "pre-push: the verdict-comparison mechanism no longer behaves as claimed on its controlled corpus."
+  exit 1
+fi
+
 echo "pre-push: running the Git-environment isolation regression test"
 if ! node "$ROOT/test/pre-push-git-isolation.test.mjs"; then
   echo ""

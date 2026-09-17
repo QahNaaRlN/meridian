@@ -92,3 +92,24 @@ jobs:
           echo "::notice::CI ran against test/instance-fixture, a fictional product."
           echo "::notice::It proves the Kernel works against an Instance, and that personal-path leaks are absent."
           echo "::notice::It does NOT prove the real product's literals are absent: that check needs the private Instance and runs locally."
+
+  rust-workspace:
+    name: Rust workspace validate (foundation)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Format check
+        run: cargo fmt --all -- --check
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+
+      - name: Test workspace
+        run: cargo test --locked --workspace
+
+      - name: Doc build
+        run: cargo doc --locked --workspace --no-deps

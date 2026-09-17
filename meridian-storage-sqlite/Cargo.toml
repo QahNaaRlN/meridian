@@ -1,0 +1,12 @@
+[package]
+name = "meridian-storage-sqlite"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+description = "Meridian Rust SQLite storage adapter — the only crate aware of SQLite."
+
+[lints]
+workspace = true
+
+[dependencies]
+rusqlite = { version = "0.40.2", default-features = false, features = ["bundled"] }

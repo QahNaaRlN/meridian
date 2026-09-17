@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-16
+updated: 2026-09-17
 ---
 
 # Changelog
@@ -15,6 +15,55 @@ updated: 2026-09-16
 Линия версий Kernel независима от Instance и от продуктовых репозиториев.
 
 ## [Unreleased]
+
+### Added
+
+- **Основание рабочего пространства Rust (`rust-workspace-foundation`) —
+  пакет 1 программы `meridian-rust-migration`.** Один Cargo workspace в
+  корне Kernel с ровно четырьмя крейтами (`meridian-core`, `meridian-app`,
+  `meridian-storage-sqlite`, `meridian-cli`), допустимым направлением
+  зависимостей (`cli` → `app`, `storage-sqlite`; `app` → `core`; `core` ни от
+  одного из трёх других не зависит) и `#![forbid(unsafe_code)]`, действующим
+  во всех четырёх крейтах и на уровне `[workspace.lints.rust]`. `meridian-cli`
+  — минимальный бинарный крейт без предметных команд, и производственный код
+  `meridian-app`/`meridian-storage-sqlite` остаётся каркасным (несёт только
+  `CRATE_NAME`): проверки выбранных библиотек живут исключительно внутри
+  `#[cfg(test)]` и не составляют публичного API пакета 1 — ни `ProbeRecord`,
+  ни адаптер к SQLite, ни схема, ни `CREATE TABLE` этим пакетом не вводятся.
+  Закреплены конкретные библиотеки: `serde`/`serde_json` для сериализации,
+  `jsonschema` (Draft 7, без сетевых/async-функций по умолчанию) для проверки
+  JSON Schema, `serde-saphyr` 1.3.0 для YAML и `rusqlite` (`bundled`, без
+  WASM-функций по умолчанию) для SQLite. `serde-saphyr` выбран по первичным
+  источникам (crates.io, репозиторий) на момент пакета: исходный `serde_yaml`
+  архивирован, а более старые преемники (`serde_yaml_ng`, `serde_norway`) не
+  публиковали новых версий полтора-два года; `serde-saphyr` публикуется
+  активно (последний релиз — тот же месяц), не тянет `unsafe`-код и C/`libyaml`
+  в собственной реализации (в духе `forbid(unsafe_code)` этого рабочего
+  пространства) и несёт API, близкий к `serde_yaml` (`to_string`/`from_str`),
+  что упрощает перенос в будущий адаптер. Выбор — только основание: пакет
+  `rust-source-format-adapters` вводит strict-lint, allowlist и паритет с
+  Node.js-читателем YAML. `Cargo.lock` зафиксирован и обновлён под
+  `serde-saphyr`. `.github/workflows/gate.yml` расширен отдельной задачей
+  `Rust workspace validate (foundation)` (`cargo fmt --check`;
+  `clippy`/`test`/`doc` — через `--locked`, чтобы CI не мог разрешить версии
+  иначе, чем зафиксировано в `Cargo.lock`) без изменения существующих
+  Node.js-проверок. Не переносит resolver, валидатор, предметные типы,
+  порты/адаптеры, схему SQLite или CLI-команды — это предмет последующих
+  пакетов программы; пакет `rust-domain-core` вводит предметное ядро в
+  `meridian-core`, но не порты и операции `meridian-app`.
+  - **Узкое исключение `document-identity` для `Cargo.toml`/`Cargo.lock`.**
+    Временная индексация кандидата вскрыла шесть конфликтов с регистром имени
+    файла — `Cargo.toml`/`Cargo.lock` в корне рабочего пространства и в
+    каждом из четырёх крейтов, — потому что оба имени заданы экосистемой
+    Cargo и не подлежат приведению к `kebab-case`. Оба добавлены в
+    `EXTERNAL_NAMES` (`scripts/kernel-validate.mjs`) и в перечень внешних
+    исключений `standards/workspace/document-identity.md` §1.1 точным
+    совпадением строки в любом каталоге, а не шаблоном и не
+    регистронезависимым сравнением: `Cargo.TOML`/`cargo.toml` под исключение
+    не подпадают и проверяются на общих основаниях. Положительно проверено
+    для корневых и крейтных файлов, отрицательно — для похожего, но
+    неточного имени (`test/kernel-validate.test.mjs`, `t285`–`t287`).
+    Остальные правила `document-identity` не ослаблены.
 
 ## [0.6.0] — 2026-09-16 (`draft`)
 

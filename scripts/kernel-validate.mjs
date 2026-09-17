@@ -397,7 +397,12 @@ const DOCUMENT_TYPES = new Set([
   'changelog', 'unclassified',
 ]);
 // Names fixed by conventions this Kernel does not own and must not "correct".
-const EXTERNAL_NAMES = new Set(['README.md', 'SKILL.md', 'AGENTS.md', 'PIN.yaml', 'LICENSE', 'VERSION']);
+// Cargo.toml/Cargo.lock are the manifest and lockfile names fixed by the
+// Cargo ecosystem itself — in every crate directory of a Rust workspace, not
+// only at the workspace root — so they join the same exact-string exception
+// as README.md, not a case-insensitive or pattern-based one: "Cargo.TOML" or
+// "cargo.toml" are not this name and are checked on general grounds.
+const EXTERNAL_NAMES = new Set(['README.md', 'SKILL.md', 'AGENTS.md', 'PIN.yaml', 'LICENSE', 'VERSION', 'Cargo.toml', 'Cargo.lock']);
 // Upper case is legal only for the release unit's root set: the files someone
 // who has just opened the repository is expected to find without looking.
 const ROOT_UPPERCASE = new Set(['README.md', 'LICENSE', 'VERSION', 'CHANGELOG.md', 'COMPATIBILITY.md', 'MANUAL.md']);

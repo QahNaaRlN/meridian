@@ -1,0 +1,9 @@
+[package]
+name = "meridian-core"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+description = "Meridian Rust domain core — synchronous, side-effect-free domain logic (no files, Git, DB, network, env, or output)."
+
+[lints]
+workspace = true

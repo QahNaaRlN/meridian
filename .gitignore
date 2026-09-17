@@ -33,6 +33,7 @@ screenshots/
 # can be opened by any tool that reads one as a graph. Whatever config such a
 # tool leaves behind is that operator's, not the Kernel's.
 node_modules/
+/target/
 .DS_Store
 Thumbs.db
 .idea/

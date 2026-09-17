@@ -1,0 +1,192 @@
+{
+  "$comment": "Controlled corpus for verification/conformance-harness/conformance-harness.mjs. Product-neutral synthetic producers only — package 2 of meridian-rust-migration has no real Node/Rust surface to compare yet (that starts at package 4). \"$NODE\" in a producer's \"command\" is resolved by runCorpus() to the interpreter running the harness itself; \"cwd\" is resolved relative to this file's own directory. Every case is run through the exact same runProducer/normalizeDiagnostics/compareVerdicts/runCase path CI, hooks/pre-push and test/conformance-harness.test.mjs use.",
+  "cases": [
+    {
+      "name": "identical-exit-and-diagnostics",
+      "description": "Same exit code, same FAIL and WARN messages, same order on both sides.",
+      "expected_status": "conformant",
+      "left": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAIL  missing required field: name\\nWARN  deprecated flag --legacy used\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAIL  missing required field: name\\nWARN  deprecated flag --legacy used\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "same-diagnostics-different-order",
+      "description": "Two FAIL messages present on both sides, emitted in opposite order — order must not create a false divergence.",
+      "expected_status": "conformant",
+      "left": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAIL  field a is missing\\nFAIL  field b is missing\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAIL  field b is missing\\nFAIL  field a is missing\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "different-exit-code",
+      "description": "Identical diagnostics, but the two sides exit with different codes.",
+      "expected_status": "divergent",
+      "left": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAIL  schema validation failed\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAIL  schema validation failed\\n');process.exit(2);"],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "missing-fail-on-right",
+      "description": "Left reports two FAILs, right reports only one of them — a dropped FAIL must be detected, not tolerated.",
+      "expected_status": "divergent",
+      "left": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAIL  config file missing\\nFAIL  schema file missing\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAIL  config file missing\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "extra-warn-on-right",
+      "description": "Right emits an additional WARN the left side never produced.",
+      "expected_status": "divergent",
+      "left": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('WARN  deprecated flag used\\n');process.exit(0);"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('WARN  deprecated flag used\\nWARN  legacy path used\\n');process.exit(0);"],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "same-text-different-level",
+      "description": "Identical message text, but FAIL on the left and WARN on the right — a severity change must not normalize away.",
+      "expected_status": "divergent",
+      "left": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAIL  unknown field present\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('WARN  unknown field present\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "diagnostic-text-differs",
+      "description": "Same level, same exit code, but the message text itself differs between the two sides.",
+      "expected_status": "divergent",
+      "left": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write(\"FAIL  field 'name' is required\\n\");process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write(\"FAIL  field 'title' is required\\n\");process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "duplicate-diagnostic-only-left",
+      "description": "Left repeats the same WARN twice, right emits it once — a lost duplicate must be detected, not deduplicated away.",
+      "expected_status": "divergent",
+      "left": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('WARN  legacy path used\\nWARN  legacy path used\\n');process.exit(0);"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('WARN  legacy path used\\n');process.exit(0);"],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "spawn-error-on-right",
+      "description": "Right side names a command that cannot be found — this must surface as an explicit harness refusal, never as a match and never as an ordinary divergence.",
+      "expected_status": "harness_error",
+      "left": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAIL  probe\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "this-command-does-not-exist-conformance-harness-probe",
+        "args": [],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "intentional-divergence-proof",
+      "description": "Deliberately obvious mismatch (a FAIL and a non-zero exit on one side against silent success on the other), included specifically to prove the mechanism raises a divergence rather than staying silent on any input.",
+      "expected_status": "divergent",
+      "left": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAIL  schema invalid\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "$NODE",
+        "args": ["-e", "process.exit(0);"],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "unparseable-diagnostic-like-line",
+      "description": "Both sides print an identical line that starts with FAIL but does not match the strict diagnostic form — an aggressive normalizer would silently ignore it and wrongly report a match; this harness must instead refuse with an explicit harness_error.",
+      "expected_status": "harness_error",
+      "left": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAILURE: something that looks like a diagnostic but is not\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "$NODE",
+        "args": ["-e", "process.stdout.write('FAILURE: something that looks like a diagnostic but is not\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      }
+    }
+  ]
+}

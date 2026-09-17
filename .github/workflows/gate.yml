@@ -58,6 +58,9 @@ jobs:
       - name: Verify the upgrade integration qualification contract
         run: node test/upgrade-integration-qualification.test.mjs
 
+      - name: Regression-test the conformance harness
+        run: node test/conformance-harness.test.mjs
+
       - name: Regression-test the pre-push Git-environment isolation
         run: node test/pre-push-git-isolation.test.mjs
 

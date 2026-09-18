@@ -810,7 +810,7 @@ mod tests {
         let err = SourceState::new(
             crate::types::Revision::new("abc1234").unwrap(),
             digest(),
-            EvidenceRef::new("instance:cbs").unwrap(),
+            EvidenceRef::new("instance:sample").unwrap(),
             false,
             Qualification::Reproducible,
         )
@@ -826,7 +826,7 @@ mod tests {
         assert!(SourceState::new(
             crate::types::Revision::new("abc1234").unwrap(),
             digest(),
-            EvidenceRef::new("instance:cbs").unwrap(),
+            EvidenceRef::new("instance:sample").unwrap(),
             false,
             Qualification::NotReproducible {
                 reason: NonEmptyString::new("dirty working tree").unwrap()
@@ -1095,7 +1095,7 @@ mod tests {
         let source = SourceState::new(
             crate::types::Revision::new("abc1234").unwrap(),
             digest(),
-            EvidenceRef::new("instance:cbs").unwrap(),
+            EvidenceRef::new("instance:sample").unwrap(),
             true,
             Qualification::Reproducible,
         )
@@ -1142,7 +1142,7 @@ mod tests {
         let source = SourceState::new(
             crate::types::Revision::new("abc1234").unwrap(),
             digest(),
-            EvidenceRef::new("instance:cbs").unwrap(),
+            EvidenceRef::new("instance:sample").unwrap(),
             true,
             Qualification::Reproducible,
         )

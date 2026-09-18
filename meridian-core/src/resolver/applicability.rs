@@ -651,7 +651,7 @@ mod tests {
     #[test]
     fn norm_id_is_the_full_intake_pointer_for_non_kernel_source() {
         let intake = IntakePointer::new(
-            "instruction-intake/cbs.yaml",
+            "instruction-intake/sample.yaml",
             IsoDate::new("2026-09-01").unwrap(),
             IntakeVerdict::AdoptCore,
             None,
@@ -659,7 +659,7 @@ mod tests {
         .unwrap();
         let rec = ApplicabilityRecord::new(
             NormRef::new(
-                "cbs-core-frontend",
+                "sample-core-frontend",
                 "AGENTS.md",
                 Some("scope-1".to_string()),
             )
@@ -676,7 +676,7 @@ mod tests {
         );
         assert_eq!(
             rec.norm_id(),
-            "instruction-intake/cbs.yaml#AGENTS.md:scope-1@2026-09-01/adopt-core"
+            "instruction-intake/sample.yaml#AGENTS.md:scope-1@2026-09-01/adopt-core"
         );
     }
 }

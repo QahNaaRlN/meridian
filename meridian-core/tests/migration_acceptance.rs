@@ -90,7 +90,7 @@ fn source_state(revision: &str, reproducible: bool) -> SourceState {
     SourceState::new(
         Revision::new(revision).unwrap(),
         digest("source-content"),
-        EvidenceRef::new("instance:cbs").unwrap(),
+        EvidenceRef::new("instance:sample").unwrap(),
         reproducible,
         if reproducible {
             Qualification::Reproducible
@@ -1005,7 +1005,7 @@ fn supersedes_accepts_a_matching_externally_resolved_predecessor() {
     let resolved = ResolvedSupersededPlan {
         plan_ref: sid("plan-0"),
         scope: scope(),
-        repository_ref: EvidenceRef::new("instance:cbs").unwrap(),
+        repository_ref: EvidenceRef::new("instance:sample").unwrap(),
         revision: Revision::new("rev-1").unwrap(),
     };
     let problems = check_supersedes(std::slice::from_ref(&successor), |q| {
@@ -1039,7 +1039,7 @@ fn reproducibility_rejects_a_snapshot_resolved_for_a_different_repository() {
 fn reproducibility_accepts_a_matching_snapshot() {
     let plan = plan_with(source_state("rev-1", true), unverified());
     let resolved = ResolvedSourceSnapshot {
-        repository_ref: EvidenceRef::new("instance:cbs").unwrap(),
+        repository_ref: EvidenceRef::new("instance:sample").unwrap(),
         revision: Revision::new("rev-1").unwrap(),
         digest: digest("source-content"),
         working_tree_clean: true,
@@ -1083,7 +1083,7 @@ fn reversibility_rejects_a_deterministic_plan_pinned_to_a_stale_fingerprint() {
     let fp = compute_plan_fingerprint(&plan);
     let resolved_snapshot = ResolvedRollbackSnapshot {
         source_snapshot_ref: EvidenceRef::new("snapshot:legacy-1").unwrap(),
-        repository_ref: EvidenceRef::new("instance:cbs").unwrap(),
+        repository_ref: EvidenceRef::new("instance:sample").unwrap(),
         revision: Revision::new("rev-1").unwrap(),
         digest: digest("source-content"),
     };

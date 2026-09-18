@@ -367,7 +367,7 @@ mod tests {
         let source = SourceState::new(
             crate::types::Revision::new("rev-1").unwrap(),
             ContentDigest::of_str("d"),
-            crate::types::EvidenceRef::new("instance:cbs").unwrap(),
+            crate::types::EvidenceRef::new("instance:sample").unwrap(),
             true,
             Qualification::Reproducible,
         )
@@ -376,7 +376,7 @@ mod tests {
         assert_eq!(
             preimage,
             format!(
-                r#"{{"scope":{{"type":"project-workspace","id":"sample-project","workspace_id":""}},"repository_ref":"instance:cbs","revision":"rev-1","digest":{{"algorithm":"sha-256","value":"{}"}}}}"#,
+                r#"{{"scope":{{"type":"project-workspace","id":"sample-project","workspace_id":""}},"repository_ref":"instance:sample","revision":"rev-1","digest":{{"algorithm":"sha-256","value":"{}"}}}}"#,
                 ContentDigest::of_str("d").value()
             )
         );

@@ -31,6 +31,17 @@
 //! `scripts/lib/instance-data-migration.mjs` (or vice versa) will change
 //! one side's hash and not the other's, and these tests will fail —
 //! exactly the guarantee a byte-compatible canonicalization is for.
+//!
+//! Kernel-purity fix-up: `fixture_one`/`fixture_two_mappings`' source
+//! `repository_ref` originally carried a product-specific Instance literal,
+//! not permitted in this Kernel repository. Replaced with the neutral
+//! `"instance:sample"`/`"instance:sample-repo"`; since `repository_ref` is
+//! itself part of both hashed projections, all four hex constants below
+//! were re-derived by running the exact same companion Node.js script
+//! above against object literals with ONLY that field changed (verified by
+//! first reproducing the PRIOR hashes against the PRIOR literal, to
+//! confirm the mirrored object literal was faithful, before trusting the
+//! new ones) — not computed or guessed by hand.
 
 use meridian_core::migration::checks::{compute_idempotency_key, compute_plan_fingerprint};
 use meridian_core::migration::*;
@@ -64,7 +75,7 @@ fn fixture_one() -> MigrationPlan {
     let source = SourceState::new(
         Revision::new("abc1234").unwrap(),
         placeholder_digest(),
-        EvidenceRef::new("instance:cbs").unwrap(),
+        EvidenceRef::new("instance:sample").unwrap(),
         true,
         Qualification::Reproducible,
     )
@@ -157,7 +168,7 @@ fn fixture_two_mappings(reverse_declaration_order: bool) -> MigrationPlan {
     let source = SourceState::new(
         Revision::new("rev-42").unwrap(),
         placeholder_digest(),
-        EvidenceRef::new("instance:cbs-repo").unwrap(),
+        EvidenceRef::new("instance:sample-repo").unwrap(),
         true,
         Qualification::Reproducible,
     )
@@ -268,7 +279,7 @@ fn plan_fingerprint_matches_the_node_reference_for_a_migrated_mapping() {
     let plan = fixture_one();
     assert_eq!(
         compute_plan_fingerprint(&plan).value(),
-        "a4d74807c288a1e8ff3d1d97bb3a2e94222f5b5810fbc0867a4401d7283f44ff"
+        "ca8af11ab2ac38db490cb7678cb05bf06b43716a22ccee2e5464784728a570f2"
     );
 }
 
@@ -277,7 +288,7 @@ fn idempotency_key_matches_the_node_reference_for_a_project_workspace_scope() {
     let plan = fixture_one();
     assert_eq!(
         compute_idempotency_key(&plan).value(),
-        "c0b6440daa3031c1a8a95c3dae09523cf3ce22d2ca3bcbecb6909a4812eaa800"
+        "727a288c00e83a6f29d5a01bb551feb9192d0e1d8b9fe66c24c00aba01472e57"
     );
 }
 
@@ -286,7 +297,7 @@ fn plan_fingerprint_matches_the_node_reference_for_a_merged_mapping() {
     let plan = fixture_two_mappings(false);
     assert_eq!(
         compute_plan_fingerprint(&plan).value(),
-        "7a7547e0c13ff2b5982fc4148a09fc8458c15221d523bcccb4290200a7bed457"
+        "19ddebb654a510ec74b46d96a79b1fc3c93693ea017efee8926994be974fcd6e"
     );
 }
 
@@ -295,7 +306,7 @@ fn idempotency_key_matches_the_node_reference_for_a_repository_scope_with_worksp
     let plan = fixture_two_mappings(false);
     assert_eq!(
         compute_idempotency_key(&plan).value(),
-        "faaa3b2685ae1ad86a722a3039e3b00f29efaba2597b175b7c7e107e2f280194"
+        "f66c28d2dc56dad8d1372c4ee9ef950ec22f704c511f4049423152d580595b97"
     );
 }
 
@@ -309,6 +320,6 @@ fn plan_fingerprint_matches_the_node_reference_regardless_of_declaration_order()
     let plan = fixture_two_mappings(true);
     assert_eq!(
         compute_plan_fingerprint(&plan).value(),
-        "7a7547e0c13ff2b5982fc4148a09fc8458c15221d523bcccb4290200a7bed457"
+        "19ddebb654a510ec74b46d96a79b1fc3c93693ea017efee8926994be974fcd6e"
     );
 }

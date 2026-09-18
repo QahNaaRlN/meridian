@@ -26,7 +26,7 @@ fn kernel_norm(path: &str, text: &str) -> (NormRef, ContentDigest) {
 fn base_sources() -> ResolverSources {
     ResolverSources {
         repository_inventory: vec![repo(
-            "cbs-core-frontend",
+            "sample-core-frontend",
             Some("vue-monorepo"),
             &["billing", "checkout"],
         )],
@@ -36,7 +36,7 @@ fn base_sources() -> ResolverSources {
 
 fn work_item(kind: WorkItemKind, candidate_paths: Vec<&str>, changed_paths: Vec<&str>) -> WorkItem {
     WorkItem::new(
-        "cbs-core-frontend",
+        "sample-core-frontend",
         kind,
         candidate_paths.into_iter().map(str::to_string).collect(),
         changed_paths.into_iter().map(str::to_string).collect(),
@@ -81,7 +81,7 @@ fn repository_scope_matches_only_the_named_repository() {
         norm,
         digest,
         ApplicabilityScope::Repository {
-            repository: "cbs-core-frontend".to_string(),
+            repository: "sample-core-frontend".to_string(),
         },
         Activation::Always,
         ApplicabilitySource::Kernel,
@@ -503,7 +503,7 @@ fn intake_ptr(register: &str, date: &str, verdict: IntakeVerdict) -> IntakePoint
 }
 
 fn repo_norm(path: &str) -> NormRef {
-    NormRef::new("cbs-core-frontend", path, None).unwrap()
+    NormRef::new("sample-core-frontend", path, None).unwrap()
 }
 
 fn intake_record(artifact: &str, date: &str, verdict: IntakeVerdict) -> IntakeRecordEntry {
@@ -520,7 +520,7 @@ fn intake_record(artifact: &str, date: &str, verdict: IntakeVerdict) -> IntakeRe
 fn two_same_date_records_with_no_supersedes_relationship_fail_closed() {
     let mut sources = base_sources();
     sources.intake_registers = vec![IntakeRegister {
-        register: "instruction-intake/cbs.yaml".to_string(),
+        register: "instruction-intake/sample.yaml".to_string(),
         records: vec![
             intake_record("AGENTS.md", "2026-09-01", IntakeVerdict::Deferred),
             intake_record("AGENTS.md", "2026-09-01", IntakeVerdict::AdoptCore),
@@ -534,7 +534,7 @@ fn two_same_date_records_with_no_supersedes_relationship_fail_closed() {
         Activation::Always,
         ApplicabilitySource::Repository {
             intake_record: intake_ptr(
-                "instruction-intake/cbs.yaml",
+                "instruction-intake/sample.yaml",
                 "2026-09-01",
                 IntakeVerdict::Deferred,
             ),
@@ -550,7 +550,7 @@ fn two_same_date_records_with_no_supersedes_relationship_fail_closed() {
         Activation::Always,
         ApplicabilitySource::Repository {
             intake_record: intake_ptr(
-                "instruction-intake/cbs.yaml",
+                "instruction-intake/sample.yaml",
                 "2026-09-01",
                 IntakeVerdict::AdoptCore,
             ),
@@ -577,7 +577,7 @@ fn two_same_date_records_with_no_supersedes_relationship_fail_closed() {
 fn a_valid_supersedes_relationship_picks_the_declared_head() {
     let mut sources = base_sources();
     sources.intake_registers = vec![IntakeRegister {
-        register: "instruction-intake/cbs.yaml".to_string(),
+        register: "instruction-intake/sample.yaml".to_string(),
         records: vec![
             intake_record("AGENTS.md", "2026-09-01", IntakeVerdict::Deferred),
             intake_record("AGENTS.md", "2026-09-02", IntakeVerdict::AdoptCore),
@@ -592,7 +592,7 @@ fn a_valid_supersedes_relationship_picks_the_declared_head() {
         Activation::Always,
         ApplicabilitySource::Repository {
             intake_record: intake_ptr(
-                "instruction-intake/cbs.yaml",
+                "instruction-intake/sample.yaml",
                 "2026-09-01",
                 IntakeVerdict::Deferred,
             ),
@@ -608,13 +608,13 @@ fn a_valid_supersedes_relationship_picks_the_declared_head() {
         Activation::Always,
         ApplicabilitySource::Repository {
             intake_record: intake_ptr(
-                "instruction-intake/cbs.yaml",
+                "instruction-intake/sample.yaml",
                 "2026-09-02",
                 IntakeVerdict::AdoptCore,
             ),
             supersedes: Some(
                 SupersedesPointer::new(
-                    "instruction-intake/cbs.yaml",
+                    "instruction-intake/sample.yaml",
                     "AGENTS.md",
                     None,
                     IsoDate::new("2026-09-01").unwrap(),
@@ -644,7 +644,7 @@ fn a_valid_supersedes_relationship_picks_the_declared_head() {
 fn a_supersedes_cycle_fails_closed() {
     let mut sources = base_sources();
     sources.intake_registers = vec![IntakeRegister {
-        register: "instruction-intake/cbs.yaml".to_string(),
+        register: "instruction-intake/sample.yaml".to_string(),
         records: vec![
             intake_record("AGENTS.md", "2026-09-01", IntakeVerdict::Deferred),
             intake_record("AGENTS.md", "2026-09-01", IntakeVerdict::AdoptCore),
@@ -658,13 +658,13 @@ fn a_supersedes_cycle_fails_closed() {
         Activation::Always,
         ApplicabilitySource::Repository {
             intake_record: intake_ptr(
-                "instruction-intake/cbs.yaml",
+                "instruction-intake/sample.yaml",
                 "2026-09-01",
                 IntakeVerdict::Deferred,
             ),
             supersedes: Some(
                 SupersedesPointer::new(
-                    "instruction-intake/cbs.yaml",
+                    "instruction-intake/sample.yaml",
                     "AGENTS.md",
                     None,
                     IsoDate::new("2026-09-01").unwrap(),
@@ -684,13 +684,13 @@ fn a_supersedes_cycle_fails_closed() {
         Activation::Always,
         ApplicabilitySource::Repository {
             intake_record: intake_ptr(
-                "instruction-intake/cbs.yaml",
+                "instruction-intake/sample.yaml",
                 "2026-09-01",
                 IntakeVerdict::AdoptCore,
             ),
             supersedes: Some(
                 SupersedesPointer::new(
-                    "instruction-intake/cbs.yaml",
+                    "instruction-intake/sample.yaml",
                     "AGENTS.md",
                     None,
                     IsoDate::new("2026-09-01").unwrap(),

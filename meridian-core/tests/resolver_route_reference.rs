@@ -13,11 +13,11 @@
 //! ```js
 //! import { resolveRules } from '<MERIDIAN_KERNEL>/scripts/rule-resolver.mjs';
 //! const workItem = {
-//!   repository_id: 'cbs-core-frontend', work_kind: 'change', change_class: 'BUGFIX',
+//!   repository_id: 'sample-core-frontend', work_kind: 'change', change_class: 'BUGFIX',
 //!   candidate_paths: [], changed_paths: [],
 //! };
 //! const baseSources = {
-//!   repository_inventory: [{ id: 'cbs-core-frontend' }],
+//!   repository_inventory: [{ id: 'sample-core-frontend' }],
 //!   applicability_records: [],
 //! };
 //! // Scenario 1 — tie-break:
@@ -41,7 +41,7 @@ use meridian_core::types::ContentDigest;
 
 fn work_item() -> WorkItem {
     WorkItem::new(
-        "cbs-core-frontend",
+        "sample-core-frontend",
         WorkItemKind::Change(ChangeClass::Bugfix),
         vec![],
         vec![],
@@ -53,7 +53,7 @@ fn work_item() -> WorkItem {
 fn base_sources() -> ResolverSources {
     ResolverSources {
         repository_inventory: vec![RepositoryInventoryEntry {
-            id: "cbs-core-frontend".to_string(),
+            id: "sample-core-frontend".to_string(),
             profile: None,
             semantic_areas: vec![],
         }],

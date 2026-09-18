@@ -195,7 +195,7 @@ mod tests {
     #[test]
     fn accepts_a_change_work_item() {
         let wi = WorkItem::new(
-            "cbs-core-frontend",
+            "sample-core-frontend",
             WorkItemKind::Change(ChangeClass::Bugfix),
             vec!["src/a.rs".to_string()],
             vec!["src/a.rs".to_string()],

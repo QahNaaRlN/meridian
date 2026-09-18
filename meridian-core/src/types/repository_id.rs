@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn accepts_hyphens() {
-        assert!(RepositoryId::new("cbs-core-frontend").is_ok());
+        assert!(RepositoryId::new("sample-core-frontend").is_ok());
     }
 
     #[test]
@@ -120,16 +120,16 @@ mod tests {
 
     #[test]
     fn rejects_uppercase() {
-        assert!(RepositoryId::new("CbsCore").is_err());
+        assert!(RepositoryId::new("SampleCore").is_err());
     }
 
     #[test]
     fn rejects_underscore() {
-        assert!(RepositoryId::new("cbs_core").is_err());
+        assert!(RepositoryId::new("sample_core").is_err());
     }
 
     #[test]
     fn rejects_leading_hyphen() {
-        assert!(RepositoryId::new("-cbs").is_err());
+        assert!(RepositoryId::new("-sample").is_err());
     }
 }

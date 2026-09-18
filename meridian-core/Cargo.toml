@@ -7,3 +7,17 @@ description = "Meridian Rust domain core — synchronous, side-effect-free domai
 
 [lints]
 workspace = true
+
+[dependencies]
+sha2 = { version = "0.11.0", default-features = false }
+# Rust's own `{:e}` (`LowerExp`) formatting does not implement ECMA-262
+# `Number::toString`'s round-to-even tie-break rule and was PROVEN to diverge
+# from it by differential testing against real `JSON.stringify` (minimal
+# counterexample: -86666878403640.625, where Rust's formatter picks the odd
+# digit "...63" and JS picks the even digit "...62" — see
+# `meridian-core/src/json.rs` and `meridian-core/tests/`). `ryu` (the
+# shortest-round-trip float formatter serde_json itself uses) was verified to
+# produce the JS-matching digit choice for that counterexample and is used as
+# the digit source instead; only the surrounding ECMA case-selection and
+# punctuation logic is still hand-written.
+ryu = { version = "1", default-features = false }

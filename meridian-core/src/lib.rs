@@ -2,12 +2,28 @@
 
 //! Meridian domain core.
 //!
-//! Package `rust-workspace-foundation` establishes only the crate boundary.
-//! Domain types, the resolver, conflict detection, migration plans, evidence
-//! and verdict/diagnostic structures are added by package `rust-domain-core`.
+//! Synchronous, side-effect-free domain logic: strict domain types
+//! ([`types`]), the rule resolver ([`resolver`]), instance-data-migration
+//! plans and their checks ([`migration`]), and evidence/verdict structures
+//! ([`evidence`]).
+//!
+//! This crate never opens a file, never talks to Git, a database or the
+//! network, never reads an environment variable, and never produces output
+//! (no `println!`/`eprintln!`/`dbg!`, no logging). Every function here
+//! takes already-loaded, already-syntactically-checked structures as
+//! parameters and returns a value — it does not know where its input came
+//! from or where its output goes. Package `rust-domain-core`
+//! (`meridian-rust-migration-program-plan.md` §4) establishes this crate's
+//! content; adapters, ports and orchestration belong to `meridian-app` and
+//! its own adapter crates, added by later packages of the same program.
 
-/// Identifies this crate in composition-root diagnostics until real domain
-/// types exist.
+pub mod evidence;
+mod json;
+pub mod migration;
+pub mod resolver;
+pub mod types;
+
+/// Identifies this crate in composition-root diagnostics.
 pub const CRATE_NAME: &str = "meridian-core";
 
 #[cfg(test)]

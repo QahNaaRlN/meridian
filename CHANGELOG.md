@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-19
+updated: 2026-09-20
 ---
 
 # Changelog
@@ -17,6 +17,80 @@ updated: 2026-09-19
 ## [Unreleased]
 
 ### Added
+
+- **Канонические документы разработки Meridian перенесены в Kernel
+  (`governance/`) — корректирующий рубеж
+  `instance-repository-retirement-baseline` программы
+  `meridian-rust-migration`.** Отдельный репозиторий Instance выведен из роли
+  активного центра управления разработкой самого Meridian (владелец,
+  2026-09-19): контракт намерений владельца, план программы переноса на
+  Rust, архитектурное решение Rust/SQLite, целевая архитектура и CLI RFC
+  теперь канонически живут в `governance/meridian-owner-intent-contract.md`,
+  `governance/plans/meridian-rust-migration-program-plan.md`,
+  `governance/decisions/meridian-rust-sqlite-architecture.md`,
+  `governance/specifications/meridian-rust-target-architecture.md` и
+  `governance/rfcs/meridian-cli-rfc.md`, очищенные при переносе от
+  продуктовых данных исходного Instance. `AGENTS.md` называет их
+  каноническими, перестаёт требовать `MERIDIAN_INSTANCE` для начала работы
+  над Meridian и записывает это решение владельца датированной записью
+  (§10). Прежний отдельный репозиторий Instance не удалён и не заброшен — он
+  остаётся замороженным для чтения источником миграции до пакета
+  `meridian-cli-migration` (пакет 8).
+
+### Changed
+
+- **`scripts/preflight.mjs` больше не требует `MERIDIAN_INSTANCE` по
+  умолчанию.** Обычный запуск проверяет только самодостаточность Kernel.
+  Явный переходный флаг `--require-instance` воспроизводит прежний строгий
+  контракт (Instance обязателен, проверяется `product.yaml` и Git-провенанс);
+  без переменной в этом режиме — явный отказ; с некорректным источником —
+  явный отказ; неизвестный аргумент отклоняется в обоих режимах.
+- **`scripts/kernel-validate.mjs`: отсутствие `MERIDIAN_INSTANCE` больше не
+  красит гейт само по себе.** Продуктово-зависимая часть kernel-purity
+  (проверка литералов и паттернов конкретного продукта) в этом режиме честно
+  сообщает `WARN` (`UNVERIFIED` — «product literals were NOT checked»), а не
+  `FAIL`; личные пути по-прежнему проверяются. Строгая проверка при явно
+  переданном `MERIDIAN_INSTANCE` (включая отклонение некорректного источника)
+  не ослаблена.
+- **`scripts/preflight.mjs` в Kernel-only режиме больше не печатает значение
+  `MERIDIAN_INSTANCE`.** Если переменная установлена, но не проверяется этим
+  режимом, вывод сообщает только сам факт, не абсолютный путь — печать пути
+  была бы утечкой продуктового пути из прогона, который его не проверил.
+- **Корректирующий раунд по `instance-repository-retirement-baseline`:
+  устранена остаточная операционная зависимость управления Meridian от
+  Instance.** `AGENTS.md` §5 больше не позволяет продолжать программу
+  разработки самого Meridian по активному плану из `$MERIDIAN_INSTANCE` —
+  неперенесённая программа заблокирована до переноса её канонического плана
+  в `governance/plans/`. Пять перенесённых документов
+  (`meridian-owner-intent-contract.md`,
+  `meridian-rust-migration-program-plan.md`,
+  `meridian-rust-sqlite-architecture.md`,
+  `meridian-rust-target-architecture.md`, `meridian-cli-rfc.md`) больше не
+  называют документы замороженного Instance действующими или авторитетными
+  в `related_documents` или в теле; такие ссылки собраны в явно
+  неоперационный блок «Исторические источники»
+  (`meridian-owner-intent-contract.md`). Восстановлены исходные
+  идентификаторы Concord (`concord-meridian-onboarding`,
+  `concord-meridian-field-evaluation`) вместо ошибочно обобщённых
+  `field-application-*` — условие паузы Concord осталось конкретным, не
+  превращено в запрет любого полевого применения. Исправлены ссылки CLI RFC
+  на `standards/templates/template-contract.md` и
+  `standards/templates/profiles/<платформа>/rfc-body.md`. `README.md`,
+  `MANUAL.md`, `COMPATIBILITY.md`,
+  `standards/workspace/kernel-boundary.md` и
+  `standards/workspace/workspace-scope-model.md` согласованы: обычный запуск
+  — Kernel-only, `--require-instance` — переходный строгий режим; неоднозначное
+  «до пакета `instance-data-migration`» заменено точной границей — проверенный
+  импорт пакета 8 (`meridian-cli-migration`) программы
+  `meridian-rust-migration`; произвольный продуктовый Instance (остаётся
+  поддерживаемым переходным адаптером `0.6.x`) явно отличён от конкретного
+  прежнего Instance, ранее управлявшего разработкой Meridian (заморожен для
+  чтения с 2026-09-19). `test/preflight.test.mjs` включён в оба обязательных
+  рубежа наравне с регрессией валидатора: отдельным шагом в
+  `.github/workflows/gate.yml` и блокирующей проверкой в `hooks/pre-push`;
+  `test/pre-push-git-isolation.test.mjs` добавил его в список заглушек
+  синтетического Kernel, так что реальный маршрут pre-push проверяется
+  целиком.
 
 - **Прикладное разрешение норм Rust (`rust-rule-resolution`) — пакет 5
   программы `meridian-rust-migration`.** `meridian-app::rule_resolution`

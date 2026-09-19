@@ -41,6 +41,14 @@ if ! node "$ROOT/test/kernel-validate.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: running the preflight check's regression suite"
+if ! node "$ROOT/test/preflight.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the preflight regression suite failed."
+  echo "pre-push: a Kernel-only/--require-instance contract of scripts/preflight.mjs no longer behaves as claimed."
+  exit 1
+fi
+
 echo "pre-push: running the rule resolver's regression suite"
 if ! node "$ROOT/test/rule-resolver.test.mjs"; then
   echo ""

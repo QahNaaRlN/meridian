@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-16
+updated: 2026-09-20
 ---
 
 # Meridian compatibility contract
@@ -35,6 +35,29 @@ Meridian состоит из независимо версионируемых �
 
 Пока Kernel в `0.x`, любой minor может сломать Instance. Instance пиннит точную
 версию Kernel до выхода `1.0.0`.
+
+## Instance продукта и прежний Instance разработки Meridian
+
+Таблица выше — о произвольном продуктовом Instance любого проекта,
+использующего Meridian: он остаётся поддерживаемым переходным адаптером под
+`0.6.x`, как и было. Ничего в этом контракте не объявляет продуктовые Instance
+немедленно запрещёнными или устаревшими.
+
+Отдельно от этого: конкретный прежний Instance, ранее служивший центром
+управления разработкой самого Meridian (а не продукта), с 2026-09-19 заморожен
+для чтения (`AGENTS.md` §10; `governance/meridian-owner-intent-contract.md`
+§25) — он больше не активный источник планов, назначений или Git-процесса этой
+разработки. Это решение о разработке Meridian, а не о совместимости Kernel с
+продуктовыми Instance в целом.
+
+Окончательный рубеж, после которого чтение `MERIDIAN_INSTANCE` для работы над
+Meridian перестаёт быть нужным вовсе (включая переходный
+`scripts/preflight.mjs --require-instance`), — проверенный импорт пакета 8
+(`meridian-cli-migration`) программы `meridian-rust-migration` и отключение
+эксплуатационных чтений через `MERIDIAN_INSTANCE`
+(`governance/plans/meridian-rust-migration-program-plan.md` §6.5a, §7). До
+этого рубежа замороженный источник остаётся читаемым только явно и только для
+миграционных целей.
 
 ## Ссылки Instance на пути внутри Kernel
 

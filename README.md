@@ -40,10 +40,13 @@ updated: 2026-09-08
 репозитория Экземпляра как части целевой архитектуры. Исходный код и рабочие
 данные могут храниться раздельно; место хранения не определяет область записи.
 
-Текущий отдельный **Экземпляр (Instance)** и переменная `MERIDIAN_INSTANCE`
-сохраняются как переходный адаптер до отдельной миграции. Поэтому действующие
-команды ниже продолжают использовать его и не выдают переходное устройство за
-конечную модель.
+Текущий отдельный **Экземпляр (Instance)** конкретного продукта и переменная
+`MERIDIAN_INSTANCE` сохраняются как переходный адаптер до отдельной миграции.
+Поэтому действующие команды ниже продолжают использовать его и не выдают
+переходное устройство за конечную модель. Это отдельно от разработки самого
+Meridian: с 2026-09-19 её контур самоуправления (видение владельца, программа
+переноса на Rust, архитектурные решения) канонически живёт в `governance/`
+этого репозитория, а не в отдельном Instance (`AGENTS.md` §1–§2, §10).
 
 Граница нормативна, а не стилистична:
 [`standards/workspace/kernel-boundary.md`](standards/workspace/kernel-boundary.md).
@@ -72,6 +75,7 @@ Confluence (D-3), сценарии 2/3 — решениями D-1/D-2.
 ```
 meridian/
 ├── VERSION  CHANGELOG.md  COMPATIBILITY.md  LICENSE
+├── governance/         контракт намерений владельца, планы, архитектурные решения и RFC разработки самого Meridian
 ├── standards/          методология, lifecycle, статусная модель, writers, шаблоны
 │   └── workspace/workspace-scope-model.md ← шесть логических областей
 │       workspace/task-pattern-registry.md ← семь универсальных типов задач
@@ -99,9 +103,10 @@ meridian/
 ## 4. Запуск валидатора
 
 ```bash
-node scripts/preflight.mjs                            # сессия подключена к правильным корням?
+node scripts/preflight.mjs                            # Kernel-only: сессия подключена к правильному Kernel?
+node scripts/preflight.mjs --require-instance         # переходный строгий режим: тот же плюс проверка Instance
 MERIDIAN_INSTANCE=/path/to/meridian-instance-<product> node scripts/kernel-validate.mjs
-node scripts/kernel-validate.mjs                      # без Instance: явный FAIL, не молчание
+node scripts/kernel-validate.mjs                      # без Instance: kernel-purity литералов — WARN (UNVERIFIED), не молчание и не OK
 MERIDIAN_INSTANCE=$PWD/test/instance-fixture node scripts/kernel-validate.mjs   # как в CI
 node test/kernel-validate.test.mjs                    # правила валидатора действительно срабатывают
 node test/workspace-scope-model.test.mjs              # шесть областей и конверт записи согласованы
@@ -115,9 +120,12 @@ node test/evidence-and-handoff.test.mjs              # контракт дока
 node test/field-evaluation.test.mjs                  # контракт полевой оценки согласован
 ```
 
-Preflight — первый шаг любой агентной сессии: он громко падает, если сессия
-открыта против устаревших корней или без `MERIDIAN_INSTANCE`, вместо того
-чтобы молча читать не те правила. Bootstrap нового Instance начинается с
+Preflight — первый шаг любой агентной сессии: обычный запуск проверяет
+только самодостаточность Kernel (Kernel-only) и громко падает, если сессия
+открыта против устаревшего или неверного Kernel, — без `MERIDIAN_INSTANCE`
+это не красная проверка. Отсутствие или неверный Instance красит только явный
+переходный режим `node scripts/preflight.mjs --require-instance`. Bootstrap
+нового Instance по-прежнему использует этот строгий режим и начинается с
 [`instance-template/instance-bootstrap.md`](instance-template/instance-bootstrap.md).
 
 ## 4a. Резолвер норм

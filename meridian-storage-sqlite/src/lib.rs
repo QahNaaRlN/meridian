@@ -2,16 +2,35 @@
 
 //! Meridian SQLite storage adapter.
 //!
-//! Package `rust-workspace-foundation` only proves, in `#[cfg(test)]`, that
-//! this crate builds, links against SQLite through `rusqlite`, and can open
-//! a working connection. It carries no production adapter API, no schema and
-//! no `CREATE TABLE`. The schema, transactional writes, the
-//! `RecordRepository`/`EvidenceRepository` port implementations and the
-//! invariants of `meridian-rust-target-architecture.md` §4 are added by
-//! package `sqlite-storage-adapter`.
+//! The only crate that knows SQLite exists (`meridian-rust-sqlite-architecture.md`
+//! §"Принятое решение" 4): it implements
+//! [`meridian_app::storage::RecordRepository`] and
+//! [`meridian_app::storage::EvidenceRepository`] over eight tables
+//! (`meridian-rust-target-architecture.md` §4.1), owning the connection,
+//! schema, schema-version gate, transactions, backup and row⇄domain-type
+//! translation. It carries no CLI, no workspace file traversal, no Git
+//! logic, no environment reads and no product data.
+//!
+//! Package `sqlite-storage-adapter`
+//! (`meridian-rust-migration-program-plan.md` §4) establishes this crate's
+//! content; `init`/`import`/`export`/`migration` CLI commands belong to
+//! later packages (`meridian-cli-foundation`, `meridian-cli-migration`).
 
-/// Identifies this crate in composition-root diagnostics until the real
-/// storage adapter exists.
+mod codec;
+mod open_error;
+mod schema;
+mod storage;
+
+pub use open_error::OpenError;
+pub use storage::SqliteStorage;
+
+/// Names of the eight tables this adapter creates
+/// (`meridian-rust-target-architecture.md` §4.1) — re-exported for tests
+/// and diagnostics that want to check schema completeness without
+/// duplicating the list.
+pub use schema::TABLE_NAMES;
+
+/// Identifies this crate in composition-root diagnostics.
 pub const CRATE_NAME: &str = "meridian-storage-sqlite";
 
 #[cfg(test)]
@@ -21,10 +40,10 @@ mod tests {
         assert_eq!(super::CRATE_NAME, "meridian-storage-sqlite");
     }
 
-    /// Proves the chosen SQLite driver (`rusqlite`, `bundled`) compiles,
-    /// links, and opens and queries a working connection. No schema, no
-    /// `CREATE TABLE`, no adapter: those belong to package
-    /// `sqlite-storage-adapter`.
+    /// Proves the chosen SQLite driver (`rusqlite`, `bundled`) still
+    /// compiles, links, and opens and queries a working connection —
+    /// carried over from package `rust-workspace-foundation`, now
+    /// alongside the real adapter it originally reserved room for.
     #[test]
     fn sqlite_driver_compiles_links_and_opens_a_connection() {
         let conn =

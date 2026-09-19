@@ -448,7 +448,10 @@ dependencies = [
 name = "meridian-storage-sqlite"
 version = "0.1.0"
 dependencies = [
+ "meridian-app",
+ "meridian-core",
  "rusqlite",
+ "serde_json",
 ]
 
 [[package]]

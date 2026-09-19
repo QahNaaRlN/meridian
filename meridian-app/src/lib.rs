@@ -6,10 +6,14 @@
 //! The adapters in [`source_format`] accept in-memory text and values only.
 //! They deliberately own no filesystem, Git, network, environment or CLI
 //! input/output. [`rule_resolution`] adds strict in-memory composition over
-//! `meridian-core` without widening that boundary.
+//! `meridian-core` without widening that boundary. [`storage`] defines the
+//! `RecordRepository`/`EvidenceRepository` ports a storage adapter
+//! implements — this crate declares the contract, never SQLite, a file or a
+//! connection itself.
 
 pub mod rule_resolution;
 pub mod source_format;
+pub mod storage;
 
 /// Identifies this crate in composition-root diagnostics until real ports
 /// exist.

@@ -9,4 +9,7 @@ description = "Meridian Rust SQLite storage adapter — the only crate aware of 
 workspace = true
 
 [dependencies]
+meridian-app = { path = "../meridian-app" }
+meridian-core = { path = "../meridian-core" }
 rusqlite = { version = "0.40.2", default-features = false, features = ["bundled"] }
+serde_json = "1.0.151"

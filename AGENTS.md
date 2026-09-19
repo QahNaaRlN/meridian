@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-27
-updated: 2026-09-08
+updated: 2026-09-19
 topic: agent-conduct
 profile: universal
 delivery: agents-md-section
@@ -182,3 +182,24 @@ the glossary's exact entity rather than the conversational word "task" in a
 machine contract. If a needed term or principle is absent, do not invent it in
 the consuming artifact; change the paired operating-foundation registry first.
 <!-- meridian:end instruction-section id=operating-foundation -->
+
+<!-- meridian:begin instruction-section id=rust-migration-contract owner=workspace-owner generated=no -->
+## 9. Контракт миграции на Rust и граница локальных проверок
+
+Совместимость с Node.js задаёт наблюдаемый контракт, но не обязывает переносить
+в Rust внутренние слабости эталонной реализации. Если Rust позволяет выразить
+инвариант типами, закрытыми перечислениями, обязательной валидацией или сделать
+ошибочное состояние непредставимым, выбирай более надёжный вариант Rust.
+Намеренное изменение внешнего поведения допустимо только тогда, когда оно явно
+зафиксировано как решение, его граница названа, а новое поведение проверено.
+
+При работе в роли ревьюера, архитектора или Git-интегратора над миграцией на
+Rust не запускай локально наборы тестов Node.js и не дублируй проверки, которые
+выполняются при отправке изменений или слиянии в GitHub, если владелец прямо не
+поручил такой запуск. Владелец запускает эти проверки сам и передаёт результат;
+агент проверяет изменения, архитектурные границы, соответствие наблюдаемому
+контракту и Git-интеграцию по предоставленному результату. Отсутствующий
+результат проверки отмечай как непроверенный, а не восполняй самостоятельным
+длительным прогоном. Для этих наборов это правило уточняет требования раздела 6
+о самостоятельном выполнении проверок и повторных проверках после слияния.
+<!-- meridian:end instruction-section id=rust-migration-contract -->

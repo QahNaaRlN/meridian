@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-18
+updated: 2026-09-19
 ---
 
 # Changelog
@@ -17,6 +17,18 @@ updated: 2026-09-18
 ## [Unreleased]
 
 ### Added
+
+- **Строгие адаптеры исходных форматов Rust
+  (`rust-source-format-adapters`) — пакет 4 программы
+  `meridian-rust-migration`.** `meridian-app::source_format` добавляет чистый
+  адаптер YAML поверх `serde-saphyr` и строгий слой JSON Schema Draft 7 поверх
+  `jsonschema`: точные допустимые конструкции, ключевые слова и форматы
+  закреплены в `standards/workspace/kernel-boundary.md`; файлового, Git,
+  сетевого, env- или CLI-ввода-вывода пакет не добавляет. Общий
+  состязательный корпус сравнивает реальные Node.js- и Rust-производители
+  через независимый conformance harness (стенд проверки соответствия), а
+  синтетические случаи продолжают доказывать, что сам стенд обнаруживает
+  расхождение и отказ запуска.
 
 - **Предметное ядро Rust (`rust-domain-core`) — пакет 3 программы
   `meridian-rust-migration`.** `meridian-core` получает синхронное предметное

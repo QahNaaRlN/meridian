@@ -1,0 +1,126 @@
+{
+  "yaml": [
+    {
+      "name": "block-mapping-sequence-scalars",
+      "source": "name: Meridian\nenabled: true\ncount: 2\nratio: 1.5\nnothing: null\nitems:\n  - one\n  - two\n"
+    },
+    {
+      "name": "flow-collections",
+      "source": "items: [one, 2, {ok: true}]\nlink: https://example.test/a:b\n"
+    },
+    {
+      "name": "block-scalars-and-comments",
+      "source": "literal: |-\n  first\n  second\nfolded: >-\n  first\n  second\nquoted: 'hash # stays' # removed\n"
+    },
+    {
+      "name": "implicit-extensions-stay-strings",
+      "source": "hex: 0x10\nyes: yes\ndate: 2026-09-19\n"
+    },
+    {
+      "name": "reject-anchor",
+      "source": "value: &anchor x\n"
+    },
+    {
+      "name": "reject-tag",
+      "source": "value: !custom x\n"
+    },
+    {
+      "name": "reject-multiple-documents",
+      "source": "value: one\n---\nvalue: two\n"
+    },
+    {
+      "name": "reject-keep-chomping",
+      "source": "value: |+\n  text\n"
+    },
+    {
+      "name": "reject-tab-indentation",
+      "source": "root:\n\tchild: value\n"
+    }
+  ],
+  "schema": [
+    {
+      "name": "valid-object",
+      "schema": {
+        "type": "object",
+        "required": ["id"],
+        "properties": { "id": { "type": "string", "minLength": 2 } },
+        "additionalProperties": false
+      },
+      "data": { "id": "ok" }
+    },
+    {
+      "name": "required-length-and-additional",
+      "schema": {
+        "type": "object",
+        "required": ["name"],
+        "properties": { "name": { "type": "string", "minLength": 3 } },
+        "additionalProperties": false
+      },
+      "data": { "name": "x", "extra": true }
+    },
+    {
+      "name": "array-and-contains",
+      "schema": {
+        "type": "array",
+        "minItems": 2,
+        "uniqueItems": true,
+        "items": { "type": "integer" },
+        "contains": { "minimum": 3 }
+      },
+      "data": [1, 1]
+    },
+    {
+      "name": "local-reference",
+      "schema": {
+        "definitions": { "identifier": { "type": "string", "pattern": "^[a-z]+$" } },
+        "$ref": "#/definitions/identifier"
+      },
+      "data": "ABC"
+    },
+    {
+      "name": "date-time-format",
+      "schema": { "type": "string", "format": "date-time" },
+      "data": "2026-09-19T10:20:30Z"
+    },
+    {
+      "name": "invalid-date-time-format",
+      "schema": { "type": "string", "format": "date-time" },
+      "data": "2026-09-19T25:20:30Z"
+    },
+    {
+      "name": "invalid-date-format",
+      "schema": { "type": "string", "format": "date" },
+      "data": "2026-13-40"
+    },
+    {
+      "name": "compositions",
+      "schema": {
+        "oneOf": [
+          { "type": "string", "minLength": 2 },
+          { "type": "integer", "minimum": 1 }
+        ],
+        "not": { "const": "forbidden" }
+      },
+      "data": "x"
+    },
+    {
+      "name": "reject-unknown-keyword-in-optional-branch",
+      "schema": {
+        "properties": {
+          "optional": { "type": "string", "minProperties": 1 }
+        }
+      },
+      "data": {}
+    },
+    {
+      "name": "reject-unknown-format",
+      "schema": { "type": "string", "format": "email" },
+      "data": "a@example.test"
+    },
+    {
+      "name": "reject-external-reference",
+      "schema": { "$ref": "https://example.test/schema.json" },
+      "data": {}
+    }
+  ]
+}

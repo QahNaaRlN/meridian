@@ -1,22 +1,14 @@
 #![forbid(unsafe_code)]
 
-//! Meridian application layer — ports and orchestration.
+//! Meridian application layer — pure source-format adapters, ports and
+//! orchestration.
 //!
-//! Package `rust-workspace-foundation` establishes only the crate boundary.
-//! In `#[cfg(test)]` only, it proves that the chosen serialization
-//! (`serde`/`serde_json`), YAML (`serde-saphyr`) and JSON Schema
-//! (`jsonschema`, Draft 7) libraries compile, link and behave as expected.
-//! Production code here carries no port trait, no adapter and none of the
-//! `import`/`validate`/`resolve`/`migration`/`export` operations. Per the
-//! active `meridian-rust-migration` roadmap: package `rust-domain-core`
-//! introduces the domain core — domain types, the resolver, conflict
-//! detection, migration plans, evidence and verdict/diagnostic structures —
-//! in `meridian-core` only, not in this crate; package `rust-rule-resolution`
-//! carries rule resolution and compositional orchestration into
-//! `meridian-app`; packages `meridian-cli-foundation` and
-//! `meridian-cli-migration` introduce the corresponding CLI commands. This
-//! package does not anticipate the concrete types or interfaces those later
-//! packages will settle on.
+//! The adapters in [`source_format`] accept in-memory text and values only.
+//! They deliberately own no filesystem, Git, network, environment or CLI
+//! input/output. Later migration packages add orchestration and composition
+//! without widening this source-format boundary.
+
+pub mod source_format;
 
 /// Identifies this crate in composition-root diagnostics until real ports
 /// exist.
@@ -53,10 +45,8 @@ mod tests {
         assert_eq!(record, round_tripped);
     }
 
-    /// Proves the chosen YAML crate (`serde-saphyr`) compiles, links and
-    /// round-trips a value through serde. No strict-lint mode, no allowlist,
-    /// no production adapter: those belong to package
-    /// `rust-source-format-adapters`.
+    /// Retains the package-1 serialization probe independently of the
+    /// production strict adapter exercised in `source_format::yaml`.
     #[test]
     fn probe_record_round_trips_through_yaml() {
         let record = ProbeRecord {

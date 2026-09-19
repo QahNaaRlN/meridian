@@ -1,5 +1,5 @@
 {
-  "$comment": "Controlled corpus for verification/conformance-harness/conformance-harness.mjs. Product-neutral synthetic producers only — package 2 of meridian-rust-migration has no real Node/Rust surface to compare yet (that starts at package 4). \"$NODE\" in a producer's \"command\" is resolved by runCorpus() to the interpreter running the harness itself; \"cwd\" is resolved relative to this file's own directory. Every case is run through the exact same runProducer/normalizeDiagnostics/compareVerdicts/runCase path CI, hooks/pre-push and test/conformance-harness.test.mjs use.",
+  "$comment": "Controlled corpus for verification/conformance-harness/conformance-harness.mjs. It retains the package-2 synthetic self-check pairs and, from package 4, includes a real Node.js/Rust source-format comparison. \"$NODE\" in a producer's \"command\" is resolved by runCorpus() to the interpreter running the harness itself; \"cwd\" is resolved relative to this file's own directory. Every case is run through the exact same runProducer/normalizeDiagnostics/compareVerdicts/runCase path CI, hooks/pre-push and test/conformance-harness.test.mjs use.",
   "cases": [
     {
       "name": "identical-exit-and-diagnostics",
@@ -184,6 +184,23 @@
       "right": {
         "command": "$NODE",
         "args": ["-e", "process.stdout.write('FAILURE: something that looks like a diagnostic but is not\\n');process.exit(1);"],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "real-node-rust-source-format-adapters",
+      "description": "The actual frozen Node.js YAML/JSON Schema implementation and the actual Rust adapters evaluate the same adversarial corpus.",
+      "expected_status": "conformant",
+      "left": {
+        "command": "$NODE",
+        "args": ["../source-format-node-producer.mjs", "source-format-corpus.json"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "../../../target/debug/examples/source_format_producer",
+        "args": [],
         "cwd": ".",
         "env": {}
       }

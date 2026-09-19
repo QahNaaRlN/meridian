@@ -10,11 +10,13 @@
 use std::path::PathBuf;
 
 use meridian_app::storage::{
-    IdempotencyKey, Payload, PortError, PutEvidenceRequest, PutRecordOutcome, PutRecordRequest,
-    RecordKey, RecordRepository, RecordSchemaVersion, RevisionNumber, SchemaRef,
+    DatabaseMetadata, DatabaseRole, IdempotencyKey, Payload, PortError, PutEvidenceRequest,
+    PutRecordOutcome, PutRecordRequest, RecordKey, RecordRepository, RecordSchemaVersion,
+    RevisionNumber, SchemaRef,
 };
 use meridian_core::types::{
-    Authority, AuthorityKind, EvidenceRef, NonEmptyString, Origin, Scope, SemanticId, WorkspaceId,
+    Authority, AuthorityKind, EvidenceRef, NonEmptyString, Origin, Revision, Scope, SemanticId,
+    WorkspaceId,
 };
 use meridian_storage_sqlite::{OpenError, SqliteStorage, TABLE_NAMES};
 
@@ -135,6 +137,19 @@ fn declared(source_ref: &str) -> Origin {
     Origin::declared(source_ref).unwrap()
 }
 
+/// The metadata every test in this file that does not specifically exercise
+/// roles or migrations opens its database with: an ordinary `workspace`
+/// database at a fixed, arbitrary Kernel edition.
+fn workspace_metadata() -> DatabaseMetadata {
+    DatabaseMetadata::new(DatabaseRole::Workspace, Revision::new("0.6.0").unwrap())
+}
+
+/// The metadata for a `tool`-role database, used by tests that write
+/// `built-in-methodology`-scoped records.
+fn tool_metadata() -> DatabaseMetadata {
+    DatabaseMetadata::new(DatabaseRole::Tool, Revision::new("0.6.0").unwrap())
+}
+
 // ---------------------------------------------------------------------------
 // 1. Creation and reopening
 // ---------------------------------------------------------------------------
@@ -145,8 +160,8 @@ fn creates_and_reopens_the_same_database_without_reapplying_the_migration() {
     let path = dir.join("kernel.sqlite3");
 
     {
-        let storage = SqliteStorage::open_path(&path).unwrap();
-        assert_eq!(storage.schema_version().unwrap(), 1);
+        let storage = SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
+        assert_eq!(storage.schema_version().unwrap(), 2);
         storage
             .put(request(
                 project_key("branch-naming"),
@@ -163,8 +178,8 @@ fn creates_and_reopens_the_same_database_without_reapplying_the_migration() {
     // Reopening must not re-run the bootstrap migration (which would fail on
     // `CREATE TABLE` of already-existing tables) and must still see the data
     // written before the first handle was dropped.
-    let reopened = SqliteStorage::open_path(&path).unwrap();
-    assert_eq!(reopened.schema_version().unwrap(), 1);
+    let reopened = SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
+    assert_eq!(reopened.schema_version().unwrap(), 2);
     let record = reopened
         .get(&project_key("branch-naming"))
         .unwrap()
@@ -179,27 +194,33 @@ fn creates_and_reopens_the_same_database_without_reapplying_the_migration() {
 #[test]
 fn foreign_keys_pragma_is_on() {
     let __dir_fk_pragma = TempDir::new("fk-pragma");
-    let storage = SqliteStorage::open_path(__dir_fk_pragma.join("db.sqlite3")).unwrap();
+    let storage =
+        SqliteStorage::open_path(__dir_fk_pragma.join("db.sqlite3"), workspace_metadata()).unwrap();
     assert!(storage.foreign_keys_enabled().unwrap());
 }
 
 #[test]
-fn all_eight_tables_exist_and_are_queryable_and_schema_version_is_the_one_supported_version() {
+fn all_nine_tables_exist_and_are_queryable_and_schema_version_is_the_one_supported_version() {
     let __dir_tables = TempDir::new("tables");
-    let storage = SqliteStorage::open_path(__dir_tables.join("db.sqlite3")).unwrap();
-    assert_eq!(TABLE_NAMES.len(), 8);
+    let storage =
+        SqliteStorage::open_path(__dir_tables.join("db.sqlite3"), workspace_metadata()).unwrap();
+    assert_eq!(TABLE_NAMES.len(), 9);
     for table in TABLE_NAMES {
-        // Every table exists and is queryable; `schema_migrations` alone is
-        // never empty post-bootstrap — it carries exactly the one row
-        // recording the version this database was created at.
-        let expected = if table == "schema_migrations" { 1 } else { 0 };
+        // Every table exists and is queryable; `schema_migrations` and
+        // `database_metadata` alone are never empty post-bootstrap — each
+        // carries exactly the one row a fresh bootstrap writes.
+        let expected = if table == "schema_migrations" || table == "database_metadata" {
+            1
+        } else {
+            0
+        };
         assert_eq!(
             storage.table_row_count(table).unwrap(),
             expected,
             "table {table} has an unexpected row count"
         );
     }
-    assert_eq!(storage.schema_version().unwrap(), 1);
+    assert_eq!(storage.schema_version().unwrap(), 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -210,16 +231,16 @@ fn all_eight_tables_exist_and_are_queryable_and_schema_version_is_the_one_suppor
 fn rejects_an_unrecognised_schema_version_with_a_typed_error() {
     let dir = TempDir::new("bad-version");
     let path = dir.join("db.sqlite3");
-    SqliteStorage::open_path(&path).unwrap();
+    SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
     {
         let raw = rusqlite::Connection::open(&path).unwrap();
         raw.execute(
-            "UPDATE schema_migrations SET version = 99 WHERE version = 1",
+            "UPDATE schema_migrations SET version = 99 WHERE version = 2",
             [],
         )
         .unwrap();
     }
-    let err = SqliteStorage::open_path(&path).unwrap_err();
+    let err = SqliteStorage::open_path(&path, workspace_metadata()).unwrap_err();
     assert_eq!(err, OpenError::UnsupportedSchemaVersion { found: 99 });
 }
 
@@ -227,12 +248,12 @@ fn rejects_an_unrecognised_schema_version_with_a_typed_error() {
 fn rejects_a_missing_schema_version_with_a_typed_error() {
     let dir = TempDir::new("missing-version");
     let path = dir.join("db.sqlite3");
-    SqliteStorage::open_path(&path).unwrap();
+    SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
     {
         let raw = rusqlite::Connection::open(&path).unwrap();
         raw.execute("DELETE FROM schema_migrations", []).unwrap();
     }
-    let err = SqliteStorage::open_path(&path).unwrap_err();
+    let err = SqliteStorage::open_path(&path, workspace_metadata()).unwrap_err();
     assert_eq!(err, OpenError::MissingSchemaVersion);
 }
 
@@ -245,7 +266,7 @@ fn rejects_a_corrupt_file_with_a_typed_error_instead_of_treating_it_as_empty() {
         b"this is not a sqlite database file at all, just bytes",
     )
     .unwrap();
-    let err = SqliteStorage::open_path(&path).unwrap_err();
+    let err = SqliteStorage::open_path(&path, workspace_metadata()).unwrap_err();
     assert!(
         matches!(err, OpenError::CorruptDatabase(_)),
         "expected CorruptDatabase, got {err:?}"
@@ -265,7 +286,8 @@ fn rejects_a_corrupt_file_with_a_typed_error_instead_of_treating_it_as_empty() {
 #[test]
 fn put_mints_a_new_record_at_revision_one() {
     let __dir_create = TempDir::new("create");
-    let storage = SqliteStorage::open_path(__dir_create.join("db.sqlite3")).unwrap();
+    let storage =
+        SqliteStorage::open_path(__dir_create.join("db.sqlite3"), workspace_metadata()).unwrap();
     let outcome = storage
         .put(request(
             project_key("branch-naming"),
@@ -293,7 +315,8 @@ fn put_mints_a_new_record_at_revision_one() {
 #[test]
 fn a_second_put_appends_a_revision_without_changing_the_previous_one() {
     let __dir_revise = TempDir::new("revise");
-    let storage = SqliteStorage::open_path(__dir_revise.join("db.sqlite3")).unwrap();
+    let storage =
+        SqliteStorage::open_path(__dir_revise.join("db.sqlite3"), workspace_metadata()).unwrap();
     let k = project_key("branch-naming");
 
     storage
@@ -346,7 +369,7 @@ fn a_second_put_appends_a_revision_without_changing_the_previous_one() {
 fn direct_update_or_delete_of_record_revisions_is_refused_by_sqlite_itself() {
     let dir = TempDir::new("immutable-revisions");
     let path = dir.join("db.sqlite3");
-    let storage = SqliteStorage::open_path(&path).unwrap();
+    let storage = SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
     storage
         .put(request(
             project_key("branch-naming"),
@@ -385,7 +408,7 @@ fn direct_update_or_delete_of_record_revisions_is_refused_by_sqlite_itself() {
 fn direct_update_or_delete_of_evidence_is_refused_by_sqlite_itself() {
     let dir = TempDir::new("immutable-evidence");
     let path = dir.join("db.sqlite3");
-    let storage = SqliteStorage::open_path(&path).unwrap();
+    let storage = SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
     let k = project_key("branch-naming");
     storage
         .put(request(
@@ -426,7 +449,11 @@ fn direct_update_or_delete_of_evidence_is_refused_by_sqlite_itself() {
 #[test]
 fn a_batch_that_fails_partway_leaves_no_trace_of_its_earlier_writes() {
     let __dir_batch_rollback = TempDir::new("batch-rollback");
-    let storage = SqliteStorage::open_path(__dir_batch_rollback.join("db.sqlite3")).unwrap();
+    let storage = SqliteStorage::open_path(
+        __dir_batch_rollback.join("db.sqlite3"),
+        workspace_metadata(),
+    )
+    .unwrap();
 
     // Seed one record under idempotency key "seed".
     storage
@@ -491,7 +518,9 @@ fn a_batch_that_fails_partway_leaves_no_trace_of_its_earlier_writes() {
 #[test]
 fn evidence_for_a_nonexistent_record_is_rejected_and_nothing_is_written() {
     let __dir_fk_violation = TempDir::new("fk-violation");
-    let storage = SqliteStorage::open_path(__dir_fk_violation.join("db.sqlite3")).unwrap();
+    let storage =
+        SqliteStorage::open_path(__dir_fk_violation.join("db.sqlite3"), workspace_metadata())
+            .unwrap();
     let missing = project_key("does-not-exist");
     let err = storage
         .put_evidence(PutEvidenceRequest::new(
@@ -517,7 +546,11 @@ fn evidence_for_a_nonexistent_record_is_rejected_and_nothing_is_written() {
 #[test]
 fn an_exact_idempotent_repeat_creates_no_second_revision() {
     let __dir_idempotent_repeat = TempDir::new("idempotent-repeat");
-    let storage = SqliteStorage::open_path(__dir_idempotent_repeat.join("db.sqlite3")).unwrap();
+    let storage = SqliteStorage::open_path(
+        __dir_idempotent_repeat.join("db.sqlite3"),
+        workspace_metadata(),
+    )
+    .unwrap();
     let make = || {
         request(
             project_key("branch-naming"),
@@ -552,7 +585,11 @@ fn an_exact_idempotent_repeat_creates_no_second_revision() {
 #[test]
 fn the_same_idempotency_key_with_different_content_is_a_conflict_not_a_repeat() {
     let __dir_idempotent_conflict = TempDir::new("idempotent-conflict");
-    let storage = SqliteStorage::open_path(__dir_idempotent_conflict.join("db.sqlite3")).unwrap();
+    let storage = SqliteStorage::open_path(
+        __dir_idempotent_conflict.join("db.sqlite3"),
+        workspace_metadata(),
+    )
+    .unwrap();
     let k = project_key("branch-naming");
 
     storage
@@ -596,7 +633,8 @@ fn the_same_idempotency_key_with_different_content_is_a_conflict_not_a_repeat() 
 #[test]
 fn evidence_is_stored_and_resolves_back_to_the_same_content() {
     let __dir_evidence = TempDir::new("evidence");
-    let storage = SqliteStorage::open_path(__dir_evidence.join("db.sqlite3")).unwrap();
+    let storage =
+        SqliteStorage::open_path(__dir_evidence.join("db.sqlite3"), workspace_metadata()).unwrap();
     let k = project_key("branch-naming");
     storage
         .put(request(
@@ -631,7 +669,11 @@ fn evidence_is_stored_and_resolves_back_to_the_same_content() {
 #[test]
 fn a_second_put_for_the_same_evidence_ref_is_rejected_even_with_identical_content() {
     let __dir_evidence_writeonce = TempDir::new("evidence-writeonce");
-    let storage = SqliteStorage::open_path(__dir_evidence_writeonce.join("db.sqlite3")).unwrap();
+    let storage = SqliteStorage::open_path(
+        __dir_evidence_writeonce.join("db.sqlite3"),
+        workspace_metadata(),
+    )
+    .unwrap();
     let k = project_key("branch-naming");
     storage
         .put(request(
@@ -670,7 +712,9 @@ fn a_second_put_for_the_same_evidence_ref_is_rejected_even_with_identical_conten
 #[test]
 fn canonical_export_is_byte_identical_across_repeated_calls_on_unchanged_state() {
     let __dir_export_stable = TempDir::new("export-stable");
-    let storage = SqliteStorage::open_path(__dir_export_stable.join("db.sqlite3")).unwrap();
+    let storage =
+        SqliteStorage::open_path(__dir_export_stable.join("db.sqlite3"), workspace_metadata())
+            .unwrap();
     storage
         .put(request(
             project_key("branch-naming"),
@@ -749,7 +793,7 @@ fn backup_produces_an_independently_openable_copy_with_the_same_exported_state()
     let source_path = dir.join("source.sqlite3");
     let backup_path = dir.join("backup.sqlite3");
 
-    let source = SqliteStorage::open_path(&source_path).unwrap();
+    let source = SqliteStorage::open_path(&source_path, workspace_metadata()).unwrap();
     source
         .put(request(
             project_key("branch-naming"),
@@ -767,7 +811,7 @@ fn backup_produces_an_independently_openable_copy_with_the_same_exported_state()
     // The source is untouched and still fully usable after taking a backup.
     assert!(source.get(&project_key("branch-naming")).unwrap().is_some());
 
-    let backup = SqliteStorage::open_path(&backup_path).unwrap();
+    let backup = SqliteStorage::open_path(&backup_path, workspace_metadata()).unwrap();
     assert_eq!(
         source.canonical_export_json().unwrap(),
         backup.canonical_export_json().unwrap()
@@ -780,8 +824,17 @@ fn backup_produces_an_independently_openable_copy_with_the_same_exported_state()
 
 #[test]
 fn round_trips_a_record_in_every_one_of_the_six_scope_variants() {
+    // `built-in-methodology` belongs in a `tool` database and the other five
+    // areas belong in a `workspace` database
+    // (`meridian-rust-migration-program-plan.md` §5.4, item 1) — this test
+    // opens one of each and routes every case to the one its own scope
+    // type is allowed in, rather than writing all six into one database.
     let __dir_scopes = TempDir::new("scopes");
-    let storage = SqliteStorage::open_path(__dir_scopes.join("db.sqlite3")).unwrap();
+    let tool_storage =
+        SqliteStorage::open_path(__dir_scopes.join("tool.sqlite3"), tool_metadata()).unwrap();
+    let workspace_storage =
+        SqliteStorage::open_path(__dir_scopes.join("workspace.sqlite3"), workspace_metadata())
+            .unwrap();
 
     let cases: Vec<(RecordKey, Authority)> = vec![
         (
@@ -820,7 +873,8 @@ fn round_trips_a_record_in_every_one_of_the_six_scope_variants() {
     ];
 
     for (i, (record_key, authority)) in cases.into_iter().enumerate() {
-        let origin = if authority.kind() == AuthorityKind::MethodologyOwner {
+        let is_built_in = authority.kind() == AuthorityKind::MethodologyOwner;
+        let origin = if is_built_in {
             Origin::built_in()
         } else {
             declared("owner-decision:scope-test")
@@ -834,6 +888,11 @@ fn round_trips_a_record_in_every_one_of_the_six_scope_variants() {
             serde_json::json!({}),
             &format!("scope-case-{i}"),
         );
+        let storage = if is_built_in {
+            &tool_storage
+        } else {
+            &workspace_storage
+        };
         storage.put(req).unwrap();
         let stored = storage.get(&record_key).unwrap().unwrap();
         assert_eq!(
@@ -851,9 +910,12 @@ fn round_trips_a_record_in_every_one_of_the_six_scope_variants() {
 #[test]
 fn record_identity_is_independent_of_which_database_file_backs_it() {
     let dir = TempDir::new("identity-vs-path");
-    let storage_a = SqliteStorage::open_path(dir.join("a.sqlite3")).unwrap();
-    let storage_b =
-        SqliteStorage::open_path(dir.join("completely-different-name-b.sqlite3")).unwrap();
+    let storage_a = SqliteStorage::open_path(dir.join("a.sqlite3"), workspace_metadata()).unwrap();
+    let storage_b = SqliteStorage::open_path(
+        dir.join("completely-different-name-b.sqlite3"),
+        workspace_metadata(),
+    )
+    .unwrap();
 
     let k = project_key("branch-naming");
     let record_a = storage_a
@@ -900,7 +962,7 @@ fn schema_ref_is_preserved_exactly_across_write_reopen_export_and_backup() {
     let source_path = dir.join("source.sqlite3");
     let backup_path = dir.join("backup.sqlite3");
 
-    let storage = SqliteStorage::open_path(&source_path).unwrap();
+    let storage = SqliteStorage::open_path(&source_path, workspace_metadata()).unwrap();
     storage
         .put(request_with_schema(
             SCHEMA_A,
@@ -946,7 +1008,7 @@ fn schema_ref_is_preserved_exactly_across_write_reopen_export_and_backup() {
 
     // 2. After closing and reopening the same file.
     drop(storage);
-    let reopened = SqliteStorage::open_path(&source_path).unwrap();
+    let reopened = SqliteStorage::open_path(&source_path, workspace_metadata()).unwrap();
     assert_eq!(
         reopened
             .get(&project_key("record-a"))
@@ -982,7 +1044,7 @@ fn schema_ref_is_preserved_exactly_across_write_reopen_export_and_backup() {
 
     // 4. In a backup snapshot.
     reopened.backup_to(&backup_path).unwrap();
-    let backup = SqliteStorage::open_path(&backup_path).unwrap();
+    let backup = SqliteStorage::open_path(&backup_path, workspace_metadata()).unwrap();
     assert_eq!(
         backup
             .get(&project_key("record-a"))
@@ -1013,7 +1075,11 @@ fn schema_ref_is_preserved_exactly_across_write_reopen_export_and_backup() {
 fn two_project_workspace_records_with_the_same_type_id_and_record_id_but_different_organization_profile_id_do_not_collide(
 ) {
     let __dir_org_profile_distinct = TempDir::new("org-profile-distinct");
-    let storage = SqliteStorage::open_path(__dir_org_profile_distinct.join("db.sqlite3")).unwrap();
+    let storage = SqliteStorage::open_path(
+        __dir_org_profile_distinct.join("db.sqlite3"),
+        workspace_metadata(),
+    )
+    .unwrap();
 
     let key_acme = key(
         Scope::project_workspace(sid("sample-project"), Some(sid("acme"))),

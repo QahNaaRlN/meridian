@@ -7,6 +7,10 @@
 
 use core::fmt;
 
+use meridian_core::types::ScopeType;
+
+use super::database_role::DatabaseRole;
+
 /// A value returned by [`super::RecordRepository`] or
 /// [`super::EvidenceRepository`] when an operation does not succeed.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,6 +32,24 @@ pub enum PortError {
     /// is rejected unconditionally, whether or not its content matches the
     /// first.
     EvidenceAlreadyExists { evidence_ref: String },
+    /// A record's [`meridian_core::types::Scope`] is not one this
+    /// database's [`DatabaseRole`] accepts — a `tool` database rejects
+    /// every scope but `built-in-methodology`, and a `workspace` database
+    /// rejects `built-in-methodology`
+    /// (`meridian-rust-migration-program-plan.md` §5.4, item 1). Rejected
+    /// at the storage boundary itself, not only by whichever composition
+    /// chose which adapter to call — a direct call against the wrong-role
+    /// adapter is refused just the same.
+    ScopeNotAllowedForDatabaseRole {
+        role: DatabaseRole,
+        scope_type: ScopeType,
+    },
+    /// A batch mixed a `built-in-methodology` request with a non-`built-in-methodology`
+    /// request. A batch is one atomic unit inside one database transaction
+    /// (`super::RecordRepository::put_batch`); splitting it silently across
+    /// the `tool` and `workspace` databases would fake atomicity that does
+    /// not exist, so a mixed-role batch is refused instead of split.
+    MixedDatabaseRolesInBatch,
     /// The underlying storage failed for a reason not covered by the more
     /// specific variants above (I/O, a corrupt file, an unexpected driver
     /// error). Carries a human-readable message only — never a driver type.
@@ -51,6 +73,14 @@ impl fmt::Display for PortError {
             PortError::EvidenceAlreadyExists { evidence_ref } => write!(
                 f,
                 "evidence \"{evidence_ref}\" is already recorded and cannot be replaced"
+            ),
+            PortError::ScopeNotAllowedForDatabaseRole { role, scope_type } => write!(
+                f,
+                "scope type \"{scope_type}\" is not allowed in a \"{role}\" database"
+            ),
+            PortError::MixedDatabaseRolesInBatch => write!(
+                f,
+                "a batch cannot mix a built-in-methodology request with a non-built-in-methodology request"
             ),
             PortError::Storage(message) => write!(f, "storage error: {message}"),
         }

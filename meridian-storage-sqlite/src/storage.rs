@@ -9,9 +9,9 @@ use std::sync::Mutex;
 use rusqlite::{Connection, OptionalExtension, Row, Transaction};
 
 use meridian_app::storage::{
-    EvidenceRepository, ManagedRecord, PortError, PutEvidenceRequest, PutRecordOutcome,
-    PutRecordRequest, RecordKey, RecordRepository, RecordRevision, RecordSchemaVersion,
-    RevisionNumber, SchemaRef, StoredEvidence,
+    DatabaseMetadata, EvidenceRepository, ManagedRecord, PortError, PutEvidenceRequest,
+    PutRecordOutcome, PutRecordRequest, RecordKey, RecordRepository, RecordRevision,
+    RecordSchemaVersion, RevisionNumber, RoledStorage, SchemaRef, StoredEvidence,
 };
 use meridian_core::types::EvidenceRef;
 
@@ -26,8 +26,14 @@ use crate::schema;
 /// `Send` but not `Sync`; wrapping it in a [`Mutex`] is what makes
 /// `SqliteStorage` safely shareable behind an `Arc` without any adapter
 /// method needing `&mut self` — every port method here takes `&self`.
+///
+/// `metadata` is read back from the database's own `database_metadata`
+/// table once, at open time (`crate::schema::prepare`), and never from the
+/// file path — every write is checked against it
+/// (`meridian-rust-migration-program-plan.md` §5.4, item 1).
 pub struct SqliteStorage {
     conn: Mutex<Connection>,
+    metadata: DatabaseMetadata,
 }
 
 /// A hand-written `Debug` that never reveals the underlying `Connection` (no
@@ -48,26 +54,51 @@ fn map_sql_err(e: rusqlite::Error) -> PortError {
 
 impl SqliteStorage {
     /// Opens (creating if absent) the database file at `path`, applying
-    /// `PRAGMA foreign_keys = ON` and either bootstrapping a fresh schema or
-    /// verifying an existing one's version (`crate::schema::prepare`).
-    pub fn open_path(path: impl AsRef<Path>) -> Result<Self, OpenError> {
+    /// `PRAGMA foreign_keys = ON` and either bootstrapping a fresh schema,
+    /// migrating an older one forward, or verifying an existing one's role
+    /// (`crate::schema::prepare`).
+    ///
+    /// `metadata` names the role and Kernel edition this open asserts. It is
+    /// required, and never inferred from `path`: for a fresh database or one
+    /// still at schema version 1, it is the only place that information
+    /// comes from; for a database already at the current version, it is
+    /// checked against what the database itself already records — both role
+    /// and Kernel edition — and any mismatch is refused
+    /// (`OpenError::DatabaseMetadataMismatch`). The metadata this
+    /// `SqliteStorage` stores and later exposes through
+    /// [`Self::database_metadata`] is always what `schema::prepare` reads
+    /// back from the database itself, never a copy of this argument.
+    pub fn open_path(
+        path: impl AsRef<Path>,
+        metadata: DatabaseMetadata,
+    ) -> Result<Self, OpenError> {
         let mut conn = Connection::open(path).map_err(|e| OpenError::Sqlite(e.to_string()))?;
-        schema::prepare(&mut conn)?;
+        let recorded = schema::prepare(&mut conn, &metadata)?;
         Ok(Self {
             conn: Mutex::new(conn),
+            metadata: recorded,
         })
     }
 
     /// Opens a private in-memory database — used by this crate's own tests
     /// and available to any caller that wants a throwaway store with no
-    /// file at all.
-    pub fn open_in_memory() -> Result<Self, OpenError> {
+    /// file at all. See [`Self::open_path`] for what `metadata` asserts and
+    /// what is actually stored.
+    pub fn open_in_memory(metadata: DatabaseMetadata) -> Result<Self, OpenError> {
         let mut conn =
             Connection::open_in_memory().map_err(|e| OpenError::Sqlite(e.to_string()))?;
-        schema::prepare(&mut conn)?;
+        let recorded = schema::prepare(&mut conn, &metadata)?;
         Ok(Self {
             conn: Mutex::new(conn),
+            metadata: recorded,
         })
+    }
+
+    /// The role and Kernel edition this database recorded about itself at
+    /// open time (`crate::schema::prepare`) — the same accessor
+    /// [`RoledStorage::database_metadata`] exposes at the port boundary.
+    pub fn database_metadata(&self) -> &DatabaseMetadata {
+        &self.metadata
     }
 
     /// Creates a consistent, independently-openable snapshot of the current
@@ -106,7 +137,7 @@ impl SqliteStorage {
     }
 
     /// Diagnostic-only row count of one of this adapter's own tables (see
-    /// [`crate::TABLE_NAMES`]) — used to confirm the eight tables exist and
+    /// [`crate::TABLE_NAMES`]) — used to confirm the nine tables exist and
     /// are queryable, and as a cheap "nothing partial was written" check
     /// after a rejected operation. `table` is validated against the closed
     /// table list before use, so this never interpolates arbitrary input
@@ -292,11 +323,21 @@ impl SqliteStorage {
     /// Applies one request within an already-open transaction — the unit
     /// `put_batch` repeats for every request, so a batch either fully
     /// applies or fully rolls back with the connection's own transaction.
+    ///
+    /// Checks `role.accepts_scope_type` before touching a single row: this
+    /// is the actual persistence boundary, so it is where the role guard
+    /// lives, not only in whatever composition chose to call this adapter
+    /// (`meridian-rust-migration-program-plan.md` §5.4, item 1).
     fn apply_one(
         tx: &Transaction<'_>,
         request: &PutRecordRequest,
+        role: meridian_app::storage::DatabaseRole,
     ) -> Result<PutRecordOutcome, PortError> {
         let key = request.key();
+        let scope_type = key.scope().scope_type();
+        if !role.accepts_scope_type(scope_type) {
+            return Err(PortError::ScopeNotAllowedForDatabaseRole { role, scope_type });
+        }
         let storage_key = key.storage_key();
         let requested_digest = content_digest(
             key,
@@ -460,7 +501,7 @@ impl RecordRepository for SqliteStorage {
     fn put(&self, request: PutRecordRequest) -> Result<PutRecordOutcome, PortError> {
         let mut conn = self.conn.lock().expect("storage mutex poisoned");
         let tx = conn.transaction().map_err(map_sql_err)?;
-        let outcome = Self::apply_one(&tx, &request)?;
+        let outcome = Self::apply_one(&tx, &request, self.metadata.role())?;
         tx.commit().map_err(map_sql_err)?;
         Ok(outcome)
     }
@@ -476,7 +517,7 @@ impl RecordRepository for SqliteStorage {
             // A `?`-propagated error drops `tx` here without `commit()`,
             // which rolls back everything applied earlier in this loop —
             // the batch either fully applies or fully does not.
-            outcomes.push(Self::apply_one(&tx, request)?);
+            outcomes.push(Self::apply_one(&tx, request, self.metadata.role())?);
         }
         tx.commit().map_err(map_sql_err)?;
         Ok(outcomes)
@@ -545,8 +586,22 @@ impl RecordRepository for SqliteStorage {
     }
 }
 
+impl RoledStorage for SqliteStorage {
+    fn database_metadata(&self) -> &DatabaseMetadata {
+        &self.metadata
+    }
+}
+
 impl EvidenceRepository for SqliteStorage {
     fn put(&self, request: PutEvidenceRequest) -> Result<StoredEvidence, PortError> {
+        let subject_scope_type = request.subject().scope().scope_type();
+        if !self.metadata.role().accepts_scope_type(subject_scope_type) {
+            return Err(PortError::ScopeNotAllowedForDatabaseRole {
+                role: self.metadata.role(),
+                scope_type: subject_scope_type,
+            });
+        }
+
         let mut conn = self.conn.lock().expect("storage mutex poisoned");
         let tx = conn.transaction().map_err(map_sql_err)?;
 

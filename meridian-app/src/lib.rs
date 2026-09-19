@@ -9,8 +9,12 @@
 //! `meridian-core` without widening that boundary. [`storage`] defines the
 //! `RecordRepository`/`EvidenceRepository` ports a storage adapter
 //! implements — this crate declares the contract, never SQLite, a file or a
-//! connection itself.
+//! connection itself. [`events`] defines the observed-event envelope and
+//! sink port. [`knowledge`] reserves, without implementing, the future
+//! Knowledge Resolver boundary.
 
+pub mod events;
+pub mod knowledge;
 pub mod rule_resolution;
 pub mod source_format;
 pub mod storage;

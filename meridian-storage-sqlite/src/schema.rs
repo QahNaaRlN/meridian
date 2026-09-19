@@ -1,22 +1,37 @@
-//! The one supported SQLite schema version and its bootstrap
-//! (`meridian-rust-target-architecture.md` §4.1).
+//! The SQLite schema, its bootstrap, and its migration ladder
+//! (`meridian-rust-target-architecture.md` §4.1;
+//! `meridian-rust-migration-program-plan.md` §5.4, item 3).
 //!
 //! `PRAGMA foreign_keys = ON` is applied on every open — SQLite does not
 //! enforce declared `REFERENCES` constraints without it, even though the
 //! constraints are always present in the schema.
+//!
+//! Schema evolution is sequential and atomic, not "only version 1 is
+//! supported": [`prepare`] walks a fresh database straight to
+//! [`SUPPORTED_SCHEMA_VERSION`] in one transaction, and walks an existing
+//! older database forward one migration step at a time, each step its own
+//! transaction. A step that fails rolls back that step alone (dropping a
+//! `rusqlite::Transaction` without calling `commit()` rolls it back), so a
+//! failed migration never leaves the schema partially applied — the
+//! database is always observably at some whole, complete version, never
+//! between two.
 
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension, Transaction};
+
+use meridian_app::storage::{DatabaseMetadata, DatabaseRole};
+use meridian_core::types::ScopeType;
 
 use crate::open_error::OpenError;
 
-/// The only schema version this build understands.
-pub const SUPPORTED_SCHEMA_VERSION: i64 = 1;
+/// The current, highest schema version this build understands and migrates
+/// existing databases up to.
+pub const SUPPORTED_SCHEMA_VERSION: i64 = 2;
 
-/// All eight tables of `meridian-rust-target-architecture.md` §4.1, created
-/// together with `schema_migrations` in one transaction. `WITHOUT ROWID` on
-/// every record-bearing table makes the point structurally, not just by
-/// convention: there is no rowid to accidentally leak as identity, because
-/// none exists.
+/// All eight record-bearing and journal tables of package
+/// `sqlite-storage-adapter`, created together with `schema_migrations` in
+/// one transaction on a fresh database. `WITHOUT ROWID` on every
+/// record-bearing table makes "no rowid leaks as identity" structural, not
+/// just conventional: there is no rowid to leak, because none exists.
 ///
 /// Foreign key direction is chosen so that the natural write order never
 /// needs a row to reference one that does not exist yet within the same
@@ -31,7 +46,7 @@ pub const SUPPORTED_SCHEMA_VERSION: i64 = 1;
 ///   first revision row exists (both committed together, in one
 ///   transaction, so the two are never observably inconsistent to a
 ///   reader).
-const SCHEMA_DDL: &str = r#"
+const SCHEMA_DDL_V1: &str = r#"
 CREATE TABLE schema_migrations (
   version    INTEGER NOT NULL PRIMARY KEY,
   applied_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
@@ -161,9 +176,24 @@ BEGIN
 END;
 "#;
 
-/// Names of all eight tables `SCHEMA_DDL` creates, for the "all eight tables
-/// exist" test to check against without duplicating the DDL's own list.
-pub const TABLE_NAMES: [&str; 8] = [
+/// Schema version 2's one addition over version 1: a single-row table
+/// carrying this database's own role and Kernel edition
+/// (`meridian-rust-migration-program-plan.md` §5.4, items 1–2). The `CHECK
+/// (id = 1)` is what makes "single-row" structural: a second `INSERT` can
+/// only collide with the existing primary key, never silently add a second
+/// row this crate would then have to pick between.
+const DATABASE_METADATA_TABLE_DDL: &str = r#"
+CREATE TABLE database_metadata (
+  id             INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+  role           TEXT    NOT NULL,
+  kernel_edition TEXT    NOT NULL
+) WITHOUT ROWID;
+"#;
+
+/// Names of every table a fully-migrated (current-version) database
+/// carries, for the "all tables exist" test to check against without
+/// duplicating the DDL's own list.
+pub const TABLE_NAMES: [&str; 9] = [
     "schema_migrations",
     "records",
     "record_revisions",
@@ -172,6 +202,7 @@ pub const TABLE_NAMES: [&str; 8] = [
     "owner_decisions",
     "execution_runs",
     "migration_runs",
+    "database_metadata",
 ];
 
 fn map_err(e: rusqlite::Error) -> OpenError {
@@ -200,9 +231,49 @@ fn read_schema_version(conn: &Connection) -> Result<Option<i64>, OpenError> {
     .map_err(map_err)
 }
 
-fn bootstrap(conn: &mut Connection) -> Result<(), OpenError> {
+fn insert_database_metadata_row(
+    tx: &Transaction<'_>,
+    metadata: &DatabaseMetadata,
+) -> Result<(), OpenError> {
+    tx.execute(
+        "INSERT INTO database_metadata (id, role, kernel_edition) VALUES (1, ?1, ?2)",
+        rusqlite::params![metadata.role().as_str(), metadata.kernel_edition().as_str(),],
+    )
+    .map_err(map_err)?;
+    Ok(())
+}
+
+/// Reads back the single `database_metadata` row. Called only once the
+/// caller already knows the database is at [`SUPPORTED_SCHEMA_VERSION`] —
+/// an older database simply has no such table yet, which is not this
+/// function's concern.
+pub fn read_database_metadata(conn: &Connection) -> Result<DatabaseMetadata, OpenError> {
+    let row: Option<(String, String)> = conn
+        .query_row(
+            "SELECT role, kernel_edition FROM database_metadata WHERE id = 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()
+        .map_err(map_err)?;
+    let Some((role, kernel_edition)) = row else {
+        return Err(OpenError::MissingDatabaseMetadata);
+    };
+    let role = DatabaseRole::try_from(role.as_str())
+        .map_err(|_| OpenError::UnknownDatabaseRole { found: role })?;
+    let kernel_edition = meridian_core::types::Revision::new(kernel_edition)
+        .map_err(|e| OpenError::Sqlite(format!("corrupt database_metadata.kernel_edition: {e}")))?;
+    Ok(DatabaseMetadata::new(role, kernel_edition))
+}
+
+/// Creates a brand-new database directly at [`SUPPORTED_SCHEMA_VERSION`] —
+/// there is no reason to walk a fresh file through history it never had.
+fn bootstrap(conn: &mut Connection, metadata: &DatabaseMetadata) -> Result<(), OpenError> {
     let tx = conn.transaction().map_err(map_err)?;
-    tx.execute_batch(SCHEMA_DDL).map_err(map_err)?;
+    tx.execute_batch(SCHEMA_DDL_V1).map_err(map_err)?;
+    tx.execute_batch(DATABASE_METADATA_TABLE_DDL)
+        .map_err(map_err)?;
+    insert_database_metadata_row(&tx, metadata)?;
     tx.execute(
         "INSERT INTO schema_migrations (version) VALUES (?1)",
         [SUPPORTED_SCHEMA_VERSION],
@@ -214,22 +285,150 @@ fn bootstrap(conn: &mut Connection) -> Result<(), OpenError> {
     tx.commit().map_err(map_err)
 }
 
+/// The `ScopeType` a `records.scope_type` column value names, or `None` for
+/// a value that is not one of the six known areas.
+fn scope_type_from_str(raw: &str) -> Option<ScopeType> {
+    match raw {
+        "built-in-methodology" => Some(ScopeType::BuiltInMethodology),
+        "user-profile" => Some(ScopeType::UserProfile),
+        "organization-profile" => Some(ScopeType::OrganizationProfile),
+        "project-workspace" => Some(ScopeType::ProjectWorkspace),
+        "repository-scope" => Some(ScopeType::RepositoryScope),
+        "run-state" => Some(ScopeType::RunState),
+        _ => None,
+    }
+}
+
+/// Checks every distinct `records.scope_type` already present against the
+/// role a v1→v2 migration is about to assign, inside the migration step's
+/// own transaction and before any DDL or write for this step runs
+/// (`meridian-rust-migration-program-plan.md` §5.4, item 3). An
+/// unrecognised scope type or one the role does not accept stops the
+/// migration outright — the transaction this call is part of is never
+/// committed on that path, so nothing this step would otherwise have
+/// written (the `database_metadata` table, its row, the version-2 journal
+/// entry) is observable afterward.
+fn check_existing_records_compatible_with_role(
+    tx: &Transaction<'_>,
+    role: DatabaseRole,
+) -> Result<(), OpenError> {
+    let mut stmt = tx
+        .prepare("SELECT DISTINCT scope_type FROM records")
+        .map_err(map_err)?;
+    let rows = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(map_err)?;
+    for row in rows {
+        let raw = row.map_err(map_err)?;
+        let scope_type = scope_type_from_str(&raw).ok_or_else(|| {
+            OpenError::UnrecognizedScopeTypeInExistingRecords { found: raw.clone() }
+        })?;
+        if !role.accepts_scope_type(scope_type) {
+            return Err(OpenError::MigrationRoleIncompatibleWithExistingRecords {
+                role,
+                scope_type: raw,
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Applies exactly one migration step, atomically, and returns the version
+/// it lands on. A future second step is added as a new match arm here, not
+/// by rewriting this function's shape.
+fn apply_migration_step(
+    conn: &mut Connection,
+    from_version: i64,
+    metadata: &DatabaseMetadata,
+) -> Result<i64, OpenError> {
+    let tx = conn.transaction().map_err(map_err)?;
+    let landed_on = match from_version {
+        1 => {
+            check_existing_records_compatible_with_role(&tx, metadata.role())?;
+            tx.execute_batch(DATABASE_METADATA_TABLE_DDL)
+                .map_err(map_err)?;
+            insert_database_metadata_row(&tx, metadata)?;
+            tx.execute("INSERT INTO schema_migrations (version) VALUES (2)", [])
+                .map_err(map_err)?;
+            2
+        }
+        other => return Err(OpenError::UnsupportedSchemaVersion { found: other }),
+    };
+    // As in `bootstrap`: an error above drops `tx` uncommitted, rolling
+    // back this one step in full — the version row and the table it
+    // describes are never observed out of step with each other.
+    tx.commit().map_err(map_err)?;
+    Ok(landed_on)
+}
+
+/// Walks an existing database from `current` forward to
+/// [`SUPPORTED_SCHEMA_VERSION`], one step — one transaction — at a time.
+fn migrate_to_current(
+    conn: &mut Connection,
+    mut current: i64,
+    metadata: &DatabaseMetadata,
+) -> Result<(), OpenError> {
+    while current < SUPPORTED_SCHEMA_VERSION {
+        current = apply_migration_step(conn, current, metadata)?;
+    }
+    Ok(())
+}
+
 /// Applies `PRAGMA foreign_keys = ON`, then either bootstraps a fresh
-/// database (no `schema_migrations` table yet) or verifies an existing
-/// one's version — transactionally and idempotently: calling this twice on
-/// the same already-prepared database is a no-op the second time, not a
-/// second migration attempt.
-pub fn prepare(conn: &mut Connection) -> Result<(), OpenError> {
+/// database, migrates an older one forward, or — for a database already at
+/// [`SUPPORTED_SCHEMA_VERSION`] — leaves the schema untouched. In every
+/// case, returns the [`DatabaseMetadata`] read back from the database
+/// itself after that work — never a copy of the `metadata` argument — so a
+/// caller (`crate::storage::SqliteStorage`) stores what the database
+/// actually records, not what it merely asked for. Calling this twice in a
+/// row with the same metadata on the same already-prepared database is a
+/// complete no-op the second time, not a second migration attempt.
+///
+/// `metadata` is supplied by the caller, never guessed from a file path or
+/// name (`meridian-rust-migration-program-plan.md` §5.4, item 3): it is the
+/// only source for a fresh bootstrap's or a v1→v2 migration's role and
+/// Kernel edition, because neither exists anywhere else to read at that
+/// point. For a database already at [`SUPPORTED_SCHEMA_VERSION`], `metadata`
+/// is instead an assertion checked against what is already recorded: role
+/// and Kernel edition must both match exactly — no edition-compatibility
+/// rule is defined yet, so "compatible" currently means "identical" for
+/// either role — and any difference is refused
+/// (`OpenError::DatabaseMetadataMismatch`) rather than silently accepted or
+/// silently overwritten.
+pub fn prepare(
+    conn: &mut Connection,
+    metadata: &DatabaseMetadata,
+) -> Result<DatabaseMetadata, OpenError> {
     conn.pragma_update(None, "foreign_keys", true)
         .map_err(map_err)?;
 
     if !table_exists(conn, "schema_migrations")? {
-        return bootstrap(conn);
+        bootstrap(conn, metadata)?;
+    } else {
+        let version = match read_schema_version(conn)? {
+            None => return Err(OpenError::MissingSchemaVersion),
+            Some(v) => v,
+        };
+
+        if !(1..=SUPPORTED_SCHEMA_VERSION).contains(&version) {
+            return Err(OpenError::UnsupportedSchemaVersion { found: version });
+        }
+
+        if version < SUPPORTED_SCHEMA_VERSION {
+            migrate_to_current(conn, version, metadata)?;
+        }
     }
 
-    match read_schema_version(conn)? {
-        None => Err(OpenError::MissingSchemaVersion),
-        Some(v) if v == SUPPORTED_SCHEMA_VERSION => Ok(()),
-        Some(found) => Err(OpenError::UnsupportedSchemaVersion { found }),
+    // Now at SUPPORTED_SCHEMA_VERSION, whichever of the three paths above
+    // got it there (or found it already there): read back the recorded
+    // metadata — the only authoritative source — and require it to match
+    // the caller's assertion on both fields before returning it.
+    let recorded = read_database_metadata(conn)?;
+    if recorded != *metadata {
+        return Err(OpenError::DatabaseMetadataMismatch {
+            expected: metadata.clone(),
+            found: recorded,
+        });
     }
+    Ok(recorded)
 }

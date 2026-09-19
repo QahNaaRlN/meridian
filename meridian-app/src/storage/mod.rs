@@ -8,11 +8,16 @@
 //! implements them, and the sole crate that knows SQLite exists
 //! (`meridian-rust-sqlite-architecture.md` §"Принятое решение" 4).
 
+mod database_metadata;
+mod database_role;
 mod error;
 mod evidence_repository;
 mod model;
 mod record_repository;
+mod role;
 
+pub use database_metadata::DatabaseMetadata;
+pub use database_role::{DatabaseRole, DatabaseRoleError};
 pub use error::PortError;
 pub use evidence_repository::EvidenceRepository;
 pub use model::{
@@ -21,3 +26,4 @@ pub use model::{
     RecordSchemaVersion, RevisionNumber, SchemaRef, SchemaRefError, StoredEvidence,
 };
 pub use record_repository::RecordRepository;
+pub use role::{RoledStorage, RouterError, StorageRouter};

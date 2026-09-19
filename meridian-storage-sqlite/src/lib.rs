@@ -5,16 +5,20 @@
 //! The only crate that knows SQLite exists (`meridian-rust-sqlite-architecture.md`
 //! §"Принятое решение" 4): it implements
 //! [`meridian_app::storage::RecordRepository`] and
-//! [`meridian_app::storage::EvidenceRepository`] over eight tables
+//! [`meridian_app::storage::EvidenceRepository`] over nine tables
 //! (`meridian-rust-target-architecture.md` §4.1), owning the connection,
-//! schema, schema-version gate, transactions, backup and row⇄domain-type
-//! translation. It carries no CLI, no workspace file traversal, no Git
-//! logic, no environment reads and no product data.
+//! schema, schema-migration ladder, database-role guard, transactions,
+//! backup and row⇄domain-type translation. It carries no CLI, no workspace
+//! file traversal, no Git logic, no environment reads and no product data
+//! in the `tool`-role database.
 //!
 //! Package `sqlite-storage-adapter`
-//! (`meridian-rust-migration-program-plan.md` §4) establishes this crate's
-//! content; `init`/`import`/`export`/`migration` CLI commands belong to
-//! later packages (`meridian-cli-foundation`, `meridian-cli-migration`).
+//! (`meridian-rust-migration-program-plan.md` §4) established this crate's
+//! original content; corrective package `knowledge-agent-foundation` (§5.4)
+//! adds database roles, schema migration beyond version 1, and the
+//! role-boundary guard on every write. `init`/`import`/`export`/`migration`
+//! CLI commands belong to later packages (`meridian-cli-foundation`,
+//! `meridian-cli-migration`).
 
 mod codec;
 mod open_error;
@@ -24,9 +28,10 @@ mod storage;
 pub use open_error::OpenError;
 pub use storage::SqliteStorage;
 
-/// Names of the eight tables this adapter creates
-/// (`meridian-rust-target-architecture.md` §4.1) — re-exported for tests
-/// and diagnostics that want to check schema completeness without
+/// Names of the nine tables a fully-migrated database carries
+/// (`meridian-rust-target-architecture.md` §4.1; `database_metadata` added
+/// by `meridian-rust-migration-program-plan.md` §5.4) — re-exported for
+/// tests and diagnostics that want to check schema completeness without
 /// duplicating the list.
 pub use schema::TABLE_NAMES;
 

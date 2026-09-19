@@ -146,11 +146,21 @@ related_documents:
 ```yaml
 program_id: meridian-self-improvement-research
 program_status: active
-current_package: research-governance-foundation
+last_completed_package: research-governance-foundation
+current_package: knowledge-agent-foundation
 current_package_status: active
-next_package: knowledge-agent-foundation
+next_package: agent-context-experiment-readiness
 experiments_open_for_implementation: []
 owner_decision_date: 2026-09-20
 ```
 
-Документальная подготовка R0 не начинает R1 и не открывает ни один эксперимент.
+R0 (`research-governance-foundation`) принят и интегрирован: пакетный коммит
+`3e7881d84ed74eb70c08725e684754a78d079002`, коммит слияния
+`b9d16ee07bf7b5bd268e8b46fd35cd1451e26662`
+(`meridian-rust-migration-program-plan.md` §5.4). R1
+(`knowledge-agent-foundation`) начат отдельным исполнением как
+корректирующий пакет программы `meridian-rust-migration`
+(`meridian-rust-migration-program-plan.md` §5.4) — реализация подготовлена в
+рабочем дереве и ожидает независимой проверки и Git-интеграции; эта запись
+не является его приёмкой. Ни один эксперимент этой синхронизацией не
+открывается.

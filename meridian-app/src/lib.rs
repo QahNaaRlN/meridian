@@ -5,9 +5,10 @@
 //!
 //! The adapters in [`source_format`] accept in-memory text and values only.
 //! They deliberately own no filesystem, Git, network, environment or CLI
-//! input/output. Later migration packages add orchestration and composition
-//! without widening this source-format boundary.
+//! input/output. [`rule_resolution`] adds strict in-memory composition over
+//! `meridian-core` without widening that boundary.
 
+pub mod rule_resolution;
 pub mod source_format;
 
 /// Identifies this crate in composition-root diagnostics until real ports

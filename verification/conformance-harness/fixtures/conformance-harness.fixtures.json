@@ -204,6 +204,23 @@
         "cwd": ".",
         "env": {}
       }
+    },
+    {
+      "name": "real-node-rust-rule-resolution",
+      "description": "The actual frozen Node.js resolver and the actual Rust application adapter resolve the same shared corpus.",
+      "expected_status": "conformant",
+      "left": {
+        "command": "$NODE",
+        "args": ["../rule-resolution-node-producer.mjs", "rule-resolution-corpus.json"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "../../../target/debug/examples/rule_resolution_producer",
+        "args": [],
+        "cwd": ".",
+        "env": {}
+      }
     }
   ]
 }

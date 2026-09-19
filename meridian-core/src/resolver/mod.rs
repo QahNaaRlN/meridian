@@ -9,8 +9,8 @@
 //! path-glob, task-class, explicit, undetermined), the same
 //! `requires_reresolution`/initiative-decomposition/`supersedes`/fail-closed
 //! rules. Not ported: file I/O, argument parsing, environment variables,
-//! JSON/YAML and the CLI `main()` — those stay in the Node reference until
-//! package `rust-rule-resolution` carries this algorithm into `meridian-app`.
+//! and the CLI `main()`. Package `rust-rule-resolution` exposes the algorithm
+//! through `meridian-app`'s strict in-memory transport boundary.
 
 mod applicability;
 mod date;

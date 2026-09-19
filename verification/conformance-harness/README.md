@@ -56,12 +56,15 @@ mechanism containing the defect would be the same code
   and `runCorpus` (self-check; used only by the regression test).
 - [`fixtures/conformance-harness.fixtures.json`](fixtures/conformance-harness.fixtures.json)
   — the controlled corpus: synthetic `node -e '...'` pairs prove the
-  mechanism, and `real-node-rust-source-format-adapters` runs the real
-  producers over
-  [`fixtures/source-format-corpus.json`](fixtures/source-format-corpus.json).
+  mechanism, `real-node-rust-source-format-adapters` runs the real producers
+  over [`fixtures/source-format-corpus.json`](fixtures/source-format-corpus.json),
+  and `real-node-rust-rule-resolution` runs the real resolvers over
+  [`fixtures/rule-resolution-corpus.json`](fixtures/rule-resolution-corpus.json).
 - [`source-format-node-producer.mjs`](source-format-node-producer.mjs) and the
-  Rust example `meridian-app/examples/source_format_producer.rs` expose only
-  deterministic verification output; neither is a future CLI command.
+  Rust example `meridian-app/examples/source_format_producer.rs`, plus
+  [`rule-resolution-node-producer.mjs`](rule-resolution-node-producer.mjs) and
+  `meridian-app/examples/rule_resolution_producer.rs`, expose only
+  deterministic verification output; none is a future CLI command.
 
 ## Producer spec
 
@@ -173,6 +176,8 @@ same `runCase` path:
 | `spawn-error-on-right` | `harness_error` | A producer that fails to spawn is an explicit refusal, never a coincidental match. |
 | `intentional-divergence-proof` | `divergent` | An unmistakable mismatch is never reported as anything but divergent — the mechanism does not stay silent on any input. |
 | `unparseable-diagnostic-like-line` | `harness_error` | A diagnostic-looking-but-unparseable line common to both sides is refused, not silently ignored into a false match. |
+| `real-node-rust-source-format-adapters` | `conformant` | The real Node.js and Rust source-format adapters agree on the shared adversarial corpus. |
+| `real-node-rust-rule-resolution` | `conformant` | The real Node.js resolver and Rust application adapter agree on the shared resolution corpus. |
 
 Run the CLI directly against a fixtures file (one case or many — "every
 requested comparison" below means every case the given file contains):

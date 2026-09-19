@@ -263,13 +263,13 @@ check('чёрный ящик: повторный запуск публичног
 
 // --- self-check: full corpus through the exact same path CI/pre-push use, via the test file ---
 
-const sourceFormatBuild = spawnSync('cargo', ['build', '-p', 'meridian-app', '--example', 'source_format_producer'], {
+const rustProducersBuild = spawnSync('cargo', ['build', '-p', 'meridian-app', '--examples'], {
   cwd: ROOT,
   encoding: 'utf8',
 });
-check('реальный Rust-производитель форматов собран перед сравнением', () => {
-  assert(sourceFormatBuild.status === 0,
-    `cargo build завершился кодом ${sourceFormatBuild.status}; stderr:\n${sourceFormatBuild.stderr}`);
+check('реальные Rust-производители собраны перед сравнением', () => {
+  assert(rustProducersBuild.status === 0,
+    `cargo build завершился кодом ${rustProducersBuild.status}; stderr:\n${rustProducersBuild.stderr}`);
 });
 
 const corpusResults = runCorpus(FIXTURES);

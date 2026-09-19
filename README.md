@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-08
+updated: 2026-09-20
 ---
 
 # Meridian
@@ -75,7 +75,8 @@ Confluence (D-3), сценарии 2/3 — решениями D-1/D-2.
 ```
 meridian/
 ├── VERSION  CHANGELOG.md  COMPATIBILITY.md  LICENSE
-├── governance/         контракт намерений владельца, планы, архитектурные решения и RFC разработки самого Meridian
+├── governance/         контракт владельца, планы, решения, RFC и исследовательский контур самого Meridian
+│   └── research/       реестр гипотез, условия допуска экспериментов и концепции самоулучшения
 ├── standards/          методология, lifecycle, статусная модель, writers, шаблоны
 │   └── workspace/workspace-scope-model.md ← шесть логических областей
 │       workspace/task-pattern-registry.md ← семь универсальных типов задач

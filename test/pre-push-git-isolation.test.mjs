@@ -143,6 +143,7 @@ function buildSyntheticKernel(name, { dropSourcingLine = false, dropKernelPin = 
   const shim = gateShimSource(probe, realDir);
   for (const rel of [
     'test/kernel-validate.test.mjs',
+    'test/preflight.test.mjs',
     'test/rule-resolver.test.mjs',
     'test/workspace-scope-model.test.mjs',
     'test/task-pattern-registry.test.mjs',

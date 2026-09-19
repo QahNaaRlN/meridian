@@ -1,9 +1,10 @@
 # Meridian Kernel .gitignore
 #
-# Second line of defence only. The first is that the Instance is a different
-# repository entirely and is not reachable from here by a relative path.
-
-# Instance checkouts, if someone places one inside this working tree anyway.
+# Instance checkouts, if someone places one inside this working tree. The
+# canonical documents of Meridian's own development (owner intent, program
+# plans, architecture decisions, RFCs) live tracked under governance/, not
+# under .agent/ or any Instance checkout — ignoring these paths never hides
+# canonical Kernel content.
 /instance/
 /instances/
 /.agent/

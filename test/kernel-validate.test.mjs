@@ -846,12 +846,28 @@ function check(name, res, { expectExit, mustMatch = [], mustNotMatch = [] }) {
   });
 }
 
-// t14 — a run without an Instance declares itself unverified and exits red
+// t14 — a Kernel-only run (no Instance at all) is a legitimate mode: it warns
+// that product literals were not checked (UNVERIFIED) but does not itself
+// turn the gate red, since Kernel-only development must not depend on an
+// Instance being wired (see AGENTS.md).
 {
   const { kernel } = freshPair('t14');
-  check('t14 missing instance is an explicit failure', run(kernel, null), {
+  check('t14 missing instance warns UNVERIFIED but does not fail the gate', run(kernel, null), {
+    expectExit: 0,
+    mustMatch: [/WARN\s+kernel-purity: MERIDIAN_INSTANCE is not set; product literals were NOT checked/],
+  });
+}
+
+// t14b — an explicitly supplied Instance that does not resolve to a real
+// product record is a wiring error, not an absent-Instance mode, and must
+// still fail strictly.
+{
+  const { kernel } = freshPair('t14b');
+  const brokenInstance = path.join(workRoot, 't14b', 'not-an-instance');
+  fs.mkdirSync(brokenInstance, { recursive: true });
+  check('t14b explicit but invalid instance still fails strictly', run(kernel, brokenInstance), {
     expectExit: 1,
-    mustMatch: [/MERIDIAN_INSTANCE is not set/],
+    mustMatch: [/product record not found at/],
   });
 }
 

@@ -1,0 +1,110 @@
+schema_version: 1
+registry_id: meridian-self-improvement-hypotheses
+title: Реестр гипотез улучшения Meridian
+owner: workspace-owner
+updated: 2026-09-20
+canonical_lifecycle_ref: governance/research/README.md
+
+lifecycle_values:
+  - captured
+  - screened
+  - architecture-ready
+  - experiment-gated
+  - experiment-ready
+  - active
+  - evaluated
+  - accepted
+  - rejected
+  - superseded
+
+hypotheses:
+  - id: meridian-hypothesis-machine-enforced-architecture
+    title: Проект ограничивает пространство решений агента
+    source_ref: governance/research/knowledge-bases-and-agent-hypotheses.md#meridian-hypothesis-machine-enforced-architecture
+    owner: workspace-owner
+    status: experiment-gated
+    architecture_decision:
+      disposition: adopt-now
+      applies_to:
+        - deterministic-validation
+        - layer-boundaries
+        - dependency-direction
+      roadmap_ref: governance/plans/meridian-rust-migration-program-plan.md#rust-workspace-foundation
+    experiment:
+      claim: Машинно-проверяемые границы снижают число лишних правок и повторных проходов агента на сопоставимых задачах.
+      falsified_when: При сопоставимом качестве решения число лишних правок или повторных проходов не снижается либо растёт.
+      entry_conditions:
+        - Выпущен минимальный Rust Meridian и закрыт выпускной рубеж пакета 10.
+        - Выбран продуктовый репозиторий с добровольно принятым режимом Meridian.
+        - Подготовлен повторяемый корпус задач одинакового класса и исходных ревизий.
+        - Зафиксированы контроль без дополнительных границ и вариант с теми же правилами, выраженными машинно.
+        - До прогона назначены пороги по лишним изменениям, повторным проходам, корректности и времени.
+
+  - id: meridian-hypothesis-structural-retrieval
+    title: Структурное получение контекста эффективнее блуждания агента
+    source_ref: governance/research/knowledge-bases-and-agent-hypotheses.md#meridian-hypothesis-structural-retrieval
+    owner: workspace-owner
+    status: experiment-gated
+    architecture_decision:
+      disposition: adopt-now
+      applies_to:
+        - derived-index-is-not-source-of-truth
+        - freshness-is-explicit
+        - provider-neutral-adapters
+      roadmap_ref: governance/plans/meridian-improvement-research-plan.md#package-r2
+    experiment:
+      claim: Структурное или гибридное получение контекста улучшает локализацию нужного кода без ухудшения корректности решения.
+      falsified_when: Экономия времени или токенов сопровождается худшей локализацией, корректностью либо большим числом лишних изменений.
+      entry_conditions:
+        - Приняты модель объекта знания Metis и контракт источника знаний.
+        - Для каждого производного индекса определены исходная редакция, дайджест и явная проверка свежести.
+        - Подготовлен один корпус задач для четырёх вариантов: агентский поиск, семантический поиск, структурное получение и гибрид.
+        - Все варианты имеют одинаковые полномочия чтения и одинаковый бюджет выполнения.
+        - Поставщик структурного индекса выбран как заменяемый адаптер, а не как норма Kernel.
+        - Утверждены метрики, пороги, правила сокрытия секретов и уничтожения экспериментальных индексов.
+
+  - id: meridian-hypothesis-deterministic-navigation
+    title: Модель не является поисковым алгоритмом
+    source_ref: governance/research/knowledge-bases-and-agent-hypotheses.md#meridian-hypothesis-deterministic-navigation
+    owner: workspace-owner
+    status: experiment-gated
+    architecture_decision:
+      disposition: adopt-now
+      applies_to:
+        - database-role-routing
+        - knowledge-resolver-separate-from-rule-resolver
+        - fail-closed-on-stale-index
+      roadmap_ref: governance/plans/meridian-rust-migration-program-plan.md#knowledge-agent-foundation
+    experiment:
+      claim: Детерминированный выбор базы и маршрута уменьшает объём исследовательского поиска модели без потери релевантного контекста.
+      falsified_when: Маршрутизатор систематически исключает необходимый контекст, увеличивает число исправлений или не даёт выигрыша против контрольного поиска.
+      entry_conditions:
+        - Выполнен корректирующий пакет knowledge-agent-foundation.
+        - Приняты источник знаний, карта полномочий и маршруты Metis.
+        - Реализована явная диагностика отсутствующего, конфликтующего или устаревшего маршрута.
+        - Подготовлен контрольный корпус запросов с размеченным необходимым контекстом.
+        - Определены полнота контекста, точность маршрута, стоимость и пороги отказа.
+        - Эксперимент не объединяет Knowledge Resolver с Rule Resolver и не превращает найденное знание в норму.
+
+  - id: meridian-hypothesis-model-independent-decision-trace
+    title: Трасса решений независима от внутренней цепочки рассуждений и модели
+    source_ref: governance/research/knowledge-bases-and-agent-hypotheses.md#meridian-hypothesis-model-independent-decision-trace
+    owner: workspace-owner
+    status: experiment-gated
+    architecture_decision:
+      disposition: adopt-now
+      applies_to:
+        - observable-event-envelope
+        - append-only-event-boundary
+        - no-chain-of-thought-dependency
+      roadmap_ref: governance/plans/meridian-rust-migration-program-plan.md#knowledge-agent-foundation
+    experiment:
+      claim: Закрытый набор наблюдаемых событий даёт человеку читаемую и переносимую между моделями трассу решения.
+      falsified_when: Трасса не позволяет восстановить проверяемую последовательность действий либо требует внутренней цепочки рассуждений конкретной модели.
+      entry_conditions:
+        - Принят версионируемый конверт события и политика сокрытия данных.
+        - Пакет 7 предоставляет стабильные точки наблюдения команд без изменения их предметного результата.
+        - Определены порядок событий, идентификаторы корреляции, срок хранения и правила удаления.
+        - Подготовлен одинаковый корпус задач как минимум для двух сменяемых модельных средств.
+        - Человеческая читаемость измеряется заранее определённой рубрикой, а не свободным впечатлением.
+        - Внутренняя цепочка рассуждений не записывается и не требуется для успешного результата.

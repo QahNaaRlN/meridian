@@ -52,13 +52,14 @@ Kernel (§4, §5.1). Пакет 2 (`rust-conformance-harness`) принят и
 (`rust-domain-core`) принят и интегрирован в интеграционную линию Kernel
 (§4, §5.1). Пакет 4 (`rust-source-format-adapters`) принят и интегрирован
 в интеграционную линию Kernel (§4, §5.1). Пакет 5 (`rust-rule-resolution`)
-**принят и интегрирован** в интеграционную линию Kernel (§4, §5.1). Перед
-пакетом 6 (`sqlite-storage-adapter`) введён обязательный корректирующий
-рубеж `instance-repository-retirement-baseline` (§5.2): вывод отдельного
-репозитория Instance из роли активного центра управления разработкой
-Meridian и перенос канонических документов программы в Kernel. Этот рубеж —
-предмет настоящей ревизии и текущего исполнения; пакет 6 не начинается, пока
-рубеж не принят и не интегрирован.
+принят и интегрирован в интеграционную линию Kernel (§4, §5.1).
+Корректирующий рубеж `instance-repository-retirement-baseline` (§5.2) —
+вывод отдельного репозитория Instance из роли активного центра управления
+разработкой Meridian и перенос канонических документов программы в Kernel —
+**принят и интегрирован** в интеграционную линию Kernel (§4, §5.2). Пакет 6
+(`sqlite-storage-adapter`) готов к началу (`current_package_status: ready`,
+§10), но этой документальной синхронизацией **не начинается** — начало
+пакета остаётся отдельным исполнением.
 
 ## 1. Активационный рубеж
 
@@ -120,8 +121,8 @@ Concord остаётся на паузе. Активационный рубеж 
 | 3 | Предметное ядро (`rust-domain-core`) | `meridian-core`: типы (§5 технической спецификации), resolver, конфликты, планы миграции, доказательства, вердикты и диагностика — без файлов, Git, БД, сети, env, вывода | 1–2 | accepted — принят и интегрирован (§5.1) |
 | 4 | Адаптеры исходных форматов (`rust-source-format-adapters`) | Строгий слой поверх YAML/JSON Schema библиотек (allowlist полей и форматов, strict-lint YAML) — построчный паритет с `scripts/lib/yaml.mjs` и `scripts/lib/json-schema.mjs` | 3 | accepted — принят и интегрирован (§5.1) |
 | 5 | Разрешение норм (`rust-rule-resolution`) | Порт `scripts/rule-resolver.mjs` и композитных проверок контрактов операционной модели (`scripts/lib/*.mjs`) в `meridian-app` поверх портов `meridian-core` | 3–4 | accepted — принят и интегрирован (§5.1) |
-| — | Корректирующий рубеж: вывод Instance-репозитория из эксплуатации (`instance-repository-retirement-baseline`) | Устранение отдельного репозитория Instance как активного центра управления разработкой Meridian; перенос пяти канонических документов в `governance/` Kernel; самодостаточный по умолчанию `preflight`/`kernel-validate`; не начинает `sqlite-storage-adapter` | 5 | active — текущее исполнение (§5.2) |
-| 6 | Хранилище SQLite (`sqlite-storage-adapter`) | `meridian-storage-sqlite`: схема §4 технической спецификации, транзакционная запись, включённые foreign keys, неизменяемые редакции и доказательства, идемпотентный импорт, резервная копия, канонический экспорт | 3, 5, `instance-repository-retirement-baseline` | planned — не начат |
+| — | Корректирующий рубеж: вывод Instance-репозитория из эксплуатации (`instance-repository-retirement-baseline`) | Устранение отдельного репозитория Instance как активного центра управления разработкой Meridian; перенос пяти канонических документов в `governance/` Kernel; самодостаточный по умолчанию `preflight`/`kernel-validate`; не начинает `sqlite-storage-adapter` | 5 | accepted — принят и интегрирован (§5.2) |
+| 6 | Хранилище SQLite (`sqlite-storage-adapter`) | `meridian-storage-sqlite`: схема §4 технической спецификации, транзакционная запись, включённые foreign keys, неизменяемые редакции и доказательства, идемпотентный импорт, резервная копия, канонический экспорт | 3, 5, `instance-repository-retirement-baseline` | ready — готов к началу, не начат (§10) |
 | 7 | Основа CLI (`meridian-cli-foundation`) | `meridian-cli`: `init`, `doctor`, `validate`, `resolve`, `export`, `--format human|json`, стабильные коды завершения, разделение stdout/stderr | 5–6 | planned |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт всех записей замороженного источника миграции без потерь; эквивалентность применимых норм между Node-эталоном и импортированным состоянием; идемпотентность повторного импорта; обратимость (`apply → rollback`); отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` в штатной работе выпускаемого бинарника | 6–7 | planned |
 | 9 | Квалификация равенства (`rust-parity-qualification`) | Полный паритетный прогон (полный набор ворот §6.1–§6.6) на всех классах тестовых деревьев; 0 расхождений вердиктов | 2, 4–8 | planned |
@@ -610,10 +611,51 @@ Kernel и принимает явный переходный флаг `--require
   переданный владельцем полный вывод проверок считается входом проверки
   результата (`AGENTS.md` §9).
 
-**Условие перехода к пакету 6** — пакет 6 (`sqlite-storage-adapter`)
-переводится в состояние `ready` только после независимой проверки и
-интеграции этого корректирующего рубежа; этой записью пакет 6 не
-начинается и не переводится в `ready`.
+**Проверочные доказательства и приёмка.** Пакетный коммит Ядра
+`e47e9464313b2844c47ce7c53c12fb9d96952707` (`feat(governance): вывести
+Instance из центра разработки Meridian`, ветка
+`feature/instance-repository-retirement-baseline`) принят отдельным коммитом
+слияния в локальную линию `dev` —
+`ee5c4e97f2d3b9b9301d5461bcbddf0c9ef754ee`. Обычный merge commit с двумя
+родителями: первый родитель `9c6722713b2c47ab1511d36332dd8845e46e6818`
+(предыдущий принятый коммит слияния — закрепление ролей и локальной
+интеграции Meridian), второй родитель
+`e47e9464313b2844c47ce7c53c12fb9d96952707` (пакетный коммит). Пакетный
+коммит достижим из коммита слияния (`git merge-base --is-ancestor
+e47e9464313b2844c47ce7c53c12fb9d96952707
+ee5c4e97f2d3b9b9301d5461bcbddf0c9ef754ee` — подтверждено). Дерево пакетного
+коммита совпадает с деревом коммита слияния (`git diff --exit-code
+e47e9464313b2844c47ce7c53c12fb9d96952707^{tree}
+ee5c4e97f2d3b9b9301d5461bcbddf0c9ef754ee^{tree}` — код завершения 0, без
+вывода): diff принятого пакета не переписан при слиянии. Интеграция
+выполнена только локально: исходная ветвь, `dev` и коммит слияния в GitHub
+не отправлялись, запрос на слияние не создавался
+(`AGENTS.md` §6.7, запись 2026-09-19).
+
+Переданные владельцем проверочные доказательства: `node
+test/preflight.test.mjs` — 10 passed, 0 failed; `node
+test/kernel-validate.test.mjs` — 293 passed, 0 failed, 0 skipped; `node
+test/pre-push-git-isolation.test.mjs` — 8 passed, 0 failed; `git diff
+--cached --check` — успешно; `sh -n hooks/pre-push` — успешно;
+синтаксический разбор `.github/workflows/gate.yml` — успешно. Cargo-тесты и
+остальные Node.js-регрессионные наборы этой документальной синхронизацией
+не запускались и для неё не требуются (`AGENTS.md` §9).
+
+**Результат рубежа, зафиксированный этой приёмкой:** каноническое
+управление разработкой Meridian находится в Kernel (`governance/`); прежний
+репозиторий Instance является только замороженным для чтения источником
+миграции; обычная предварительная проверка (`node scripts/preflight.mjs`)
+работает без Instance; строгий переходный режим доступен явно через
+`--require-instance`; регрессионная проверка preflight
+(`test/preflight.test.mjs`) включена в локальные (`hooks/pre-push`) и
+удалённые (`.github/workflows/gate.yml`) ворота.
+
+**Условие перехода к пакету 6 — выполнено.** Корректирующий рубеж
+`instance-repository-retirement-baseline` независимо проверен и
+интегрирован (выше); пакет 6 (`sqlite-storage-adapter`) переведён в
+состояние `ready` (§4, §10). Этой записью пакет 6 не начинается: она не
+создаёт `meridian-storage-sqlite`, не переносит его схему и не начинает
+CLI, Metis или Concord.
 
 ## 6. Ворота Rust
 
@@ -819,24 +861,21 @@ program_id: meridian-rust-migration
 program_status: active
 activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
-last_completed_package: rust-rule-resolution
-current_package: instance-repository-retirement-baseline
-current_package_status: active
-next_package: sqlite-storage-adapter
+last_completed_package: instance-repository-retirement-baseline
+current_package: sqlite-storage-adapter
+current_package_status: ready
+next_package: meridian-cli-foundation
 concord_status: paused_pending_meridian_rust_release
 release_version: unassigned
 release_gate: closed
 owner_decision_date: 2026-09-19
 ```
 
-Настоящая ревизия фиксирует приёмку и интеграцию пакета 5
-(`rust-rule-resolution`, §5.1) и вводит обязательный корректирующий рубеж
-`instance-repository-retirement-baseline` (§5.2) перед пакетом 6. Она **не
-начинает** пакет 6: не создаёт `meridian-storage-sqlite`, не переносит схему
-SQLite и не затрагивает интерфейс командной строки, Metis или Concord — ни
+Настоящая ревизия фиксирует приёмку и интеграцию корректирующего рубежа
+`instance-repository-retirement-baseline` (§5.2) и переводит пакет 6
+(`sqlite-storage-adapter`) в состояние `ready`. Она **не начинает** пакет 6:
+не создаёт `meridian-storage-sqlite`, не добавляет его схему или код
+хранения и не начинает интерфейс командной строки, Metis или Concord — ни
 один из них этой синхронизацией не начинается и не возобновляется; Concord
-остаётся на паузе. Настоящий рубеж
-переносит канонические документы программы в Kernel и приводит
-`preflight`/`kernel-validate` к самодостаточному по умолчанию поведению
-(§5.2); его собственное принятие остаётся отдельным, независимо проверяемым
-исполнением, а не результатом этой документальной записи.
+остаётся на паузе. Начало пакета 6 остаётся отдельным, самостоятельным
+исполнением после этой синхронизации.

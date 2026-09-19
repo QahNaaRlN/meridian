@@ -29,13 +29,9 @@
 //     the public CLI never reads it and never runs this function.
 //
 
-// On this package (rust-conformance-harness, package 2 of
-// meridian-rust-migration) there is no real producer to point at yet: the
-// controlled corpus in fixtures/conformance-harness.fixtures.json runs two
-// synthetic `node -e '...'` producers per case, chosen only to prove this
-// mechanism actually distinguishes a matching pair from a diverging one.
-// Wiring real Node/Rust commands into a producer spec is future work
-// (starting package 4) and requires no change to the functions below.
+// The corpus retains synthetic pairs that prove the mechanism itself and,
+// from package 4, also runs the real Node.js and Rust source-format producers
+// over one shared adversarial corpus through these unchanged functions.
 //
 // Producer spec shape (both `left` and `right` of a case use it):
 //   { command: string, args: string[], cwd: string, env: Record<string,string> }

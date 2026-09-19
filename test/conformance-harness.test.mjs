@@ -37,6 +37,7 @@ import { fileURLToPath } from 'node:url';
 import { runProducer, normalizeDiagnostics, compareVerdicts, runCase, runCorpus, runConformanceCheck } from '../verification/conformance-harness/conformance-harness.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.join(__dirname, '..');
 const FIXTURES = path.join(__dirname, '..', 'verification', 'conformance-harness', 'fixtures', 'conformance-harness.fixtures.json');
 const CLI = path.join(__dirname, '..', 'verification', 'conformance-harness', 'conformance-harness.mjs');
 const CORPUS_RAW = JSON.parse(fs.readFileSync(FIXTURES, 'utf8'));
@@ -261,6 +262,15 @@ check('чёрный ящик: повторный запуск публичног
 });
 
 // --- self-check: full corpus through the exact same path CI/pre-push use, via the test file ---
+
+const sourceFormatBuild = spawnSync('cargo', ['build', '-p', 'meridian-app', '--example', 'source_format_producer'], {
+  cwd: ROOT,
+  encoding: 'utf8',
+});
+check('реальный Rust-производитель форматов собран перед сравнением', () => {
+  assert(sourceFormatBuild.status === 0,
+    `cargo build завершился кодом ${sourceFormatBuild.status}; stderr:\n${sourceFormatBuild.stderr}`);
+});
 
 const corpusResults = runCorpus(FIXTURES);
 

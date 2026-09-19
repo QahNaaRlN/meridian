@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-09-17
-updated: 2026-09-17
+updated: 2026-09-19
 ---
 
 # Conformance harness
@@ -26,10 +26,10 @@ two normalized results to an explicit `conformant` / `divergent` /
 - Does not define `Verdict`, `Diagnostic`, a resolver, or any other Meridian
   domain concept (`meridian-rust-target-architecture.md` §2, §5). It only
   understands "a process ran, here is what it printed and how it exited".
-- Carries no real comparison of the Node validator against Rust: on this
-  package there is no Rust surface yet to compare against. Real Node/Rust
-  comparison starts at package 4 (`rust-source-format-adapters`,
-  `meridian-rust-migration-program-plan.md` §6.2).
+- Does not substitute synthetic self-checks for product comparison. Package 4
+  adds a real Node.js/Rust comparison for the introduced YAML and JSON Schema
+  surface while retaining the synthetic cases that prove the mechanism can
+  detect divergence and harness failure.
 
 ## Why a separate artifact
 
@@ -55,9 +55,13 @@ mechanism containing the defect would be the same code
   `runConformanceCheck` (public; what the CLI's exit code is derived from)
   and `runCorpus` (self-check; used only by the regression test).
 - [`fixtures/conformance-harness.fixtures.json`](fixtures/conformance-harness.fixtures.json)
-  — the controlled corpus: synthetic `node -e '...'` producer pairs chosen to
-  prove the mechanism actually distinguishes a matching pair from a diverging
-  one, not fixtures of a real Node/Rust comparison.
+  — the controlled corpus: synthetic `node -e '...'` pairs prove the
+  mechanism, and `real-node-rust-source-format-adapters` runs the real
+  producers over
+  [`fixtures/source-format-corpus.json`](fixtures/source-format-corpus.json).
+- [`source-format-node-producer.mjs`](source-format-node-producer.mjs) and the
+  Rust example `meridian-app/examples/source_format_producer.rs` expose only
+  deterministic verification output; neither is a future CLI command.
 
 ## Producer spec
 
@@ -212,14 +216,13 @@ in-memory `.match`/`.status` field). `hooks/pre-push` and
 second, independently written comparison or aggregation algorithm living in
 any of the three.
 
-## Future reuse
+## Real-producer reuse
 
-Wiring a real Node command and a real Rust command into a producer spec
-(`{ command, args, cwd, env }`) starting at package 4
-(`rust-source-format-adapters`) requires no change to `runProducer`,
-`normalizeDiagnostics`, `compareVerdicts`, `runCase` or `runConformanceCheck`
-— only a new fixtures file (or an equivalent caller) supplying real commands
-instead of synthetic `node -e` producers. The `"$NODE"`/relative-`cwd`
+Package 4 wires real Node.js and Rust commands into a producer specification
+without changing `runProducer`, `normalizeDiagnostics`, `compareVerdicts`,
+`runCase` or `runConformanceCheck`. Later packages can add fixture cases or an
+equivalent caller without adding a second comparison algorithm. The
+`"$NODE"`/relative-`cwd`
 fixture convenience lives only in the shared fixture-loading helper used by
 `runConformanceCheck` and `runCorpus`, not in the reusable core, precisely so
 it never has to be un-taught later.

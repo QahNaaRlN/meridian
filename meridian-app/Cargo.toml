@@ -9,6 +9,7 @@ description = "Meridian Rust application layer — ports and orchestration over 
 workspace = true
 
 [dependencies]
+fancy-regex = "0.19.0"
 jsonschema = { version = "0.56.0", default-features = false }
 meridian-core = { path = "../meridian-core" }
 serde = { version = "1.0.229", features = ["derive"] }

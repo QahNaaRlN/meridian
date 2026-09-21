@@ -15,6 +15,7 @@
 
 pub mod events;
 pub mod knowledge;
+pub mod operating_model;
 pub mod rule_resolution;
 pub mod source_format;
 pub mod storage;

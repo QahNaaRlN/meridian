@@ -6,68 +6,73 @@
 //! self-checks): `kernel-purity` (personal-path leak half),
 //! `document-identity`, `duplicate-fm`, the Markdown link check, generic
 //! in-gate registry `$schema` validation, the `rule-resolution` PHASE B
-//! fixture check, `git-provenance`, and — as of subpackage
-//! `validate-mechanical-integrity` (package 7, subpackage 7a) —
-//! `sha-provenance`, `instruction-topics`, `operating-foundation`,
-//! `stack-profiles` and `agent-instruction-identity`. Each uses the exact
-//! ported strict adapters (`meridian_app::source_format`, including the
-//! file-independent marked-region adapter
-//! `meridian_app::source_format::regions` this subpackage added) or, for
-//! `rule-resolution`, no composite algorithm beyond schema validation at
-//! all (see `rule_resolution_fixtures`). The fixed "no Instance configured"
-//! advisories every one of these checks' Node counterpart already prints
-//! when `MERIDIAN_INSTANCE` is unset are reproduced verbatim: this package
-//! wires no `--instance` flag (deferred to package 8,
-//! `meridian-rust-migration-program-plan.md` §4).
+//! fixture check, `git-provenance`, subpackage `validate-mechanical-integrity`
+//! (package 7, subpackage 7a) — `sha-provenance`, `instruction-topics`,
+//! `operating-foundation`, `stack-profiles` and
+//! `agent-instruction-identity` — and, as of subpackage
+//! `validate-operating-contracts` (package 7, subpackage 7b),
+//! `functional-parity`, `task-pattern-registry`,
+//! `instruction-source-registry`, `task-specification-contract`,
+//! `execution-state-model`, `role-and-human-control` and
+//! `bounded-context-manifest`. Each uses the exact ported strict adapters
+//! (`meridian_app::source_format`, including the file-independent
+//! marked-region adapter `meridian_app::source_format::regions` 7a added)
+//! or, for `rule-resolution`, no composite algorithm beyond schema
+//! validation at all (see `rule_resolution_fixtures`); 7b's seven families
+//! each pair a JSON Schema with a bespoke composite-consistency algorithm
+//! ported to `meridian_app::operating_model` — pure functions over
+//! already-parsed values, with the file/YAML/JSON I/O and, for
+//! `bounded-context-manifest`, the external pinned-record resolution
+//! boundary, staying in this crate's own module for that family. The fixed
+//! "no Instance configured" advisories every one of these checks' Node
+//! counterpart already prints when `MERIDIAN_INSTANCE` is unset are
+//! reproduced verbatim: this package wires no `--instance` flag (deferred
+//! to package 8, `meridian-rust-migration-program-plan.md` §4).
 //!
 //! **Not yet ported — explicit, itemised `blocked` list, never silently
-//! passed and never silently failed** ([`BLOCKED_CHECKS`]): the 15 remaining
-//! operating-model composite contracts (`functional-parity`,
-//! `task-pattern-registry`, `instruction-source-registry`,
-//! `task-specification-contract`, `execution-state-model`,
-//! `role-and-human-control`, `bounded-context-manifest`,
-//! `evidence-and-handoff-contract`, `meridian-field-evaluation`,
-//! `controlled-rule-intake`, `existing-project-compatibility-mode`,
-//! `instance-data-migration`, `instance-canonical-export`,
-//! `workspace-compatibility-qualification`,
+//! passed and never silently failed** ([`BLOCKED_CHECKS`]): the 8 remaining
+//! operating-model composite contracts (`evidence-and-handoff-contract`,
+//! `meridian-field-evaluation`, `controlled-rule-intake`,
+//! `existing-project-compatibility-mode`, `instance-data-migration`,
+//! `instance-canonical-export`, `workspace-compatibility-qualification`,
 //! `upgrade-integration-qualification`) each pair a JSON Schema with a
 //! bespoke composite-consistency algorithm from its own
 //! `scripts/lib/*.mjs` module; two of those pure algorithms already exist in
 //! `meridian-core` (`migration::checks`, `evidence::aggregate`) but are not
-//! yet wired to real fixture files by this CLI, and the remaining ~12 have no
-//! Rust port at all. Porting these composite algorithms is a new
-//! architectural undertaking on the scale of the packages that ported
-//! `rule-resolver.mjs` and `scripts/lib/yaml.mjs`/`json-schema.mjs` — it is
-//! not something this command can safely approximate without either
-//! fabricating a verdict or silently narrowing the accepted contract. The
-//! owner has since decided the split and order
+//! yet wired to real fixture files by this CLI, and the remaining six have
+//! no Rust port at all. The owner has decided the split and order
 //! (`governance/plans/meridian-rust-migration-program-plan.md` §5.5c):
-//! subpackage 7b (`functional-parity`, `task-pattern-registry`,
-//! `instruction-source-registry`, `task-specification-contract`,
-//! `execution-state-model`, `role-and-human-control`,
-//! `bounded-context-manifest`), then 7c (`evidence-and-handoff-contract`,
+//! subpackage 7b is implemented by this module (this doc comment's own
+//! record); 7c (`evidence-and-handoff-contract`,
 //! `meridian-field-evaluation`, `controlled-rule-intake`,
 //! `existing-project-compatibility-mode`), then 7d
 //! (`instance-data-migration`, `instance-canonical-export`,
 //! `workspace-compatibility-qualification`,
 //! `upgrade-integration-qualification`) — implemented and accepted in that
-//! order, none of it started by this module. Package 8
+//! order, neither started by this module. Package 8
 //! (`meridian-cli-migration`) stays blocked on the acceptance and
-//! integration of all of 7a–7d, not only 7a.
+//! integration of all of 7a–7d, not only 7a/7b.
 
 mod agent_instruction_identity;
+mod bounded_context_manifest;
 mod document_identity;
 mod duplicate_fm;
+mod execution_state;
+mod functional_parity;
 mod git_provenance;
 mod instance_context;
+mod instruction_source_registry;
 mod instruction_topics;
 mod kernel_purity;
 mod link_check;
 mod operating_foundation;
 mod registry_schema;
+mod role_and_human_control;
 mod rule_resolution_fixtures;
 mod sha_provenance;
 mod stack_profiles;
+mod task_pattern_registry;
+mod task_specification;
 
 use std::io::Write;
 use std::path::Path;
@@ -86,13 +91,6 @@ pub const ALLOWED_FLAGS: &[&str] = &["kernel", "format"];
 /// See the module documentation above for why each of these is not yet
 /// implemented, and what porting it would require.
 pub const BLOCKED_CHECKS: &[(&str, &str)] = &[
-    ("functional-parity", "needs functionalParityConsistency (scripts/kernel-validate.mjs) ported as a meridian-core/meridian-app pure function"),
-    ("task-pattern-registry", "needs scripts/lib/task-pattern-registry.mjs's composite algorithm ported"),
-    ("instruction-source-registry", "needs scripts/lib/instruction-source-registry.mjs's composite algorithm ported"),
-    ("task-specification-contract", "needs scripts/lib/task-specification.mjs's composite algorithm ported"),
-    ("execution-state-model", "needs scripts/lib/execution-state.mjs's composite algorithm ported"),
-    ("role-and-human-control", "needs scripts/lib/role-and-human-control.mjs's composite algorithm ported"),
-    ("bounded-context-manifest", "needs scripts/lib/context-manifest.mjs's composite algorithm ported"),
     ("evidence-and-handoff-contract", "meridian-core::evidence::aggregate ports the pure verdict algorithm, but the file-facing fixture harness is not yet wired into this CLI"),
     ("meridian-field-evaluation", "needs scripts/lib/field-evaluation.mjs's composite algorithm ported"),
     ("controlled-rule-intake", "needs scripts/lib/controlled-rule-intake.mjs's composite algorithm ported"),
@@ -171,6 +169,9 @@ fn collect(kernel_root: &Path) -> Result<Collected, WalkError> {
     let rule_resolution = rule_resolution_fixtures::run(kernel_root);
     failures.extend(rule_resolution.failures);
 
+    let functional_parity = functional_parity::run(kernel_root);
+    failures.extend(functional_parity.failures);
+
     let provenance = git_provenance::run(kernel_root);
     failures.extend(provenance.failures);
     warnings.extend(provenance.warnings);
@@ -194,6 +195,24 @@ fn collect(kernel_root: &Path) -> Result<Collected, WalkError> {
     let identity_norms =
         agent_instruction_identity::run(kernel_root, &markdown_files, topics.topic_pool.as_ref());
     failures.extend(identity_norms.failures);
+
+    let task_patterns = task_pattern_registry::run(kernel_root, &files);
+    failures.extend(task_patterns.failures);
+
+    let source_registry = instruction_source_registry::run(kernel_root);
+    failures.extend(source_registry.failures);
+
+    let task_specification = task_specification::run(kernel_root);
+    failures.extend(task_specification.failures);
+
+    let execution_state = execution_state::run(kernel_root);
+    failures.extend(execution_state.failures);
+
+    let role_and_human_control = role_and_human_control::run(kernel_root);
+    failures.extend(role_and_human_control.failures);
+
+    let bounded_context_manifest = bounded_context_manifest::run(kernel_root);
+    failures.extend(bounded_context_manifest.failures);
 
     warnings.push(
         "front-matter/path-placement: no Instance root, working-memory artifacts were NOT checked"

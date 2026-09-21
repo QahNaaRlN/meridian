@@ -530,6 +530,457 @@ for (const family of VALIDATE_MUTATION_FAMILIES_7A) {
 }
 
 // ---------------------------------------------------------------------------
+// Package meridian-cli-foundation, subpackage validate-operating-contracts
+// (package 7, subpackage 7b), corrective round: one negative mutation per
+// one of the seven families this subpackage ported, each on its own full,
+// fresh copy of this repository (same reason as VALIDATE_MUTATION_FAMILIES_7A
+// — several of these mutate an existing Kernel file in place).
+//
+// The previous round's five fixtures-truncation mutations (emptying a
+// schema's bundled "invalid" array) only ever exercised the WIRING code's
+// own bundle-shape check ("the fixtures file has no non-empty ... array") —
+// never the family's actual bespoke composite algorithm
+// (`evaluate*`/`check*` in `meridian_app::operating_model::*`), which is
+// what this package's whole purpose is to port. This round replaces all
+// five with a SCHEMA-VALID mutation of one bundled "valid" fixture's own
+// document, chosen so it violates exactly one composite-only rule the JSON
+// Schema itself cannot state (never a `uniqueItems`/type/enum violation the
+// generic `$schema` pass would already catch on its own, which would leave
+// it ambiguous which layer actually caught the mutation). `task-pattern-registry`
+// and `role-and-human-control` keep their existing real-Kernel-data
+// mutations (`standards/workspace/{task-pattern-registry,role-registry}.yaml`)
+// unchanged — they already exercise their own composite algorithms, not
+// merely the wiring code.
+//
+// Each mutation is verified against a BASELINE computed on the SAME
+// unmutated copy immediately before mutating it — not the generic
+// corpus-wide `conformant`/`divergent` harness, whose full-diagnostic-set
+// comparison is fragile against anything else in the tree changing (a
+// lesson learned the hard way earlier in this same round: duplicating
+// task-pattern-registry.yaml's whole list once collided every real pattern
+// id, cascading into task-specification-contract's and — worse —
+// upgrade-integration-qualification's (7d, still `BLOCKED_CHECKS`) own
+// fixtures, an unavoidable, permanent `divergent` that had nothing to do
+// with task-pattern-registry itself; see `duplicateOneTaskPatternWithNewId`
+// below for the narrower mutation that replaced it).
+//
+// The check itself (`assertMutationDeltaMultisetsEqual`) does not stop
+// at "the two sides intersect somewhere" — a corrective round tightened it
+// after that weaker form let a real ordering bug through undetected (see
+// `governance/plans/meridian-rust-migration-program-plan.md` §5.9 pt. 1). It
+// computes the full multiset DELTA (`multisetDelta`) of the mutated run over
+// the baseline on each side — every new line, WITH its repeat count, not
+// merely which distinct strings are new — and asserts the delta is
+// non-empty, carries the family's `expectedFailPrefix`, and is EQUAL AS A
+// MULTISET between Node and Rust: the exact same lines, the exact same
+// number of times each, never merely an intersecting subset. This proves
+// the underlying composite algorithm agrees completely on what changed, not
+// just that "something new, and coincidentally one same line," failed on
+// both.
+function computeFailLines(dir) {
+  const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+    cwd: ROOT,
+    env: { ...process.env, MERIDIAN_KERNEL: dir },
+    encoding: 'utf8',
+  });
+  const nodeFails = nodeRun.stdout
+    .split('\n')
+    .filter((l) => l.startsWith('FAIL'))
+    .map((l) => l.replace(/^FAIL\s+/, ''));
+  const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+  const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+  let rustFails;
+  try {
+    rustFails = JSON.parse(rustRun.stdout.trim()).result.failures;
+  } catch (e) {
+    throw new Error(
+      `expected exactly one JSON result document on the real meridian binary's stdout, got: ${JSON.stringify(rustRun.stdout)} (${e.message}); stderr: ${rustRun.stderr}`,
+    );
+  }
+  return { nodeFails, rustFails };
+}
+
+// A multiset (bag) of diagnostic lines, counting repeats — a mutation that
+// duplicates an already-present line, or that a family's own composite
+// algorithm reports once per affected fixture, must be compared by COUNT,
+// not merely by which distinct strings appear.
+function multisetCounts(lines) {
+  const counts = new Map();
+  for (const line of lines) counts.set(line, (counts.get(line) ?? 0) + 1);
+  return counts;
+}
+
+function multisetsEqual(a, b) {
+  const ca = multisetCounts(a);
+  const cb = multisetCounts(b);
+  if (ca.size !== cb.size) return false;
+  for (const [line, count] of ca) {
+    if (cb.get(line) !== count) return false;
+  }
+  return true;
+}
+
+// The multiset DELTA of `mutated` over `baseline`: for each distinct line,
+// however many more times it appears in `mutated` than in `baseline`
+// (never negative — a line the mutation made LESS frequent is not part of
+// what the mutation introduced). This is the full set of what changed,
+// not merely the lines that happen to also carry a chosen prefix.
+function multisetDelta(baseline, mutated) {
+  const baselineCounts = multisetCounts(baseline);
+  const mutatedCounts = multisetCounts(mutated);
+  const delta = [];
+  for (const [line, mutatedCount] of mutatedCounts) {
+    const extra = mutatedCount - (baselineCounts.get(line) ?? 0);
+    for (let i = 0; i < extra; i += 1) delta.push(line);
+  }
+  return delta;
+}
+
+function assertMutationDeltaMultisetsEqual(dir, expectedFailPrefix, label) {
+  const baseline = computeFailLines(dir);
+  return (mutate) => {
+    mutate(dir);
+    const mutated = computeFailLines(dir);
+    const nodeDelta = multisetDelta(baseline.nodeFails, mutated.nodeFails);
+    const rustDelta = multisetDelta(baseline.rustFails, mutated.rustFails);
+    assert(
+      nodeDelta.length > 0,
+      `${label}: expected a non-empty Node delta over baseline; baseline=${JSON.stringify(baseline.nodeFails)} mutated=${JSON.stringify(mutated.nodeFails)}`,
+    );
+    assert(
+      rustDelta.length > 0,
+      `${label}: expected a non-empty Rust delta over baseline; baseline=${JSON.stringify(baseline.rustFails)} mutated=${JSON.stringify(mutated.rustFails)}`,
+    );
+    assert(
+      nodeDelta.some((l) => l.startsWith(expectedFailPrefix)),
+      `${label}: expected the Node delta to carry a line with prefix "${expectedFailPrefix}", got delta: ${JSON.stringify(nodeDelta)}`,
+    );
+    assert(
+      rustDelta.some((l) => l.startsWith(expectedFailPrefix)),
+      `${label}: expected the Rust delta to carry a line with prefix "${expectedFailPrefix}", got delta: ${JSON.stringify(rustDelta)}`,
+    );
+    assert(
+      multisetsEqual(nodeDelta, rustDelta),
+      `${label}: expected the Node and Rust deltas to be equal as multisets (same lines, same counts), not merely intersecting; node-delta=${JSON.stringify(nodeDelta)} rust-delta=${JSON.stringify(rustDelta)}`,
+    );
+  };
+}
+
+function duplicateYamlListToEnd(filePath, marker) {
+  const text = fs.readFileSync(filePath, 'utf8');
+  const idx = text.indexOf(marker);
+  assert(idx !== -1, `${filePath} must contain "${marker.trim()}" to mutate after`);
+  const listBlock = text.slice(idx + marker.length);
+  fs.writeFileSync(filePath, text + listBlock);
+}
+
+// Duplicating task-pattern-registry.yaml's whole task_patterns list (as
+// duplicateYamlListToEnd would) collides EVERY real pattern id at once —
+// including the seven ids task-specification-contract's and
+// upgrade-integration-qualification's own bundled fixtures reference by
+// name, which cascades this one mutation into families this Kernel's Rust
+// side has not yet ported (upgrade-integration-qualification is 7d,
+// BLOCKED_CHECKS) and can therefore never report — an unavoidable, permanent
+// divergence that has nothing to do with task-pattern-registry itself. This
+// narrower mutation instead appends two copies of the FIRST pattern entry
+// under one brand-new id ("mutation-probe-pattern") no other bundled fixture
+// references by name, so the only families it can possibly disturb are
+// task-pattern-registry's own duplicate-id/duplicate-classification-pair
+// checks.
+function duplicateOneTaskPatternWithNewId(filePath) {
+  const text = fs.readFileSync(filePath, 'utf8');
+  const marker = 'task_patterns:\n';
+  const idx = text.indexOf(marker);
+  assert(idx !== -1, `${filePath} must contain "${marker.trim()}" to mutate after`);
+  const listText = text.slice(idx + marker.length);
+  const parts = listText.split(/(?=^ {2}- \$schema:)/m).filter(Boolean);
+  assert(parts.length >= 1, `${filePath} must carry at least one task pattern entry`);
+  const first = parts[0];
+  assert(
+    first.includes('id: assess-existing-state'),
+    `${filePath}'s first task pattern entry must be "assess-existing-state" to mutate`,
+  );
+  const duplicate = first.replace('id: assess-existing-state', 'id: mutation-probe-pattern');
+  fs.writeFileSync(filePath, text + duplicate + duplicate);
+}
+
+// Each `write` mutates exactly one bundled "valid" fixture's own document,
+// changing a value the JSON Schema itself places no constraint on (so the
+// generic `$schema` pass stays silent and only the family's bespoke
+// composite algorithm can object), chosen to violate exactly one composite
+// rule with no side effect on any other fixture or family:
+//   - functional-parity: drops one of three post-change `contract_links`
+//     entries from an otherwise-complete VERIFIED record — rule 6 ("a
+//     per-assertion VERIFIED needs BOTH covering evidence AND a link");
+//   - instruction-source-registry: flips a verified, source-missing
+//     source's `recorded_state.currency` from "stale" to "current" — a
+//     source known gone cannot have a *current* snapshot;
+//   - task-specification-contract: appends a second acceptance criterion
+//     under a brand-new id whose statement/verification duplicate the
+//     first criterion's — schema places no `uniqueItems` on
+//     `acceptance_criteria` (unlike `constraints`/`resolved_norms`, which
+//     do carry `uniqueItems` and were avoided for exactly that reason);
+//   - execution-state-model: sets `current_actor` to a rooted POSIX path —
+//     `current_actor` is schema-typed as a bare non-empty string with no
+//     path-shape constraint, so only `nonPortableReason` can object;
+//   - bounded-context-manifest: sets one authoritative source's `purpose`
+//     to a rooted POSIX path — same reasoning, on a field with no
+//     interaction with the checkpoint/resolver machinery.
+function VALIDATE_MUTATION_FAMILIES_7B_WRITE_functionalParity(dir) {
+  const p = path.join(
+    dir,
+    'verification',
+    'functional-parity',
+    'fixtures',
+    'functional-parity-evidence.fixtures.json',
+  );
+  const bundle = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const rec = bundle[0].valid[0].doc.records[0];
+  rec.post_change_evidence.contract_links = rec.post_change_evidence.contract_links.filter(
+    (l) => l.assertion_id !== 'io.mapping',
+  );
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function VALIDATE_MUTATION_FAMILIES_7B_WRITE_instructionSourceRegistry(dir) {
+  const p = path.join(
+    dir,
+    'registries',
+    'operating-model',
+    'fixtures',
+    'instruction-source-registry.fixtures.json',
+  );
+  const bundle = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const c = bundle.valid.find((c) => c.note.startsWith('source reported missing'));
+  assert(c, `${p} must carry a "source reported missing" valid fixture to mutate`);
+  c.registry.instruction_sources[0].payload.recorded_state.currency = 'current';
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function VALIDATE_MUTATION_FAMILIES_7B_WRITE_taskSpecificationContract(dir) {
+  const p = path.join(dir, 'registries', 'operating-model', 'fixtures', 'task-specification.fixtures.json');
+  const bundle = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const spec = bundle.valid[0].spec;
+  const first = spec.payload.acceptance_criteria[0];
+  spec.payload.acceptance_criteria.push({
+    id: 'default-applied-dup',
+    statement: first.statement,
+    verification: { ...first.verification },
+  });
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function VALIDATE_MUTATION_FAMILIES_7B_WRITE_executionStateModel(dir) {
+  const p = path.join(dir, 'registries', 'operating-model', 'fixtures', 'execution-state.fixtures.json');
+  const bundle = JSON.parse(fs.readFileSync(p, 'utf8'));
+  bundle.valid[0].spec.payload.current_actor = '/etc/passwd';
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function VALIDATE_MUTATION_FAMILIES_7B_WRITE_boundedContextManifest(dir) {
+  const p = path.join(dir, 'registries', 'operating-model', 'fixtures', 'context-manifest.fixtures.json');
+  const bundle = JSON.parse(fs.readFileSync(p, 'utf8'));
+  bundle.valid[0].spec.payload.authoritative_sources[0].purpose = '/etc/passwd';
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+const VALIDATE_MUTATION_FAMILIES_7B = [
+  {
+    id: 'functional-parity',
+    write: VALIDATE_MUTATION_FAMILIES_7B_WRITE_functionalParity,
+    expectedFailPrefix: 'functional-parity:',
+  },
+  {
+    id: 'task-pattern-registry',
+    write: (dir) => {
+      duplicateOneTaskPatternWithNewId(
+        path.join(dir, 'standards', 'workspace', 'task-pattern-registry.yaml'),
+      );
+    },
+    expectedFailPrefix: 'task-pattern-registry:',
+  },
+  {
+    id: 'instruction-source-registry',
+    write: VALIDATE_MUTATION_FAMILIES_7B_WRITE_instructionSourceRegistry,
+    expectedFailPrefix: 'instruction-source-registry:',
+  },
+  {
+    id: 'task-specification-contract',
+    write: VALIDATE_MUTATION_FAMILIES_7B_WRITE_taskSpecificationContract,
+    expectedFailPrefix: 'task-specification-contract:',
+  },
+  {
+    id: 'execution-state-model',
+    write: VALIDATE_MUTATION_FAMILIES_7B_WRITE_executionStateModel,
+    expectedFailPrefix: 'execution-state-model:',
+  },
+  {
+    id: 'role-and-human-control',
+    write: (dir) => {
+      duplicateYamlListToEnd(
+        path.join(dir, 'standards', 'workspace', 'role-registry.yaml'),
+        '  roles:\n',
+      );
+    },
+    expectedFailPrefix: 'role-and-human-control:',
+  },
+  {
+    id: 'bounded-context-manifest',
+    write: VALIDATE_MUTATION_FAMILIES_7B_WRITE_boundedContextManifest,
+    expectedFailPrefix: 'bounded-context-manifest:',
+  },
+];
+
+for (const family of VALIDATE_MUTATION_FAMILIES_7B) {
+  const mutationDir = fs.mkdtempSync(path.join(os.tmpdir(), `conformance-harness-kernel-validate-mutation-7b-${family.id}-`));
+  createdTempDirs.push(mutationDir);
+  try {
+    copyRepoWithoutGitOrTarget(mutationDir);
+    const assertDeltaMultisetsEqual = assertMutationDeltaMultisetsEqual(
+      mutationDir,
+      family.expectedFailPrefix,
+      family.id,
+    );
+    check(
+      `реальный Node/Rust validate: schema-valid мутация "${family.id}" даёт полностью равные как мультимножество multiset-дельты (с учётом кратности) относительно baseline на обеих сторонах, непустые и несущие префикс "${family.expectedFailPrefix}" (подпакет 7b)`,
+      () => {
+        assertDeltaMultisetsEqual(family.write);
+      },
+    );
+  } finally {
+    fs.rmSync(mutationDir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(mutationDir), 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Package meridian-cli-foundation, subpackage validate-operating-contracts,
+// corrective round, item 2: `bounded-context-manifest`'s resolved-entry
+// "unknown field" checks (`meridian-app/src/operating_model/bounded_context_manifest.rs`,
+// `check_resolved_state` and `resolve_pinned_reference`) obtain a genuine
+// Rust-native improvement over the Node reference: they iterate
+// `serde_json::Map` — a `BTreeMap` in this workspace — in stable
+// alphabetical order, never Node's `Object.keys()` source-text order. This
+// is kept, not reverted (a Rust unit test,
+// `unknown_fields_on_a_resolved_entry_are_reported_in_stable_alphabetical_order_across_repeated_calls`,
+// pins the alphabetical order and byte-identical repeated output). This is
+// the real-process counterpart: it constructs a resolver response with two
+// unknown fields named so their SOURCE-TEXT order is the opposite of their
+// alphabetical order — "zzzz_extra_field" written first, "aaaa_extra_field"
+// last — and runs both the real Node reference and the real compiled
+// `meridian` binary against it directly, WITHOUT going through the generic
+// `conformant`/`divergent` harness. It computes an explicit baseline/delta
+// (`computeFailLines`/`multisetDelta`, the same machinery
+// `VALIDATE_MUTATION_FAMILIES_7B` uses) and pins the EXACT full delta on
+// each side: every line in the Node delta names "zzzz_extra_field" and none
+// name "aaaa_extra_field" (and vice versa for the Rust delta) — no
+// additional, unaccounted-for new FAIL is tolerated on either side. It also
+// proves the two deltas are otherwise the SAME set of diagnostics by
+// remapping the field name and comparing as multisets, so the only named
+// difference is genuinely that one field name, nothing else. The two sides'
+// full diagnostic text genuinely differs by construction (which unknown
+// field is named first), so this test states plainly that they are NOT
+// conformant, while pinning that both still fail closed on the same
+// underlying defect — never silently accepting the malformed resolver
+// response, and never crashing instead of reporting it.
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-kernel-validate-mutation-7b-unknown-field-order-'));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const baseline = computeFailLines(dir);
+
+    const fixturesPath = path.join(dir, 'registries', 'operating-model', 'fixtures', 'context-manifest.fixtures.json');
+    const bundle = JSON.parse(fs.readFileSync(fixturesPath, 'utf8'));
+    const resolutionKey = 'records/execution-run/example-run-001';
+    const original = bundle.resolution[resolutionKey];
+    assert(original, `${fixturesPath} must carry a "${resolutionKey}" resolution entry to mutate`);
+    const mutatedEntry = {};
+    mutatedEntry.zzzz_extra_field = 'z';
+    for (const k of Object.keys(original)) mutatedEntry[k] = original[k];
+    mutatedEntry.aaaa_extra_field = 'a';
+    bundle.resolution[resolutionKey] = mutatedEntry;
+    fs.writeFileSync(fixturesPath, JSON.stringify(bundle));
+
+    const mutated = computeFailLines(dir);
+    const nodeDelta = multisetDelta(baseline.nodeFails, mutated.nodeFails);
+    const rustDelta = multisetDelta(baseline.rustFails, mutated.rustFails);
+
+    check('намеренная граница: обе стороны fail-closed на резолвере с несколькими неизвестными полями (ни одна не считает документ чистым)', () => {
+      assert(nodeDelta.length > 0, `ожидалась непустая Node-дельта, получено: ${JSON.stringify(nodeDelta)}`);
+      assert(rustDelta.length > 0, `ожидалась непустая Rust-дельта, получено: ${JSON.stringify(rustDelta)}`);
+      assert(
+        nodeDelta.every((l) => l.includes('unknown field')),
+        `ожидалось, что вся Node-дельта состоит из диагностик "unknown field", получено: ${JSON.stringify(nodeDelta)}`,
+      );
+      assert(
+        rustDelta.every((l) => l.includes('unknown field')),
+        `ожидалось, что вся Rust-дельта состоит из диагностик "unknown field", получено: ${JSON.stringify(rustDelta)}`,
+      );
+    });
+
+    check('намеренная граница: точный полный набор — вся Node-дельта называет "zzzz_extra_field" (порядок исходного текста) и не называет "aaaa_extra_field"; никаких дополнительных новых FAIL', () => {
+      assert(
+        nodeDelta.every((l) => l.includes('"zzzz_extra_field"')),
+        `ожидалось, что каждая строка Node-дельты называет "zzzz_extra_field", получено: ${JSON.stringify(nodeDelta)}`,
+      );
+      assert(
+        nodeDelta.every((l) => !l.includes('"aaaa_extra_field"')),
+        `Node-дельта не должна называть "aaaa_extra_field" ни в одной строке, получено: ${JSON.stringify(nodeDelta)}`,
+      );
+    });
+
+    check('намеренная граница: точный полный набор — вся Rust-дельта называет "aaaa_extra_field" (алфавитный порядок) и не называет "zzzz_extra_field"; никаких дополнительных новых FAIL', () => {
+      assert(
+        rustDelta.every((l) => l.includes('"aaaa_extra_field"')),
+        `ожидалось, что каждая строка Rust-дельты называет "aaaa_extra_field", получено: ${JSON.stringify(rustDelta)}`,
+      );
+      assert(
+        rustDelta.every((l) => !l.includes('"zzzz_extra_field"')),
+        `Rust-дельта не должна называть "zzzz_extra_field" ни в одной строке, получено: ${JSON.stringify(rustDelta)}`,
+      );
+    });
+
+    check('намеренная граница: обе дельты совпадают как множества строк ПОСЛЕ замены имени поля — единственное отличие между сторонами это имя первого названного неизвестного поля, не что-то ещё', () => {
+      const nodeDeltaAsIfAlphabetical = nodeDelta.map((l) => l.replaceAll('"zzzz_extra_field"', '"aaaa_extra_field"'));
+      assert(
+        multisetsEqual(nodeDeltaAsIfAlphabetical, rustDelta),
+        `ожидалось, что Node-дельта после замены "zzzz_extra_field" на "aaaa_extra_field" побайтово совпадает с Rust-дельтой как multiset; node(remapped)=${JSON.stringify(nodeDeltaAsIfAlphabetical)} rust=${JSON.stringify(rustDelta)}`,
+      );
+    });
+
+    check('намеренная граница: обе стороны fail-closed (ненулевой код завершения, result.ok: false у Rust)', () => {
+      const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+        cwd: ROOT,
+        env: { ...process.env, MERIDIAN_KERNEL: dir },
+        encoding: 'utf8',
+      });
+      const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+      const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+      let rustResult;
+      try {
+        rustResult = JSON.parse(rustRun.stdout.trim());
+      } catch (e) {
+        throw new Error(`expected exactly one JSON result document on stdout, got: ${JSON.stringify(rustRun.stdout)} (${e.message})`);
+      }
+      assert(nodeRun.status !== 0, `ожидался ненулевой код завершения Node, получено ${nodeRun.status}`);
+      assert(rustRun.status === 1, `ожидался exit_code::DOMAIN_NEGATIVE (1), получено ${rustRun.status}`);
+      assert(rustResult.result.ok === false, 'ожидался result.ok: false');
+    });
+
+    check('намеренная граница: полный вывод действительно расходится — этот случай НЕ помечается conformant', () => {
+      assert(
+        !multisetsEqual(mutated.nodeFails, mutated.rustFails),
+        'ожидалось настоящее расхождение полного вывода (иначе граница не названа честно, а спрятана)',
+      );
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Package meridian-cli-foundation, subpackage validate-mechanical-integrity,
 // second CHANGES_REQUESTED round on 7a, item 2: cross-language conformance
 // for the specific adversarial shapes that round named, beyond the single

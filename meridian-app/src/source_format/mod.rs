@@ -2,6 +2,7 @@
 //! implementation.
 
 pub mod json_schema;
+pub mod regions;
 pub mod yaml;
 
 pub use yaml::parse as parse_yaml;

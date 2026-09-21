@@ -1,0 +1,158 @@
+{
+  "blank_fenced_blocks": [
+    {
+      "name": "simple-fence-blanks-content-and-preserves-offsets",
+      "raw": "before\n```\ncode <!-- meridian:begin x -->\n```\nafter\n"
+    },
+    {
+      "name": "unclosed-fence",
+      "raw": "before\n```\nnever closes\n"
+    },
+    {
+      "name": "shorter-nested-fence-does-not-close-the-outer-one",
+      "raw": "````\n```\n````\nafter\n"
+    },
+    {
+      "name": "multiple-spaces-around-fence-are-preserved-verbatim-outside-it",
+      "raw": "before   with   several   spaces\n```\ncode\n```\nafter   with   several   spaces\n"
+    },
+    {
+      "name": "tilde-fence",
+      "raw": "before\n~~~\ncode\n~~~\nafter\n"
+    },
+    {
+      "name": "unicode-cyrillic-and-cjk-inside-fence-before-later-content",
+      "raw": "```\nПривет мир こんにちは 世界\n```\n<!-- meridian:begin topic-pool -->\nreal body\n<!-- meridian:end topic-pool -->\n"
+    },
+    {
+      "name": "crlf-line-endings-preserve-carriage-returns-and-offsets",
+      "raw": "before\r\n```\r\ncode <!-- meridian:begin x -->\r\n```\r\nafter\r\n"
+    },
+    {
+      "name": "closing-fence-shorter-than-opening-never-closes-it",
+      "raw": "````\n```\nstill inside\n"
+    },
+    {
+      "name": "closing-fence-longer-than-opening-does-close-it",
+      "raw": "```\ninside\n`````\nafter\n"
+    },
+    {
+      "name": "empty-input",
+      "raw": ""
+    },
+    {
+      "name": "no-fence-at-all",
+      "raw": "just plain text\nover two lines\n"
+    }
+  ],
+  "marked_region": [
+    {
+      "name": "exact-one-pair-reads-the-body",
+      "raw": "prefix\n<!-- meridian:begin topic-pool owner=x -->\nbody line\n<!-- meridian:end topic-pool -->\nsuffix\n",
+      "region_name": "topic-pool"
+    },
+    {
+      "name": "missing-marker-is-an-error",
+      "raw": "no markers here\n",
+      "region_name": "topic-pool"
+    },
+    {
+      "name": "duplicated-begin-marker-is-an-error",
+      "raw": "<!-- meridian:begin topic-pool -->\na\n<!-- meridian:end topic-pool -->\n<!-- meridian:begin topic-pool -->\nb\n<!-- meridian:end topic-pool -->\n",
+      "region_name": "topic-pool"
+    },
+    {
+      "name": "reversed-markers-end-before-begin-is-an-error",
+      "raw": "<!-- meridian:end topic-pool -->\nbody\n<!-- meridian:begin topic-pool -->\n",
+      "region_name": "topic-pool"
+    },
+    {
+      "name": "marker-quoted-inside-a-fenced-example-is-ignored",
+      "raw": "```\n<!-- meridian:begin topic-pool -->\nquoted\n<!-- meridian:end topic-pool -->\n```\n<!-- meridian:begin topic-pool -->\nreal\n<!-- meridian:end topic-pool -->\n",
+      "region_name": "topic-pool"
+    },
+    {
+      "name": "an-unclosed-fence-anywhere-in-the-document-is-an-error",
+      "raw": "<!-- meridian:begin topic-pool -->\nbody\n<!-- meridian:end topic-pool -->\n```\nnever closes\n",
+      "region_name": "topic-pool"
+    },
+    {
+      "name": "crlf-line-endings",
+      "raw": "prefix\r\n<!-- meridian:begin topic-pool -->\r\nbody line\r\n<!-- meridian:end topic-pool -->\r\nsuffix\r\n",
+      "region_name": "topic-pool"
+    },
+    {
+      "name": "unicode-cyrillic-before-and-inside-the-region",
+      "raw": "русский текст перед регионом\n<!-- meridian:begin topic-pool owner=команда -->\nрусское тело региона\n<!-- meridian:end topic-pool -->\n",
+      "region_name": "topic-pool"
+    },
+    {
+      "name": "attrs-are-trimmed-and-returned",
+      "raw": "<!-- meridian:begin topic-pool   owner=x  generated=yes  -->\nbody\n<!-- meridian:end topic-pool -->\n",
+      "region_name": "topic-pool"
+    },
+    {
+      "name": "a_missing_marker_of_a_different_name_does_not_match",
+      "raw": "<!-- meridian:begin stack-profile-pool -->\nbody\n<!-- meridian:end stack-profile-pool -->\n",
+      "region_name": "topic-pool"
+    }
+  ],
+  "instruction_regions": [
+    {
+      "name": "side-by-side-regions-and-headings-outside-are-ignored",
+      "raw": "# Title\n<!-- meridian:begin instruction-section id=\"a\" owner=\"team-a\" generated=\"no\" -->\nbody a\n<!-- meridian:end instruction-section -->\n<!-- meridian:begin instruction-section id=\"b\" owner=\"team-b\" generated=\"yes\" -->\nbody b\n<!-- meridian:end instruction-section -->\n"
+    },
+    {
+      "name": "nesting-is-rejected",
+      "raw": "<!-- meridian:begin instruction-section id=\"a\" -->\n<!-- meridian:begin instruction-section id=\"b\" -->\n<!-- meridian:end instruction-section -->\n<!-- meridian:end instruction-section -->\n"
+    },
+    {
+      "name": "a-duplicated-region-id-is-rejected",
+      "raw": "<!-- meridian:begin instruction-section id=\"a\" -->\nbody a\n<!-- meridian:end instruction-section -->\n<!-- meridian:begin instruction-section id=\"a\" -->\nbody a again\n<!-- meridian:end instruction-section -->\n"
+    },
+    {
+      "name": "a-region-ending-where-none-is-open-is-rejected",
+      "raw": "<!-- meridian:end instruction-section -->\n"
+    },
+    {
+      "name": "a-region-opened-and-never-closed-is-rejected",
+      "raw": "<!-- meridian:begin instruction-section id=\"a\" -->\nbody\n"
+    },
+    {
+      "name": "russian-front-matter-is-blanked-through-its-closing-line",
+      "raw": "---\nзаголовок: Значение с русским текстом\nвладелец: команда\n---\n<!-- meridian:begin instruction-section id=\"a\" -->\nbody\n<!-- meridian:end instruction-section -->\n"
+    },
+    {
+      "name": "front-matter-with-multibyte-cjk-content-preserves-byte-offsets",
+      "raw": "---\nключ: 日本語テスト\n---\n<!-- meridian:begin instruction-section id=\"a\" -->\nbody\n<!-- meridian:end instruction-section -->\n"
+    },
+    {
+      "name": "uncovered-non-heading-lines-outside-every-region-are-counted",
+      "raw": "# Title\nstray text outside every region\n<!-- meridian:begin instruction-section id=\"a\" -->\nbody\n<!-- meridian:end instruction-section -->\n"
+    },
+    {
+      "name": "crlf-line-endings-throughout",
+      "raw": "# Title\r\n<!-- meridian:begin instruction-section id=\"a\" owner=\"team-a\" generated=\"no\" -->\r\nbody a\r\n<!-- meridian:end instruction-section -->\r\n"
+    },
+    {
+      "name": "an-unclosed-fence-anywhere-in-the-document-is-rejected",
+      "raw": "<!-- meridian:begin instruction-section id=\"a\" -->\nbody\n<!-- meridian:end instruction-section -->\n```\nnever closes\n"
+    },
+    {
+      "name": "a-closing-marker-naming-a-different-id-is-rejected",
+      "raw": "<!-- meridian:begin instruction-section id=\"a\" -->\nbody\n<!-- meridian:end instruction-section id=\"b\" -->\n"
+    },
+    {
+      "name": "an-invalid-generated-attribute-value-is-rejected",
+      "raw": "<!-- meridian:begin instruction-section id=\"a\" generated=\"maybe\" -->\nbody\n<!-- meridian:end instruction-section -->\n"
+    },
+    {
+      "name": "a-region-beginning-without-an-id-is-rejected",
+      "raw": "<!-- meridian:begin instruction-section -->\nbody\n<!-- meridian:end instruction-section -->\n"
+    },
+    {
+      "name": "no-front-matter-and-no-regions-at-all",
+      "raw": "just a plain document\nwith two lines\n"
+    }
+  ]
+}

@@ -432,8 +432,12 @@ dependencies = [
 name = "meridian-cli"
 version = "0.1.0"
 dependencies = [
+ "fancy-regex",
  "meridian-app",
+ "meridian-core",
  "meridian-storage-sqlite",
+ "rusqlite",
+ "serde_json",
 ]
 
 [[package]]

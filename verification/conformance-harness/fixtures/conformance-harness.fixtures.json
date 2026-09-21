@@ -206,6 +206,23 @@
       }
     },
     {
+      "name": "real-node-rust-regions-adapters",
+      "description": "Package meridian-cli-foundation, subpackage validate-mechanical-integrity, third CHANGES_REQUESTED round, item 1: the actual frozen scripts/lib/regions.mjs (blankFencedBlocks/markedRegion/instructionRegions) and the actual compiled meridian_app::source_format::regions functions (blank_fenced_blocks/marked_region/instruction_regions) evaluate the same shared positive/adversarial corpus (verification/conformance-harness/fixtures/regions-corpus.json) — Unicode/Cyrillic before and inside a fence/region, Front Matter, CRLF, short/long/nested/unclosed fences, duplicate/missing/reversed markers, a duplicated region id, and sourceText preservation. Both producers call the real exported/compiled functions directly, never a test-only copy. blank_fenced_blocks's own raw blanked-whitespace WIDTH is deliberately normalized away by both producers before comparison (collapsed to one placeholder per run) — an intentional, documented boundary: Node blanks one space per UTF-16 code unit, Rust blanks one space per UTF-8 byte (required so later byte offsets used to slice the original raw text stay valid), and nothing downstream of either language's own blanked buffer ever inspects that width. Every other observation (which lines are blanked at all, error text, region text/attrs, instruction-region ids/owners/generated/text/sourceText, uncoveredLines) is compared verbatim.",
+      "expected_status": "conformant",
+      "left": {
+        "command": "$NODE",
+        "args": ["../regions-node-producer.mjs", "regions-corpus.json"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "../../../target/debug/examples/regions_producer",
+        "args": [],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
       "name": "real-node-rust-rule-resolution",
       "description": "The actual frozen Node.js resolver and the actual Rust application adapter resolve the same shared corpus.",
       "expected_status": "conformant",
@@ -218,6 +235,40 @@
       "right": {
         "command": "../../../target/debug/examples/rule_resolution_producer",
         "args": [],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "real-node-rust-cli-resolve",
+      "description": "Package meridian-cli-foundation, item 2: the actual frozen Node.js resolver and the actual compiled `meridian` binary's `resolve` subcommand (spawned as a real subprocess per request, request piped on stdin — meridian-cli/examples/resolve_cli_producer.rs) resolve the same shared corpus. Distinct from real-node-rust-rule-resolution above, which only reaches meridian-app in-process.",
+      "expected_status": "conformant",
+      "left": {
+        "command": "$NODE",
+        "args": ["../rule-resolution-node-producer.mjs", "rule-resolution-corpus.json"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "../../../target/debug/examples/resolve_cli_producer",
+        "args": [],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
+      "name": "real-node-rust-cli-validate-clean-kernel",
+      "description": "Package meridian-cli-foundation, item 2: the actual frozen Node.js scripts/kernel-validate.mjs and the actual compiled `meridian` binary's `validate` subcommand — spawned as a real subprocess by meridian-cli/examples/validate_cli_producer.rs, which only reformats that subprocess's own real --format json stdout into FAIL/WARN lines, never calling collect_diagnostics or any other library function itself — evaluate the real, current Kernel checkout. expected_status is deliberately \"divergent\", not \"conformant\": `meridian validate` correctly refuses exit code 0 while any BLOCKED_CHECKS family remains unported (item 1 of the second CHANGES_REQUESTED round), so its exit code legitimately differs from the complete Node reference's even on an otherwise-clean tree with zero real FAIL/WARN differences. test/conformance-harness.test.mjs additionally asserts the exact shape of this expected divergence (exit_code.match: false, but empty fail/warn missing/added on both sides) — a plain expected_status: \"divergent\" alone would not catch a regression that also broke diagnostic-content agreement.",
+      "expected_status": "divergent",
+      "left": {
+        "command": "$NODE",
+        "args": ["../../../scripts/kernel-validate.mjs"],
+        "cwd": ".",
+        "env": { "MERIDIAN_KERNEL": "../../.." }
+      },
+      "right": {
+        "command": "../../../target/debug/examples/validate_cli_producer",
+        "args": ["../../.."],
         "cwd": ".",
         "env": {}
       }

@@ -3,15 +3,25 @@ name = "meridian-cli"
 version = "0.1.0"
 edition.workspace = true
 publish.workspace = true
-description = "Meridian Rust CLI — composition root binary. Carries no domain commands in this package."
+description = "Meridian Rust CLI — composition root binary. `init`/`doctor`/`validate`/`resolve`/`export` (package meridian-cli-foundation)."
 
 [lints]
 workspace = true
+
+[lib]
+name = "meridian_cli"
+path = "src/lib.rs"
 
 [[bin]]
 name = "meridian"
 path = "src/main.rs"
 
 [dependencies]
+fancy-regex = "0.19.0"
 meridian-app = { path = "../meridian-app" }
+meridian-core = { path = "../meridian-core" }
 meridian-storage-sqlite = { path = "../meridian-storage-sqlite" }
+serde_json = "1.0.151"
+
+[dev-dependencies]
+rusqlite = { version = "0.40.2", default-features = false, features = ["bundled"] }

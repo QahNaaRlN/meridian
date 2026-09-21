@@ -64,13 +64,15 @@ Kernel (§4, §5.1). Пакет 2 (`rust-conformance-harness`) принят и
 отдела Meridian (`governance/research/`) — **принят и интегрирован**:
 пакетный коммит `3e7881d84ed74eb70c08725e684754a78d079002`, коммит слияния
 `b9d16ee07bf7b5bd268e8b46fd35cd1451e26662`.
-До пакета 7 введён корректирующий пакет `knowledge-agent-foundation`: он
-сохраняет проверенный результат пакета 6 и обязан закрепить роли баз,
-эволюцию схемы и событийную границу до реализации командного интерфейса
-(§4, §5.4). Его исполнение **начато**: реализация подготовлена в рабочем
-дереве и ожидает независимой проверки и Git-интеграции (§5.4) — она не
-считается принятой этой документальной записью. Ни эксперимент
-исследовательского реестра этой синхронизацией не начинается.
+Корректирующий пакет `knowledge-agent-foundation` — роли баз `tool`/
+`workspace`, эволюция схемы и событийная граница до реализации командного
+интерфейса (§4, §5.4) — **принят и интегрирован**: пакетный коммит
+`e790a3af880cfab83894cb332e03d48b4ff6fc88`, коммит слияния
+`97108dfa00e8b7474ec32332ecacf8494df9460c` (§5.4). Пакет 7
+(`meridian-cli-foundation`) начат: реализация подготовлена в рабочем дереве
+и ожидает независимой проверки и Git-интеграции (§5.4) — она не считается
+принятой этой документальной записью. Ни эксперимент исследовательского
+реестра этой синхронизацией не начинается.
 
 ## 1. Активационный рубеж
 
@@ -134,9 +136,9 @@ Concord остаётся на паузе. Активационный рубеж 
 | 5 | Разрешение норм (`rust-rule-resolution`) | Порт `scripts/rule-resolver.mjs` и композитных проверок контрактов операционной модели (`scripts/lib/*.mjs`) в `meridian-app` поверх портов `meridian-core` | 3–4 | accepted — принят и интегрирован (§5.1) |
 | — | Корректирующий рубеж: вывод Instance-репозитория из эксплуатации (`instance-repository-retirement-baseline`) | Устранение отдельного репозитория Instance как активного центра управления разработкой Meridian; перенос пяти канонических документов в `governance/` Kernel; самодостаточный по умолчанию `preflight`/`kernel-validate`; не начинает `sqlite-storage-adapter` | 5 | accepted — принят и интегрирован (§5.2) |
 | 6 | Хранилище SQLite (`sqlite-storage-adapter`) | `meridian-storage-sqlite`: схема §4 технической спецификации, транзакционная запись, включённые foreign keys, неизменяемые редакции и доказательства, идемпотентный импорт, резервная копия, канонический экспорт | 3, 5, `instance-repository-retirement-baseline` | accepted — принят и локально интегрирован (§5.3) |
-| — | Корректирующий пакет: основание знаний и агентной среды (`knowledge-agent-foundation`) | Роли баз `tool`/`workspace`, привязка рабочей базы к редакции Kernel, последовательные миграции схемы, маршрутизация хранилищ, версионируемый конверт наблюдаемого события и отключаемый приёмник событий; спецификации `init`/`doctor`/`export` и импорта согласованы с этими границами | 6, `research-governance-foundation` | active — реализация подготовлена, ожидает независимой проверки и интеграции (§5.4, §10) |
-| 7 | Основа CLI (`meridian-cli-foundation`) | `meridian-cli`: `init`, `doctor`, `validate`, `resolve`, `export`, `--format human|json`, стабильные коды завершения, разделение stdout/stderr; `init` и `doctor` соблюдают принятые роли баз, а наблюдаемые события не меняют предметный результат команды | 5–6, `knowledge-agent-foundation` | planned |
-| 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт всех записей замороженного источника миграции без потерь; эквивалентность применимых норм между Node-эталоном и импортированным состоянием; идемпотентность повторного импорта; обратимость (`apply → rollback`); отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` в штатной работе выпускаемого бинарника | 6–7, `knowledge-agent-foundation` | planned |
+| — | Корректирующий пакет: основание знаний и агентной среды (`knowledge-agent-foundation`) | Роли баз `tool`/`workspace`, привязка рабочей базы к редакции Kernel, последовательные миграции схемы, маршрутизация хранилищ, версионируемый конверт наблюдаемого события и отключаемый приёмник событий; спецификации `init`/`doctor`/`export` и импорта согласованы с этими границами | 6, `research-governance-foundation` | accepted — принят и интегрирован (§5.4) |
+| 7 | Основа CLI (`meridian-cli-foundation`) | `meridian-cli`: `init`, `doctor`, `validate`, `resolve`, `export`, `--format human|json`, стабильные коды завершения, разделение stdout/stderr; `init` и `doctor` соблюдают принятые роли баз, а наблюдаемые события не меняют предметный результат команды. С 2026-09-21 (§5.5b) пакет 7 — агрегатор подпакетов: 7a `validate-mechanical-integrity` (сокращение `BLOCKED_CHECKS`, реальное CLI-сравнение, fail-clean `init`), затем 7b `validate-operating-contracts`, 7c `validate-evidence-and-intake`, 7d `validate-migration-qualification` — оставшиеся 15 заблокированных семейств `validate`, разбитые на три подпакета в этом порядке решением владельца (§5.5c) | 5–6, `knowledge-agent-foundation` | active — агрегатор; 7a active (реализация подготовлена, ожидает независимой проверки и интеграции, §5.5b), 7b–7d planned, в порядке 7b → 7c → 7d (§5.5c) |
+| 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт всех записей замороженного источника миграции без потерь; эквивалентность применимых норм между Node-эталоном и импортированным состоянием; идемпотентность повторного импорта; обратимость (`apply → rollback`); отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` в штатной работе выпускаемого бинарника | 6–7, `knowledge-agent-foundation` | planned — заблокирован приёмкой и интеграцией всех подпакетов 7a–7d (§5.5b) |
 | 9 | Квалификация равенства (`rust-parity-qualification`) | Полный паритетный прогон (полный набор ворот §6.1–§6.6) на всех классах тестовых деревьев; 0 расхождений вердиктов | 2, 4–8 | planned |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
 
@@ -899,6 +901,874 @@ test/kernel-validate.test.mjs` — 293 passed, 0 failed, 0 skipped; `git diff
 интегрирован; документальная запись `ready`, равно как и переданная выше
 запись `active`, не считается его началом или приёмкой.
 
+**Приёмка (синхронизация владельца, 2026-09-20).** Пакет `knowledge-agent-foundation`
+принят и интегрирован: пакетный коммит
+`e790a3af880cfab83894cb332e03d48b4ff6fc88` (`feat(storage): заложить
+основание знаний и агентной среды`) принят отдельным коммитом слияния в
+`dev` — `97108dfa00e8b7474ec32332ecacf8494df9460c` (`merge(dev): принять
+feature/knowledge-agent-foundation — заложить основание знаний и агентной
+среды`). Обычный merge-коммит с двумя родителями: первый родитель
+`b9d16ee07bf7b5bd268e8b46fd35cd1451e26662` (предыдущий принятый коммит
+слияния — `research-governance-foundation`), второй родитель — сам пакетный
+коммит. Пакетный коммит достижим из коммита слияния (`git merge-base
+--is-ancestor e790a3af880cfab83894cb332e03d48b4ff6fc88
+97108dfa00e8b7474ec32332ecacf8494df9460c` — подтверждено). Дерево пакетного
+коммита совпадает с деревом коммита слияния (`git diff --exit-code
+e790a3af880cfab83894cb332e03d48b4ff6fc88^{tree}
+97108dfa00e8b7474ec32332ecacf8494df9460c^{tree}` — код завершения 0, без
+вывода): diff принятого пакета не переписан при слиянии. Проверочные
+доказательства — переданные исполнителем результаты выше (375 passed, 0
+failed по всем крейтам; `node test/conformance-harness.test.mjs` 40 passed;
+`node test/kernel-validate.test.mjs` 293 passed; `git diff --check` без
+ошибок) — приняты как предъявленный владельцем результат прогона
+(`AGENTS.md` §6.3, «Переданный владельцем полный вывод проверок считается
+входом проверки результата»), не перезапущены заново этой синхронизацией.
+
+**Начало пакета 7.** Настоящей записью пакет 7 (`meridian-cli-foundation`)
+переводится в состояние `active`: реализация подготовлена в рабочем дереве
+без Git-записей и ожидает независимой архитектурной проверки и
+Git-интеграции; эта запись не является его приёмкой (`AGENTS.md` §6.3,
+§8 запретов этого плана — «не считать документальную ревизию плана началом
+пакета» не применяется здесь, поскольку начало пакета 7 сопровождается
+самой реализацией, переданной в этом же раунде, а не отдельной
+документальной ревизией).
+
+### 5.5. Пакет 7: основа CLI (`meridian-cli-foundation`)
+
+**Переданная реализация (исполнитель, 2026-09-20).** Работа выполнена в
+рабочем дереве без Git-записей (без `branch`/`switch`, `add`, `commit`,
+`merge`, `rebase`, `reset`, `stash`, `tag`, `push`) — ожидает независимого
+архитектурного ревью и последующей Git-интеграции; настоящая запись не
+является приёмкой пакета.
+
+1. `meridian-cli` теперь несёт настоящий Rust CLI: `init`, `doctor`,
+   `validate`, `resolve`, `export`, общий `--format human|json`,
+   документированные стабильные коды завершения
+   (`meridian-cli/src/exit_code.rs`: `0` успех, `1` отрицательный, но
+   корректно сформированный результат, `2` ошибка использования
+   командной строки, `3` ошибка входа/окружения) и строгое разделение
+   потоков — результат только в stdout, диагностика только в stderr,
+   независимо от `--format` (`meridian-cli/src/lib.rs`).
+2. Композиция: `meridian-core` остаётся чистым синхронным ядром без
+   изменений в этом пакете; `meridian-app` не получила нового файлового,
+   Git-, БД- или env-ввода-вывода — `meridian-cli` читает файлы, `VERSION`,
+   `instance-template/`, обе SQLite-базы через уже существующие порты
+   `meridian_storage_sqlite::SqliteStorage` и вызывает
+   `meridian_app::rule_resolution::resolve` и
+   `meridian_app::source_format` как уже перенесённые механизмы, не
+   дублируя их алгоритмы (`meridian-cli/src/commands/*.rs`,
+   `meridian-cli/src/kernel.rs`).
+3. `init` копирует `instance-template/` файл-в-файл из названного
+   `--kernel` (никогда не встроенной копии), никогда не перезаписывает уже
+   существующий файл назначения, создаёт обе базы с явными ролями
+   (`DatabaseRole::Tool`/`Workspace`) и редакцией, прочитанной из
+   канонического `VERSION`; при сбое открытия второй базы удаляет только
+   базу, реально созданную этим запуском, не трогая уже существовавшую
+   (`meridian-cli/src/commands/init.rs`).
+4. `doctor` read-only: не создаёт отсутствующую базу
+   (`meridian-cli/src/commands/mod.rs::open_existing_db` явно проверяет
+   существование файла до открытия), показывает фактически прочитанные
+   роль, редакцию и версию схемы каждой базы, отклоняет переставленные
+   роли и несовпадающую редакцию через уже существующий типизированный
+   `OpenError::DatabaseMetadataMismatch`, не угадывая роль по имени файла.
+5. `validate` (`meridian-cli/src/commands/validate/mod.rs` and its
+   submodules `document_identity.rs`, `duplicate_fm.rs`, `git_provenance.rs`,
+   `instance_context.rs`, `kernel_purity.rs`, `link_check.rs`,
+   `registry_schema.rs`, `rule_resolution_fixtures.rs` — not a single file
+   any more) implements, **ported for real against real Kernel content**:
+   `kernel-purity` (personal-path-leak half), `document-identity`,
+   `duplicate-fm`, the Markdown link check, generic in-gate registry
+   `$schema` validation, the `rule-resolution` PHASE B fixture check, and
+   `git-provenance`. It never runs Node.js and never reaches the network.
+   Every other check family `scripts/kernel-validate.mjs` runs — the 15
+   operating-model composite contracts, plus `sha-provenance`,
+   `instruction-topics`, `operating-foundation`, `stack-profiles` and
+   `agent-instruction-identity` — is named individually, with the specific
+   reason it is not yet ported, in the fixed `BLOCKED_CHECKS` list
+   (`meridian-cli/src/commands/validate/mod.rs`) and echoed verbatim in
+   every `validate` result's `blocked` array: never silently passed, never
+   silently failed. **`meridian validate` never returns exit code `0` /
+   `status: "ok"` while `BLOCKED_CHECKS` is non-empty** — its verdict is
+   `ok` only when both `failures` is empty *and* `blocked` is empty
+   (`meridian-cli/src/commands/validate/mod.rs::run`), so a Kernel whose
+   only unchecked surface is the blocked families is reported exactly as
+   what it is: not fully validated, not "OK". See "Second
+   `CHANGES_REQUESTED` corrective round" below for why the full port of
+   those 19 families is escalated as `BLOCKED_FOR_OWNER_DECISION` rather
+   than attempted in this package's scope.
+6. `resolve` — тонкий файловый/stdin-адаптер вокруг
+   `meridian_app::rule_resolution::resolve`: обе схемы реестра читаются из
+   названного `--kernel` на каждом вызове, запрос — из `--request` или
+   stdin. Отклонённый запрос (нарушение схемы, неизвестное поле,
+   отклонение ядра) даёт код `3`; корректно разрешённый результат,
+   включая несущий `unresolved_applicability`/`unresolved_items`/
+   `conflicts`, — код `0`, поскольку это законный детерминированный ответ
+   резолвера, а не отказ CLI.
+7. `export` открывает обе базы только для чтения с проверенными
+   метаданными, объединяет их канонические JSON-экспорты в один массив,
+   пересортированный по тому же порядку сегментов, что и
+   `RecordKey::storage_key`, — так что порядок результата зависит только
+   от содержимого, а не от того, какая база прочитана первой; ни одна
+   запись не копируется между ролями.
+8. `EventSink` подключён через композицию: каждая функция команды
+   принимает `&dyn EventSink`; производственный бинарник всегда собирает
+   `NoOpEventSink` (`meridian-cli/src/main.rs`); `meridian-cli/src/events.rs`
+   добавляет `RecordingEventSink`, не выводимый ни в один поток
+   производственно. Ворота §6.4b проверяются пятью тестами, не одним:
+   `swapping_the_event_sink_does_not_change_stdout_stderr_or_exit_code`
+   (`validate`, реально исполненная дважды — с `NoOpEventSink` и с
+   `RecordingEventSink` — и побайтово сравненная по stdout/stderr/коду
+   завершения) и по одному аналогичному тесту на `doctor`, `export`,
+   `resolve` и `init` (`meridian-cli/src/lib.rs`, `event_sink_has_no_effect_on_*`)
+   — сильнее, чем доказательство `knowledge-agent-foundation` на уровне
+   `meridian-app`, поскольку проверяется на границе процесса, а не только
+   в памяти.
+9. `governance/rfcs/meridian-cli-rfc.md` и
+   `governance/specifications/meridian-rust-target-architecture.md` не
+   потребовали содержательного пересмотра для этого пакета: состав команд,
+   расположение `instance-template`, роли баз и модель кодов завершения
+   уже были зафиксированы предыдущими пакетами; этот пакет реализует их, не
+   переопределяя.
+
+**Проверки, выполненные исполнителем (первая передача, 2026-09-20).** См.
+раздел ниже, «Корректирующая передача после второго `CHANGES_REQUESTED`»:
+эта первая передача's exact numbers (405/40 tests) are superseded there and
+not repeated here, precisely because item 4 of the second round required
+removing stale test-count claims rather than leaving two contradictory
+counts side by side.
+
+## 5.5a. Корректирующая передача после второго `CHANGES_REQUESTED` (исполнитель, 2026-09-21)
+
+Владелец передал пять пунктов правки после второго раунда `CHANGES_REQUESTED`
+на пакет 7. Работа снова выполнена в рабочем дереве без Git-записей (без
+`branch`/`switch`, `add`, `commit`, `merge`, `rebase`, `reset`, `stash`,
+`tag`, `push`) — эта запись не является приёмкой пакета, и пакет не
+переводится в `accepted`/`ready` этой записью.
+
+**Пункт 1 — полный перенос `validate`: BLOCKED_FOR_OWNER_DECISION.**
+`scripts/kernel-validate.mjs` (3805 строк) реализует 20 семейств проверок,
+которые `meridian validate` пока не переносит; 15 из них — композитные
+контракты операционной модели, каждый со своим алгоритмом в
+`scripts/lib/*.mjs`:
+
+| Модуль | Строк |
+|---|---:|
+| `instance-data-migration.mjs` | 1579 |
+| `evidence-and-handoff.mjs` | 1605 |
+| `field-evaluation.mjs` | 1467 |
+| `context-manifest.mjs` (bounded-context-manifest) | 1124 |
+| `workspace-compatibility-qualification.mjs` | 734 |
+| `existing-project-compatibility-mode.mjs` | 662 |
+| `upgrade-integration-qualification.mjs` | 612 |
+| `role-and-human-control.mjs` | 590 |
+| `controlled-rule-intake.mjs` | 525 |
+| `execution-state.mjs` | 491 |
+| `task-specification.mjs` | 369 |
+| `instruction-source-registry.mjs` | 318 |
+| `task-pattern-registry.mjs` | 239 |
+
+— 10 315 строк bespoke JS composite-consistency algorithms across these 13
+modules alone (two more named families, `functional-parity` and
+`instance-canonical-export`, live inline in `kernel-validate.mjs` itself,
+not in a separate `scripts/lib` file). Two of the fifteen already have a
+pure Rust port of their core algorithm in `meridian-core`
+(`evidence::aggregate` for `evidence-and-handoff-contract`,
+`migration::checks` for `instance-data-migration`) — но, как уже
+задокументировано в `meridian-cli/src/commands/validate/mod.rs`'s own
+module doc, только сам алгоритм: файловый дискавери, разбор специфического
+формата каждого контракта, кросс-ссылки и текст сообщений об ошибках,
+побитово совпадающий с Node, для каждого из этих двух ещё предстоит
+построить — сопоставимая по объёму работа с уже перенесёнными
+`rule-resolver.mjs` и `yaml.mjs`/`json-schema.mjs` пакетами каждая, не
+«последний шаг» уже почти готового переноса. Остальные 5 семейств
+(`sha-provenance`, `instruction-topics`, `operating-foundation`,
+`stack-profiles`, `agent-instruction-identity`) не требуют нового
+доменного алгоритма, но каждое требует: обнаружение файлов по
+специфическим путям Kernel, разбор строгого YAML-поднабора уже перенесённым
+`meridian_app::source_format`, извлечение «региона» из парного `.md`-файла
+(порт `scripts/lib/regions.mjs`, 150 строк, пока не перенесён), сравнение
+множеств и побитово совпадающие сообщения — не единственный день работы, но
+и не архитектурное решение, обсуждаемое отдельно ниже.
+
+Полный перенос всех 20 семейств — с реальными фикстурами, отрицательными
+доказательствами и conformance-сравнением с Node на каждое — это, по
+собственной оценке этого пакета, программа работы, сравнимая по объёму с
+пакетами 2–7 вместе взятыми, а не corrective-раунд одного пакета. Попытка
+приблизить её в этом раунде означала бы либо сфабрикованный вердикт, либо
+молчаливое сужение принятого контракта — оба прямо запрещены переданной
+инструкцией. **Это остановлено с `BLOCKED_FOR_OWNER_DECISION`**: решение о
+том, разбивать ли перенос на отдельные пакеты (по семейству или группами),
+в каком порядке относительно пакета 8 (`meridian-cli-migration`), и с каким
+приоритетом — принадлежит владельцу, не исполнителю.
+
+Что этот раунд всё же сделал в границах пакета 7, без нового
+архитектурного решения:
+
+- **Исправлен реальный дефект fail-open.** `meridian validate` раньше
+  возвращал код `0`/`status: "ok"`, если единственными реальными
+  диагностиками были `warnings`, даже когда `BLOCKED_CHECKS` был непустым —
+  непройденный обязательный гейт репортился как пройденный. Теперь
+  `ok = failures.is_empty() && BLOCKED_CHECKS.is_empty()`
+  (`meridian-cli/src/commands/validate/mod.rs::run`): код `0` невозможен,
+  пока хоть одно семейство остаётся заблокированным, независимо от того,
+  насколько чист остальной результат. Человекочитаемый формат получил
+  третий, отдельный вердикт — `BLOCKED` (не `OK`, не `FAIL`) — когда
+  реальных ошибок нет, но обязательный гейт не исполнялся целиком, вместо
+  того чтобы называть это состояние либо ложным «OK», либо вводящим в
+  заблуждение «FAIL» (в котором на самом деле 0 диагностик).
+- `BLOCKED_CHECKS` (20 семейств, каждое — с точной причиной непереноса)
+  остаётся неизменным списком: ни одно семейство из него не удалено этим
+  раундом — удаление элемента списка без реальной реализации и
+  отрицательного доказательства прямо запрещено переданной инструкцией.
+
+**Пункт 2 — conformance стал реальным сравнением бинарников.**
+`resolve_cli_producer.rs` (`meridian-cli/examples/`) и новый
+`validate_cli_producer.rs` больше не вызывают
+`meridian_cli::commands::resolve::run`/`collect_diagnostics` библиотечно —
+каждый порождает настоящий скомпилированный `target/.../meridian` как
+отдельный процесс (`std::process::Command`, запрос через stdin для
+`resolve`, `--format json` для `validate`, реформатируемый только после
+получения реального stdout этого процесса) и берёт настоящий код завершения
+этого процесса. `kernel_validate_producer.rs` (звавший
+`collect_diagnostics` напрямую) удалён — фикстура
+`real-node-rust-cli-validate-clean-kernel` больше не проходит через него.
+`meridian-cli/examples/resolve_cli_producer.rs` находит путь к реальному
+бинарнику через `std::env::current_exe()` (сосед по каталогу профиля —
+`CARGO_BIN_EXE_meridian` недоступен примерам Cargo, только интеграционным
+тестам).
+
+Реальное сравнение обнажило структурный вопрос: `meridian validate`
+корректно (после исправления выше) никогда не возвращает `exit 0` на этом
+Kernel, пока `BLOCKED_CHECKS` непусто, тогда как полный Node-эталон на том
+же чистом дереве возвращает `exit 0`. Это не регрессия — это ожидаемое,
+единственное расхождение, вызванное намеренной неполнотой Rust-стороны, а
+не ошибкой одной из сторон. Ослаблять `compareVerdicts`
+(`verification/conformance-harness/conformance-harness.mjs`) для этого
+случая запрещено README самого харнесса («exit codes are compared for
+equality, never mapped onto one another»), поэтому:
+`real-node-rust-cli-validate-clean-kernel`'s `expected_status` изменён на
+`divergent` (было ошибочно `conformant`), и `test/conformance-harness.test.mjs`
+добавляет отдельную, точную проверку формы этого расхождения — `exit_code.match
+=== false`, но `fail`/`warn` `missing`/`added` пусты с обеих сторон — так
+что регрессия в самих диагностиках (а не только в коде завершения) всё
+равно была бы поймана.
+
+Добавлено пять новых сквозных (Node ↔ реальный `meridian`) негативных
+мутационных сравнений — по одному на каждое реально перенесённое семейство
+`validate`, не только позитивный чистый прогон:
+`test/conformance-harness.test.mjs`'s `VALIDATE_MUTATION_FAMILIES` —
+`kernel-purity` (личный путь), `document-identity` (не-kebab-case имя
+файла), `duplicate-fm` (осиротевший второй front-matter блок), `link-check`
+(битая Markdown-ссылка), `registry-schema` (документ, нарушающий
+объявленную JSON Schema) — каждое проверяет, что Node и реальный `meridian`
+сообщают один и тот же новый `FAIL` на одной и той же мутированной полной
+копии этого репозитория (без `.git`/`target`). `rule-resolution` и
+`git-provenance` не повторены здесь: первое уже целиком покрыто выделенными
+корпусами (`real-node-rust-rule-resolution`, `real-node-rust-cli-resolve`),
+второе не имеет содержательной файловой мутации в этом объёме работы
+(его единственная реализованная проверка — консультативное «Instance root
+not supplied»).
+
+**Пункт 3 — `init`'s file copy исправлен на настоящий fail-clean.**
+`meridian-cli/src/kernel.rs::copy_instance_template` больше не делает
+`destination.exists() → fs::copy`: это гонка (проверка и запись —
+раздельные системные вызовы) и не даёт защиты от symlink (a dangling or
+live symlink at the destination would pass `.exists()`'s check in the
+old-но false branch or get written through by `fs::copy` in the new-file
+branch). Теперь каждый файл создаётся `fs::OpenOptions::create_new` —
+атомарно, `O_CREAT|O_EXCL`: уже существующий файл, каталог ИЛИ symlink
+(висящий или нет) по этому пути делает создание неуспешным с
+`AlreadyExists`, никогда не открывая и не переписывая то, что там есть.
+Каждая цель регистрируется в `TemplateCopyResult` как `copied: true` в
+момент успешного `create_new`, до копирования единого байта содержимого —
+раньше эта запись добавлялась только после успешного `fs::copy`, так что
+файл, чья запись оборвалась на середине, никогда не попадал в список
+известных этому вызову путей и не мог быть откачен ни этой функцией, ни
+вызывающим её `init`. При ошибке записи частичный файл удаляется здесь же,
+второй, независимой линией защиты.
+
+`rollback_template_copy` и `init`'s собственный `rollback()` больше не
+проглатывают ошибки очистки (`let _ = fs::remove_file/remove_dir`) —
+каждая настоящая ошибка (не `NotFound`, не «каталог не пуст» — оба ожидаемы
+и не репортируются) собирается в `Vec<String>` и печатается как отдельные
+строки `warning:` на stderr до основной ошибки
+(`meridian-cli/src/commands/init.rs::report_rollback_diagnostics`).
+
+Добавлен настоящий, а не смоделированный, fault-injection тест:
+`meridian-cli/tests/binary_runs.rs::init_rolls_back_a_partial_file_left_by_a_real_write_failure_mid_copy`
+запускает реальный `meridian` под `sh -c "trap '' XFSZ; ulimit -f 2; exec
+\"$0\" \"$@\""` — ограничивает размер файла процесса на уровне ОС и
+игнорирует `SIGXFSZ` средствами самой оболочки (никогда не `unsafe`
+Rust-код — `Cargo.toml`'s `[workspace.lints.rust] unsafe_code = "forbid"`
+запрещает его во всём workspace), так что запись, превышающая лимит, даёт
+настоящую `EFBIG` `io::Error`, а не убивает процесс сигналом. Тест строит
+синтетический Kernel с одним маленьким файлом (успешно копируется целиком
+раньше лимита) и одним большим (падает на середине записи), затем
+побайтово сравнивает снимок рабочего каталога до и после — включая
+предсуществующий, не относящийся к `init`, пользовательский файл.
+
+**Пункт 4 — эта самая синхронизация.** Устаревшие утверждения (405 тестов,
+40 conformance-случаев, единственный EventSink-тест, путь
+`meridian-cli/src/commands/validate.rs` как одного файла) удалены из §5.5
+выше и не повторяются здесь двумя разными числами. Пакет остаётся `active`,
+не `accepted`/`ready`: `BLOCKED_CHECKS` по-прежнему непусто (пункт 1 выше).
+
+**Пункт 5 — проверки, выполненные исполнителем (2026-09-21):**
+`cargo fmt --all -- --check` — чисто; `cargo build --workspace --all-targets
+--all-features --locked` — чисто; `cargo test --workspace --all-targets
+--all-features --locked` — **419 passed, 0 failed** по всем крейтам
+(`meridian-cli` — 15 unit-тестов в `src/lib.rs`/`src/commands/*.rs` + 30 в
+`tests/binary_runs.rs`, включая новый fault-injection тест пункта 3;
+остальные крейты не изменены этим раундом); `cargo clippy --workspace
+--all-targets --all-features --locked -- -D warnings` — чисто;
+`RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked` —
+чисто; `node --test test/conformance-harness.test.mjs` — **49 passed, 0
+failed** (было 44 до этого раунда: +5 мутационных семейств пункта 2, и
++1 точная проверка формы расхождения `real-node-rust-cli-validate-clean-kernel`,
+−1 старая проверка «conformant», замененная на «divergent» с точной формой);
+`node test/kernel-validate.test.mjs` — 293 passed, 0 failed, 0 skipped
+(не изменился этим раундом — ни один Node-файл не тронут); полный `node
+scripts/preflight.mjs` — самодостаточен, `MERIDIAN_INSTANCE` не затронут;
+`git diff --check` — без ошибок; изолированная `git add -A && git diff
+--cached --check` (в отдельном `git clone` рабочего дерева, никогда не в
+самом репозитории — переданная инструкция запрещает `add` в реальном
+репозитории) — без ошибок.
+
+**Точный список путей, изменённых или добавленных этим раундом** (сверх
+уже перечисленных в первой передаче §5.5 выше):
+
+*Изменены:* `meridian-cli/src/commands/validate/mod.rs` (fail-closed `ok`,
+трёхзначный человекочитаемый вердикт), `meridian-cli/src/kernel.rs`
+(`create_new_file`, fail-clean `copy_instance_template`,
+`rollback_template_copy` с диагностикой), `meridian-cli/src/commands/init.rs`
+(`rollback()` с диагностикой, `report_rollback_diagnostics`),
+`meridian-cli/src/lib.rs` (обновлённый `swapping_the_event_sink_...` тест),
+`meridian-cli/tests/binary_runs.rs` (переименован и переписан
+`validate_passes_on_this_kernel_in_human_and_json` →
+`validate_reports_blocked_not_ok_on_this_kernel_with_zero_real_failures`;
+добавлен `init_rolls_back_a_partial_file_left_by_a_real_write_failure_mid_copy`),
+`meridian-cli/examples/resolve_cli_producer.rs` (спавнит реальный бинарник),
+`verification/conformance-harness/fixtures/conformance-harness.fixtures.json`
+(`real-node-rust-cli-resolve`/`real-node-rust-cli-validate-clean-kernel`
+description и `expected_status`), `test/conformance-harness.test.mjs`
+(`VALIDATE_MUTATION_FAMILIES`, точная проверка формы расхождения,
+`--bins` добавлен к сборке производителей).
+
+*Добавлены:* `meridian-cli/examples/validate_cli_producer.rs`.
+
+*Удалены:* `meridian-cli/examples/kernel_validate_producer.rs`.
+
+**Условие перехода к пакету 8:** пакет отдельно исполнен, независимо принят
+и интегрирован; переданная выше запись `active` не считается его началом
+или приёмкой. Пункт 1 (полный перенос `validate`) остаётся
+`BLOCKED_FOR_OWNER_DECISION` и не является условием, которое исполнитель
+может закрыть без отдельного решения владельца о разбиении и
+приоритизации переноса 20 заблокированных семейств.
+
+## 5.5b. Подпакет 7a `validate-mechanical-integrity` (исполнитель, 2026-09-21)
+
+Владелец разрешил `BLOCKED_FOR_OWNER_DECISION` §5.5a пункта 1: пакет 7
+(`meridian-cli-foundation`) становится **агрегатором** подпакетов, а не
+одним неделимым результатом. Подпакет 7a (`validate-mechanical-integrity`)
+переносит ровно пять из 20 семейств `BLOCKED_CHECKS`, названных в §5.5a как
+«механические» — не требующие нового доменного алгоритма:
+`sha-provenance`, `instruction-topics`, `operating-foundation`,
+`stack-profiles`, `agent-instruction-identity`. Подпакеты 7b–7d (оставшиеся
+15 заблокированных композитных контрактов операционной модели, их
+разбиение и порядок) остаются `planned` — это по-прежнему решение
+владельца, не закрытое этой записью. Пакет 8 (`meridian-cli-migration`)
+остаётся `planned`, заблокированным приёмкой и интеграцией всех подпакетов
+7a–7d. Эта запись фиксирует, что 7a **начат**, реализация подготовлена в
+рабочем дереве и ожидает независимой проверки и Git-интеграции (§5.4) — она
+не считается принятой этой документальной записью, и пакет 7 в целом
+остаётся `active`, не `accepted`/`ready`.
+
+**Реализация пяти семейств.** Каждое читает Kernel-специфичные пути через
+`meridian-cli/src/kernel.rs`'s уже перенесённое перечисление файлов
+(`list_git_tracked_files`/`walk_all_files`), разбирает данные строгими
+уже перенесёнными адаптерами (`meridian_app::source_format::yaml`,
+`::json_schema`), извлекает «регион» пула из парного `.md`-файла через
+новый файлово-независимый адаптер `meridian_app::source_format::regions`
+(порт `scripts/lib/regions.mjs`: `blankFencedBlocks`, `markedRegion`,
+`instructionRegions` — 454 строки, 10 модульных тестов — **устарело: см.
+§5.5d ниже для действующих чисел после третьего `CHANGES_REQUESTED`
+раунда**), сравнивает
+множества и воспроизводит точный текст диагностик Node-эталона
+(`scripts/kernel-validate.mjs`, соответствующие секции для каждого
+семейства) — с точностью до именованных намеренных расхождений §5.5d
+(например, авария Node-эталона на `stack-profiles.profiles` неверного типа,
+где само это утверждение о точном тексте неприменимо, потому что Node не
+производит вовсе никакой структурированной диагностики для сравнения).
+Ни один из пяти модулей или адаптер `regions` не выполняет
+файловый, Git-, env- или process-ввод/вывод внутри `meridian-core`;
+файловое чтение остаётся в `meridian-cli`, как и у всех ранее перенесённых
+проверок:
+
+**Приведённые ниже per-module числа строк/тестов — исторические (на момент
+этой записи, до второго и третьего корректирующих раундов, изменивших
+`instruction_topics.rs`/`stack_profiles.rs`/`operating_foundation.rs` пунктом
+3 §5.5d и `regions.rs` пунктом 3 §5.5e); действующие числа — в §5.5e ниже.**
+
+- `meridian-cli/src/commands/validate/sha_provenance.rs` (224 строки, 6
+  модульных тестов) — сверка SHA-256 установленных skill-артефактов с их
+  `PIN.yaml`;
+- `meridian-cli/src/commands/validate/instruction_topics.rs` (245 строк, 6
+  тестов) — согласие двух половин пула тем (`instruction-topics.yaml` и
+  регион пула в `instruction-topics.md`);
+- `meridian-cli/src/commands/validate/operating_foundation.rs` (427 строк,
+  6 тестов) — согласие машинных идентичностей и человекочитаемых подписей
+  терминов и принципов операционного основания (`operating-foundation.yaml`
+  + регионы в связанном `.md`);
+- `meridian-cli/src/commands/validate/stack_profiles.rs` (245 строк, 5
+  тестов) — согласие пула стек-профилей (`stack-profiles/stack-profiles.yaml`
+  + регион в `stack-profiles/stack-profiles.md`), включая отдельную проверку,
+  что `universal` не значится профилем;
+- `meridian-cli/src/commands/validate/agent_instruction_identity.rs` (349
+  строк, 9 тестов) — четыре обязательных поля §7 (delivery/activation/topic/
+  derived_from) на документах, объявляющих себя agent instruction нормой, с
+  учётом пула `instruction-topics` для допустимых значений topic.
+
+Все пять удалены из `BLOCKED_CHECKS`
+(`meridian-cli/src/commands/validate/mod.rs`) и подключены в `collect()`
+наравне с ранее перенесёнными проверками; `BLOCKED_CHECKS` теперь содержит
+ровно **15** записей (было 20 в §5.5a) — список сверен построчно с §5.5a
+пункта 1 и не расходится с ним ни одним именем. `ok = failures.is_empty()
+&& BLOCKED_CHECKS.is_empty()` (§5.5a пункт 1) не изменено: код `0`
+по-прежнему невозможен, пока хоть одно из оставшихся 15 семейств блокировано,
+и эта запись не заявляет паритет с полным контрактом §7.1 — расхождение
+`real-node-rust-cli-validate-clean-kernel` (exit code, `BLOCKED_CHECKS`)
+остаётся `expected_status: "divergent"`, не `conformant`, до тех пор, пока
+`BLOCKED_CHECKS` не опустеет.
+
+**Доказательство переноса — реальное CLI-сравнение, не приближение.** Для
+каждого из пяти семейств `test/conformance-harness.test.mjs`'s
+`VALIDATE_MUTATION_FAMILIES_7A` строит отдельную полную копию этого
+репозитория (без `.git`/`target`), вносит одну целевую негативную мутацию
+(поддельный SHA-провенанс skill, лишняя запись в одной половине пула тем,
+лишний термин в данных operating-foundation без соответствующей подписи,
+лишний стек-профиль в данных без подписи, документ без обязательных полей
+agent-instruction-identity) и сравнивает реальный Node-эталон
+(`scripts/kernel-validate.mjs`) с реальным собранным `meridian validate`
+(процесс, не библиотечный вызов — `meridian-cli/examples/validate_cli_producer.rs`
+не изменился в этой части: уже спавнит реальный бинарник с §5.5a пункта 2).
+Каждый случай ожидает и получает `conformant` — совпадающий новый `FAIL` на
+обеих сторонах. Позитивные фикстуры для каждого семейства — само дерево
+этого Kernel-репозитория, уже используемое чистым (немутированным) прогоном
+`real-node-rust-cli-validate-clean-kernel`.
+
+**Пункт 5 — `resolve` conformance: exit code 2 отличён от exit code 3.**
+`meridian-cli/examples/resolve_cli_producer.rs` больше не схлопывает любой
+ненулевой код завершения в одну строку `"rejected"`: наблюдение теперь несёт
+точный код завершения процесса (`output.status.code()`) и текст stderr
+(`rejected:exit={code}:{stderr}`), а не только факт отказа. Новый
+модульный/чёрноящичный тест
+`meridian-cli/tests/binary_runs.rs::resolve_distinguishes_a_usage_error_from_a_rejected_request_by_exit_code`
+и соседний
+`resolve_rejects_malformed_json_with_environment_exit_code_and_empty_stdout`
+подтверждают, что отсутствующий обязательный флаг возвращает
+`exit_code::USAGE` (2), а принятая, но не разбираемая или не удовлетворяющая
+транспортному контракту заявка — `exit_code::INPUT_OR_ENVIRONMENT` (3): два
+разных кода для двух разных причин отказа, не одна общая «rejected»
+категория ни в CLI, ни в верификационном производителе, который его
+наблюдает.
+
+**Проверки, выполненные исполнителем (2026-09-21):** `cargo fmt --all --
+--check` — чисто; `cargo build --workspace --all-targets --all-features
+--locked` — чисто; `cargo test --workspace --all-targets --all-features
+--locked` — **462 passed, 0 failed** (было 419 в §5.5a; +43 — 32 новых
+модульных теста по пяти семействам (6+6+6+5+9), 10 в
+`meridian-app/src/source_format/regions.rs`, 1 новый в
+`meridian-cli/tests/binary_runs.rs` для пункта 5) — **это число устарело
+после второго и третьего раундов `CHANGES_REQUESTED`; действующее число —
+в §5.5d ниже**; `cargo clippy --workspace --all-targets --all-features
+--locked -- -D warnings` — чисто; `RUSTDOCFLAGS="-D warnings" cargo doc
+--workspace --no-deps --locked` — чисто; `node --test
+test/conformance-harness.test.mjs` — **54 passed, 0 failed** (было 49 в
+§5.5a; +5 — по одной сквозной мутационной проверке на каждое из пяти
+семейств 7a, `VALIDATE_MUTATION_FAMILIES_7A`) — **это число тоже устарело;
+действующее число — в §5.5d ниже**; `node
+test/kernel-validate.test.mjs` — 293 passed, 0 failed, 0 skipped (не
+изменился этим раундом — ни один Node-файл-эталон не тронут); полный `node
+scripts/preflight.mjs` — самодостаточен; `git diff --check` — без ошибок;
+изолированная `git add -A && git diff --cached --check` (во временной копии
+рабочего дерева вне этого репозитория, никогда не в самом репозитории) —
+без ошибок.
+
+**Точный список путей, изменённых или добавленных этим раундом:**
+
+*Добавлены:* `meridian-app/src/source_format/regions.rs`,
+`meridian-cli/src/commands/validate/sha_provenance.rs`,
+`meridian-cli/src/commands/validate/instruction_topics.rs`,
+`meridian-cli/src/commands/validate/operating_foundation.rs`,
+`meridian-cli/src/commands/validate/stack_profiles.rs`,
+`meridian-cli/src/commands/validate/agent_instruction_identity.rs`.
+
+*Изменены:* `meridian-app/src/source_format/mod.rs` (реэкспорт `regions`),
+`meridian-cli/src/commands/validate/mod.rs` (пять новых модулей подключены
+в `collect()`, `BLOCKED_CHECKS` сокращён с 20 до 15 записей, обновлена
+документация модуля), `meridian-cli/examples/resolve_cli_producer.rs`
+(пункт 5 — точный код завершения и stderr вместо общего `"rejected"`),
+`meridian-cli/tests/binary_runs.rs` (новый тест на различение exit 2/3
+`resolve`), `test/conformance-harness.test.mjs`
+(`VALIDATE_MUTATION_FAMILIES_7A`), `governance/plans/meridian-rust-migration-program-plan.md`
+(эта запись и обновление §4 таблицы пакетов 7/8).
+
+**Условие перехода к 7b–7d/пакету 8:** подпакет 7a отдельно исполнен,
+независимо принят и интегрирован; статус передачи ниже —
+`READY_FOR_ARCHITECT_REVIEW` только для подпакета 7a, не для всего пакета
+7. Разбиение оставшихся 15 семейств на 7b–7d и их порядок более не
+`BLOCKED_FOR_OWNER_DECISION` — см. §5.5c ниже, где владелец принял это
+решение. Подпакет 7a остаётся `active` до отдельной независимой приёмки;
+7b–7d остаются `planned` до своей собственной реализации.
+
+## 5.5c. Решение владельца: разбиение и порядок подпакетов 7b–7d (2026-09-21)
+
+Владелец закрыл вопрос §5.5a пункта 1 и §5.5b, ранее остановленный
+`BLOCKED_FOR_OWNER_DECISION`, — не «оставить как единый неделимый перенос»
+и не «разбить по одному семейству на подпакет», а сгруппировать оставшиеся
+15 заблокированных семейств `BLOCKED_CHECKS`
+(`meridian-cli/src/commands/validate/mod.rs`) в три подпакета, в
+зафиксированном порядке реализации и приёмки:
+
+- **7b `validate-operating-contracts`** — контракты операционной модели,
+  проверяемые без Instance-фикстур эволюционного/полевого рода:
+  `functional-parity`, `task-pattern-registry`,
+  `instruction-source-registry`, `task-specification-contract`,
+  `execution-state-model`, `role-and-human-control`,
+  `bounded-context-manifest`;
+- **7c `validate-evidence-and-intake`** — доказательная база и приёмка
+  правил: `evidence-and-handoff-contract`, `meridian-field-evaluation`,
+  `controlled-rule-intake`, `existing-project-compatibility-mode`;
+- **7d `validate-migration-qualification`** — квалификация миграции и
+  совместимости, естественно примыкающая к пакету 8
+  (`meridian-cli-migration`): `instance-data-migration`,
+  `instance-canonical-export`, `workspace-compatibility-qualification`,
+  `upgrade-integration-qualification`.
+
+**Порядок:** 7b → 7c → 7d — реализуются и принимаются последовательно в
+этом порядке, не параллельно и не в другом порядке, если владелец не примет
+отдельное решение об изменении.
+
+**Пакет 8 (`meridian-cli-migration`) остаётся заблокирован** приёмкой и
+интеграцией **всех** подпакетов 7a–7d — не только 7a, и не частичным
+подмножеством 7b–7d. Таблица пакетов §4 уже отражает это условие для
+пакета 8; эта запись не ослабляет и не сужает его.
+
+Эта запись — единственное действующее слово по разбиению и порядку 7b–7d:
+любое более раннее утверждение в этом документе (§5.5a пункт 1, §5.5b) о
+том, что это решение ещё не принято владельцем, устарело этой записью и не
+описывает текущее состояние. Начало фактической реализации 7b, её
+исполнитель и её собственные критерии приёмки остаются отдельными,
+последующими решениями — эта запись фиксирует только разбиение и порядок,
+не назначение исполнителя или дату начала.
+
+## 5.5d. Третья корректирующая передача подпакета 7a (исполнитель, 2026-09-21)
+
+Владелец передал пять пунктов правки после третьего раунда `CHANGES_REQUESTED`
+на подпакет 7a. Работа снова выполнена в рабочем дереве без Git-записей (без
+`branch`/`switch`, `add`, `commit`, `merge`, `rebase`, `reset`, `stash`,
+`tag`, `push`) — эта запись не является приёмкой подпакета, и он не
+переводится в `accepted`/`ready` этой записью. 7a остаётся `active`,
+статус передачи ниже — по-прежнему `READY_FOR_ARCHITECT_REVIEW` только для
+7a; 7b–7d остаются `planned`, их разбиение и порядок (7b → 7c → 7d, §5.5c)
+и блокировка пакета 8 приёмкой и интеграцией всех 7a–7d — без изменений.
+
+**Пункт 1 — общий positive/adversarial corpus для `regions.mjs`/`regions.rs`,
+реальные вызовы с обеих сторон.** Новая тройка файлов:
+
+- `verification/conformance-harness/fixtures/regions-corpus.json` — 35
+  случаев (было 34 до четвёртого корректирующего раунда, §5.5e): 11 на
+  `blank_fenced_blocks`/`blankFencedBlocks` (простой fence, unclosed fence,
+  короткий вложенный fence НЕ закрывает более длинный внешний, `~~~`-fence,
+  Unicode/CJK внутри fence до последующего региона, CRLF, закрывающий fence
+  короче/длиннее открывающего, пустой вход, вход без fence, несколько
+  последовательных пробелов до и после fence сохраняются побайтово вне
+  забеленных строк), 10 на
+  `marked_region`/`markedRegion` (ровно одна пара, отсутствующий маркер,
+  дублированный `begin`, `end` перед `begin`, маркер внутри цитируемого
+  fence, unclosed fence где-то в документе, CRLF, кириллица до и внутри
+  региона, атрибуты обрезаны и возвращены, маркер другого имени не
+  совпадает), 14 на `instruction_regions`/`instructionRegions`
+  (side-by-side регионы с заголовками снаружи, вложенность отклонена,
+  дублированный id региона отклонён, `end` без открытого региона, открытый
+  и никогда не закрытый регион, русский Front Matter блокируется по свою
+  закрывающую строку, Front Matter с многобайтовым CJK-содержимым сохраняет
+  байтовые смещения, непокрытые нестрочные-заголовком строки посчитаны,
+  CRLF целиком, unclosed fence где-то в документе, закрывающий маркер с
+  другим id, недопустимое значение `generated`, регион без id, документ
+  вовсе без Front Matter и регионов).
+- `verification/conformance-harness/regions-node-producer.mjs` — вызывает
+  РЕАЛЬНЫЕ экспортированные `blankFencedBlocks`/`markedRegion`/
+  `instructionRegions` из `scripts/lib/regions.mjs` напрямую (не копию
+  логики).
+- `meridian-app/examples/regions_producer.rs` — вызывает РЕАЛЬНЫЕ
+  скомпилированные `blank_fenced_blocks`/`marked_region`/
+  `instruction_regions` из `meridian_app::source_format::regions` напрямую.
+
+Новая фикстура `real-node-rust-regions-adapters`
+(`verification/conformance-harness/fixtures/conformance-harness.fixtures.json`,
+`expected_status: "conformant"`) подключена в тот же контролируемый корпус,
+что и `real-node-rust-source-format-adapters`/`real-node-rust-rule-resolution`
+— подхватывается существующим в `test/conformance-harness.test.mjs` циклом
+по `corpusResults` автоматически, без нового кода теста. Сравниваются
+ошибки, `text`/`attrs`, `sourceText` и весь исходный текст, побитово — это
+утверждение верно начиная с четвёртого корректирующего раунда (§5.5e), где
+нормализация ширины забеленного пробега ограничена именно теми строками,
+которые `blank_fenced_blocks`/`blankFencedBlocks` фактически забелили; до
+этого раунда оба производителя схлопывали пробег из более чем одного пробела
+на ЛЮБОЙ строке, включая нетронутый текст вне fence, и побитовое сравнение
+вне забеленных строк не было доказано.
+
+Одна названная, намеренная граница: `blank_fenced_blocks` в Rust заменяет
+символ на столько же пробелов, сколько у него байт UTF-8 (обязательное
+условие — иначе байтовые смещения для последующего среза `raw` съезжают),
+тогда как Node-эталон заменяет по одному пробелу на каждую единицу UTF-16, —
+поэтому ШИРИНА забеленного пробельного пробега для многобайтового символа
+внутри fence легитимно расходится между языками, и ни один потребитель ни в
+Kernel, ни в этом порту эту ширину никогда не читает (только факт
+забеливания строки и нетронутые смещения вокруг него). Оба производителя
+схлопывают пробег пробелов в один фиксированный плейсхолдер (`·BLANKED·`)
+перед сравнением, но, с четвёртого корректирующего раунда (§5.5e), только на
+строке, которая действительно отличается от соответствующей строки `raw` —
+то есть строке, которую `blank_fenced_blocks`/`blankFencedBlocks`
+действительно забелили; строка, которую забеливание не тронуло, сравнивается
+как есть, включая любой собственный пробег пробелов. Это подтверждает всё,
+что действительно входит в контракт, не заявляя побайтовое совпадение
+ширины забеленного пробега, которого ни одна сторона не обещает, и при этом
+больше не прячет за тем же плейсхолдером совпадение или расхождение вне
+забеленных строк.
+
+**Пункт 2 — названная граница для `stack-profiles.profiles` неверного
+типа, не заявленная `conformant`.** Новый блок в
+`test/conformance-harness.test.mjs` (вне общего цикла
+`VALIDATE_MUTATION_FAMILIES_7A_ADVERSARIAL`, поскольку Node здесь не
+производит вовсе никакой структурированной диагностики, которую можно было
+бы сравнить) строит полную копию репозитория с
+`stack-profiles/stack-profiles.yaml`, где `profiles: true`, и напрямую
+запускает оба настоящих бинарника:
+
+- `scripts/kernel-validate.mjs` — завершается ненулевым кодом с
+  **необработанным** `TypeError: entries.map is not a function`
+  (`comparePool`, вызов для `stack-profiles`) на stderr; stdout **пуст**,
+  потому что `ok()`/`fail()`/`warn()` печатают накопленное только при
+  штатном завершении, а авария происходит до него — каждая диагностика уже
+  пройденных проверок (`kernel-purity`, `document-identity`, … до
+  `stack-profiles`) теряется безвозвратно;
+- реальный `meridian validate --format json` — код завершения `1`
+  (`exit_code::DOMAIN_NEGATIVE`), пустой stderr, один валидный JSON-документ
+  на stdout со `status: "fail"`, `result.ok: false` и authored `FAIL`
+  `stack-profiles: "profiles" must be a list, found a boolean`
+  (`meridian-cli/src/commands/validate/stack_profiles.rs`, второй раунд
+  `CHANGES_REQUESTED`) — выполнение продолжается до полного результата.
+
+Обе стороны корректно отказываются от нулевого/успешного кода (fail-open
+отсутствует с обеих сторон), но по двум принципиально разным механизмам —
+непрозрачная авария, теряющая всю информацию, против легального полного
+негативного результата. Это зафиксировано двумя прямыми проверками против
+обоих настоящих бинарников, не через общий `conformant`/`divergent` харнесс
+(там нечего сравнивать на стороне Node) и не как `conformant`. Node-эталон
+не исправлялся — только наблюдался, как и предписано. С четвёртого
+корректирующего раунда (§5.5e) проверка Node-стороны закреплена полностью,
+не только ненулевым кодом: `nodeRun.status === 1` (точный код необработанного
+исключения Node, а не любой ненулевой), `nodeRun.signal === null`
+(завершение самим процессом, не убито сигналом) и `nodeRun.error ===
+undefined` (`spawnSync` сам не сообщил об ошибке запуска) — вместе с уже
+проверявшимся пустым stdout и `TypeError` на stderr.
+
+**Пункт 3 — RAII для новых файловых unit-тестов.** `temp()` в
+`instruction_topics.rs`, `stack_profiles.rs` и `operating_foundation.rs`
+теперь возвращает RAII-guard `TestDir` (`Drop` удаляет ровно свой каталог,
+включая раскрутку паники), а не голый `PathBuf`; каждый вызывающий тест
+больше не содержит собственный `let _ = fs::remove_dir_all(&dir);` в конце.
+Имя каталога — PID **и** наносекундная метка времени, не только PID:
+голый PID — общий, предсказуемый каталог, на который может столкнуться
+повторный запуск или параллельный поток `cargo test`.
+
+**Пункт 4 — эта самая синхронизация.** Устаревшие числа §5.5b (`454 строки,
+10 тестов` для `regions.rs`; `462 passed`; `54 passed`) отмечены
+устаревшими на месте, со ссылкой сюда, а не удалены молча — история
+раунда остаётся читаемой. Действующие числа — в пункте 5 ниже.
+
+**Пункт 5 — проверки, выполненные исполнителем (2026-09-21):** `cargo fmt
+--all -- --check` — чисто; `cargo build --workspace --all-targets
+--all-features --locked` — чисто; `cargo test --workspace --all-targets
+--all-features --locked` — **481 passed, 0 failed** (без изменения по
+сравнению со вторым корректирующим раундом — этот раунд не добавил ни
+одного нового `#[test]`: пункты 1–2 живут в Node-стороне харнесса и в новом
+верификационном примере `regions_producer.rs`, пункт 3 — чистый рефакторинг
+существующих тестов без изменения их числа); `cargo clippy --workspace
+--all-targets --all-features --locked -- -D warnings` — чисто;
+`RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked` —
+чисто; `node --test test/conformance-harness.test.mjs` — **62 passed, 0
+failed** (было 59 после второго раунда: +1 `real-node-rust-regions-adapters`,
++2 обе прямые проверки намеренной границы `stack-profiles` неверного
+типа); `node test/kernel-validate.test.mjs` — 293 passed, 0 failed, 0
+skipped (не изменился этим раундом — ни один Node-файл-эталон не тронут,
+только НАБЛЮДЁН новым тестом в пункте 2); полный `node scripts/preflight.mjs`
+— самодостаточен; `git diff --check` — без ошибок; изолированная `git add -A
+&& git diff --cached --check` (в отдельной полной копии рабочего дерева
+вне этого репозитория, никогда не в самом репозитории) — без ошибок.
+
+**Точный список путей, изменённых или добавленных этим (третьим)
+раундом:**
+
+*Добавлены:* `verification/conformance-harness/fixtures/regions-corpus.json`,
+`verification/conformance-harness/regions-node-producer.mjs`,
+`meridian-app/examples/regions_producer.rs`.
+
+*Изменены:* `verification/conformance-harness/fixtures/conformance-harness.fixtures.json`
+(новая фикстура `real-node-rust-regions-adapters`),
+`test/conformance-harness.test.mjs` (намеренная граница `stack-profiles`
+неверного типа, вне общего мутационного цикла),
+`meridian-cli/src/commands/validate/instruction_topics.rs`,
+`meridian-cli/src/commands/validate/stack_profiles.rs`,
+`meridian-cli/src/commands/validate/operating_foundation.rs` (RAII
+`TestDir` вместо голого `PathBuf` и ручной очистки),
+`governance/plans/meridian-rust-migration-program-plan.md` (эта запись,
+пометка устаревших чисел §5.5b).
+
+## 5.5e. Четвёртая корректирующая передача подпакета 7a (исполнитель, 2026-09-21)
+
+Владелец передал три пункта правки после четвёртого раунда `CHANGES_REQUESTED`
+на подпакет 7a, узко ограниченного самим 7a: 7b–7d и пакет 8 не начаты и не
+затронуты этой записью. Работа снова выполнена в рабочем дереве без
+Git-записей (без `branch`/`switch`, `add`, `commit`, `merge`, `rebase`,
+`reset`, `stash`, `tag`, `push`) — эта запись не является приёмкой подпакета,
+и он не переводится в `accepted`/`ready` этой записью. 7a остаётся `active`,
+статус передачи ниже — по-прежнему `READY_FOR_ARCHITECT_REVIEW` только для
+7a; 7b–7d остаются `planned`, их разбиение и порядок (7b → 7c → 7d, §5.5c) и
+блокировка пакета 8 приёмкой и интеграцией всех 7a–7d — без изменений.
+
+**Пункт 1 — нормализация ширины забеленного пробега ограничена
+фактически забеленными строками.** До этого раунда
+`normalizeBlankedRuns`/`normalize_blanked_runs`
+(`verification/conformance-harness/regions-node-producer.mjs`,
+`meridian-app/examples/regions_producer.rs`) схлопывали `/ +/g` — КАЖДЫЙ
+пробег из более чем одного пробела — на любой строке результата
+`blank_fenced_blocks`/`blankFencedBlocks`, включая текст, которого забеливание
+никогда не касалось. Это скрывало бы за одним и тем же плейсхолдером
+(`·BLANKED·`) реальное расхождение в нетронутом тексте между двумя языками,
+не только в ширине забеленного fence-содержимого, которую граница и должна
+нормализовать. Обе функции теперь принимают также `raw` и построчно сравнивают
+результат с исходным текстом: строка нормализуется, только если она
+отличается от соответствующей строки `raw` (то есть была фактически забелена);
+нетронутая строка сравнивается как есть, пробел за пробелом. Новый
+corpus-case `multiple-spaces-around-fence-are-preserved-verbatim-outside-it`
+(`verification/conformance-harness/fixtures/regions-corpus.json`) — несколько
+последовательных пробелов и до, и после fence — делает точное побайтовое
+сохранение этого текста частью сравнения, а не только предполагаемым
+свойством.
+
+**Пункт 2 — Node-завершение в проверке `stack-profiles` неверного типа
+закреплено полностью.** Прежняя проверка утверждала только
+`nodeRun.status !== 0` — любой ненулевой код прошёл бы, включая код от
+сигнала или от ошибки самого `spawnSync`, ни один из которых не был бы тем
+самым «необработанным исключением», который пункт и должен пригвоздить.
+Проверка (`test/conformance-harness.test.mjs`) теперь также утверждает
+`nodeRun.status === 1` (точный код Node для необработанного исключения),
+`nodeRun.signal === null` (процесс завершился сам, не был убит сигналом) и
+`nodeRun.error === undefined` (`spawnSync` не сообщил о собственной ошибке
+запуска) — вместе с уже существовавшими проверками пустого stdout и
+`TypeError: entries.map is not a function` на stderr. Действительный запуск
+подтверждает `status: 1, signal: null`, без `error`, на этом же входе.
+
+**Пункт 3 — формулировки синхронизированы.** (a) §5.5b теперь
+квалифицирует заявление о «точном тексте диагностик Node-эталона» ссылкой
+на именованные намеренные расхождения §5.5d (авария `stack-profiles`
+неверного типа, где у Node вовсе нет структурированной диагностики для
+сравнения). (b) corpus-case, ранее названный
+`shorter-nested-fence-closes-the-outer-one`
+(`verification/conformance-harness/fixtures/regions-corpus.json`) и
+одноимённый Rust unit-тест
+`blank_fenced_blocks_a_shorter_nested_fence_closes_the_outer_one`
+(`meridian-app/src/source_format/regions.rs`) заявляли обратное тому, что
+`raw = "````\n```\n````\nafter\n"` действительно проверяет: трёхбэктиковая
+строка внутри четырёхбэктикового fence КОРОЧЕ открывающего маркера и потому
+НЕ закрывает его (`marker.chars().count() >= fence_len` в
+`blank_fenced_blocks` требует длину не меньше); закрывает fence только третья
+строка, той же длины, что и открывающая. Оба переименованы в
+`shorter-nested-fence-does-not-close-the-outer-one` (corpus) и
+`blank_fenced_blocks_a_shorter_nested_fence_does_not_close_the_outer_one`
+(Rust-тест) — сама логика и утверждения теста не менялись, только имя,
+ранее заявлявшее не то, что тест проверяет. (c) Та же ложная формулировка в
+описании корпуса §5.5d («короткий вложенный fence закрывает внешний»)
+исправлена на «короткий вложенный fence НЕ закрывает более длинный
+внешний», а счёт case'ов `blank_fenced_blocks` обновлён с 10 до 11 (34 → 35
+всего) после добавления corpus-case пункта 1. (d) Описание фикстуры
+`real-node-rust-regions-adapters` (в §5.5d и в
+`verification/conformance-harness/fixtures/conformance-harness.fixtures.json`)
+заявляет побитовое сравнение всего прочего, кроме ширины забеленного пробега
+внутри fence, — это утверждение верно только начиная с этого, четвёртого,
+раунда (пункт 1 выше); текст §5.5d обновлён явной оговоркой об этом. (e)
+Устаревшие per-module числа строк/тестов в §5.5b (`sha_provenance.rs` 224/6,
+`instruction_topics.rs` 245/6, `operating_foundation.rs` 427/6,
+`stack_profiles.rs` 245/5, `agent_instruction_identity.rs` 349/9) явно
+помечены историческими на месте, со ссылкой сюда; действующие числа на конец
+этого раунда:
+
+| Модуль | Строк | Тестов |
+|---|---|---|
+| `sha_provenance.rs` | 301 | 7 |
+| `instruction_topics.rs` | 407 | 9 |
+| `operating_foundation.rs` | 596 | 9 |
+| `stack_profiles.rs` | 402 | 8 |
+| `agent_instruction_identity.rs` | 349 | 9 |
+| `regions.rs` | 557 | 18 |
+
+Рост этих чисел относительно §5.5b — накопленный эффект второго и третьего
+корректирующих раундов (RAII `TestDir`, добавленные adversarial-тесты и
+исправления по их замечаниям), а не этого, четвёртого, раунда, который сам
+по себе не добавил и не удалил ни одного `#[test]` ни в одном из этих шести
+файлов (переименование Rust-теста в пункте 3(b) не меняет их число).
+
+**Проверки, выполненные исполнителем (2026-09-21):** `cargo fmt --all --
+--check` — чисто; `cargo build --workspace --all-targets --all-features
+--locked` — чисто; `cargo test --workspace --all-targets --all-features
+--locked` — **481 passed, 0 failed** (без изменения по сравнению с третьим
+корректирующим раундом — этот раунд не добавил и не убрал ни одного
+`#[test]`, только переименовал один в `regions.rs`); `cargo clippy
+--workspace --all-targets --all-features --locked -- -D warnings` — чисто;
+`RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked` —
+чисто; `node --test test/conformance-harness.test.mjs` — **62 passed, 0
+failed** (без изменения по сравнению с третьим раундом — этот раунд не
+добавил и не убрал ни одного `test()`/`check()`, только уточнил
+существующие); `node test/kernel-validate.test.mjs` — 293 passed, 0 failed,
+0 skipped (не изменился этим раундом — ни один Node-файл-эталон не тронут);
+полный `node scripts/preflight.mjs` — самодостаточен; `git diff --check` —
+без ошибок; изолированная `git add -A && git diff --cached --check` (в
+отдельной полной копии рабочего дерева вне этого репозитория, никогда не в
+самом репозитории) — сообщает две строки о завершающих пробелах в
+`standards/templates/readme-template.md`, файле, не тронутом ни этим, ни
+любым из предыдущих раундов 7a (`git diff --stat` для этого пути — пусто);
+это преднамеренный синтаксис Markdown-переноса строки (завершающие два
+пробела), пред-существующий в дереве до этого раунда, а не регрессия от него —
+изолированная проверка находит его только потому, что копия репозитория
+заново инициализируется как Git и `git add -A` индексирует файл целиком, а не
+как диапазон изменённых строк, которые видит обычный `git diff --check` на
+самом репозитории (там же — «без ошибок» на реальном дереве). HEAD
+(`97108dfa00e8b7474ec32332ecacf8494df9460c`) и ветка (`dev`) не изменились
+этим раундом — рабочее дерево содержит только несколько незакоммиченных
+изменений, `git status` тот же, что и до начала раунда, минус правки этого
+раунда.
+
+**Точный список путей, изменённых или добавленных этим (четвёртым)
+раундом:**
+
+*Изменены:* `verification/conformance-harness/regions-node-producer.mjs`
+(пункт 1), `meridian-app/examples/regions_producer.rs` (пункт 1),
+`verification/conformance-harness/fixtures/regions-corpus.json` (пункт 1 —
+новый corpus-case; пункт 3(b) — переименование существующего case'а),
+`test/conformance-harness.test.mjs` (пункт 2),
+`meridian-app/src/source_format/regions.rs` (пункт 3(b) — переименование
+Rust unit-теста, без изменения его тела), `governance/plans/meridian-rust-migration-program-plan.md`
+(эта запись, пункт 3(a)(c)(d)(e)).
+
+*Не изменены этим раундом:* ничего из 7b–7d или пакета 8; ни один из пяти
+семейств-модулей `validate` (кроме их отражения в таблице выше — сами файлы
+`sha_provenance.rs`, `instruction_topics.rs`, `operating_foundation.rs`,
+`stack_profiles.rs`, `agent_instruction_identity.rs` не тронуты этим
+раундом, только `regions.rs`).
+
 ## 6. Ворота Rust
 
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
@@ -1143,10 +2013,10 @@ program_id: meridian-rust-migration
 program_status: active
 activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
-last_completed_package: sqlite-storage-adapter
-current_package: knowledge-agent-foundation
+last_completed_package: knowledge-agent-foundation
+current_package: meridian-cli-foundation
 current_package_status: active
-next_package: meridian-cli-foundation
+next_package: meridian-cli-migration
 concord_status: paused_pending_meridian_rust_release
 release_version: unassigned
 release_gate: closed
@@ -1154,11 +2024,11 @@ owner_decision_date: 2026-09-20
 ```
 
 Настоящая ревизия фиксирует принятие и интеграцию корректирующего пакета
-`research-governance-foundation` (пакетный коммит
-`3e7881d84ed74eb70c08725e684754a78d079002`, коммит слияния
-`b9d16ee07bf7b5bd268e8b46fd35cd1451e26662`) и начало исполнения пакета
-`knowledge-agent-foundation` — реализация подготовлена в рабочем дереве
-(§5.4, «Переданная реализация»), но не принята и не Git-интегрирована этой
-записью: `current_package_status: active` фиксирует, что пакет начат, а не
-что он завершён. Ни Metis, ни Concord, ни один эксперимент этой
-синхронизацией не начинаются; Concord остаётся на паузе.
+`knowledge-agent-foundation` (пакетный коммит
+`e790a3af880cfab83894cb332e03d48b4ff6fc88`, коммит слияния
+`97108dfa00e8b7474ec32332ecacf8494df9460c`, §5.4) и начало исполнения
+пакета 7 (`meridian-cli-foundation`) — реализация подготовлена в рабочем
+дереве (§5.4, «Переданная реализация»), но не принята и не
+Git-интегрирована этой записью: `current_package_status: active` фиксирует,
+что пакет начат, а не что он завершён. Ни Metis, ни Concord, ни один
+эксперимент этой синхронизацией не начинаются; Concord остаётся на паузе.

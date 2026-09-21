@@ -146,9 +146,9 @@ related_documents:
 ```yaml
 program_id: meridian-self-improvement-research
 program_status: active
-last_completed_package: research-governance-foundation
-current_package: knowledge-agent-foundation
-current_package_status: active
+last_completed_package: knowledge-agent-foundation
+current_package: none
+current_package_status: blocked
 next_package: agent-context-experiment-readiness
 experiments_open_for_implementation: []
 owner_decision_date: 2026-09-20
@@ -158,9 +158,13 @@ R0 (`research-governance-foundation`) принят и интегрирован: 
 `3e7881d84ed74eb70c08725e684754a78d079002`, коммит слияния
 `b9d16ee07bf7b5bd268e8b46fd35cd1451e26662`
 (`meridian-rust-migration-program-plan.md` §5.4). R1
-(`knowledge-agent-foundation`) начат отдельным исполнением как
-корректирующий пакет программы `meridian-rust-migration`
-(`meridian-rust-migration-program-plan.md` §5.4) — реализация подготовлена в
-рабочем дереве и ожидает независимой проверки и Git-интеграции; эта запись
-не является его приёмкой. Ни один эксперимент этой синхронизацией не
-открывается.
+(`knowledge-agent-foundation`) принят и интегрирован: пакетный коммит
+`e790a3af880cfab83894cb332e03d48b4ff6fc88`, коммит слияния
+`97108dfa00e8b7474ec32332ecacf8494df9460c`
+(`meridian-rust-migration-program-plan.md` §5.4). R2
+(`agent-context-experiment-readiness`) остаётся заблокирован (§2, §3): он не
+открывается автоматически по факту приёмки R1 — его начало обусловлено
+выпускным рубежом Rust Meridian
+(`meridian-rust-migration-program-plan.md` §7) и отдельным решением
+владельца (`meridian-owner-intent-contract.md` §26). Ни один эксперимент
+исследовательского реестра этой синхронизацией не открывается.

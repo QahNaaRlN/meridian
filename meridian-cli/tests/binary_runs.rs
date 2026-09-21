@@ -236,10 +236,10 @@ fn validate_reports_blocked_not_ok_on_this_kernel_with_zero_real_failures() {
     assert_eq!(value["result"]["ok"], false);
     assert_eq!(value["result"]["failures"].as_array().unwrap().len(), 0);
     // Ground-truth cross-check against the real Node reference's own output
-    // on this exact tree (`node scripts/kernel-validate.mjs`): 302 tracked
-    // names, 12/12 registries, 20 satisfied / 27 rejected rule-resolution
-    // fixtures.
-    assert_eq!(value["result"]["stats"]["document_identity_checked"], 302);
+    // on this exact tree (`node scripts/kernel-validate.mjs`): 333 tracked
+    // names (was 302 before the 7a merge added tracked files to `dev`), 12/12
+    // registries, 20 satisfied / 27 rejected rule-resolution fixtures.
+    assert_eq!(value["result"]["stats"]["document_identity_checked"], 333);
     assert_eq!(value["result"]["stats"]["schema_validated"], 12);
     assert_eq!(value["result"]["stats"]["schema_attempted"], 12);
     assert_eq!(value["result"]["stats"]["rule_resolution_satisfied"], 20);
@@ -256,7 +256,11 @@ fn validate_reports_blocked_not_ok_on_this_kernel_with_zero_real_failures() {
         value["result"]["stats"]["agent_instruction_identity_undeclared_other"],
         30
     );
-    assert_eq!(value["result"]["blocked"].as_array().unwrap().len(), 15);
+    // 20 before subpackage 7a, 15 after 7a removed its own five families;
+    // subpackage 7b then removed its own seven families from
+    // `BLOCKED_CHECKS` (`meridian-cli/src/commands/validate/mod.rs`) — 8
+    // remain, all belonging to 7c/7d.
+    assert_eq!(value["result"]["blocked"].as_array().unwrap().len(), 8);
     assert!(stderr_of(&json_output).is_empty());
 }
 

@@ -137,7 +137,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Корректирующий рубеж: вывод Instance-репозитория из эксплуатации (`instance-repository-retirement-baseline`) | Устранение отдельного репозитория Instance как активного центра управления разработкой Meridian; перенос пяти канонических документов в `governance/` Kernel; самодостаточный по умолчанию `preflight`/`kernel-validate`; не начинает `sqlite-storage-adapter` | 5 | accepted — принят и интегрирован (§5.2) |
 | 6 | Хранилище SQLite (`sqlite-storage-adapter`) | `meridian-storage-sqlite`: схема §4 технической спецификации, транзакционная запись, включённые foreign keys, неизменяемые редакции и доказательства, идемпотентный импорт, резервная копия, канонический экспорт | 3, 5, `instance-repository-retirement-baseline` | accepted — принят и локально интегрирован (§5.3) |
 | — | Корректирующий пакет: основание знаний и агентной среды (`knowledge-agent-foundation`) | Роли баз `tool`/`workspace`, привязка рабочей базы к редакции Kernel, последовательные миграции схемы, маршрутизация хранилищ, версионируемый конверт наблюдаемого события и отключаемый приёмник событий; спецификации `init`/`doctor`/`export` и импорта согласованы с этими границами | 6, `research-governance-foundation` | accepted — принят и интегрирован (§5.4) |
-| 7 | Основа CLI (`meridian-cli-foundation`) | `meridian-cli`: `init`, `doctor`, `validate`, `resolve`, `export`, `--format human|json`, стабильные коды завершения, разделение stdout/stderr; `init` и `doctor` соблюдают принятые роли баз, а наблюдаемые события не меняют предметный результат команды. С 2026-09-21 (§5.5b) пакет 7 — агрегатор подпакетов: 7a `validate-mechanical-integrity` (сокращение `BLOCKED_CHECKS`, реальное CLI-сравнение, fail-clean `init`), затем 7b `validate-operating-contracts`, 7c `validate-evidence-and-intake`, 7d `validate-migration-qualification` — оставшиеся 15 заблокированных семейств `validate`, разбитые на три подпакета в этом порядке решением владельца (§5.5c) | 5–6, `knowledge-agent-foundation` | active — агрегатор; 7a active (реализация подготовлена, ожидает независимой проверки и интеграции, §5.5b), 7b–7d planned, в порядке 7b → 7c → 7d (§5.5c) |
+| 7 | Основа CLI (`meridian-cli-foundation`) | `meridian-cli`: `init`, `doctor`, `validate`, `resolve`, `export`, `--format human|json`, стабильные коды завершения, разделение stdout/stderr; `init` и `doctor` соблюдают принятые роли баз, а наблюдаемые события не меняют предметный результат команды. С 2026-09-21 (§5.5b) пакет 7 — агрегатор подпакетов: 7a `validate-mechanical-integrity` (сокращение `BLOCKED_CHECKS`, реальное CLI-сравнение, fail-clean `init`), затем 7b `validate-operating-contracts`, 7c `validate-evidence-and-intake`, 7d `validate-migration-qualification` — оставшиеся 15 заблокированных семейств `validate`, разбитые на три подпакета в этом порядке решением владельца (§5.5c) | 5–6, `knowledge-agent-foundation` | active — агрегатор; 7a accepted/integrated (§5.7), 7b active — реализация подготовлена и прошла корректирующий раунд, ожидает независимой проверки и интеграции (§5.7, §5.8), 7c–7d planned, в порядке 7b → 7c → 7d (§5.5c) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт всех записей замороженного источника миграции без потерь; эквивалентность применимых норм между Node-эталоном и импортированным состоянием; идемпотентность повторного импорта; обратимость (`apply → rollback`); отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` в штатной работе выпускаемого бинарника | 6–7, `knowledge-agent-foundation` | planned — заблокирован приёмкой и интеграцией всех подпакетов 7a–7d (§5.5b) |
 | 9 | Квалификация равенства (`rust-parity-qualification`) | Полный паритетный прогон (полный набор ворот §6.1–§6.6) на всех классах тестовых деревьев; 0 расхождений вердиктов | 2, 4–8 | planned |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
@@ -1768,6 +1768,568 @@ Rust unit-теста, без изменения его тела), `governance/pl
 `sha_provenance.rs`, `instruction_topics.rs`, `operating_foundation.rs`,
 `stack_profiles.rs`, `agent_instruction_identity.rs` не тронуты этим
 раундом, только `regions.rs`).
+
+## 5.7. Подпакет 7b `validate-operating-contracts` (исполнитель, 2026-09-21)
+
+Владелец подтвердил приёмку и локальную интеграцию 7a: пакетный коммит
+`63c7c65551f6575f02b1a2f3ccd8a6edec390921`, коммит слияния
+`758fdfff55a44e79e16a895c1752d78878a1f43c` — дерево пакетного коммита равно
+дереву коммита слияния, пакетный коммит достижим из `dev`, `dev` (HEAD на
+начало этого раунда) указывает на этот коммит слияния. 7a переходит в
+`accepted`/`integrated`; 7b становится `active`. 7c и 7d остаются `planned`,
+пакет 8 остаётся заблокирован приёмкой и интеграцией всех подпакетов 7a–7d
+(§5.5c). Работа этого раунда выполнена в рабочем дереве без Git-записей (без
+`branch`/`switch`, `add`, `commit`, `merge`, `rebase`, `reset`, `stash`,
+`tag`, `push`) — эта запись не является приёмкой 7b, и он не переводится в
+`accepted`/`ready` этой записью.
+
+**Перенесённые семь семейств.** Каждое — специализированная JSON Schema плюс
+собственный bespoke composite-consistency алгоритм из `scripts/lib/*.mjs`
+(или, для `functional-parity`, инлайн-функция `kernel-validate.mjs`),
+перенесённый в `meridian_app::operating_model::*` — чистую функцию над уже
+разобранными значениями, без файлового, Git-, env- или process-ввода/вывода.
+Файловое чтение (схема, данные, fixtures) остаётся в собственном модуле
+`meridian-cli/src/commands/validate/*.rs` каждого семейства; ровно две
+внешние границы, которые composite-алгоритм не может обойти без файлового
+или резолверного ввода/вывода, выражены callback'ом, а не прямым `fs`/
+резолвером внутри `meridian-app`: `task-pattern-registry`'s
+`check_kernel_link` (существование, каноникализация и членство в отслеживаемом
+множестве целевого файла канонической ссылки — с 2026-09-21, §5.8 пункт 3)
+и `bounded-context-manifest`'s внешняя граница разрешения закреплённых
+ссылок. Это трёхуровневое разделение `meridian-core`/`meridian-app`/
+`meridian-cli`, которое пакет явно требовал, применено единообразно ко всем
+семи семействам — в отличие от плоского размещения всей логики в
+`meridian-cli`, принятого 7a:
+
+| Семейство | `meridian-app` модуль | `meridian-cli` модуль | Реальные fixtures (valid/invalid) |
+|---|---|---|---|
+| `functional-parity` | `operating_model::functional_parity` | `commands::validate::functional_parity` | 8 / 29 |
+| `task-pattern-registry` | `operating_model::task_pattern_registry` — с 2026-09-21 (§5.8 пункт 3): исправлено после корректирующего раунда, устранив собственное противоречие этой таблицы, ранее заявлявшей composite только в `meridian-cli` | `commands::validate::task_pattern_registry` (только файловая цель канонической ссылки — `check_kernel_link` передаётся как callback, см. §5.8 пункт 3) | 1 / 34 |
+| `instruction-source-registry` | `operating_model::instruction_source_registry` | `commands::validate::instruction_source_registry` | 7 / 36 |
+| `task-specification-contract` | `operating_model::task_specification` | `commands::validate::task_specification` | 11 / 48 |
+| `execution-state-model` | `operating_model::execution_state` | `commands::validate::execution_state` | 11 / 47 |
+| `role-and-human-control` | `operating_model::role_and_human_control` | `commands::validate::role_and_human_control` | реестр ролей 1 / 12, human-control 10 / 49 |
+| `bounded-context-manifest` | `operating_model::bounded_context_manifest` | `commands::validate::bounded_context_manifest` | 10 / 65 |
+
+`execution-state-model`, `role-and-human-control` и
+`bounded-context-manifest` переиспользуют `resolve_schema_ref`/
+`non_portable_reason` из `operating_model::task_specification` и
+`LIFECYCLE_STAGES`/`WORK_STATUSES`/`TERMINAL_STATUSES` из
+`operating_model::execution_state` НЕИЗМЕНЁННЫМИ — тот же приём, что и у
+Node-эталона (`execution-state.mjs`/`role-and-human-control.mjs`/
+`context-manifest.mjs` реэкспортируют, а не копируют, эти функции и
+константы из `task-specification.mjs`/`execution-state.mjs`), а не
+расходящаяся вторая копия адресной математики или закрытых пулов.
+
+Все семь удалены из `BLOCKED_CHECKS`
+(`meridian-cli/src/commands/validate/mod.rs`) и подключены в `collect()`.
+**Точный список восьми оставшихся записей** (все — 7c/7d, ни одна не
+принадлежит 7b): `evidence-and-handoff-contract`, `meridian-field-evaluation`,
+`controlled-rule-intake`, `existing-project-compatibility-mode`,
+`instance-data-migration`, `instance-canonical-export`,
+`workspace-compatibility-qualification`, `upgrade-integration-qualification`
+— сверено построчно с §5.5c и не расходится с ним ни одним именем.
+`ok = failures.is_empty() && BLOCKED_CHECKS.is_empty()` не ослаблено: код `0`
+по-прежнему невозможен, пока хоть одно из оставшихся восьми семейств
+блокировано.
+
+**Доказательство переноса — реальное CLI-сравнение для каждого семейства
+(исправлено корректирующими раундами §5.8 пункт 1 и §5.9 пункт 1 — эта
+запись сама не редактировалась, чтобы сохранить читаемой историю раунда;
+действующее описание проверки — только в §5.9).** Первая редакция этой
+записи мутировала, для пяти из семи семейств, только форму собственного
+fixtures-бандла (усечение `invalid` до `[]`) — это доказывало только, что
+связующий код в `meridian-cli` сообщает о пустом массиве одинаково, а не
+что сам bespoke composite-алгоритм (`evaluate*`/`check*` в
+`meridian_app::operating_model::*`) вообще запускался и совпадает. §5.8
+пункт 1 заменил все пять на schema-valid мутацию одного значения внутри
+уже существующего `valid`-fixture, которую JSON Schema не отвергает и
+которую отклоняет только сам composite-алгоритм, и проверял её через
+пересечение множеств новых FAIL — устарело: §5.9 пункт 1 заменил эту
+проверку на точное равенство multiset-дельты (с учётом кратности повторов)
+между Node и Rust относительно baseline, посчитанного на той же копии
+непосредственно перед мутацией. Сами семь мутаций (значения, которые
+меняются) — не устарели, только способ их проверки; за точными мутациями и
+найденной ими ошибкой упорядочивания см. §5.8, за действующим способом
+проверки — §5.9. Два семейства с настоящими данными Kernel
+(`task-pattern-registry`, `role-and-human-control`) по-прежнему мутируют
+`standards/workspace/{task-pattern-registry,role-registry}.yaml` напрямую —
+они уже с первой редакции этой записи упражняли собственный
+composite-алгоритм, не только связующий код.
+
+**Именованная граница, найденная и исправленная этим раундом —
+детерминированный порядок множественных одновременных диагностик.**
+Первая написанная версия `task_pattern_registry.rs` использовала `HashMap`
+там, где Node-эталон использует `Map` (`pairCount`), и `functional_parity.rs`
+использовал `HashMap`/`HashSet` там, где Node-эталон использует `Map`/`Set`
+(`catalog`/`declared`, `baseCondIds`) — оба итерируются в порядке первой
+вставки, тогда как `HashMap`/`HashSet` в Rust итерируются в произвольном,
+зависящем от хешера порядке. Это было обнаружено НЕ модульными тестами
+против реальных fixtures (они проверяют только `problems.is_empty()`/
+`!problems.is_empty()`, не точный порядок или текст), а именно требуемой
+кросс-языковой мутацией: `task-pattern-registry`'s собственная мутация
+(дублирование всего списка `task_patterns`) вызвала одновременно несколько
+диагностик о повторяющейся классификационной паре, и Rust называл другую
+пару первой, чем Node — `divergent`, не `conformant`. Исправлено: обе точки
+теперь ведут отдельный `Vec` порядка первой вставки рядом с `HashMap`/
+`HashSet` для членства, и все места, где Node-эталон обходит `Map`/`Set` для
+построения диагностик, обходят этот `Vec`. Сама мутация также сужена: полное
+дублирование `task_patterns` сталкивало ВСЕ семь реальных id, включая те, на
+которые `task-specification-contract` и — что важнее —
+ещё не перенесённый `upgrade-integration-qualification` (7d, `BLOCKED_CHECKS`)
+ссылаются по имени в собственных fixtures, из-за чего Node сообщал о четырёх
+диагностиках `upgrade-integration-qualification`, которые Rust не может
+сообщить никогда, пока 7d не перенесён, — расхождение, не имеющее отношения
+к `task-pattern-registry` как таковому. Новая мутация добавляет один
+новый шаблон под id `mutation-probe-pattern`, на который никакой другой
+fixture не ссылается, — единственное семейство, которое она может задеть,
+это само `task-pattern-registry`.
+
+**Именованные, принятые границы, оставленные как есть (не новые для этого
+раунда) — устарело: на момент этой записи граница была подтверждена только
+именованием, без исполняемой проверки; действующее доказательство — §5.8
+пункт 2 (Rust unit-тест) и §5.9 пункт 2 (real-process случай с точным
+полным набором дельты); текст ниже сохранён как есть ради читаемой истории
+раунда, а не как действующее описание проверки.** Две точки в
+`bounded_context_manifest.rs` (`check_resolved_state`'s и
+`resolve_pinned_reference`'s собственные проверки "неизвестное поле")
+обходят `serde_json::Map` (в этом workspace — `BTreeMap`, без
+`preserve_order`) там, где Node-эталон обходит `Object.keys()` в порядке
+исходного текста; при одновременно нескольких неизвестных полях в одной
+записи, возвращённой резолвером, языки могут назвать разные поля первыми —
+та же граница, что уже документирована на `resolve_cli_producer.rs`'s
+`result`, а не новая. На момент ЭТОЙ записи ни один из имеющихся реальных
+fixtures или мутаций её не задевал (резолвер — тестовые данные, а не
+содержимое Kernel), так что исправление оставалось документированным
+именованием, а не кодом, вместо непропорционального усложнения ради
+ненаблюдаемого тогда случая — следующий корректирующий раунд (§5.8 пункт 2)
+добавил именно такую исполняемую проверку, узко для этой цели, не
+меняя это решение задним числом.
+
+**Проверки, выполненные исполнителем (2026-09-21):** `cargo fmt --all --
+--check` — чисто; `cargo build --workspace --all-targets --all-features
+--locked` — чисто; `cargo test --workspace --all-targets --all-features
+--locked` — **539 passed, 0 failed** (было 481 после третьего/четвёртого
+корректирующего раунда 7a; +58 новых модульных тестов по семи семействам
+7b, распределённых между `meridian-app::operating_model::*` и
+`meridian-cli::commands::validate::*`, включая по одному
+`the_real_kernel_*_schema_and_fixtures_agree` тесту на каждое семейство,
+прогоняющему ВСЕ перечисленные выше реальные valid/invalid fixtures);
+`cargo clippy --workspace --all-targets --all-features --locked -- -D
+warnings` — чисто; `RUSTDOCFLAGS="-D warnings" cargo doc --workspace
+--no-deps --locked` — чисто; `node --test test/conformance-harness.test.mjs`
+— **69 passed, 0 failed** (было 62 после четвёртого корректирующего раунда
+7a; +7 — по одной сквозной мутационной проверке на каждое из семи семейств
+7b, `VALIDATE_MUTATION_FAMILIES_7B`); `node test/kernel-validate.test.mjs` —
+293 passed, 0 failed, 0 skipped (не изменился этим раундом — ни один
+Node-файл-эталон не тронут); полный `node scripts/preflight.mjs` —
+самодостаточен; `git diff --check` — без ошибок; изолированная `git add -A
+&& git diff --cached --check` (в отдельной полной копии рабочего дерева вне
+этого репозитория, никогда не в самом репозитории) — сообщает те же две
+строки о завершающих пробелах в `standards/templates/readme-template.md`,
+что и предыдущий (четвёртый) раунд 7a, файле, не тронутом ни этим, ни любым
+предыдущим раундом (`git diff --stat`/`git status --short` для этого пути —
+пусто) — то же пред-существующее, ранее задокументированное явление, не
+регрессия этого раунда. HEAD (`758fdfff55a44e79e16a895c1752d78878a1f43c`) и
+ветка (`dev`) не изменились этим раундом и совпадают с состоянием на начало
+раунда; рабочее дерево содержит только незакоммиченные изменения этого
+раунда — никаких `branch`/`switch`, `add`, `commit`, `merge`, `rebase`,
+`reset`, `stash`, `tag` или `push` не выполнялось.
+
+**Непроверенное и намеренные расхождения.** За пределами семи мутаций
+`VALIDATE_MUTATION_FAMILIES_7B` (по одной на семейство, минимум, требуемый
+заданием) не проводилось отдельного состязательного раунда по образцу
+второго `CHANGES_REQUESTED` над 7a (§5.5a пункт 2 и далее) — сложные
+многошаговые состязательные формы (несколько одновременных
+missing/wrong-type/duplicate/cross-reference случаев сверх того, что уже
+покрывают сами реальные invalid-fixtures) не проверялись отдельно кросс-
+языково, только через уже встроенные в реальные fixtures adversarial-случаи
+(суммарно 29+34+36+48+47+12+49+65 = 320 реальных invalid-fixture-кейсов —
+`functional-parity` (29) была по ошибке пропущена из этой суммы в первой
+редакции этой записи, исправлено на месте, не пометкой как устаревшей, —
+между семью семействами, каждый прогнанный напрямую через обе реализации).
+Помимо
+двух именованных границ выше (детерминированный порядок — исправлено;
+BTreeMap-порядок неизвестных полей резолвера — документировано, не
+исправлено кодом), намеренных расхождений с Node-эталоном в этом раунде не
+вводилось.
+
+**Точный список путей, изменённых или добавленных этим раундом:**
+
+*Добавлены:* `meridian-app/src/operating_model/mod.rs`,
+`meridian-app/src/operating_model/functional_parity.rs`,
+`meridian-app/src/operating_model/instruction_source_registry.rs`,
+`meridian-app/src/operating_model/task_specification.rs`,
+`meridian-app/src/operating_model/execution_state.rs`,
+`meridian-app/src/operating_model/role_and_human_control.rs`,
+`meridian-app/src/operating_model/bounded_context_manifest.rs`,
+`meridian-cli/src/commands/validate/functional_parity.rs`,
+`meridian-cli/src/commands/validate/task_pattern_registry.rs`,
+`meridian-cli/src/commands/validate/instruction_source_registry.rs`,
+`meridian-cli/src/commands/validate/task_specification.rs`,
+`meridian-cli/src/commands/validate/execution_state.rs`,
+`meridian-cli/src/commands/validate/role_and_human_control.rs`,
+`meridian-cli/src/commands/validate/bounded_context_manifest.rs`.
+
+*Изменены:* `meridian-app/src/lib.rs` (реэкспорт `operating_model`),
+`meridian-cli/src/commands/validate/mod.rs` (семь новых модулей подключены
+в `collect()`, `BLOCKED_CHECKS` сокращён с 15 до 8 записей, обновлена
+документация модуля), `meridian-cli/tests/binary_runs.rs` (ground-truth
+числа `document_identity_checked` 302→333 и `blocked.len()` 15→8 — первое
+исправляет уже устаревшее до начала этого раунда число, ставшее неверным
+после интеграции 7a в `dev`, не изменение этого раунда по существу; второе —
+прямое следствие удаления семи записей 7b), `test/conformance-harness.test.mjs`
+(`VALIDATE_MUTATION_FAMILIES_7B`, семь мутаций и вспомогательные функции),
+`governance/plans/meridian-rust-migration-program-plan.md` (эта запись).
+
+*Не изменены этим раундом:* ничего из 7c/7d или пакета 8; ни один файл 7a
+(`sha_provenance.rs`, `instruction_topics.rs`, `operating_foundation.rs`,
+`stack_profiles.rs`, `agent_instruction_identity.rs`, `regions.rs`) не
+тронут.
+
+**Условие перехода к 7c/7d/пакету 8:** подпакет 7b отдельно исполнен,
+независимо принят и интегрирован; статус передачи ниже —
+`READY_FOR_ARCHITECT_REVIEW` только для 7b. Подпакет 7a остаётся
+`accepted`/`integrated` (подтверждено выше); 7c и 7d остаются `planned` до
+своей собственной реализации, в зафиксированном порядке 7b → 7c → 7d
+(§5.5c); пакет 8 остаётся заблокирован приёмкой и интеграцией всех
+подпакетов 7a–7d, не только 7a–7b.
+
+## 5.8. Первый корректирующий раунд подпакета 7b (исполнитель, 2026-09-21)
+
+Владелец передал пять пунктов правки после первого раунда
+`CHANGES_REQUESTED` на подпакет 7b, узко ограниченного самим 7b: 7c, 7d и
+пакет 8 не начаты и не затронуты этой записью. Работа снова выполнена в
+рабочем дереве без Git-записей (без `branch`/`switch`, `add`, `commit`,
+`merge`, `rebase`, `reset`, `stash`, `tag`, `push`) — эта запись не является
+приёмкой подпакета, и он не переводится в `accepted`/`ready` этой записью.
+7b остаётся `active`, статус передачи ниже — по-прежнему
+`READY_FOR_ARCHITECT_REVIEW` только для 7b; 7a остаётся
+`accepted`/`integrated`, 7c–7d остаются `planned`, порядок 7b → 7c → 7d
+(§5.5c) и блокировка пакета 8 приёмкой и интеграцией всех 7a–7d — без
+изменений.
+
+**Пункт 1 — все семь семейств доказаны schema-valid мутацией, запускающей
+именно bespoke composite-алгоритм.** §5.7's `VALIDATE_MUTATION_FAMILIES_7B`
+мутировала, для пяти из семи семейств без реальных данных в Kernel
+(`functional-parity`, `instruction-source-registry`,
+`task-specification-contract`, `execution-state-model`,
+`bounded-context-manifest`), только форму собственного fixtures-бандла
+(усечение `invalid` до `[]`) — это доказывало лишь, что связующий код в
+`meridian-cli` одинаково сообщает о пустом массиве, никогда не запуская сам
+`evaluate*`/`check*` алгоритм в `meridian_app::operating_model::*` на
+содержательном входе. Заменено на мутацию одного значения внутри уже
+существующего `valid`-fixture, которую JSON Schema не отвергает (ни разу не
+`uniqueItems`/тип/enum — иначе было бы неоднозначно, какой слой отловил
+мутацию) и которую отклоняет только сам composite-алгоритм:
+
+- `functional-parity` — из первого VERIFIED-fixture удалена ровно одна
+  запись `post_change_evidence.contract_links` (`io.mapping`), оставляя
+  `evidence.covers` нетронутым: правило 6 ("VERIFIED нужны ОБА — покрывающее
+  evidence И post-change contract link");
+- `instruction-source-registry` — у verified, source-missing источника
+  (`recorded_state.currency`) переведён с `"stale"` на `"current"`:
+  источник, известный как пропавший, не может иметь текущий снимок;
+- `task-specification-contract` — к первому fixture добавлен второй
+  acceptance-criterion под новым id, с тем же `statement`/`verification`,
+  что и у первого (`acceptance_criteria` в схеме не несёт `uniqueItems`, в
+  отличие от `constraints`/`resolved_norms` — они намеренно не тронуты по
+  этой причине);
+- `execution-state-model` — `payload.current_actor` первого fixture заменён
+  на `/etc/passwd`: поле — обычная непустая строка без ограничения формы в
+  схеме, отклоняет только `nonPortableReason`;
+- `bounded-context-manifest` — `purpose` первого authoritative source
+  первого fixture заменён на `/etc/passwd`: то же рассуждение, поле не
+  взаимодействует с checkpoint/резолвером.
+
+`task-pattern-registry` и `role-and-human-control` сохранили свои прежние
+мутации реальных данных Kernel
+(`standards/workspace/{task-pattern-registry,role-registry}.yaml`) без
+изменений — они уже в §5.7 упражняли собственный composite-алгоритм, не
+только связующий код.
+
+Проверка также переписана: раньше — через общий корпус
+`conformant`/`divergent` харнесса (`mutatedKernelValidateCase`/`runCase`),
+чья полная сверка множества диагностик хрупка к любому постороннему
+изменению в дереве (см. предыдущий, четвёртый, корректирующий раунд 7a, где
+именно эта хрупкость впервые проявилась). Новая проверка
+(`computeFailLines`/`assertMutationIntroducesAMatchingFail`,
+`test/conformance-harness.test.mjs`) сравнивает мутированный прогон с
+BASELINE, посчитанным на ТОЙ ЖЕ немутированной копии непосредственно перед
+мутацией — **устарело: способ сравнения описан здесь так, как он был в
+ЭТОМ раунде (пересечение множеств новых FAIL, без учёта кратности); §5.9
+пункт 1 заменил его на точное равенство multiset-дельты; см. §5.9 за
+действующим описанием**: утверждает, что на КАЖДОЙ стороне появляется хотя
+бы одна НОВАЯ строка FAIL с префиксом `expectedFailPrefix` семейства,
+отсутствующая в baseline, и хотя бы одна из новых строк побайтово совпадает
+между Node и Rust. Все семь случаев проверены напрямую против реальных
+бинарников; для каждого из пяти новых — ровно одна новая строка с каждой
+стороны, и она совпадает побайтово.
+
+**Пункт 2 — детерминированный BTreeMap-порядок сохранён как Rust-native
+улучшение, с честно закреплённой границей.** `check_resolved_state` и
+`resolve_pinned_reference` (`meridian-app/src/operating_model/bounded_context_manifest.rs`)
+продолжают обходить `serde_json::Map` (в этом workspace — `BTreeMap`, без
+`preserve_order`) в алфавитном порядке при перечислении неизвестных полей
+резолвер-записи — не откачено к попытке воспроизвести порядок исходного
+текста Node (что потребовало бы order-preserving JSON-парсера, которого этот
+workspace сознательно не использует). Добавлено:
+
+- Rust unit-тест
+  `unknown_fields_on_a_resolved_entry_are_reported_in_stable_alphabetical_order_across_repeated_calls`
+  — резолвер-запись с двумя неизвестными полями, чьи имена намеренно
+  расставлены так, что порядок их появления в исходном тексте (`zzzz_extra_field`
+  первым, `aaaa_extra_field` последним) противоположен алфавитному; пять
+  независимых вызовов подряд подтверждают, что `aaaa_extra_field` всегда
+  назван первым и что вывод побайтово идентичен между вызовами, не только
+  одним и тем же множеством;
+- отдельный real-process тест Node/Rust
+  (`test/conformance-harness.test.mjs`, безымянный блок после
+  `VALIDATE_MUTATION_FAMILIES_7B`) — та же намеренная расстановка имён полей
+  в реальной fixtures-записи `context-manifest.fixtures.json`'s
+  `resolution`, реальный Node-эталон и реальный собранный `meridian`
+  запущены напрямую. Проверено явно, без обращения к общему
+  `conformant`/`divergent` харнессу и без утверждения `conformant`: Node
+  называет `zzzz_extra_field` первым (порядок исходного текста), Rust —
+  `aaaa_extra_field` первым (алфавитный порядок) — расхождение полного
+  вывода подтверждено прямым сравнением отсортированных множеств
+  диагностик (не равны), и в этом же тесте закреплено, что ОБЕ стороны
+  fail-closed: ненулевой код завершения и `result.ok: false`/наличие FAIL с
+  обеих сторон, ни одна не считает мутированный резолвер-ответ чистым —
+  **устарело: этот тест не вычислял явный baseline/дельту и не закреплял
+  точный полный набор дельты, только первую строку каждой стороны; §5.9
+  пункт 2 переписал его на явную baseline/дельту с точным полным набором;
+  см. §5.9 за действующим описанием**.
+
+**Пункт 3 — чистая часть `task-pattern-registry` вынесена в
+`meridian_app::operating_model::task_pattern_registry`.** Composite-алгоритм
+(`evaluate_task_pattern_registry` и все его внутренние проверки — id/пара
+уникальность, классификация ссылок, REFACTOR/BUGFIX/initiative-правила,
+`check_rule_resolution_bugfix_consistency`) перенесён в новый файл
+`meridian-app/src/operating_model/task_pattern_registry.rs` как чистая
+функция над уже разобранными значениями. Единственная неотделимая внешняя
+граница — проверка файловой ЦЕЛИ канонической ссылки (существование,
+каноникализация симлинков, членство в отслеживаемом множестве) — выражена
+callback'ом `EvalContext::check_kernel_link: &dyn Fn(&str) -> Result<(), String>`,
+а не вызовом `fs` изнутри `meridian-app`, — тот же приём, что уже
+использует `bounded_context_manifest`'s внешняя граница разрешения. Пути
+канонической ссылки, чья некорректность НЕ требует файловой системы (пустой
+путь, обратный слэш, абсолютный путь или диск, необработанный `.`/`..`
+сегмент), проверяются отдельной чистой функцией
+`portable_relative_path_defect` ДО вызова callback'а — они никогда не
+доходят до `meridian-cli`, и `meridian-cli`'s собственная
+`check_kernel_link_target` больше не дублирует эти проверки, сокращённая до
+ровно файловой части (`std::fs::canonicalize`/`std::fs::metadata` против
+корня Kernel и отслеживаемого множества). `meridian-cli/src/commands/validate/task_pattern_registry.rs`
+теперь строит этот callback в `run()`, замыкая `kernel_root` и
+отслеживаемое множество, и передаёт его в `EvalContext` — файловый ввод/
+вывод, разбор YAML/JSON и построение отслеживаемого множества остаются
+целиком в `meridian-cli`, как и требовалось.
+
+**Пункт 4 — governance синхронизирован.** Строка пакета 7 в §4 исправлена:
+была устаревшей ("7a active … , 7b–7d planned"), теперь отражает текущее
+состояние (7a `accepted`/`integrated`, 7b `active` после этого
+корректирующего раунда, 7c–7d `planned`). Устранено собственное
+противоречие §5.7's таблицы размещения: вводный абзац утверждал
+единообразное трёхуровневое разделение для всех семи семейств, а строка
+`task-pattern-registry` в той же таблице заявляла composite целиком в
+`meridian-cli` — оба места исправлены на месте (не пометкой как
+устаревшими: это было фактической ошибкой первой редакции, не сменой
+решения), отражая пункт 3 выше. Арифметическая ошибка в сумме реальных
+invalid-fixture-кейсов (§5.7, «Непроверенное и намеренные расхождения»)
+исправлена: `functional-parity`'s 29 было пропущено из суммы
+`34+36+48+47+12+49+65 = 291`; верная сумма —
+`29+34+36+48+47+12+49+65 = 320`, тоже исправлено на месте.
+
+**Проверки, выполненные исполнителем (2026-09-21) — устаревшие числа: см.
+§5.9 ниже для действующих после второго корректирующего раунда:**
+`cargo fmt --all --
+--check` — чисто; `cargo build --workspace --all-targets --all-features
+--locked` — чисто; `cargo test --workspace --all-targets --all-features
+--locked` — **546 passed, 0 failed** (было 539 после первой редакции 7b;
++7 — Rust unit-тесты нового `meridian-app::operating_model::task_pattern_registry`
+модуля и его `meridian-cli` обёртки сверх перенесённых один-в-один, плюс
+новый детерминированного-порядка unit-тест в `bounded_context_manifest.rs`,
+за вычетом двух удалённых из `meridian-cli`'s `task_pattern_registry.rs`
+тестов пути канонической ссылки, чья проверка переехала в `meridian-app`);
+`cargo clippy --workspace --all-targets --all-features --locked -- -D
+warnings` — чисто; `RUSTDOCFLAGS="-D warnings" cargo doc --workspace
+--no-deps --locked` — чисто; `node --test test/conformance-harness.test.mjs`
+— **73 passed, 0 failed** (было 69 после первой редакции 7b; +4 — новый
+безымянный блок пункта 2's четырёх real-process проверок; семь мутаций
+`VALIDATE_MUTATION_FAMILIES_7B` заменены на schema-valid форму, не добавлены
+и не удалены как проверки, отсюда не +7); `node test/kernel-validate.test.mjs`
+— 293 passed, 0 failed, 0 skipped (не изменился этим раундом — ни один
+Node-файл-эталон не тронут); полный `node scripts/preflight.mjs` —
+самодостаточен; `git diff --check` — без ошибок; изолированная `git add -A
+&& git diff --cached --check` (в отдельной полной копии рабочего дерева вне
+этого репозитория, никогда не в самом репозитории) — сообщает те же две
+строки о завершающих пробелах в `standards/templates/readme-template.md`,
+файле, не тронутом ни этим, ни любым предыдущим раундом (`git diff --stat`/
+`git status --short` для этого пути — пусто) — то же пред-существующее,
+ранее задокументированное явление, не регрессия этого раунда. HEAD
+(`758fdfff55a44e79e16a895c1752d78878a1f43c`) и ветка (`dev`) не изменились
+этим раундом и совпадают с состоянием на начало раунда; рабочее дерево
+содержит только незакоммиченные изменения — никаких `branch`/`switch`,
+`add`, `commit`, `merge`, `rebase`, `reset`, `stash`, `tag` или `push` не
+выполнялось.
+
+**Точный список путей, изменённых или добавленных этим (корректирующим)
+раундом:**
+
+*Добавлены:* `meridian-app/src/operating_model/task_pattern_registry.rs`.
+
+*Изменены:* `meridian-app/src/operating_model/mod.rs` (подключён новый
+модуль), `meridian-app/src/operating_model/bounded_context_manifest.rs`
+(пункт 2 — `RecordResolver` именованный тип вместо инлайн `dyn Fn`-типа для
+`clippy::type_complexity`, новый детерминированного-порядка unit-тест, два
+уточняющих doc-комментария у существующих `for k in obj.keys()`),
+`meridian-cli/src/commands/validate/task_pattern_registry.rs` (пункт 3 —
+переписан в тонкую файловую обёртку над перенесённым composite-алгоритмом),
+`test/conformance-harness.test.mjs` (пункт 1 — семь мутаций
+`VALIDATE_MUTATION_FAMILIES_7B` заменены на schema-valid форму и новую
+baseline-diff проверку; пункт 2 — новый real-process блок из четырёх
+проверок), `governance/plans/meridian-rust-migration-program-plan.md` (эта
+запись; §4 строка пакета 7; §5.7 исправления пунктов 3–4).
+
+*Не изменены этим раундом:* ничего из 7a, 7c, 7d или пакета 8; шесть из семи
+`meridian_app::operating_model::*` модулей 7b
+(`functional_parity`, `instruction_source_registry`, `task_specification`,
+`execution_state`, `role_and_human_control`) и все шесть соответствующих
+`meridian-cli` модулей, кроме `task_pattern_registry.rs`, не тронуты.
+
+**Условие перехода к 7c/7d/пакету 8:** без изменений — подпакет 7b отдельно
+исполнен, независимо принят и интегрирован; статус передачи —
+`READY_FOR_ARCHITECT_REVIEW` только для 7b.
+
+## 5.9. Второй корректирующий раунд подпакета 7b (исполнитель, 2026-09-21)
+
+Владелец передал четыре пункта правки после второго раунда
+`CHANGES_REQUESTED` на подпакет 7b, узко ограниченного самим 7b: 7c, 7d и
+пакет 8 не начаты и не затронуты этой записью. Работа снова выполнена в
+рабочем дереве без Git-записей (без `branch`/`switch`, `add`, `commit`,
+`merge`, `rebase`, `reset`, `stash`, `tag`, `push`) — эта запись не является
+приёмкой подпакета, и он не переводится в `accepted`/`ready` этой записью.
+7b остаётся `active`, статус передачи ниже — по-прежнему
+`READY_FOR_ARCHITECT_REVIEW` только для 7b; 7a остаётся
+`accepted`/`integrated`, 7c–7d остаются `planned`, порядок 7b → 7c → 7d
+(§5.5c) и блокировка пакета 8 приёмкой и интеграцией всех 7a–7d — без
+изменений. Ни один Rust-файл этим раундом не тронут — оба пункта ниже
+касаются только `test/conformance-harness.test.mjs`.
+
+**Пункт 1 — пересечение множеств заменено на точное равенство
+multiset-дельты.** §5.8's `assertMutationIntroducesAMatchingFail`
+утверждала только, что хотя бы одна новая строка с нужным префиксом
+пересекается между Node и Rust — это не отклоняло случай, где одна сторона
+сообщает дополнительную, ничем не объяснённую диагностику сверх общей, или
+где та же строка встречается разное число раз. Заменено на:
+`multisetCounts`/`multisetsEqual`/`multisetDelta` — дельта считается как
+мультимножество (`Map<строка, количество>`) МУТИРОВАННОГО прогона
+относительно BASELINE, посчитанного на той же копии непосредственно перед
+мутацией, с учётом кратности: строка, появившаяся в мутированном прогоне на
+N раз больше, чем в baseline, входит в дельту ровно N раз.
+`assertMutationIntroducesAMatchingFail` теперь утверждает: обе дельты (Node
+и Rust) непустые, обе содержат хотя бы одну строку с `expectedFailPrefix`
+семейства, и обе дельты равны друг другу КАК МУЛЬТИМНОЖЕСТВА — не только
+пересекаются. Проверено против всех семи семейств: каждая из ранее
+подтверждённых хирургических (§5.8) мутаций даёт дельту из ровно одной
+строки на каждой стороне, и эта строка совпадает побайтово — точное
+равенство мультимножеств проходит без изменения самих мутаций.
+
+**Пункт 2 — BTreeMap real-process случай считает явные baseline/дельту и
+закрепляет точный полный набор.** Прежняя версия (§5.8 пункт 2) не считала
+baseline вовсе — она мутировала пустое дерево и читала `nodeUnknown[0]`/
+`rustUnknown[0]` напрямую, не отделяя эффект мутации от того, что уже было
+в дереве, и не утверждая, что никаких ДРУГИХ новых FAIL не появилось.
+Переписано на тот же `computeFailLines`/`multisetDelta`, что и
+`VALIDATE_MUTATION_FAMILIES_7B`: baseline считается на немутированной копии
+ДО записи резолвер-ответа с двумя неизвестными полями, дельта — после.
+Закреплено явно, шестью проверками:
+
+1. обе дельты непустые и целиком состоят из строк `"unknown field"`;
+2. вся Node-дельта называет `"zzzz_extra_field"` (порядок исходного текста
+   JSON) и НИ ОДНА строка не называет `"aaaa_extra_field"` — точный полный
+   набор, не только первая строка;
+3. вся Rust-дельта называет `"aaaa_extra_field"` (алфавитный порядок
+   `BTreeMap`) и ни одна строка не называет `"zzzz_extra_field"`;
+4. Node-дельта после текстовой замены `"zzzz_extra_field"` →
+   `"aaaa_extra_field"` совпадает с Rust-дельтой как мультимножество —
+   доказывает, что единственное различие между сторонами это ИМЯ первого
+   названного поля, а не какая-то ещё скрытая расходящаяся диагностика;
+5. обе стороны действительно fail-closed (ненулевой код завершения,
+   `result.ok: false` у Rust) — тем же прогоном бинарников, что и раньше;
+6. полный вывод (`mutated.nodeFails`/`mutated.rustFails`, не только
+   дельта) действительно не равен как мультимножество — случай честно не
+   маркируется `conformant`.
+
+Эмпирически подтверждено: мутация задевает ДВЕ реальные valid-fixture
+записи `context-manifest.fixtures.json` (`reference manifest` и
+`participant switch`), обе ссылающиеся на один и тот же резолвер-ключ
+`records/execution-run/example-run-001` — обе дельты (Node и Rust) состоят
+из двух строк, по одной на каждую задетую fixture, и проверка 4 выше
+подтверждает их точное соответствие после замены имени поля, а не только
+что «какая-то» строка совпадает.
+
+**Пункт 3 — исторический абзац §5.7 синхронизирован с текущим состоянием.**
+§5.7's абзац «Доказательство переноса» указывал только на §5.8 как на
+действующее описание проверки; после этого раунда способ проверки в §5.8
+сам устарел (пункт 1 выше). §5.7 обновлён: ссылается на §5.8 за точными
+мутациями (не устарели) и на §5.9 (эту запись) за действующим способом
+проверки (multiset-дельта, не пересечение). §5.8's собственный текст также
+отмечен на месте: описание способа сравнения в пункте 1, описание
+real-process случая в пункте 2 и итоговые числа проверок помечены
+устаревшими со ссылкой сюда — не переписаны и не удалены, история раунда
+остаётся читаемой.
+
+**Проверки, выполненные исполнителем (2026-09-21):** `cargo fmt --all --
+--check` — чисто; `cargo build --workspace --all-targets --all-features
+--locked` — чисто; `cargo test --workspace --all-targets --all-features
+--locked` — **546 passed, 0 failed** (без изменения по сравнению с первым
+корректирующим раундом — этот раунд не тронул ни одного Rust-файла);
+`cargo clippy --workspace --all-targets --all-features --locked -- -D
+warnings` — чисто; `RUSTDOCFLAGS="-D warnings" cargo doc --workspace
+--no-deps --locked` — чисто; `node --test test/conformance-harness.test.mjs`
+— **75 passed, 0 failed** (было 73 после первого корректирующего раунда;
++2 — BTreeMap real-process случай пункта 2 разделён на шесть проверок
+вместо четырёх, при этом ни одна из семи проверок `VALIDATE_MUTATION_FAMILIES_7B`
+не добавлена и не удалена, только усилен способ проверки внутри каждой);
+`node test/kernel-validate.test.mjs` — 293 passed, 0 failed, 0 skipped (не
+изменился этим раундом — ни один Node-файл-эталон не тронут); полный `node
+scripts/preflight.mjs` — самодостаточен; `git diff --check` — без ошибок;
+изолированная `git add -A && git diff --cached --check` (в отдельной полной
+копии рабочего дерева вне этого репозитория, никогда не в самом
+репозитории) — сообщает те же две строки о завершающих пробелах в
+`standards/templates/readme-template.md`, файле, не тронутом ни этим, ни
+любым предыдущим раундом (`git diff --stat`/`git status --short` для этого
+пути — пусто) — то же пред-существующее, ранее задокументированное явление,
+не регрессия этого раунда. HEAD (`758fdfff55a44e79e16a895c1752d78878a1f43c`)
+и ветка (`dev`) не изменились этим раундом и совпадают с состоянием на
+начало раунда; рабочее дерево содержит только незакоммиченные изменения —
+никаких `branch`/`switch`, `add`, `commit`, `merge`, `rebase`, `reset`,
+`stash`, `tag` или `push` не выполнялось.
+
+**Точный список путей, изменённых или добавленных этим (вторым
+корректирующим) раундом:**
+
+*Добавлены:* ничего.
+
+*Изменены:* `test/conformance-harness.test.mjs` (пункт 1 —
+`multisetCounts`/`multisetsEqual`/`multisetDelta` и переписанная
+`assertMutationIntroducesAMatchingFail`; пункт 2 — BTreeMap real-process
+блок переписан на явные baseline/дельту и шесть точных проверок),
+`governance/plans/meridian-rust-migration-program-plan.md` (эта запись;
+пункт 3 — синхронизация §5.7 и пометка устаревших мест §5.8).
+
+*Не изменены этим раундом:* ничего из 7a, 7c, 7d или пакета 8; ни один
+Rust-файл (`meridian-app/src/operating_model/*`,
+`meridian-cli/src/commands/validate/*`) не тронут; сами семь мутаций
+`VALIDATE_MUTATION_FAMILIES_7B` (какие значения меняются) и мутация
+BTreeMap-случая (расстановка имён полей) не изменены — изменился только
+способ их проверки.
+
+**Условие перехода к 7c/7d/пакету 8:** без изменений — подпакет 7b отдельно
+исполнен, независимо принят и интегрирован; статус передачи —
+`READY_FOR_ARCHITECT_REVIEW` только для 7b.
 
 ## 6. Ворота Rust
 

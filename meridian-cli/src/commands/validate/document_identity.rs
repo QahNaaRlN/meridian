@@ -9,6 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use fancy_regex::Regex;
+use meridian_app::source_format::carries_own_front_matter;
 
 /// `"skill"` is deliberately absent: delivery is a field of its own now
 /// (`agent-instruction-identity.md`), not a type.
@@ -65,19 +66,6 @@ fn root_uppercase() -> HashSet<&'static str> {
     ]
     .into_iter()
     .collect()
-}
-
-/// Shared with `agent_instruction_identity`, which applies the same rule to
-/// decide which Markdown documents are read for their own Front Matter —
-/// one implementation, not a copy per check (matches
-/// `scripts/kernel-validate.mjs`'s own single `carriesOwnFrontMatter`,
-/// called from two check sites).
-pub(super) fn carries_own_front_matter(rel: &str) -> bool {
-    !rel.ends_with("-template.md")
-        && !rel.ends_with("-body.md")
-        && !rel.starts_with("instance-template/")
-        && !rel.starts_with("test/")
-        && Path::new(rel).file_name().and_then(|n| n.to_str()) != Some("SKILL.md")
 }
 
 pub struct Outcome {

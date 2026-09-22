@@ -76,6 +76,7 @@ mod instruction_source_registry;
 mod instruction_topics;
 mod kernel_purity;
 mod link_check;
+mod mechanical_integrity_boundary;
 mod operating_foundation;
 mod registry_schema;
 mod role_and_human_control;
@@ -89,12 +90,72 @@ use std::io::Write;
 use std::path::Path;
 
 use meridian_app::events::EventSink;
-use meridian_core::types::NonEmptyString;
+use meridian_app::validation::mechanical_integrity::OperationError;
+use meridian_core::types::{Diagnostic, DiagnosticLevel, NonEmptyString};
 use serde_json::{json, Value};
 
 use crate::cli::{OutputFormat, ParsedArgs};
 use crate::exit_code;
 use crate::kernel::{self, WalkError};
+
+/// Everything that can stop `collect` before it produces a `Collected`
+/// result: a fail-closed directory walk failure (unchanged, pre-existing —
+/// [`WalkError`]), or a port-based `mechanical_integrity` check's own
+/// [`OperationError`] — an access/encoding/walk failure reading the Kernel
+/// workspace through `WorkspaceReader`, distinct from that check's ordinary
+/// domain diagnostics. Both are environment problems from `validate`'s own
+/// point of view: neither ever becomes a false "clean" or "domain-negative"
+/// result.
+#[derive(Debug)]
+pub enum CollectError {
+    Walk(WalkError),
+    Workspace(OperationError),
+}
+
+impl std::fmt::Display for CollectError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CollectError::Walk(error) => write!(f, "{error}"),
+            CollectError::Workspace(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for CollectError {}
+
+impl From<WalkError> for CollectError {
+    fn from(error: WalkError) -> Self {
+        CollectError::Walk(error)
+    }
+}
+
+impl From<OperationError> for CollectError {
+    fn from(error: OperationError) -> Self {
+        CollectError::Workspace(error)
+    }
+}
+
+/// Splits a batch of [`Diagnostic`]s produced by a port-based
+/// `meridian_app::validation::mechanical_integrity` check into the
+/// `(failures, warnings)` string lists this module's own JSON/human
+/// presentation has always used — the observable shape is unchanged, only
+/// the source of the messages is now a typed [`Diagnostic`] rather than a
+/// pre-formatted `String`. An `Info`-level diagnostic (none of the five 7a
+/// checks currently produces one) is treated as a warning rather than
+/// silently dropped.
+fn split_diagnostics(diagnostics: Vec<Diagnostic>) -> (Vec<String>, Vec<String>) {
+    let mut failures = Vec::new();
+    let mut warnings = Vec::new();
+    for diagnostic in diagnostics {
+        match diagnostic.level() {
+            DiagnosticLevel::Fail => failures.push(diagnostic.message().to_string()),
+            DiagnosticLevel::Warn | DiagnosticLevel::Info => {
+                warnings.push(diagnostic.message().to_string())
+            }
+        }
+    }
+    (failures, warnings)
+}
 
 const COMMAND: &str = "validate";
 pub const ALLOWED_FLAGS: &[&str] = &["kernel", "format"];
@@ -132,7 +193,7 @@ fn is_markdown(path: &std::path::Path) -> bool {
         .unwrap_or(false)
 }
 
-fn collect(kernel_root: &Path) -> Result<Collected, WalkError> {
+fn collect(kernel_root: &Path) -> Result<Collected, CollectError> {
     let (files, used_git, fallback_warn) = match kernel::list_git_tracked_files(kernel_root) {
         Some(files) => (files, true, None),
         None => {
@@ -185,22 +246,22 @@ fn collect(kernel_root: &Path) -> Result<Collected, WalkError> {
 
     warnings.extend(instance_context::run(kernel_root)?);
 
-    let sha_provenance = sha_provenance::run(kernel_root);
+    let sha_provenance = sha_provenance::run(kernel_root)?;
     failures.extend(sha_provenance.failures);
     warnings.extend(sha_provenance.warnings);
 
-    let topics = instruction_topics::run(kernel_root);
+    let topics = instruction_topics::run(kernel_root)?;
     failures.extend(topics.failures);
 
-    let foundation = operating_foundation::run(kernel_root);
+    let foundation = operating_foundation::run(kernel_root)?;
     failures.extend(foundation.failures);
 
-    let profiles = stack_profiles::run(kernel_root);
+    let profiles = stack_profiles::run(kernel_root)?;
     failures.extend(profiles.failures);
     let stack_profile_pool_loaded = profiles.pool_loaded;
 
     let identity_norms =
-        agent_instruction_identity::run(kernel_root, &markdown_files, topics.topic_pool.as_ref());
+        agent_instruction_identity::run(kernel_root, &markdown_files, topics.topic_pool.as_ref())?;
     failures.extend(identity_norms.failures);
 
     let task_patterns = task_pattern_registry::run(kernel_root, &files);
@@ -384,7 +445,7 @@ pub fn run(
 /// failure/warning lists [`run`] does, without any CLI/JSON/human framing —
 /// a real caller of the same logic the shipped command uses, not a second
 /// implementation.
-pub fn collect_diagnostics(kernel_root: &Path) -> Result<(Vec<String>, Vec<String>), WalkError> {
+pub fn collect_diagnostics(kernel_root: &Path) -> Result<(Vec<String>, Vec<String>), CollectError> {
     let collected = collect(kernel_root)?;
     Ok((collected.failures, collected.warnings))
 }

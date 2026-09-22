@@ -153,7 +153,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Корректирующий пакет: основание знаний и агентной среды (`knowledge-agent-foundation`) | Роли баз `tool`/`workspace`, привязка рабочей базы к редакции Kernel, последовательные миграции схемы, маршрутизация хранилищ, версионируемый конверт наблюдаемого события и отключаемый приёмник событий; спецификации `init`/`doctor`/`export` и импорта согласованы с этими границами | 6, `research-governance-foundation` | accepted — принят и интегрирован (§5.4) |
 | 7 | Основа CLI (`meridian-cli-foundation`) | `meridian-cli`: `init`, `doctor`, `validate`, `resolve`, `export`, `--format human|json`, стабильные коды завершения, разделение stdout/stderr; подпакеты 7a–7d остаются исторической декомпозицией объёма | 5–6, `knowledge-agent-foundation`, `rust-architecture-conformance` | architecture-blocked (§5.13): 7a/7b исторически integrated, но не release-ready; приёмка 7c отозвана; 7d не начат |
 | — | Корректирующий пакет архитектуры (`rust-architecture-conformance`) | Устранить нарушения аудита: типизированные границы DTO → domain, обязательные порты, typed diagnostics, перенос предметной логики из CLI, декомпозиция Value-центричных модулей; доказать сохранение бизнес-ценности и обоснованные Rust-native улучшения | 1–7b, аудит §5.13 | active — пакеты 1–2 приняты и локально интегрированы; программа исправления продолжается §5.16 |
-| — | Архитектурное исправление исторического 7a (`meridian-cli-foundation-architecture-remediation`) | Перенести пять семейств 7a из CLI в typed core/app pipeline и ввести реально используемый app-owned `WorkspaceReader`; CLI оставить адаптером и presentation-слоем | `rust-architecture-conformance-1` и `-2`, §5.13 | specified, not started (§5.16) |
+| — | Архитектурное исправление исторического 7a (`meridian-cli-foundation-architecture-remediation`) | Перенести пять семейств 7a из CLI в typed core/app pipeline и ввести реально используемый app-owned `WorkspaceReader`; CLI оставить адаптером и presentation-слоем | `rust-architecture-conformance-1` и `-2`, §5.13 | accepted — принято и локально интегрировано (§5.16.8) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | planned — заблокирован завершением корректирующего пакета и всех подпакетов 7 |
 | 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | planned |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
@@ -3679,7 +3679,9 @@ status --short --branch` — `dev...origin/dev [ahead 17]`, без staged
 
 ### 5.16.1. Статус и условие старта
 
-Статус пакета: `SPECIFIED_NOT_STARTED`.
+Статус пакета: `ACCEPTED_AND_LOCALLY_INTEGRATED`. Итоговый вердикт архитектора
+и сопровождающий его локальный package/merge flow записаны в §5.16.8. Условие
+старта ниже исторически зафиксировано как оно стояло в задании.
 
 Пакет можно начать только после того, как принятые
 `rust-architecture-conformance-1` и `rust-architecture-conformance-2` будут
@@ -3854,6 +3856,22 @@ node test/kernel-validate.test.mjs
 git diff --check
 ```
 
+**Правило корректирующих раундов.** Полный gate выше относится к одному
+финальному кандидату после архитектурного одобрения и не повторяется после
+каждого `CHANGES_REQUESTED`. В промежуточном корректирующем раунде исполнитель
+запускает только целевые Rust-ворота, `node --check` для изменённого
+`test/conformance-harness.test.mjs` и `git diff --check`. Если раунд меняет
+наблюдаемое Node/Rust-поведение, запускается отдельный сфокусированный
+исполняемый case, когда харнесс позволяет выбрать его безопасно; иначе тест
+добавляется и синтаксически проверяется, а полный
+`node --test test/conformance-harness.test.mjs` откладывается до финального
+gate. `node test/kernel-validate.test.mjs` в корректирующих раундах не
+повторяется без отдельного прямого назначения. После последней Rust-правки оба
+полных Node-набора выполняются один раз на неизменяемом финальном кандидате.
+Это правило является применением общего протокола `AGENTS.md` §9 и имеет
+приоритет над механическим копированием списка финальных ворот в очередное
+задание исполнителю.
+
 Conformance не заменяет §5.16.3–§5.16.5. Полный Node gate исполнитель не
 запускает до архитектурного одобрения первой передачи.
 
@@ -3886,6 +3904,140 @@ Conformance не заменяет §5.16.3–§5.16.5. Полный Node gate и
 > Для первой передачи выполни только targeted gates §5.16.6. Передай
 > `READY_FOR_ARCHITECT_REVIEW` (не `ACCEPTED`), карту перемещённых symbols,
 > список production panic sites, различия и результаты каждой команды.
+
+### 5.16.8. Реализация и статус передачи (исполнитель, 2026-09-22)
+
+Пакет реализован исполнителем в рабочем дереве (без Git-записей) за первую
+передачу и четыре последующих корректирующих раунда `CHANGES_REQUESTED`
+архитектора. Статус передачи: `READY_FOR_ARCHITECT_REVIEW`. Не `ACCEPTED` —
+итоговый вердикт принимает архитектор после независимой проверки; настоящая
+запись не провозглашает приёмку самостоятельно.
+
+**Итоговый вердикт архитектора (2026-09-22): `ACCEPTED`.** Все замечания пяти
+раундов закрыты; полный финальный gate четвёртого корректирующего раунда и
+целевой документационный gate финализационного раунда приняты как достаточное
+доказательство. Пакет локально интегрирован сопровождающим эту запись
+package/merge flow. Это принятие не начинает 7d или пакет 8 и не разрешает
+публикацию `dev`.
+
+**Содержание раундов.** Раунд 1 — маршрут `WorkspaceReader -> app DTO -> core
+domain/checks -> Vec<Diagnostic>` для всех пяти семейств, единственная
+production-реализация порта (`meridian_cli::adapters::workspace_reader::FsWorkspaceReader`),
+CLI-модули сведены к тонким shims. Раунд 2 — типизированные directory entries
+(`meridian_core::types::EntryName`), устранение fail-open путей парсера
+(`meridian_app::validation::mechanical_integrity::{regex_is_match,
+regex_capture1, regex_collect_captures}`), явный typed-result вместо
+`filter_map(...ok())` в `instruction-topics`/`stack-profiles`, два намеренных
+Rust-native отличия (`sha-provenance` неполный `source_archive`,
+`operating-foundation` entry без `id`) документированы в `COMPATIBILITY.md` с
+matched Node/Rust conformance-тестами. Раунд 3 — `agent-instruction-identity`
+получил construction-report модель (`CompleteIdentity`/
+`IdentityConstructionIssue`); `sha-provenance` получил валидирующие
+`SkillPin::new`/`SourceArchive::new`. Раунд 4 (текущий кандидат) — `sha-provenance`
+переведён на единственные production construction report builders
+(`build_pin_report`/`build_archive_report` -> `PinConstructionReport`/
+`ArchiveConstructionReport`), устраняющие независимый вызов low-level
+валидаторов приложением; `operating-foundation` декомпозирован так, что
+id/ru/en-сигнатура записи/строки остаётся доступной pool-agreement даже при
+пустом `body`/`ru`/`en` (без ложного «halves disagree», без нового
+`entry_missing_bilingual_name` — пустое bilingual-имя мапится на существующий
+Node-совместимый mismatch); `IncoherentField` остаётся внутренним construction
+issue агента-инструкции без отдельного user-visible diagnostic. Финализационный
+раунд (эта передача) синхронизирует §5.16.1/§4/§10 этого документа,
+исправляет две устаревшие ссылки в `COMPATIBILITY.md` и три устаревших
+doc comment в `meridian-core`/`meridian-app`, не меняя код или наблюдаемое
+поведение.
+
+**Карта: старый CLI symbol -> новый owner/symbol (по пяти семействам).**
+
+| Семейство | Старый CLI symbol (monolithic `meridian-cli/src/commands/validate/<family>.rs`) | Новый owner/symbol |
+|---|---|---|
+| sha-provenance | `fn run` (собственные `std::fs`, `serde_json::Value`, digest, path join); `fn short` | `meridian_app::validation::mechanical_integrity::sha_provenance::run` (оркестрация через порт); `meridian_core::mechanical_integrity::sha_provenance::{build_pin_report, build_archive_report, PinConstructionReport, ArchiveConstructionReport, SkillPin, SourceArchive, short}`; CLI — тонкий shim `meridian_cli::commands::validate::sha_provenance::run`, вызывающий app |
+| instruction-topics | `fn run`, `fn dedupe_preserve_order`, `fn type_name`, `struct TestDir` | `meridian_app::validation::mechanical_integrity::instruction_topics::run`; `meridian_core::mechanical_integrity::{dedupe_preserve_order, instruction_topics::{TopicId, TopicPool, check_pool_agreement}}`; CLI — тонкий shim |
+| operating-foundation | `fn run`, `fn dedupe_preserve_order`, `fn duplicates_after_first`, `struct Row` | `meridian_app::validation::mechanical_integrity::operating_foundation::{run, resolve_entries, extract_rows}`; `meridian_core::mechanical_integrity::operating_foundation::{FoundationEntry, FoundationRow, check_pool, empty_body_row_ids, entry_missing_id}`; CLI — тонкий shim |
+| stack-profiles | `fn run`, `fn dedupe_preserve_order`, `fn type_name` | `meridian_app::validation::mechanical_integrity::stack_profiles::run`; `meridian_core::mechanical_integrity::stack_profiles::{StackProfileName, StackProfilePool, check_pool_agreement}`; CLI — тонкий shim |
+| agent-instruction-identity | `fn run`, `fn capture`, `fn matches`, `fn relative_slash` (кандидат-отбор и regex внутри CLI) | `meridian_app::validation::mechanical_integrity::agent_instruction_identity::{run, select_candidates, RawFrontMatter}` (regex здесь; `meridian-core` без `fancy-regex`); `meridian_core::mechanical_integrity::agent_instruction_identity::{build_identity, evaluate_document, CompleteIdentity, IdentityConstructionIssue}`; CLI — тонкий shim |
+
+Общее для всех пяти: единственная production-реализация порта —
+`meridian_cli::adapters::workspace_reader::FsWorkspaceReader` (impl
+`meridian_app::workspace::WorkspaceReader`); типизированный путь —
+`meridian_core::types::WorkspaceRelativePath`; типизированное имя записи
+каталога — `meridian_core::types::EntryName`.
+
+**Production `unwrap`/`expect` audit (полный список, обоснование на месте).**
+Ни один сайт не зависит от пользовательских/файловых данных — каждый
+guarded литералом, кодовой константой или непосредственно предшествующей
+проверкой:
+
+- `meridian-core/src/mechanical_integrity/mod.rs:26,30` —
+  `Diagnostic::new(level, message).expect("message is non-empty")`: `message`
+  всегда построен через `format!` с непустым литеральным префиксом.
+- `meridian-app/src/validation/mechanical_integrity/{operating_foundation,instruction_topics,stack_profiles}.rs`
+  (`fn fail`) — тот же паттерн, тот же инвариант.
+- `meridian-app/.../agent_instruction_identity.rs:85` —
+  `NormField::parse(f).expect(...)`: `f` перебирает `NORM_FIELDS` — тот же
+  модуль, что и `NormField::parse`, оба списка синхронизированы намеренно и
+  проверены тестом.
+- `meridian-app/.../agent_instruction_identity.rs:88-104` (9 сайтов) —
+  `Regex::new(ЛИТЕРАЛ).expect("... pattern compiles")`: regex — исходный
+  литерал, ошибка возможна только при опечатке в коде (compile-time
+  инвариант), не во время выполнения.
+- `meridian-app/.../{operating_foundation,instruction_topics,stack_profiles}.rs`
+  — `WorkspaceRelativePath::new(YAML_PATH/MD_PATH/GLOSSARY_PATH/PRINCIPLES_PATH).expect("literal path is valid")`
+  и `sha_provenance.rs` — `WorkspaceRelativePath::new("skills").expect(...)`:
+  все аргументы — `const &str` литералы, синтаксически валидные workspace-пути
+  по построению.
+- `meridian-app/.../{operating_foundation,instruction_topics,stack_profiles}.rs`
+  — `yaml_raw.unwrap()`/`glossary_raw.unwrap()`/`principles_raw.unwrap()`/
+  `md_raw.unwrap()`: каждый непосредственно следует за `if x.is_none() || ...
+  { return ...; }` — к моменту `.unwrap()` значение гарантированно `Some`.
+- `meridian-app/.../{operating_foundation,instruction_topics,stack_profiles}.rs`
+  — `Regex::new(ЛИТЕРАЛ).expect("row pattern compiles")`: тот же
+  compile-time-инвариант, что и выше.
+
+Новых `unwrap`/`expect`/`panic!` сайтов раунд 4 не добавил; список идентичен
+раунду 2 (первому, где аудит был выполнен полностью).
+
+**Точный список изменённых файлов (рабочее дерево, без Git-записей).**
+
+Изменённые (`M`): `AGENTS.md`\*, `COMPATIBILITY.md`, `governance/plans/meridian-rust-migration-program-plan.md`\*,
+`meridian-app/src/lib.rs`, `meridian-app/src/source_format/mod.rs`,
+`meridian-cli/src/commands/validate/{agent_instruction_identity,document_identity,instruction_topics,mod,operating_foundation,sha_provenance,stack_profiles}.rs`,
+`meridian-cli/src/lib.rs`, `meridian-cli/tests/binary_runs.rs`,
+`meridian-core/src/lib.rs`, `meridian-core/src/types/mod.rs`,
+`test/conformance-harness.test.mjs`.
+
+Новые (`??`): `meridian-app/src/source_format/markdown_identity.rs`,
+`meridian-app/src/validation/{mod.rs,mechanical_integrity/{mod,agent_instruction_identity,instruction_topics,operating_foundation,sha_provenance,stack_profiles}.rs}`,
+`meridian-app/src/workspace/{mod,reader}.rs`,
+`meridian-cli/src/adapters/{mod,workspace_reader}.rs`,
+`meridian-cli/src/commands/validate/mechanical_integrity_boundary.rs`,
+`meridian-core/src/mechanical_integrity/{mod,agent_instruction_identity,instruction_topics,operating_foundation,pool,sha_provenance,stack_profiles}.rs`,
+`meridian-core/src/types/{entry_name,workspace_relative_path}.rs`.
+
+\* `AGENTS.md` и этот план несут владельческую политику корректирующих раундов
+(§9/выше в этом разделе), применённую до пятого раунда, и правку §5.16.1/§4/§10
+этим же раундом — оба файла не относятся к production-коду пакета.
+
+**Проверки, выполненные исполнителем.** Целевой набор §5.16.6 зелёный на
+каждом из четырёх корректирующих раундов (см. соответствующие передачи в
+чате с архитектором; краткая сводка последнего раунда — `cargo fmt --all --
+check` чисто; `cargo build --workspace` чисто; `cargo clippy --workspace
+--all-targets --all-features -- -D warnings` чисто; `RUSTDOCFLAGS="-D
+warnings" cargo doc --workspace --no-deps` чисто; `cargo test -p
+meridian-core mechanical_integrity` — 71 passed; `cargo test -p meridian-app
+mechanical_integrity` — 54 passed; `cargo test -p meridian-cli
+mechanical_integrity` — 9 passed; `cargo test -p meridian-cli` — 79 passed;
+`cargo test --workspace` — 725 passed; `node --test
+test/conformance-harness.test.mjs` — 99 passed, 0 failed; `node
+test/kernel-validate.test.mjs` — 293 passed, 0 failed; `git diff --check`
+чисто). Пятый, финализационный раунд документации Node-наборы не повторяет
+(поведение и Node corpus не менялись) — запускает только корректирующие
+ворота, результаты в этой же передаче исполнителя.
+
+**Git.** `HEAD` не сдвигался на протяжении всех пяти раундов, индекс пуст,
+`branch/switch/add/commit/merge/rebase/reset/stash/tag/push` не выполнялись
+ни разу; чужие незакоммиченные изменения не тронуты.
 
 ## 6. Ворота Rust
 
@@ -4154,7 +4306,7 @@ last_completed_package: knowledge-agent-foundation
 current_package: rust-architecture-conformance
 current_package_status: conformance_1_and_2_accepted_and_locally_integrated
 next_package: meridian-cli-foundation-architecture-remediation
-next_package_status: specified_not_started
+next_package_status: accepted_and_locally_integrated
 concord_status: paused_pending_meridian_rust_release
 release_version: unassigned
 release_gate: closed
@@ -4193,3 +4345,28 @@ Concord остаётся на паузе.
 Статус НЕ `ACCEPTED`: итоговый вердикт пакета целиком — решение архитектора
 после этой передачи, не самопровозглашённое исполнителем. 7d и пакет 8
 по-прежнему не начинаются.
+
+**Обновление (2026-09-22, §5.16, четвёртый корректирующий раунд,
+финализационный).** `next_package_status` синхронизирован:
+`ready_for_architect_review_not_accepted` —
+`meridian-cli-foundation-architecture-remediation` реализован исполнителем в
+рабочем дереве (без Git-записей) за первую передачу и четыре корректирующих
+раунда `CHANGES_REQUESTED`; целевой набор ворот §5.16.6 зелёный на каждом
+раунде, полный `cargo test --workspace` и оба Node-набора (conformance
+harness — 99/99, `kernel-validate.test.mjs` — 293/293) зелёные на кандидате
+четвёртого раунда (§5.16.8). Статус НЕ `ACCEPTED`: итоговый вердикт —
+решение архитектора после независимой проверки, не самопровозглашённое
+исполнителем. `current_package`/`current_package_status` не переписаны —
+`rust-architecture-conformance` остаётся исторической записью предыдущего
+пакета. Ни 7d, ни пакет 8 этим обновлением не открываются: их запуск
+по-прежнему заблокирован до независимой архитектурной приёмки
+`meridian-cli-foundation-architecture-remediation`.
+
+**Обновление (2026-09-22, §5.16, итоговый вердикт архитектора).** Пакет
+`meridian-cli-foundation-architecture-remediation` принят после независимой
+проверки фактического production route, канонического реестра совместимости,
+публичной документации и переданных результатов ворот; статус синхронизирован
+как `accepted_and_locally_integrated`. Локальная интеграция выполнена отдельным
+package commit и отдельным `--no-ff` merge-коммитом по действующему режиму
+`AGENTS.md` §6.7, без публикации `dev` или исходной ветви. 7d и пакет 8 этим
+решением не начинаются.

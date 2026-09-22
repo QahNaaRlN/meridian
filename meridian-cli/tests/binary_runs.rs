@@ -235,23 +235,55 @@ fn validate_reports_blocked_not_ok_on_this_kernel_with_zero_real_failures() {
     assert_eq!(value["command"], "validate");
     assert_eq!(value["result"]["ok"], false);
     assert_eq!(value["result"]["failures"].as_array().unwrap().len(), 0);
-    // Ground-truth cross-check against the real Node reference's own output
-    // on this exact tree (`node scripts/kernel-validate.mjs`): 348 tracked
-    // names (was 302 before the 7a merge, 333 was this constant's own
-    // stale value going into subpackage 7c — the real count was already
-    // 348 at the 7b merge commit `07229f6`, confirmed by
-    // `git ls-tree -r --name-only 07229f6 | wc -l`; 7c's own four new
-    // source files are not `git add`ed by this package and do not move
-    // this count further), 12/12 registries, 20 satisfied / 27 rejected
-    // rule-resolution fixtures.
-    assert_eq!(value["result"]["stats"]["document_identity_checked"], 348);
+    // `document_identity_checked` must equal the Kernel's ACTUAL tracked
+    // file count, derived HERE, independently, at test-run time — never a
+    // frozen literal. A literal goes stale every time a later package adds
+    // or removes a tracked file (the corrective round that replaced this
+    // assertion, `meridian-cli-foundation-architecture-remediation` item 6,
+    // found the previous literal `348` already three merges out of date at
+    // its own current HEAD, 383 — itself a replacement for an even earlier
+    // stale `333`/`302`). This still exercises the real `git ls-files`
+    // path end to end (a genuinely separate process invocation and parse
+    // from `meridian_cli::kernel::list_git_tracked_files`'s own, not a
+    // read of its result), so a real divergence between what `validate`
+    // reports and what Git actually tracks is still caught.
+    let git_tracked_count = {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(kernel)
+            .args(["ls-files", "-z"])
+            .output()
+            .expect("git ls-files runs");
+        assert!(output.status.success(), "git ls-files failed: {output:?}");
+        String::from_utf8(output.stdout)
+            .expect("git ls-files output is UTF-8")
+            .split('\0')
+            .filter(|s| !s.is_empty())
+            .count()
+    };
+    assert_eq!(
+        value["result"]["stats"]["document_identity_checked"],
+        git_tracked_count,
+        "validate's own tracked-file count must match a fresh, independent `git ls-files` on this exact checkout"
+    );
     assert_eq!(value["result"]["stats"]["schema_validated"], 12);
     assert_eq!(value["result"]["stats"]["schema_attempted"], 12);
     assert_eq!(value["result"]["stats"]["rule_resolution_satisfied"], 20);
     assert_eq!(value["result"]["stats"]["rule_resolution_rejected"], 27);
+    // The three `agent_instruction_identity_*` counts below are, like
+    // `document_identity_checked` above, a snapshot of THIS checkout's real
+    // Markdown content (every document carrying its own Front Matter,
+    // classified by `standards/workspace/agent-instruction-identity.md` §7)
+    // rather than a synthetic fixture — they drift whenever a later,
+    // unrelated package changes how many Kernel documents declare (fully or
+    // partially) a topic/profile/delivery/activation. Cross-checked
+    // independently of `meridian_cli` (a standalone Python re-derivation of
+    // §7 reading raw `git ls-files '*.md'` content directly) as part of the
+    // corrective round that found the previous values (28/22/30) stale —
+    // `meridian-cli-foundation-architecture-remediation` item 6.
     assert_eq!(
         value["result"]["stats"]["agent_instruction_identity_declared_norms"],
-        28
+        29
     );
     assert_eq!(
         value["result"]["stats"]["agent_instruction_identity_undeclared_prescriptive"],
@@ -259,7 +291,7 @@ fn validate_reports_blocked_not_ok_on_this_kernel_with_zero_real_failures() {
     );
     assert_eq!(
         value["result"]["stats"]["agent_instruction_identity_undeclared_other"],
-        30
+        32
     );
     // 20 before subpackage 7a, 15 after 7a removed its own five families;
     // subpackage 7b then removed its own seven families, and subpackage 7c

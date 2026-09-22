@@ -22,6 +22,7 @@
 //! only crate that knows SQLite. No command here re-implements a domain
 //! algorithm `meridian-app`/`meridian-core` already provide.
 
+pub mod adapters;
 pub mod cli;
 pub mod commands;
 pub mod events;

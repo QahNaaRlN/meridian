@@ -28,6 +28,7 @@
 //
 // Usage: node test/conformance-harness.test.mjs
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -1717,6 +1718,278 @@ for (const family of VALIDATE_MUTATION_FAMILIES_7A_ADVERSARIAL) {
       assert(
         value.result.failures.some((f) => f.startsWith('stack-profiles: "profiles" must be a list')),
         `ожидался authored FAIL с префиксом \`stack-profiles: "profiles" must be a list\`, получено: ${JSON.stringify(value.result.failures)}`,
+      );
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Package `meridian-cli-foundation-architecture-remediation`
+// (`meridian-rust-migration-program-plan.md` §5.16), corrective round, item
+// 7: sha-provenance path confinement. `scripts/kernel-validate.mjs` resolves
+// a pin's `artifact`/`source_archive.path` with `path.join(dir, ...)`, which
+// does not confine the result to `dir` — a pinned name of `../../<file>`
+// walks back out of the skill's own directory and is verified against
+// whatever real file sits there. `meridian_core::types::WorkspaceRelativePath`
+// rejects a `..` component at construction, so the Rust CLI reports the
+// SAME "which does not exist"/"source archive ... is missing" text an
+// ordinary missing file already produces — see this suite's own
+// `COMPATIBILITY.md` entry and
+// `meridian-app/src/validation/mechanical_integrity/sha_provenance.rs`'s own
+// doc comment. Both fields are exercised, on the SAME real mutated Kernel
+// tree (`copyRepoWithoutGitOrTarget`), each with its own escaping skill so
+// the two cases never interfere with each other's digest check.
+// ---------------------------------------------------------------------------
+function shaProvenancePathConfinementCase(fieldLabel, mutate) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `conformance-harness-sha-provenance-escape-${fieldLabel}-`));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const skillName = `escape-test-skill-${fieldLabel}`;
+    fs.mkdirSync(path.join(dir, 'skills', skillName), { recursive: true });
+    mutate(dir, skillName);
+
+    const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+      cwd: ROOT,
+      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      encoding: 'utf8',
+    });
+    check(`намеренная граница: Node-эталон следует за экранирующим ${fieldLabel} и верифицирует файл ВНЕ каталога скилла (path.join не ограничивает)`, () => {
+      assert(nodeRun.error === undefined, `spawnSync не должен был сообщить об ошибке запуска, получено: ${nodeRun.error}`);
+      assert(
+        nodeRun.stdout.includes(`${skillName} matches its pin`) ||
+          nodeRun.stdout.includes(`${skillName} source archive matches its pin`),
+        `ожидалась строка OK, подтверждающая, что Node прочитал файл вне каталога скилла и его дайджест совпал, получено stdout: ${JSON.stringify(nodeRun.stdout)}`,
+      );
+      assert(
+        !nodeRun.stdout.includes(`FAIL  sha-provenance: ${skillName}`),
+        `Node не должен был сообщить об отказе для этого скилла — тест доказывает обратное (эталон следует за экранирующим путём), получено stdout: ${JSON.stringify(nodeRun.stdout)}`,
+      );
+    });
+
+    const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    check(`намеренная граница: реальный \`meridian validate\` отклоняет экранирующий ${fieldLabel} как несуществующий (WorkspaceRelativePath не пересекает границу скилла)`, () => {
+      assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
+      let value;
+      try {
+        value = JSON.parse(rustRun.stdout.trim());
+      } catch (e) {
+        throw new Error(`ожидался ровно один JSON-документ на stdout, получено: ${JSON.stringify(rustRun.stdout)} (${e.message})`);
+      }
+      const relevant = value.result.failures.filter((f) => f.includes(skillName));
+      assert(relevant.length > 0, `ожидался хотя бы один FAIL, упоминающий ${skillName}, получено: ${JSON.stringify(value.result.failures)}`);
+      assert(
+        relevant.every((f) => f.includes('which does not exist') || f.includes('is missing')),
+        `ожидался ТОТ ЖЕ текст диагностики, что и для обычного отсутствующего файла, получено: ${JSON.stringify(relevant)}`,
+      );
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+  }
+}
+
+shaProvenancePathConfinementCase('artifact', (dir, skillName) => {
+  const secretContent = 'top secret, outside the skill directory\n';
+  const secretDigest = crypto.createHash('sha256').update(secretContent, 'utf8').digest('hex');
+  fs.writeFileSync(path.join(dir, 'escaped-secret.txt'), secretContent);
+  fs.writeFileSync(
+    path.join(dir, 'skills', skillName, 'PIN.yaml'),
+    `artifact: ../../escaped-secret.txt\nsha256: ${secretDigest}\n`,
+  );
+});
+
+shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
+  const artifactContent = 'ok\n';
+  const artifactDigest = crypto.createHash('sha256').update(artifactContent, 'utf8').digest('hex');
+  const archiveBytes = Buffer.from('not really a zip, but real bytes outside the skill directory');
+  const archiveDigest = crypto.createHash('sha256').update(archiveBytes).digest('hex');
+  fs.writeFileSync(path.join(dir, 'skills', skillName, 'SKILL.md'), artifactContent);
+  fs.writeFileSync(path.join(dir, 'escaped-archive.zip'), archiveBytes);
+  fs.writeFileSync(
+    path.join(dir, 'skills', skillName, 'PIN.yaml'),
+    `artifact: SKILL.md\nsha256: ${artifactDigest}\nsource_archive:\n  path: ../../escaped-archive.zip\n  sha256: ${archiveDigest}\n`,
+  );
+});
+
+// Positive counterpart, on the SAME real repository copy: an ordinary
+// confined relative path (including a subdirectory) must still verify
+// cleanly on BOTH sides — the confinement fix rejects only an escaping
+// path, never a normal one.
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-sha-provenance-confined-'));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const skillName = 'confined-nested-skill';
+    const content = 'nested body\n';
+    const digest = crypto.createHash('sha256').update(content, 'utf8').digest('hex');
+    // A lower-kebab-case, non-Markdown nested path on purpose: this fixture
+    // only proves the confined-path join itself, and a `.md` name would
+    // also trip the UNRELATED `document-identity` check (naming/Front
+    // Matter), which is not what this test is about.
+    fs.mkdirSync(path.join(dir, 'skills', skillName, 'docs'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'skills', skillName, 'docs', 'artifact.txt'), content);
+    fs.writeFileSync(
+      path.join(dir, 'skills', skillName, 'PIN.yaml'),
+      `artifact: docs/artifact.txt\nsha256: ${digest}\n`,
+    );
+
+    const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+      cwd: ROOT,
+      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      encoding: 'utf8',
+    });
+    check('позитивный контроль: обычный вложенный относительный путь артефакта верифицируется на Node-эталоне', () => {
+      assert(nodeRun.stdout.includes(`${skillName} matches its pin`), `получено stdout: ${JSON.stringify(nodeRun.stdout)}`);
+    });
+
+    const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    check('позитивный контроль: обычный вложенный относительный путь артефакта верифицируется через WorkspaceRelativePath (Rust)', () => {
+      let value;
+      try {
+        value = JSON.parse(rustRun.stdout.trim());
+      } catch (e) {
+        throw new Error(`ожидался ровно один JSON-документ на stdout, получено: ${JSON.stringify(rustRun.stdout)} (${e.message})`);
+      }
+      const relevant = value.result.failures.filter((f) => f.includes(skillName));
+      assert(relevant.length === 0, `ожидалось отсутствие FAIL для ${skillName}, получено: ${JSON.stringify(relevant)}`);
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Package `meridian-cli-foundation-architecture-remediation`, second
+// corrective round, item 4: the two architect-approved intentional
+// differences from the first corrective round's item 2 — an incomplete
+// `source_archive` declaration (`sha-provenance`) and an `operating-foundation`
+// data entry with no `id` — each finalized here with a real Node/Rust
+// mutated-tree comparison, on the SAME fixture, asserting the EXACT
+// diagnostic/verdict difference. Node is never modified to agree.
+// ---------------------------------------------------------------------------
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-sha-provenance-incomplete-archive-'));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const skillName = 'incomplete-archive-skill';
+    const artifactContent = 'ok\n';
+    const artifactDigest = crypto.createHash('sha256').update(artifactContent, 'utf8').digest('hex');
+    fs.mkdirSync(path.join(dir, 'skills', skillName), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'skills', skillName, 'SKILL.md'), artifactContent);
+    // `source_archive` declares only `path`, never `sha256` — Node's own
+    // `if (arch?.path && arch?.sha256)` guard is false, so the whole block
+    // is skipped in silence (no ok, no fail, no warn at all for it).
+    fs.writeFileSync(
+      path.join(dir, 'skills', skillName, 'PIN.yaml'),
+      `artifact: SKILL.md\nsha256: ${artifactDigest}\nsource_archive:\n  path: source/archive.zip\n`,
+    );
+
+    const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+      cwd: ROOT,
+      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      encoding: 'utf8',
+    });
+    check('намеренная граница: Node-эталон молча пропускает неполный source_archive (ни OK, ни FAIL)', () => {
+      assert(nodeRun.error === undefined, `spawnSync не должен был сообщить об ошибке запуска, получено: ${nodeRun.error}`);
+      assert(
+        nodeRun.stdout.includes(`${skillName} matches its pin`),
+        `ожидался OK для самого артефакта, получено stdout: ${JSON.stringify(nodeRun.stdout)}`,
+      );
+      assert(
+        !nodeRun.stdout.includes(`${skillName} source archive`),
+        `Node не должен был сообщить ни OK, ни FAIL про source archive этого скилла вообще, получено stdout: ${JSON.stringify(nodeRun.stdout)}`,
+      );
+    });
+
+    const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    check('намеренная граница: реальный `meridian validate` сообщает FAIL про неполный source_archive (Incomplete — ошибка конструктора, а не домен-вариант)', () => {
+      assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
+      let value;
+      try {
+        value = JSON.parse(rustRun.stdout.trim());
+      } catch (e) {
+        throw new Error(`ожидался ровно один JSON-документ на stdout, получено: ${JSON.stringify(rustRun.stdout)} (${e.message})`);
+      }
+      const relevant = value.result.failures.filter((f) => f.includes(skillName));
+      assert(relevant.length === 1, `ожидался ровно один FAIL про ${skillName}, получено: ${JSON.stringify(value.result.failures)}`);
+      assert(
+        relevant[0].includes('missing path, sha256, or both'),
+        `получено: ${JSON.stringify(relevant)}`,
+      );
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+  }
+}
+
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-operating-foundation-entry-without-id-'));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const yamlPath = path.join(dir, 'standards', 'workspace', 'operating-foundation.yaml');
+    const original = fs.readFileSync(yamlPath, 'utf8');
+    // Adds one raw `terms[]` entry with no `id` at all, immediately after
+    // the `terms:` key — Node's own `String(entry?.id ?? '')` plus its
+    // every truthy-`id` guard (`duplicateData`'s filter, `undocumented`'s
+    // filter) makes this entry invisible to every one of `comparePool`'s
+    // checks; it produces neither OK nor FAIL. Every other real term/row
+    // stays untouched, so this mutation cannot introduce any OTHER
+    // disagreement on either side.
+    assert(original.includes('\nterms:\n'), 'ожидался ключ "terms:" в operating-foundation.yaml для мутации');
+    const mutated = original.replace(
+      '\nterms:\n',
+      '\nterms:\n  - canonical_ru: "Без идентификатора"\n    canonical_en: "No id"\n',
+    );
+    fs.writeFileSync(yamlPath, mutated);
+
+    const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+      cwd: ROOT,
+      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      encoding: 'utf8',
+    });
+    check('намеренная граница: Node-эталон молча пропускает entry без id в operating-foundation (ни один FAIL про него)', () => {
+      assert(nodeRun.error === undefined, `spawnSync не должен был сообщить об ошибке запуска, получено: ${nodeRun.error}`);
+      assert(
+        !nodeRun.stdout.includes('have no id'),
+        `Node не должен был сообщить ни про один entry без id, получено stdout: ${JSON.stringify(nodeRun.stdout)}`,
+      );
+      assert(
+        !nodeRun.stdout.includes('FAIL  operating-foundation:'),
+        `остальные term/principle записи не должны были начать расходиться, получено stdout: ${JSON.stringify(nodeRun.stdout)}`,
+      );
+    });
+
+    const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    check('намеренная граница: реальный `meridian validate` сообщает FAIL про entry без id (транспортный уровень считает и сообщает, домен строит только валидные)', () => {
+      assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
+      let value;
+      try {
+        value = JSON.parse(rustRun.stdout.trim());
+      } catch (e) {
+        throw new Error(`ожидался ровно один JSON-документ на stdout, получено: ${JSON.stringify(rustRun.stdout)} (${e.message})`);
+      }
+      const relevant = value.result.failures.filter((f) => f.includes('have no id'));
+      assert(relevant.length === 1, `ожидался ровно один FAIL про entry без id, получено: ${JSON.stringify(value.result.failures)}`);
+      assert(relevant[0].includes('1 term entry'), `получено: ${JSON.stringify(relevant)}`);
+      const otherFoundationFailures = value.result.failures.filter(
+        (f) => f.includes('operating-foundation:') && !f.includes('have no id'),
+      );
+      assert(
+        otherFoundationFailures.length === 0,
+        `остальные term/principle записи не должны были начать расходиться, получено: ${JSON.stringify(otherFoundationFailures)}`,
       );
     });
   } finally {

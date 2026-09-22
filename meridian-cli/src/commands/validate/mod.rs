@@ -87,13 +87,15 @@ mod task_pattern_registry;
 mod task_specification;
 
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use meridian_app::events::EventSink;
 use meridian_app::validation::mechanical_integrity::OperationError;
-use meridian_core::types::{Diagnostic, DiagnosticLevel, NonEmptyString};
+use meridian_app::workspace::{GitInspector, GitInspectorError};
+use meridian_core::types::{Diagnostic, DiagnosticLevel, NonEmptyString, WorkspaceRelativePath};
 use serde_json::{json, Value};
 
+use crate::adapters::git_inspector::{CachedGitInspector, RealGitInspector};
 use crate::cli::{OutputFormat, ParsedArgs};
 use crate::exit_code;
 use crate::kernel::{self, WalkError};
@@ -157,6 +159,22 @@ fn split_diagnostics(diagnostics: Vec<Diagnostic>) -> (Vec<String>, Vec<String>)
     (failures, warnings)
 }
 
+/// The ONE place either family's CLI presentation prefix
+/// (`task-pattern-registry: ` / `task-specification-contract: `) is ever
+/// added to a message (`rust-architecture-conformance-3` corrective round:
+/// "presentation ownership"). Core and app diagnostic messages for both
+/// families are prefix-free by construction, so this is an unconditional
+/// prepend — never a `starts_with`/`strip_prefix` check for an
+/// already-present copy, because there is never one to find: a caller
+/// passes every message a family's app operation produced exactly once,
+/// from exactly one call site per family.
+fn with_family_prefix(family: &str, messages: Vec<String>) -> Vec<String> {
+    messages
+        .into_iter()
+        .map(|message| format!("{family}: {message}"))
+        .collect()
+}
+
 const COMMAND: &str = "validate";
 pub const ALLOWED_FLAGS: &[&str] = &["kernel", "format"];
 
@@ -193,27 +211,86 @@ fn is_markdown(path: &std::path::Path) -> bool {
         .unwrap_or(false)
 }
 
+/// Resolves the ONE real Git tracked-file snapshot for the whole `validate`
+/// invocation (`rust-architecture-conformance-3` corrective round, "one Git
+/// snapshot for the whole `validate`"): a single `git ls-files -z` process,
+/// via the same production [`GitInspector`]
+/// (`crate::adapters::git_inspector::RealGitInspector`) the
+/// `task-pattern-registry` family uses. [`collect`] hands the RAW resulting
+/// `Result` to [`collect_with_git_result`], which never spawns `git` itself
+/// and normalizes it exactly once — every consumer (`kernel-purity`,
+/// `document-identity`, `task-pattern-registry`) reads that same normalized
+/// typed value.
 fn collect(kernel_root: &Path) -> Result<Collected, CollectError> {
-    let (files, used_git, fallback_warn) = match kernel::list_git_tracked_files(kernel_root) {
-        Some(files) => (files, true, None),
-        None => {
-            let files = kernel::walk_all_files(kernel_root)?;
-            (
-                files,
-                false,
-                Some(
-                    "kernel-purity: Git enumeration unavailable; scanning a filesystem walk instead (untracked files included)"
-                        .to_string(),
-                ),
-            )
-        }
-    };
+    let git_snapshot = RealGitInspector::new(kernel_root).tracked_files();
+    collect_with_git_result(kernel_root, git_snapshot)
+}
+
+/// `Ok` with an EMPTY tracked-file list is folded into `Unavailable` here —
+/// the ONE place in `validate`'s composition that decision is made (matches
+/// the Node reference's own `gitTrackedFiles`, `scripts/kernel-validate.mjs`:
+/// `return files.length ? files : null`). Every downstream consumer in
+/// [`collect_with_git_result`] — the filesystem-universe fallback AND
+/// `task-pattern-registry`'s own tracked-set resolution, via
+/// [`CachedGitInspector`] — reads the RESULT of this normalization, never
+/// the raw snapshot: an empty tracked list is never treated as a trustworthy
+/// "nothing under this root is tracked" answer by anything downstream
+/// (`rust-architecture-conformance-3` corrective round, "one normalized Git
+/// snapshot, no text-based dedup"). `Unavailable` and `InvalidPath` pass
+/// through unchanged.
+fn normalize_git_snapshot(
+    raw: Result<Vec<WorkspaceRelativePath>, GitInspectorError>,
+) -> Result<Vec<WorkspaceRelativePath>, GitInspectorError> {
+    match raw {
+        Ok(tracked) if tracked.is_empty() => Err(GitInspectorError::Unavailable),
+        other => other,
+    }
+}
+
+/// The whole `validate` composition, minus resolving the Git snapshot
+/// itself — split out from [`collect`] so tests can drive every consumer of
+/// that snapshot from one caller-supplied RAW `Result`, without spawning a
+/// real `git` process, and so this function's own production text can be
+/// asserted (structural gate below) to construct no [`RealGitInspector`] of
+/// its own. [`normalize_git_snapshot`] runs first, once, on that raw input;
+/// everything below reads only its normalized result.
+fn collect_with_git_result(
+    kernel_root: &Path,
+    raw_git_snapshot: Result<Vec<WorkspaceRelativePath>, GitInspectorError>,
+) -> Result<Collected, CollectError> {
+    let git_snapshot = normalize_git_snapshot(raw_git_snapshot);
 
     let mut failures = Vec::new();
     let mut warnings = Vec::new();
-    if let Some(warning) = fallback_warn {
-        warnings.push(warning);
-    }
+
+    // The file universe `kernel-purity` and `document-identity` scan.
+    // `InvalidPath` is a distinct data-integrity problem, not mere absence:
+    // it still falls back to a filesystem walk for the file universe (there
+    // is no other file list to scan with), but reports a `Fail`, not a
+    // `Warn` — a snapshot Git itself could not honestly produce is never
+    // presented as an ordinary "Git unavailable" outcome.
+    let (files, used_git): (Vec<PathBuf>, bool) = match &git_snapshot {
+        Ok(tracked) => (
+            tracked
+                .iter()
+                .map(|p| kernel_root.join(p.as_str()))
+                .collect(),
+            true,
+        ),
+        Err(GitInspectorError::Unavailable) => {
+            warnings.push(
+                "kernel-purity: Git enumeration unavailable; scanning a filesystem walk instead (untracked files included)"
+                    .to_string(),
+            );
+            (kernel::walk_all_files(kernel_root)?, false)
+        }
+        Err(GitInspectorError::InvalidPath { raw, reason }) => {
+            failures.push(format!(
+                "kernel-purity: Git reported a workspace-invalid tracked path \"{raw}\" ({reason}); the tracked-file snapshot cannot be trusted as either the Kernel file universe or task-pattern-registry's canonical-link tracked-file set"
+            ));
+            (kernel::walk_all_files(kernel_root)?, false)
+        }
+    };
 
     let purity = kernel_purity::run(kernel_root, &files, used_git);
     failures.extend(purity.failures);
@@ -264,13 +341,27 @@ fn collect(kernel_root: &Path) -> Result<Collected, CollectError> {
         agent_instruction_identity::run(kernel_root, &markdown_files, topics.topic_pool.as_ref())?;
     failures.extend(identity_norms.failures);
 
-    let task_patterns = task_pattern_registry::run(kernel_root, &files);
+    // Reuses the exact NORMALIZED snapshot resolved once above — no second
+    // `git ls-files` for this family (`CachedGitInspector` never spawns a
+    // process), and no false "not in the tracked file set" failures from an
+    // `Ok(empty)` raw answer, since normalization already turned that into
+    // `Unavailable` before this point.
+    let cached_git = CachedGitInspector::new(git_snapshot.clone());
+    let task_patterns = task_pattern_registry::run(kernel_root, &cached_git)?;
     failures.extend(task_patterns.failures);
+    // `task_patterns.warnings` structurally never contains a second copy of
+    // the "Git enumeration unavailable" fact: `meridian_app`'s own
+    // `task_pattern_registry::evaluate` carries that ONE fact on a separate
+    // typed `Outcome::git_unavailable` field, kept out of its generic
+    // `diagnostics`/`warnings` — nothing here has to scan message text to
+    // find and drop a duplicate (`rust-architecture-conformance-3`
+    // corrective round, "no text-based dedup").
+    warnings.extend(task_patterns.warnings);
 
     let source_registry = instruction_source_registry::run(kernel_root);
     failures.extend(source_registry.failures);
 
-    let task_specification = task_specification::run(kernel_root);
+    let task_specification = task_specification::run(kernel_root, task_patterns.catalog.as_ref())?;
     failures.extend(task_specification.failures);
 
     let execution_state = execution_state::run(kernel_root);
@@ -448,4 +539,300 @@ pub fn run(
 pub fn collect_diagnostics(kernel_root: &Path) -> Result<(Vec<String>, Vec<String>), CollectError> {
     let collected = collect(kernel_root)?;
     Ok((collected.failures, collected.warnings))
+}
+
+/// Structural gates for `rust-architecture-conformance-3`
+/// (`governance/plans/meridian-rust-migration-program-plan.md` §5.17.3,
+/// point 10): the two `task-pattern-registry`/`task-specification-contract`
+/// CLI command modules stay thin composition/presentation shims — no
+/// concrete filesystem I/O, no `serde_json::Value`, no schema navigation,
+/// no domain rules and no reintroduced `evaluate_*(&Value, ...)`
+/// production entrypoint for either family.
+#[cfg(test)]
+mod rust_architecture_conformance_3_structural_gates {
+    fn read(rel: &str) -> String {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(rel);
+        std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()))
+    }
+
+    fn production_text(rel: &str) -> String {
+        let text = read(rel);
+        let production_end = text.find("#[cfg(test)]").unwrap_or(text.len());
+        text[..production_end]
+            .lines()
+            .filter(|line| !line.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn the_two_command_modules_carry_no_direct_io_value_or_domain_rules() {
+        for rel in [
+            "src/commands/validate/task_pattern_registry.rs",
+            "src/commands/validate/task_specification.rs",
+        ] {
+            let production = production_text(rel);
+            for forbidden in [
+                "std::fs",
+                "std::process",
+                "serde_json::Value",
+                "json_schema::",
+                "parse_yaml(",
+                "evaluate_task_pattern_registry(&",
+                "evaluate_task_specification(&",
+            ] {
+                assert!(
+                    !production.contains(forbidden),
+                    "{rel} contains \"{forbidden}\" — this command module must stay a thin composition/presentation shim over meridian-app's own port-based orchestration"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_two_command_modules_only_compose_the_real_app_orchestration_and_adapters() {
+        let expectations: &[(&str, &[&str])] = &[
+            (
+                "src/commands/validate/task_pattern_registry.rs",
+                &[
+                    "app::evaluate(",
+                    "FsWorkspaceReader::new(",
+                    "FsLinkTarget::new(",
+                ],
+            ),
+            (
+                "src/commands/validate/task_specification.rs",
+                &["app::evaluate(", "FsWorkspaceReader::new("],
+            ),
+        ];
+        for (rel, calls) in expectations {
+            let text = read(rel);
+            for call in *calls {
+                assert!(
+                    text.contains(call),
+                    "{rel} must call `{call}` — it must delegate to the real production route, not reimplement it"
+                );
+            }
+        }
+    }
+
+    /// One real Git snapshot for the whole `validate` invocation
+    /// (corrective round item 3): `task_pattern_registry.rs` must receive
+    /// its `GitInspector` from the caller — it must never construct its own
+    /// `RealGitInspector` and spawn a second `git ls-files`.
+    #[test]
+    fn the_registry_command_module_never_constructs_its_own_git_inspector() {
+        let production = production_text("src/commands/validate/task_pattern_registry.rs");
+        assert!(
+            !production.contains("RealGitInspector"),
+            "task_pattern_registry.rs must receive `git: &dyn GitInspector` from its caller, not construct RealGitInspector itself — that would spawn a second real `git ls-files` for the same validate invocation"
+        );
+    }
+
+    /// The composition root (`collect`) is the ONE place in this crate that
+    /// resolves the real Git snapshot; `collect_with_git_result` — which
+    /// does everything else `collect` does — must never construct its own
+    /// `RealGitInspector` either, so every test driving it through a
+    /// caller-supplied `Result` genuinely exercises "no second Git call".
+    #[test]
+    fn real_git_inspector_is_constructed_exactly_once_in_this_module() {
+        let production = production_text("src/commands/validate/mod.rs");
+        let occurrences = production.matches("RealGitInspector::new(").count();
+        assert_eq!(
+            occurrences, 1,
+            "expected exactly one `RealGitInspector::new(` in validate/mod.rs (inside `collect`); found {occurrences}"
+        );
+    }
+}
+
+/// Composition-level coverage for `rust-architecture-conformance-3`
+/// corrective round item 3: one Git snapshot, shared by `kernel-purity`
+/// (via the filesystem-universe fallback) and `task-pattern-registry` (via
+/// `CachedGitInspector`), for the whole `validate` invocation — driven
+/// through [`collect_with_git_result`] so no test here spawns a real `git`
+/// process of its own.
+#[cfg(test)]
+mod rust_architecture_conformance_3_single_git_snapshot {
+    use super::*;
+
+    fn kernel_root() -> std::path::PathBuf {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .to_path_buf()
+    }
+
+    /// A fake `GitInspector` that counts how many times it is asked for the
+    /// tracked-file set — used to prove `CachedGitInspector` (the real
+    /// production wrapper `collect` hands to `task_pattern_registry::run`)
+    /// only ever reads the ALREADY-resolved snapshot, never triggers a
+    /// second underlying lookup of its own.
+    struct CountingGit {
+        calls: std::cell::Cell<u32>,
+        result: Result<Vec<WorkspaceRelativePath>, GitInspectorError>,
+    }
+    impl GitInspector for CountingGit {
+        fn tracked_files(&self) -> Result<Vec<WorkspaceRelativePath>, GitInspectorError> {
+            self.calls.set(self.calls.get() + 1);
+            self.result.clone()
+        }
+    }
+
+    /// Reuses ONE real snapshot (fetched here, directly, exactly once — not
+    /// through `collect`) for both `collect_with_git_result`'s own file
+    /// universe and, through `CachedGitInspector`, `task-pattern-registry`'s
+    /// tracked-set resolution: proves the two no longer each spawn their own
+    /// `git ls-files` for a real, valid snapshot.
+    #[test]
+    fn a_valid_real_snapshot_is_reused_by_every_consumer_without_a_second_lookup() {
+        let root = kernel_root();
+        let real_snapshot = RealGitInspector::new(&root).tracked_files();
+        assert!(real_snapshot.is_ok(), "{real_snapshot:?}");
+
+        let counting = CountingGit {
+            calls: std::cell::Cell::new(0),
+            result: real_snapshot.clone(),
+        };
+        // `task_pattern_registry::run` takes its `git` port from the
+        // caller; feeding it a counting fake here (standing in for what
+        // `collect_with_git_result` does with `CachedGitInspector` in
+        // production) proves the registry route reads the snapshot exactly
+        // once, matching `CachedGitInspector::tracked_files`'s own
+        // zero-process-spawn behaviour.
+        let outcome = super::task_pattern_registry::run(&root, &counting).unwrap();
+        assert_eq!(
+            counting.calls.get(),
+            1,
+            "task_pattern_registry::run must read the shared git port exactly once"
+        );
+        assert!(outcome.catalog.is_some(), "{:?}", outcome.failures);
+
+        let collected = collect_with_git_result(&root, real_snapshot).unwrap();
+        assert!(
+            collected
+                .warnings
+                .iter()
+                .all(|w| !w.contains("Git enumeration unavailable")),
+            "a valid, non-empty real snapshot must never produce a Git-unavailable warning: {:?}",
+            collected.warnings
+        );
+    }
+
+    /// `Unavailable` produces exactly the one existing `kernel-purity`
+    /// fallback warning — `task-pattern-registry`'s own copy of the same
+    /// root cause is not additionally surfaced.
+    #[test]
+    fn unavailable_snapshot_yields_exactly_one_git_enumeration_warning() {
+        let root = kernel_root();
+        let collected =
+            collect_with_git_result(&root, Err(GitInspectorError::Unavailable)).unwrap();
+        let git_warnings: Vec<&String> = collected
+            .warnings
+            .iter()
+            .filter(|w| w.contains("Git enumeration unavailable"))
+            .collect();
+        assert_eq!(
+            git_warnings.len(),
+            1,
+            "expected exactly one Git-enumeration-unavailable warning, found {git_warnings:?}"
+        );
+        assert_eq!(
+            git_warnings[0],
+            "kernel-purity: Git enumeration unavailable; scanning a filesystem walk instead (untracked files included)"
+        );
+    }
+
+    /// Corrective round item 1/4: `Ok(vec![])` — Git ran successfully but
+    /// reports nothing tracked — is normalized to the SAME contract as
+    /// `Unavailable`, not trusted as "nothing under this root is tracked":
+    /// filesystem fallback, exactly the one existing warning, and no false
+    /// "not in the tracked file set" rejection of `task-pattern-registry`'s
+    /// own present canonical links (which an un-normalized `Ok(empty)`
+    /// would previously have produced, since `resolve_tracked_set` treats
+    /// any `Ok` — even empty — as a trustworthy, if empty, tracked set).
+    #[test]
+    fn an_empty_ok_snapshot_is_normalized_to_the_same_contract_as_unavailable() {
+        let root = kernel_root();
+        let collected = collect_with_git_result(&root, Ok(Vec::new())).unwrap();
+
+        let git_warnings: Vec<&String> = collected
+            .warnings
+            .iter()
+            .filter(|w| w.contains("Git enumeration unavailable"))
+            .collect();
+        assert_eq!(
+            git_warnings.len(),
+            1,
+            "expected exactly one Git-enumeration-unavailable warning for Ok(empty), found {git_warnings:?}"
+        );
+        assert_eq!(
+            git_warnings[0],
+            "kernel-purity: Git enumeration unavailable; scanning a filesystem walk instead (untracked files included)"
+        );
+
+        // Filesystem fallback: `checked_files` must match a real filesystem
+        // walk, not a (bogus) zero-tracked-file count.
+        let walked = kernel::walk_all_files(&root).unwrap();
+        assert_eq!(collected.checked_files, walked.len());
+
+        // No false "not in the tracked file set" rejection, and the
+        // registry must still build its catalog via the filesystem-
+        // existence fallback, exactly as a genuine `Unavailable` does.
+        assert!(
+            !collected
+                .failures
+                .iter()
+                .any(|f| f.contains("not in the Kernel's tracked file set")),
+            "an Ok(empty) raw snapshot must never cause a false untracked-link failure: {:?}",
+            collected.failures
+        );
+        assert!(
+            !collected
+                .failures
+                .iter()
+                .any(|f| f.contains("no task-pattern catalog is available")),
+            "an Ok(empty) raw snapshot must still let task-pattern-registry build its catalog via the filesystem-existence fallback: {:?}",
+            collected.failures
+        );
+    }
+
+    /// `InvalidPath` fails closed: a `Fail` diagnostic is reported, and
+    /// `task-pattern-registry` never treats the untrustworthy snapshot as a
+    /// trusted tracked set — its catalog becomes `None`, which propagates
+    /// as `task-specification-contract`'s own "no catalog available"
+    /// failure, exactly like any other registry-side rejection.
+    #[test]
+    fn invalid_path_snapshot_fails_closed_with_no_catalog() {
+        let root = kernel_root();
+        let err = GitInspectorError::InvalidPath {
+            raw: "../escape".to_string(),
+            reason: "workspace path must be relative, not absolute or drive-prefixed".to_string(),
+        };
+        let collected = collect_with_git_result(&root, Err(err)).unwrap();
+        assert!(
+            collected
+                .failures
+                .iter()
+                .any(|f| f.contains("workspace-invalid tracked path")),
+            "{:?}",
+            collected.failures
+        );
+        assert!(
+            collected
+                .failures
+                .iter()
+                .any(|f| f.contains("no task-pattern catalog is available")),
+            "an untrustworthy Git snapshot must leave task-pattern-registry's catalog None, so task-specification-contract reports its own \"no catalog\" failure: {:?}",
+            collected.failures
+        );
+        assert!(
+            !collected
+                .warnings
+                .iter()
+                .any(|w| w.contains("Git enumeration unavailable")),
+            "InvalidPath must never be reported as mere unavailability: {:?}",
+            collected.warnings
+        );
+    }
 }

@@ -35,3 +35,4 @@ topics:
   # среда и история
   - version-control-flow
   - release-versioning
+  - rust-migration-quality

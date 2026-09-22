@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-20
-updated: 2026-08-21
+updated: 2026-09-22
 related_documents:
   - ./agent-instruction-identity.md
   - ./instruction-intake.md
@@ -98,6 +98,7 @@ related_documents:
 |---|---|---|---|
 | `version-control-flow` | как изменение попадает в основную линию | правила ветвления, формы сообщения, запреты прямой записи | содержание изменения |
 | `release-versioning` | как обозначается выпуск | правило номера, момент повышения, состав записи об изменении | момент выпуска |
+| `rust-migration-quality` | как сохраняется качество при миграции на Rust | целевую Rust-архитектуру, Rust-native надёжность и границы совместимости | предметные правила мигрируемой функции |
 
 <!-- meridian:end topic-pool -->
 

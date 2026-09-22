@@ -1,4 +1,6 @@
 ---
+title: Rust architecture conformance 1 — четвёртый корректирующий раунд
+document_type: plan
 id: rust-architecture-conformance-1-fourth-corrective-round
 status: changes-requested
 scope: workspace

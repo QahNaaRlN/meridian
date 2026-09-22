@@ -1,6 +1,6 @@
 ---
 title: Аудит архитектуры всей Rust-кодовой базы Meridian
-document_type: audit
+document_type: report
 status: current
 scope: workspace
 owner: workspace-owner

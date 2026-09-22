@@ -9,6 +9,7 @@ updated: 2026-09-21
 topic: rust-migration-quality
 profile: universal
 delivery: agents-md-section
+activation: task-class
 ---
 
 # Качество миграции Meridian на Rust

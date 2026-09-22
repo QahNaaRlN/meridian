@@ -152,8 +152,9 @@ Concord остаётся на паузе. Активационный рубеж 
 | 6 | Хранилище SQLite (`sqlite-storage-adapter`) | `meridian-storage-sqlite`: схема §4 технической спецификации, транзакционная запись, включённые foreign keys, неизменяемые редакции и доказательства, идемпотентный импорт, резервная копия, канонический экспорт | 3, 5, `instance-repository-retirement-baseline` | accepted — принят и локально интегрирован (§5.3) |
 | — | Корректирующий пакет: основание знаний и агентной среды (`knowledge-agent-foundation`) | Роли баз `tool`/`workspace`, привязка рабочей базы к редакции Kernel, последовательные миграции схемы, маршрутизация хранилищ, версионируемый конверт наблюдаемого события и отключаемый приёмник событий; спецификации `init`/`doctor`/`export` и импорта согласованы с этими границами | 6, `research-governance-foundation` | accepted — принят и интегрирован (§5.4) |
 | 7 | Основа CLI (`meridian-cli-foundation`) | `meridian-cli`: `init`, `doctor`, `validate`, `resolve`, `export`, `--format human|json`, стабильные коды завершения, разделение stdout/stderr; подпакеты 7a–7d остаются исторической декомпозицией объёма | 5–6, `knowledge-agent-foundation`, `rust-architecture-conformance` | architecture-blocked (§5.13): 7a/7b исторически integrated, но не release-ready; приёмка 7c отозвана; 7d не начат |
-| — | Корректирующий пакет архитектуры (`rust-architecture-conformance`) | Устранить нарушения аудита: типизированные границы DTO → domain, обязательные порты, typed diagnostics, перенос предметной логики из CLI, декомпозиция Value-центричных модулей; доказать сохранение бизнес-ценности и обоснованные Rust-native улучшения | 1–7b, аудит §5.13 | active — пакеты 1–2 приняты и локально интегрированы; программа исправления продолжается §5.16 |
+| — | Корректирующий пакет архитектуры (`rust-architecture-conformance`) | Устранить нарушения аудита: типизированные границы DTO → domain, обязательные порты, typed diagnostics, перенос предметной логики из CLI, декомпозиция Value-центричных модулей; доказать сохранение бизнес-ценности и обоснованные Rust-native улучшения | 1–7b, аудит §5.13 | active — пакеты 1–2 и исправление 7a приняты и локально интегрированы; пакет 3 специфицирован, не начат (§5.17) |
 | — | Архитектурное исправление исторического 7a (`meridian-cli-foundation-architecture-remediation`) | Перенести пять семейств 7a из CLI в typed core/app pipeline и ввести реально используемый app-owned `WorkspaceReader`; CLI оставить адаптером и presentation-слоем | `rust-architecture-conformance-1` и `-2`, §5.13 | accepted — принято и локально интегрировано (§5.16.8) |
+| — | Основание типизированных task-контрактов (`rust-architecture-conformance-3`) | Перевести `task-pattern-registry` и `task-specification-contract` на общий typed core/app pipeline; переиспользовать канонические `WorkKind`/`ChangeClass`, ввести реально используемый `GitInspector`, передавать принятую каталогизацию паттернов в спецификацию без повторного разбора | `meridian-cli-foundation-architecture-remediation`, §5.13 | specified, not started (§5.17) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | planned — заблокирован завершением корректирующего пакета и всех подпакетов 7 |
 | 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | planned |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
@@ -4039,6 +4040,256 @@ test/kernel-validate.test.mjs` — 293 passed, 0 failed; `git diff --check`
 `branch/switch/add/commit/merge/rebase/reset/stash/tag/push` не выполнялись
 ни разу; чужие незакоммиченные изменения не тронуты.
 
+## 5.17. Пакет `rust-architecture-conformance-3`: основание типизированных task-контрактов (задание, 2026-09-22)
+
+### 5.17.1. Статус и условие старта
+
+Статус пакета: `SPECIFIED_NOT_STARTED`. Начинать его можно только от ревизии,
+в которой `meridian-cli-foundation-architecture-remediation` принят и локально
+интегрирован (§5.16.8). На момент спецификации условие выполнено: `dev`
+содержит отдельный package commit и отдельный `--no-ff` merge-коммит этого
+пакета. Исполнитель не выполняет Git-записи и передаёт результат со статусом
+`READY_FOR_ARCHITECT_REVIEW`, а не `ACCEPTED`.
+
+### 5.17.2. Почему следующий срез именно такой
+
+Пакет исправляет ровно два оставшихся семейства исторического 7b:
+
+1. `task-pattern-registry`;
+2. `task-specification-contract`.
+
+Это один связный вертикальный срез, а не объединение по удобству. Task
+specification разрешает `task_pattern` против встроенного каталога, а текущий
+CLI повторно разбирает сырой YAML каталога и собирает нетипизированный
+`TaskPatternRef`. После исправления первая операция строит типизированный
+`TaskPatternCatalog`, а вторая потребляет именно этот принятый результат.
+Кроме того, `task_specification` сейчас является неправильным владельцем общих
+`resolve_schema_ref`/`non_portable_reason`, которые импортируют следующие
+семейства 7b/7c. Пакет переносит общую чистую семантику в нейтрального typed
+owner, создавая основание для последующих срезов без преждевременного переноса
+самих этих семейств.
+
+Порядок после этого пакета остаётся явным: сначала остальные семейства 7b,
+затем два оставшихся семейства 7c, затем четыре новых реализации 7d. Пакет 8
+остаётся закрыт.
+
+### 5.17.3. Обязательная архитектура результата
+
+```text
+WorkspaceReader + GitInspector
+  -> private transport DTO / source-format boundary в meridian-app
+  -> domain constructors в meridian-core
+  -> TaskPatternCatalog
+  -> TaskSpecification, разрешённая против этого каталога
+  -> Vec<Diagnostic>
+  -> существующий CLI human/json presentation
+```
+
+1. **Канонические типы core.** `meridian-core` владеет закрытыми domain-типами
+   каталога и спецификации, их конструкторами и чистыми проверками. Уже
+   существующие `meridian_core::resolver::{WorkKind, ChangeClass}`
+   переиспользуются; второй строковый или enum-пул для тех же понятий запрещён.
+   Идентификаторы, обязательные непустые тексты, допустимые сочетания
+   `work_kind`/`change_class`, классификация ссылок и cardinality выражаются
+   типами и конструкторами, а не соглашением над `Value`.
+2. **Transport boundary.** JSON Schema и YAML/JSON decoding остаются в
+   `meridian-app::source_format`/приватных transport DTO. `serde_json::Value`
+   допустим только внутри этой границы и существующего общего schema engine;
+   он не входит в публичную сигнатуру operations/domain constructors и не
+   хранится в domain-типах пакета. Успешная schema-проверка не считается
+   построенным доменным объектом.
+3. **Две app-операции, одна композиция.** App-операция registry читает
+   обязательные schema/envelope/YAML/fixtures и `rule-resolution.md`, строит
+   `TaskPatternCatalog` и возвращает typed diagnostics. App-операция task
+   specification читает свои schema/envelope/fixtures и получает уже
+   построенный каталог как вход. Она не перечитывает и не разбирает
+   `task-pattern-registry.yaml`, не восстанавливает ссылки из кортежей строк и
+   не дублирует его валидацию.
+4. **`WorkspaceReader`.** Оба production routes используют уже принятый
+   app-owned `WorkspaceReader`; прямого `std::fs`, `Path::canonicalize` или
+   `fs::metadata` в двух CLI command-модулях нет. Проверка canonical-link
+   target выполняется через минимальную типизированную capability порта,
+   которая различает missing, I/O, не-regular-file и symlink escape. Можно
+   расширить `WorkspaceReader` либо выделить узкий app-owned companion port,
+   но нельзя передавать callback `Fn(&str) -> Result<(), String>`.
+5. **`GitInspector`.** Пакет вводит app-owned порт и CLI-адаптер для
+   перечисления tracked workspace paths, потому что registry реально
+   использует этот факт. Порт возвращает валидированные
+   `WorkspaceRelativePath` и типизированную ошибку; запуск
+   `std::process::Command("git")` остаётся только в CLI-адаптере. Поведение
+   общего validate при недоступном Git — существующий явный filesystem
+   fallback плюс warning — сохраняется и тестируется; operation не угадывает
+   provenance по пустому списку.
+6. **Общие reference/portability rules.** `resolve_schema_ref` и
+   `non_portable_reason` получают нейтрального владельца в core/app, название
+   которого не связывает их с task specification. Другие пока не исправленные
+   модули могут быть механически переключены на этот owner без изменения их
+   поведения. В `task_specification` допускается только временный публичный
+   re-export без собственной логики, если он необходим для ограничения diff;
+   новые потребители через него запрещены, а карта передачи обязана назвать
+   оставшихся потребителей и план удаления facade.
+7. **Typed diagnostics.** Core/app возвращают
+   `meridian_core::types::Diagnostic`, а ошибки чтения/парсинга/построения
+   представлены отдельными typed errors и не смешиваются с отрицательным
+   предметным результатом. Тексты, уровни, порядок, ограничение отображения
+   первых десяти registry problems, human/json output и exit codes сохраняются
+   на presentation boundary, если архитектор отдельно не примет Rust-native
+   отличие.
+8. **Partial construction.** Ошибка одного элемента каталога не создаёт
+   частично валидный `TaskPatternCatalog` и не разрешает спецификацию против
+   отброшенных строк. При этом независимые ошибки элементов/полей собираются в
+   прежнем детерминированном порядке настолько полно, насколько соответствующие
+   typed values построимы; ранний `return` не должен скрывать независимые
+   diagnostics без явного обоснования.
+9. **Fixtures и production path.** Реальные fixtures проходят через те же
+   transport/domain/operation entrypoints, что и реальные документы. Нельзя
+   сохранять параллельный `evaluate_*(&Value) -> Vec<String>` только ради
+   fixtures или conformance. Schema-pool consistency и проверка текста
+   `rule-resolution.md` также входят в новую production-композицию, а не
+   остаются предметной логикой CLI.
+10. **Rust-native надёжность.** Неизвестные закрытые enum-значения,
+    несовместимый `change_class`, пустые/дублирующиеся semantic ids,
+    некорректные portable paths и неоднозначная ссылка на pattern не могут
+    быть представлены как валидный domain state. Новое наблюдаемое отличие от
+    Node получает matched Node/Rust test, запись в `COMPATIBILITY.md` и статус
+    `BLOCKED_FOR_ARCHITECT_DECISION`; исполнитель не принимает его сам.
+11. **Production panic audit.** Каждый `unwrap`/`expect` в изменённом
+    production scope удалён либо обоснован доказуемым внутренним инвариантом.
+    Workspace bytes, decoded DTO, schemas, fixtures, Git output, paths и
+    catalogue data внутренним инвариантом не считаются.
+12. **Физическая декомпозиция.** Плоские Value-centric файлы разрешено
+    заменить модуль-директориями по образцу принятых conformance-пакетов.
+    Имена файлов вторичны; обязательны владельцы и направление зависимостей:
+    `core domain/checks <- app transport/orchestration/ports <- CLI adapters
+    and presentation`.
+
+### 5.17.4. Явно вне объёма
+
+- `functional-parity`, `execution-state-model`, `role-and-human-control` и
+  `bounded-context-manifest`, кроме механической смены импорта общих pure
+  reference helpers без изменения поведения;
+- оба оставшихся семейства 7c: `evidence-and-handoff-contract` и
+  `meridian-field-evaluation`;
+- четыре семейства 7d, пакет 8, import/migration, SQLite и release;
+- `SourceResolver` и `Clock`: ни одна из двух операций пакета их не использует;
+- перенос общего `kernel-purity`, document identity, link checker или всех
+  Git-вызовов репозитория на новые порты одним пакетом;
+- изменение Node-эталона ради подгонки, удаление Node-пути, изменение
+  публичного CLI JSON/human формата или exit codes;
+- косметическое переписывание всех соседних operating-model модулей.
+
+### 5.17.5. Критерии приёмки
+
+Пакет получает `ACCEPTED` только если одновременно выполнены все пункты:
+
+1. Оба CLI command-модуля являются тонкой композицией/presentation и не
+   содержат `std::fs`, `serde_json::Value`, regex, schema navigation,
+   предметных constants/rules или собственных fixture loops.
+2. Публичных production entrypoints вида `evaluate_*(&Value) -> Vec<String>`
+   для двух семейств не осталось; `Value` не пересекает transport boundary.
+3. Task specification получает принятый `TaskPatternCatalog`; тест доказывает,
+   что она не может разрешиться против сырых, schema-only или частично
+   построенных entries.
+4. `WorkKind`/`ChangeClass` имеют одного владельца в core и используются
+   registry, specification и resolver без преобразования enum -> string ->
+   enum между слоями.
+5. `WorkspaceReader` и `GitInspector` реально вызываются production route;
+   fake ports покрывают missing/unreadable/malformed, Git unavailable,
+   невалидный Git path, untracked target, directory target и symlink escape.
+6. Git fallback сохраняет прежний warning/checked-files contract, а
+   недоступность Git не маскируется пустым успешным tracked set.
+7. Core проверки выполняются без filesystem/Git; app orchestration проверяется
+   fake ports; CLI adapters отдельно проверяются real filesystem и локальным
+   временным Git-репозиторием с RAII cleanup.
+8. Все valid/invalid fixtures обоих семейств и реальные Kernel documents
+   проходят новый production pipeline; diagnostic order и truncation
+   проверены явно.
+9. Structural gates запрещают concrete I/O в core/app, `std::process` вне
+   CLI Git adapter, direct I/O/Value/domain rules в двух CLI commands и новые
+   импорты общих helpers через task-specification facade.
+10. `COMPATIBILITY.md` содержит все и только принятые различия scope; новых
+    различий без решения архитектора нет.
+11. Публичные domain types, ports и errors документированы; rustdoc проходит
+    с warnings-as-errors и не ссылается на удалённые symbols.
+12. Передача содержит карту `старый symbol -> новый owner/symbol`, список
+    временных facade consumers, production panic audit, точный список файлов
+    и результаты каждой назначенной проверки.
+
+### 5.17.6. Ворота исполнения
+
+Первая передача запускает последовательно только целевые ворота:
+
+```bash
+cargo fmt --all -- --check
+cargo clippy -p meridian-core -p meridian-app -p meridian-cli --all-targets --all-features -- -D warnings
+cargo test -p meridian-core task_pattern
+cargo test -p meridian-core task_specification
+cargo test -p meridian-app task_pattern
+cargo test -p meridian-app task_specification
+cargo test -p meridian-cli task_pattern
+cargo test -p meridian-cli task_specification
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
+node --check test/conformance-harness.test.mjs
+git diff --check
+```
+
+Если выбранные test filters не захватывают тесты из-за окончательных имён
+модулей, исполнитель перечисляет фактические test names и запускает
+эквивалентные package-scoped filters; молчаливый прогон `0 tests` не считается
+воротами.
+
+После архитектурного одобрения архитектор назначает один полный gate на
+неизменяемом кандидате:
+
+```bash
+cargo fmt --all -- --check
+cargo build --workspace
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
+cargo test --workspace
+node --test test/conformance-harness.test.mjs
+node test/kernel-validate.test.mjs
+git diff --check
+```
+
+Для корректирующих раундов действует правило `AGENTS.md` §9: повторяются
+только затронутые Rust gates, syntax check изменённого Node harness и
+`git diff --check`; полный Node gate не гоняется после каждой правки и
+выполняется один раз после последней Rust-правки.
+
+### 5.17.7. Готовое задание исполнителю
+
+> Работай над пакетом `rust-architecture-conformance-3` строго по §5.17
+> `governance/plans/meridian-rust-migration-program-plan.md`.
+>
+> До изменений выполни `node scripts/preflight.mjs` и проверь, что база
+> содержит локально интегрированный
+> `meridian-cli-foundation-architecture-remediation`, а рабочее дерево не
+> требует переноса чужих изменений. Если интеграционной ревизии нет или пакет
+> доступен только как dirty diff, остановись со статусом
+> `BLOCKED_PENDING_PRIOR_PACKAGE_INTEGRATION`.
+>
+> Перенеси ровно `task-pattern-registry` и
+> `task-specification-contract` на маршрут `WorkspaceReader + GitInspector ->
+> private transport DTO -> core constructors/checks -> TaskPatternCatalog ->
+> TaskSpecification -> Vec<Diagnostic> -> CLI presentation`. Переиспользуй
+> существующие core `WorkKind`/`ChangeClass`; не создавай второй пул. Task
+> specification должна потреблять принятый каталог, а не повторно читать его
+> YAML. Введи `GitInspector` с production CLI adapter и typed errors; direct
+> filesystem/process code оставь только в CLI adapters.
+>
+> Перенеси общие schema-reference/portability helpers к нейтральному owner.
+> Соседние модули меняй только механически ради импорта либо оставь явно
+> учтённый временный facade. Не начинай остальные семейства 7b/7c, 7d или
+> пакет 8. Новое наблюдаемое отличие не принимай: добавь matched test, опиши
+> бизнес-эффект и остановись с `BLOCKED_FOR_ARCHITECT_DECISION`.
+>
+> Не выполняй branch/switch/add/commit/merge/rebase/reset/stash/tag/push и не
+> форматируй посторонние файлы. Для первой передачи выполни только targeted
+> gates §5.17.6. Передай `READY_FOR_ARCHITECT_REVIEW` (не `ACCEPTED`), карту
+> symbols/owners, facade consumers, production panic audit, точные изменённые
+> файлы и результаты каждой команды.
+
 ## 6. Ворота Rust
 
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
@@ -4305,8 +4556,8 @@ activation_gate_status: passed
 last_completed_package: knowledge-agent-foundation
 current_package: rust-architecture-conformance
 current_package_status: conformance_1_and_2_accepted_and_locally_integrated
-next_package: meridian-cli-foundation-architecture-remediation
-next_package_status: accepted_and_locally_integrated
+next_package: rust-architecture-conformance-3
+next_package_status: specified_not_started
 concord_status: paused_pending_meridian_rust_release
 release_version: unassigned
 release_gate: closed
@@ -4370,3 +4621,12 @@ harness — 99/99, `kernel-validate.test.mjs` — 293/293) зелёные на �
 package commit и отдельным `--no-ff` merge-коммитом по действующему режиму
 `AGENTS.md` §6.7, без публикации `dev` или исходной ветви. 7d и пакет 8 этим
 решением не начинаются.
+
+**Обновление (2026-09-22, §5.17, следующий пакет).** Канонический указатель
+продвинут на `rust-architecture-conformance-3` со статусом
+`specified_not_started`. Пакет ограничен связанным основанием task-контрактов:
+`task-pattern-registry` строит типизированный каталог, а
+`task-specification-contract` потребляет его; одновременно вводится реально
+используемый `GitInspector` и переиспользуется принятый `WorkspaceReader`.
+Остальные четыре семейства 7b, два семейства 7c, весь 7d и пакет 8 остаются
+неоткрытыми.

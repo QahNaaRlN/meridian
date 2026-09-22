@@ -1,4 +1,4 @@
-//! Verbatim port of `scripts/lib/role-and-human-control.mjs`: the
+//! Business-contract migration of `scripts/lib/role-and-human-control.mjs`: the
 //! composite-consistency algorithms behind the `role-and-human-control`
 //! check. Two product-neutral Kernel contracts, one module:
 //!

@@ -9,55 +9,66 @@
 //! fixture check, `git-provenance`, subpackage `validate-mechanical-integrity`
 //! (package 7, subpackage 7a) — `sha-provenance`, `instruction-topics`,
 //! `operating-foundation`, `stack-profiles` and
-//! `agent-instruction-identity` — and, as of subpackage
-//! `validate-operating-contracts` (package 7, subpackage 7b),
-//! `functional-parity`, `task-pattern-registry`,
+//! `agent-instruction-identity` — subpackage `validate-operating-contracts`
+//! (package 7, subpackage 7b) — `functional-parity`, `task-pattern-registry`,
 //! `instruction-source-registry`, `task-specification-contract`,
 //! `execution-state-model`, `role-and-human-control` and
-//! `bounded-context-manifest`. Each uses the exact ported strict adapters
-//! (`meridian_app::source_format`, including the file-independent
-//! marked-region adapter `meridian_app::source_format::regions` 7a added)
-//! or, for `rule-resolution`, no composite algorithm beyond schema
-//! validation at all (see `rule_resolution_fixtures`); 7b's seven families
-//! each pair a JSON Schema with a bespoke composite-consistency algorithm
-//! ported to `meridian_app::operating_model` — pure functions over
-//! already-parsed values, with the file/YAML/JSON I/O and, for
-//! `bounded-context-manifest`, the external pinned-record resolution
-//! boundary, staying in this crate's own module for that family. The fixed
-//! "no Instance configured" advisories every one of these checks' Node
-//! counterpart already prints when `MERIDIAN_INSTANCE` is unset are
-//! reproduced verbatim: this package wires no `--instance` flag (deferred
-//! to package 8, `meridian-rust-migration-program-plan.md` §4).
+//! `bounded-context-manifest` — and, as of subpackage
+//! `validate-evidence-and-intake` (package 7, subpackage 7c),
+//! `evidence-and-handoff-contract`, `meridian-field-evaluation`,
+//! `controlled-rule-intake` and `existing-project-compatibility-mode`. Each
+//! uses the exact ported strict adapters (`meridian_app::source_format`,
+//! including the file-independent marked-region adapter
+//! `meridian_app::source_format::regions` 7a added) or, for
+//! `rule-resolution`, no composite algorithm beyond schema validation at
+//! all (see `rule_resolution_fixtures`); every operating-model family from
+//! 7b onward pairs a JSON Schema with a bespoke composite-consistency
+//! algorithm ported to `meridian_app::operating_model` — pure functions
+//! over already-parsed values, with the file/YAML/JSON I/O and, for
+//! `bounded-context-manifest`/`evidence-and-handoff-contract`/
+//! `meridian-field-evaluation`/`controlled-rule-intake`, the external
+//! pinned-record resolution boundary, staying in this crate's own module
+//! for that family; `existing-project-compatibility-mode` composes the
+//! REAL `instruction-source-registry`/`controlled-rule-intake` composite
+//! algorithms directly rather than a second copy of either contract's
+//! shape, and its rule-candidate resolver is built from that same scan's
+//! own `discovered_sources`, never a second external wiring requirement.
+//! The fixed "no Instance configured" advisories every one of these
+//! checks' Node counterpart already prints when `MERIDIAN_INSTANCE` is
+//! unset are reproduced verbatim: this package wires no `--instance` flag
+//! (deferred to package 8, `meridian-rust-migration-program-plan.md` §4).
 //!
 //! **Not yet ported — explicit, itemised `blocked` list, never silently
-//! passed and never silently failed** ([`BLOCKED_CHECKS`]): the 8 remaining
-//! operating-model composite contracts (`evidence-and-handoff-contract`,
-//! `meridian-field-evaluation`, `controlled-rule-intake`,
-//! `existing-project-compatibility-mode`, `instance-data-migration`,
+//! passed and never silently failed** ([`BLOCKED_CHECKS`]): the 4 remaining
+//! operating-model composite contracts, all belonging to subpackage 7d
+//! (`validate-migration-qualification`) — `instance-data-migration`,
 //! `instance-canonical-export`, `workspace-compatibility-qualification`,
-//! `upgrade-integration-qualification`) each pair a JSON Schema with a
+//! `upgrade-integration-qualification` — each pair a JSON Schema with a
 //! bespoke composite-consistency algorithm from its own
 //! `scripts/lib/*.mjs` module; two of those pure algorithms already exist in
 //! `meridian-core` (`migration::checks`, `evidence::aggregate`) but are not
-//! yet wired to real fixture files by this CLI, and the remaining six have
+//! yet wired to real fixture files by this CLI, and the remaining two have
 //! no Rust port at all. The owner has decided the split and order
 //! (`governance/plans/meridian-rust-migration-program-plan.md` §5.5c):
-//! subpackage 7b is implemented by this module (this doc comment's own
-//! record); 7c (`evidence-and-handoff-contract`,
-//! `meridian-field-evaluation`, `controlled-rule-intake`,
-//! `existing-project-compatibility-mode`), then 7d
+//! subpackages 7a and 7b are `accepted`/`integrated`
+//! (`meridian-rust-migration-program-plan.md` §5.7, §5.10); 7c is
+//! implemented by this module (this doc comment's own record) and passed
+//! to independent review as `READY_FOR_ARCHITECT_REVIEW` (§5.11); 7d
 //! (`instance-data-migration`, `instance-canonical-export`,
 //! `workspace-compatibility-qualification`,
-//! `upgrade-integration-qualification`) — implemented and accepted in that
-//! order, neither started by this module. Package 8
-//! (`meridian-cli-migration`) stays blocked on the acceptance and
-//! integration of all of 7a–7d, not only 7a/7b.
+//! `upgrade-integration-qualification`) is not started by this module.
+//! Package 8 (`meridian-cli-migration`) stays blocked on the acceptance and
+//! integration of all of 7a–7d, not only 7a–7c.
 
 mod agent_instruction_identity;
 mod bounded_context_manifest;
+mod controlled_rule_intake;
 mod document_identity;
 mod duplicate_fm;
+mod evidence_and_handoff;
 mod execution_state;
+mod existing_project_compatibility_mode;
+mod field_evaluation;
 mod functional_parity;
 mod git_provenance;
 mod instance_context;
@@ -91,10 +102,6 @@ pub const ALLOWED_FLAGS: &[&str] = &["kernel", "format"];
 /// See the module documentation above for why each of these is not yet
 /// implemented, and what porting it would require.
 pub const BLOCKED_CHECKS: &[(&str, &str)] = &[
-    ("evidence-and-handoff-contract", "meridian-core::evidence::aggregate ports the pure verdict algorithm, but the file-facing fixture harness is not yet wired into this CLI"),
-    ("meridian-field-evaluation", "needs scripts/lib/field-evaluation.mjs's composite algorithm ported"),
-    ("controlled-rule-intake", "needs scripts/lib/controlled-rule-intake.mjs's composite algorithm ported"),
-    ("existing-project-compatibility-mode", "needs scripts/lib/existing-project-compatibility-mode.mjs's composite algorithm ported"),
     ("instance-data-migration", "meridian-core::migration::checks ports the pure plan-check algorithm, but the file-facing fixture harness is not yet wired into this CLI"),
     ("instance-canonical-export", "needs scripts/lib/instance-data-migration.mjs's export-side composite algorithm ported"),
     ("workspace-compatibility-qualification", "needs scripts/lib/workspace-compatibility-qualification.mjs's composite algorithm ported"),
@@ -213,6 +220,18 @@ fn collect(kernel_root: &Path) -> Result<Collected, WalkError> {
 
     let bounded_context_manifest = bounded_context_manifest::run(kernel_root);
     failures.extend(bounded_context_manifest.failures);
+
+    let evidence_and_handoff = evidence_and_handoff::run(kernel_root);
+    failures.extend(evidence_and_handoff.failures);
+
+    let field_evaluation = field_evaluation::run(kernel_root);
+    failures.extend(field_evaluation.failures);
+
+    let controlled_rule_intake = controlled_rule_intake::run(kernel_root);
+    failures.extend(controlled_rule_intake.failures);
+
+    let existing_project_compatibility_mode = existing_project_compatibility_mode::run(kernel_root);
+    failures.extend(existing_project_compatibility_mode.failures);
 
     warnings.push(
         "front-matter/path-placement: no Instance root, working-memory artifacts were NOT checked"

@@ -1,4 +1,4 @@
-//! Verbatim port of `scripts/lib/context-manifest.mjs`: the
+//! Business-contract migration of `scripts/lib/context-manifest.mjs`: the
 //! composite-consistency algorithm behind the `bounded-context-manifest`
 //! check. `registries/operating-model/context-manifest.schema.json` is the
 //! COMPLETE schema for the bounded context manifest of ONE execution run

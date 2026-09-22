@@ -5,7 +5,7 @@ status: draft
 scope: workspace
 owner: workspace-owner
 created: 2026-09-14
-updated: 2026-09-19
+updated: 2026-09-21
 related_documents:
   - $MERIDIAN_KERNEL/governance/meridian-owner-intent-contract.md
   - $MERIDIAN_KERNEL/governance/decisions/meridian-rust-sqlite-architecture.md
@@ -14,10 +14,18 @@ related_documents:
   - $MERIDIAN_KERNEL/standards/workspace/kernel-boundary.md
   - $MERIDIAN_KERNEL/standards/workspace/workspace-scope-model.md
   - $MERIDIAN_KERNEL/standards/workspace/instance-data-migration.md
+  - $MERIDIAN_KERNEL/standards/workspace/rust-migration-quality.md
   - $MERIDIAN_KERNEL/standards/workspace/operating-glossary.md
 ---
 
 # Целевая архитектура Rust Meridian
+
+> **Нормативный приоритет.** Эта спецификация является обязательным критерием
+> приёмки каждого Rust-пакета. Зелёный Node/Rust conformance не разрешает
+> нарушить границы крейтов, портов, типов или уровней проверки. Если Rust
+> позволяет более надёжную реализацию без потери бизнес-ценности, применяется
+> она, а не буквальный перенос Node.js. См.
+> `standards/workspace/rust-migration-quality.md`.
 
 > Канонизировано в Kernel 2026-09-19 (`$MERIDIAN_KERNEL/AGENTS.md` §1–§2,
 > §10) вместе с четырьмя другими документами программы переноса на Rust;
@@ -72,8 +80,9 @@ meridian-cli             # корень композиции: бинарник +
 - типы предметной области (§5);
 - resolver — вычисление применимых норм, протоколов и блокеров из контекста
   задачи, репозитория, путей, профилей и объявленной применимости (тот же
-  контракт, что и сегодняшний `scripts/rule-resolver.mjs`, перенесённый
-  построчно, а не переосмысленный);
+  предметный контракт, что и сегодняшний `scripts/rule-resolver.mjs`,
+  реализованный типами и алгоритмами Rust без буквального переноса внутренней
+  структуры Node.js);
 - обнаружение и представление конфликтов норм;
 - планы миграции — структуры данных и проверки контракта
   `instance-data-migration.md` (девять свойств: нейтральность к хранилищу,
@@ -321,6 +330,13 @@ PostgreSQL, вне объёма текущего цикла) или второй
 Уровень 1 и 2 могут жить в `meridian-app` (граница с внешним миром); уровень 3
 и 4 — граница между `meridian-app` и `meridian-core`, где смысл уже
 предметный, а не транспортный.
+
+Это проверяемый gate, а не рекомендация. Входная `serde_json::Value` не должна
+проходить в предметный алгоритм после успешного построения валидного типа;
+одна функция не должна одновременно выполнять schema-валидацию, разрешать
+внешние ссылки, вычислять предметный verdict и форматировать строковые
+диагностики. Исключения допустимы только для явно названного transport/source-
+format адаптера и не становятся образцом для operating-model кода.
 
 ## 7. CLI (`meridian-cli`)
 

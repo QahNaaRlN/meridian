@@ -139,7 +139,7 @@ pub fn run(kernel_root: &Path) -> Outcome {
             failures.push(format!(
                 "instruction-source-registry: a fixture that must be a valid registry was rejected ({}): {}",
                 case.get("note").and_then(Value::as_str).unwrap_or(""),
-                problems[0]
+                problems[0].message()
             ));
         }
     }

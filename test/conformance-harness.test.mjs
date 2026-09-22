@@ -671,6 +671,91 @@ function assertMutationDeltaMultisetsEqual(dir, expectedFailPrefix, label) {
   };
 }
 
+// Removes exactly ONE occurrence of `target` from `lines`, asserting it was
+// actually present — never a silent no-op, so a caller that expected the
+// line to already be there finds out immediately if it is not.
+function removeOneOccurrence(lines, target) {
+  const idx = lines.indexOf(target);
+  assert(
+    idx !== -1,
+    `expected to find exactly one occurrence of ${JSON.stringify(target)} to remove; not found in ${JSON.stringify(lines)}`,
+  );
+  const copy = lines.slice();
+  copy.splice(idx, 1);
+  return copy;
+}
+
+// The ONE accepted, documented Rust-native divergence this mutation
+// produces (`COMPATIBILITY.md`, "Намеренные Rust-native усиления",
+// `rust-architecture-conformance-3` row): Node's `task-specification-contract`
+// block (`scripts/kernel-validate.mjs`, ~line 1225) re-reads and re-parses
+// `task-pattern-registry.yaml` directly, INDEPENDENT of whether the earlier
+// `task-pattern-registry` block's own check (`tprOk`) succeeded — a
+// duplicate pattern id elsewhere in the file never stops it from resolving
+// the `task_pattern` references its own fixtures use. Rust's
+// `task_pattern_registry::evaluate` only ever publishes a
+// `TaskPatternCatalog` once EVERY catalogue-level rule has already passed
+// (`rust-architecture-conformance-3` corrective round item 1: fail-closed
+// `TaskPatternCatalog::build` — a duplicate id anywhere yields `catalog:
+// None`, not a partially-built one), and `task_specification`'s own CLI
+// wrapper (`meridian-cli/src/commands/validate/task_specification.rs`)
+// reports a dependent `"task-specification-contract: no task-pattern
+// catalog is available; task-pattern-registry must be checked first"`
+// whenever that catalog is absent — a second, structurally coupled
+// diagnostic Node's independent re-parse can never produce, since Node has
+// no equivalent shared-catalogue gate to fail closed on.
+const TASK_SPECIFICATION_NO_CATALOG_LINE =
+  'task-specification-contract: no task-pattern catalog is available; task-pattern-registry must be checked first';
+
+// `task-pattern-registry`'s own accepted-boundary check, replacing the
+// generic `assertMutationDeltaMultisetsEqual` for this ONE family only:
+// proves the `task-pattern-registry` diagnostics themselves still agree
+// completely (as a multiset) between Node and Rust, that Rust's delta
+// carries EXACTLY the one documented extra `task-specification-contract`
+// line above and Node's never does, and that removing that single line
+// from Rust's delta leaves the two sides identical — not merely
+// "intersecting," and not a blanket relaxation that would also hide an
+// unrelated real divergence in either family.
+function assertTaskPatternRegistryMutationAcceptedDivergence(dir, expectedFailPrefix, label) {
+  const baseline = computeFailLines(dir);
+  return (mutate) => {
+    mutate(dir);
+    const mutated = computeFailLines(dir);
+    const nodeDelta = multisetDelta(baseline.nodeFails, mutated.nodeFails);
+    const rustDelta = multisetDelta(baseline.rustFails, mutated.rustFails);
+    assert(
+      nodeDelta.length > 0,
+      `${label}: expected a non-empty Node delta over baseline; baseline=${JSON.stringify(baseline.nodeFails)} mutated=${JSON.stringify(mutated.nodeFails)}`,
+    );
+    assert(
+      rustDelta.length > 0,
+      `${label}: expected a non-empty Rust delta over baseline; baseline=${JSON.stringify(baseline.rustFails)} mutated=${JSON.stringify(mutated.rustFails)}`,
+    );
+    assert(
+      nodeDelta.some((l) => l.startsWith(expectedFailPrefix)),
+      `${label}: expected the Node delta to carry a line with prefix "${expectedFailPrefix}", got delta: ${JSON.stringify(nodeDelta)}`,
+    );
+    assert(
+      rustDelta.some((l) => l.startsWith(expectedFailPrefix)),
+      `${label}: expected the Rust delta to carry a line with prefix "${expectedFailPrefix}", got delta: ${JSON.stringify(rustDelta)}`,
+    );
+    assert(
+      !nodeDelta.includes(TASK_SPECIFICATION_NO_CATALOG_LINE),
+      `${label}: Node must never produce the dependent "no task-pattern catalog is available" line — its task-specification-contract block re-parses the raw catalogue independently of task-pattern-registry's own verdict; node-delta=${JSON.stringify(nodeDelta)}`,
+    );
+    const rustNoCatalogCount = rustDelta.filter((l) => l === TASK_SPECIFICATION_NO_CATALOG_LINE).length;
+    assert(
+      rustNoCatalogCount === 1,
+      `${label}: expected the Rust delta to carry the dependent "no task-pattern catalog is available" line exactly once (the one accepted rust-architecture-conformance-3 divergence, COMPATIBILITY.md), found ${rustNoCatalogCount}; rust-delta=${JSON.stringify(rustDelta)}`,
+    );
+    const rustDeltaWithoutAcceptedLine = removeOneOccurrence(rustDelta, TASK_SPECIFICATION_NO_CATALOG_LINE);
+    assert(
+      multisetsEqual(nodeDelta, rustDeltaWithoutAcceptedLine),
+      `${label}: after removing the ONE accepted extra Rust line, expected the Node and Rust deltas to be equal as multisets (same lines, same counts) — anything else here would be a REAL, undocumented divergence; node-delta=${JSON.stringify(nodeDelta)} rust-delta-without-accepted-line=${JSON.stringify(rustDeltaWithoutAcceptedLine)}`,
+    );
+  };
+}
+
 function duplicateYamlListToEnd(filePath, marker) {
   const text = fs.readFileSync(filePath, 'utf8');
   const idx = text.indexOf(marker);
@@ -841,15 +926,22 @@ for (const family of VALIDATE_MUTATION_FAMILIES_7B) {
   createdTempDirs.push(mutationDir);
   try {
     copyRepoWithoutGitOrTarget(mutationDir);
-    const assertDeltaMultisetsEqual = assertMutationDeltaMultisetsEqual(
-      mutationDir,
-      family.expectedFailPrefix,
-      family.id,
-    );
+    // `task-pattern-registry` carries one documented, accepted
+    // rust-architecture-conformance-3 divergence (see
+    // `assertTaskPatternRegistryMutationAcceptedDivergence`'s own doc
+    // comment and `COMPATIBILITY.md`): it gets its own accepted-boundary
+    // check instead of the strict full-equality one every other 7b family
+    // still uses unchanged.
+    const isTaskPatternRegistry = family.id === 'task-pattern-registry';
+    const assertDelta = isTaskPatternRegistry
+      ? assertTaskPatternRegistryMutationAcceptedDivergence(mutationDir, family.expectedFailPrefix, family.id)
+      : assertMutationDeltaMultisetsEqual(mutationDir, family.expectedFailPrefix, family.id);
     check(
-      `реальный Node/Rust validate: schema-valid мутация "${family.id}" даёт полностью равные как мультимножество multiset-дельты (с учётом кратности) относительно baseline на обеих сторонах, непустые и несущие префикс "${family.expectedFailPrefix}" (подпакет 7b)`,
+      isTaskPatternRegistry
+        ? `реальный Node/Rust validate: schema-valid мутация "task-pattern-registry" даёт равные как multiset registry-диагностики на обеих сторонах и ровно одну дополнительную ожидаемую Rust-only diagnostic "${TASK_SPECIFICATION_NO_CATALOG_LINE}" (принятое Rust-native усиление rust-architecture-conformance-3, COMPATIBILITY.md), которую Node не производит; после удаления этой единственной строки дельты равны как мультимножество (подпакет 7b)`
+        : `реальный Node/Rust validate: schema-valid мутация "${family.id}" даёт полностью равные как мультимножество multiset-дельты (с учётом кратности) относительно baseline на обеих сторонах, непустые и несущие префикс "${family.expectedFailPrefix}" (подпакет 7b)`,
       () => {
-        assertDeltaMultisetsEqual(family.write);
+        assertDelta(family.write);
       },
     );
   } finally {

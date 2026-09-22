@@ -9,6 +9,15 @@ description = "Meridian Rust domain core — synchronous, side-effect-free domai
 workspace = true
 
 [dependencies]
+# Pure pattern matching only (`task_contracts::portability`): no filesystem,
+# Git, process, env or output I/O in this crate — see
+# `standards/workspace/rust-migration-quality.md` §5's I/O boundary and
+# `rust-architecture-conformance-3` corrective round item 2, which moved
+# `non_portable_reason`/`resolve_schema_ref` here so
+# `task_contracts::specification::check_task_specification` can gate its own
+# `TaskSpecification` construction on portability itself, in the one public
+# constructor, rather than depending on a caller running a second pass.
+fancy-regex = "0.19.0"
 sha2 = { version = "0.11.0", default-features = false }
 # Rust's own `{:e}` (`LowerExp`) formatting does not implement ECMA-262
 # `Number::toString`'s round-to-even tie-break rule and was PROVEN to diverge

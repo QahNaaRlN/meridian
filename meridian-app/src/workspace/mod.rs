@@ -6,6 +6,10 @@
 //! implementation drives this crate's own orchestration tests
 //! (`crate::validation::mechanical_integrity`) without touching disk.
 
+mod git_inspector;
+mod link_target;
 mod reader;
 
+pub use git_inspector::{GitInspector, GitInspectorError};
+pub use link_target::{LinkTargetError, LinkTargetPort};
 pub use reader::{DirEntry, EntryKind, ReadError, WorkspaceReader};

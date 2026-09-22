@@ -5,7 +5,7 @@ status: active
 scope: workspace
 owner: workspace-owner
 created: 2026-09-14
-updated: 2026-09-21
+updated: 2026-09-23
 related_documents:
   - $MERIDIAN_KERNEL/governance/meridian-owner-intent-contract.md
   - $MERIDIAN_KERNEL/governance/plans/meridian-improvement-research-plan.md
@@ -154,7 +154,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | 7 | Основа CLI (`meridian-cli-foundation`) | `meridian-cli`: `init`, `doctor`, `validate`, `resolve`, `export`, `--format human|json`, стабильные коды завершения, разделение stdout/stderr; подпакеты 7a–7d остаются исторической декомпозицией объёма | 5–6, `knowledge-agent-foundation`, `rust-architecture-conformance` | architecture-blocked (§5.13): 7a/7b исторически integrated, но не release-ready; приёмка 7c отозвана; 7d не начат |
 | — | Корректирующий пакет архитектуры (`rust-architecture-conformance`) | Устранить нарушения аудита: типизированные границы DTO → domain, обязательные порты, typed diagnostics, перенос предметной логики из CLI, декомпозиция Value-центричных модулей; доказать сохранение бизнес-ценности и обоснованные Rust-native улучшения | 1–7b, аудит §5.13 | active — пакеты 1–2 и исправление 7a приняты и локально интегрированы; пакет 3 специфицирован, не начат (§5.17) |
 | — | Архитектурное исправление исторического 7a (`meridian-cli-foundation-architecture-remediation`) | Перенести пять семейств 7a из CLI в typed core/app pipeline и ввести реально используемый app-owned `WorkspaceReader`; CLI оставить адаптером и presentation-слоем | `rust-architecture-conformance-1` и `-2`, §5.13 | accepted — принято и локально интегрировано (§5.16.8) |
-| — | Основание типизированных task-контрактов (`rust-architecture-conformance-3`) | Перевести `task-pattern-registry` и `task-specification-contract` на общий typed core/app pipeline; переиспользовать канонические `WorkKind`/`ChangeClass`, ввести реально используемый `GitInspector`, передавать принятую каталогизацию паттернов в спецификацию без повторного разбора | `meridian-cli-foundation-architecture-remediation`, §5.13 | specified, not started (§5.17) |
+| — | Основание типизированных task-контрактов (`rust-architecture-conformance-3`) | Перевести `task-pattern-registry` и `task-specification-contract` на общий typed core/app pipeline; переиспользовать канонические `WorkKind`/`ChangeClass`, ввести реально используемый `GitInspector`, передавать принятую каталогизацию паттернов в спецификацию без повторного разбора | `meridian-cli-foundation-architecture-remediation`, §5.13 | accepted — принято и локально интегрировано (§5.17.8) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | planned — заблокирован завершением корректирующего пакета и всех подпакетов 7 |
 | 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | planned |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
@@ -4044,12 +4044,14 @@ test/kernel-validate.test.mjs` — 293 passed, 0 failed; `git diff --check`
 
 ### 5.17.1. Статус и условие старта
 
-Статус пакета: `SPECIFIED_NOT_STARTED`. Начинать его можно только от ревизии,
-в которой `meridian-cli-foundation-architecture-remediation` принят и локально
-интегрирован (§5.16.8). На момент спецификации условие выполнено: `dev`
-содержит отдельный package commit и отдельный `--no-ff` merge-коммит этого
-пакета. Исполнитель не выполняет Git-записи и передаёт результат со статусом
-`READY_FOR_ARCHITECT_REVIEW`, а не `ACCEPTED`.
+Статус пакета: `ACCEPTED_AND_LOCALLY_INTEGRATED` (§5.17.8). Историческое
+условие старта сохраняется: начинать его было можно только от ревизии, в которой
+`meridian-cli-foundation-architecture-remediation` принят и локально
+интегрирован (§5.16.8). Условие было выполнено: стартовый `dev` содержал
+отдельный package commit и отдельный `--no-ff` merge-коммит предшествующего
+пакета. Исполнитель не выполнял Git-записи и передал результат со статусом
+`READY_FOR_ARCHITECT_REVIEW`; окончательный `ACCEPTED` вынес архитектор после
+независимого ревью и полного финального gate.
 
 ### 5.17.2. Почему следующий срез именно такой
 
@@ -4289,6 +4291,67 @@ git diff --check
 > gates §5.17.6. Передай `READY_FOR_ARCHITECT_REVIEW` (не `ACCEPTED`), карту
 > symbols/owners, facade consumers, production panic audit, точные изменённые
 > файлы и результаты каждой команды.
+
+### 5.17.8. Реализация, приёмка и локальная интеграция (2026-09-23)
+
+**Итоговый вердикт архитектора: `ACCEPTED`.** Пакет реализован исполнителем без
+Git-записей, прошёл независимое архитектурное ревью и корректирующие раунды.
+Финальный неизменяемый кандидат прошёл полный gate §5.17.6 и локально
+интегрирован сопровождающим эту запись package/merge flow. Публикация ветви
+или `dev` не выполнялась; остальные семейства 7b/7c, весь 7d и пакет 8 не
+открыты.
+
+**Итоговая архитектура.** `task-pattern-registry` строит закрытый
+`TaskPatternCatalog`; любой schema-, DTO-, domain-, canonical-link-,
+`rule-resolution.md`- или fixture-дефект оставляет каталог `None` целиком.
+`task-specification-contract` получает только принятый каталог и строит
+`TaskSpecification` единым публичным core-gate структуры, portability и
+pattern resolution, не перечитывая `task-pattern-registry.yaml`. Общие
+`resolve_schema_ref`/`non_portable_reason` принадлежат
+`meridian_core::task_contracts::portability`; app `reference_portability` —
+временный re-export facade для `execution_state`, `role_and_human_control`,
+`bounded_context_manifest`, `evidence_and_handoff` и `field_evaluation`,
+удаляемый пакетом последнего из этих потребителей.
+
+`meridian validate` вызывает `RealGitInspector::tracked_files` один раз,
+нормализует `Ok(empty)` в typed `Unavailable` до fan-out и передаёт один
+результат file-universe и registry через `CachedGitInspector`. `Unavailable`
+даёт ровно один прежний fallback warning; `InvalidPath` fail-closed. Реальный
+Git process находится только в CLI adapter; canonical-link filesystem semantics
+принадлежат app-owned `LinkTargetPort`.
+
+Старые `evaluate_task_pattern_registry(&Value, ...)`, строковый
+`TaskPatternRef` и `evaluate_task_specification(&Value, ...)` заменены
+`TaskPatternEntry::try_new`, `TaskPatternCatalog::{build,resolve}` и
+`check_task_specification`/`TaskSpecification`. Два CLI command-файла остались
+тонкими composition/presentation shims; family prefix добавляется ровно один
+раз на CLI boundary. Production panic audit оставил только доказанные инварианты
+литеральных diagnostic messages, static regex и literal workspace paths;
+workspace data, schemas, fixtures, Git output и catalog data ими не считаются.
+
+Принято одно ограниченное Rust-native отличие из `COMPATIBILITY.md`: Node
+независимо повторно разбирает сырой каталог, а Rust не разрешает спецификацию
+против отвергнутого `TaskPatternCatalog` и добавляет одну зависимую диагностику
+на уже failing Kernel. Matched conformance-case допускает ровно эту строку и
+требует точного совпадения остального multiset.
+
+**Принятый файловый периметр.** Изменены `COMPATIBILITY.md`, `Cargo.lock`,
+`governance/plans/meridian-rust-migration-program-plan.md`,
+`meridian-core/{Cargo.toml,src/lib.rs}`,
+`meridian-app/src/operating_model/{mod,task_pattern_registry,task_specification}.rs`,
+`meridian-app/src/workspace/mod.rs`, `meridian-cli/src/adapters/mod.rs`,
+`meridian-cli/src/commands/validate/{mod,task_pattern_registry,task_specification}.rs`
+и `test/conformance-harness.test.mjs`; добавлены
+`meridian-core/src/task_contracts/{mod,catalog,portability,specification}.rs`,
+`meridian-app/src/operating_model/reference_portability.rs`,
+`meridian-app/src/workspace/{git_inspector,link_target}.rs` и
+`meridian-cli/src/adapters/{git_inspector,link_target}.rs`.
+
+**Финальный gate владельца.** Format, build, workspace clippy и rustdoc —
+чисто; `cargo test --workspace` — 814 passed, 0 failed; conformance harness —
+99 passed, 0 failed; `kernel-validate.test.mjs` — 293 passed, 0 failed, 0
+skipped; `git diff --check` — чисто. Полный вывод принят как доказательство
+согласно `AGENTS.md` §6.3 и §9.
 
 ## 6. Ворота Rust
 
@@ -4553,15 +4616,15 @@ program_id: meridian-rust-migration
 program_status: active
 activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
-last_completed_package: knowledge-agent-foundation
-current_package: rust-architecture-conformance
-current_package_status: conformance_1_and_2_accepted_and_locally_integrated
-next_package: rust-architecture-conformance-3
-next_package_status: specified_not_started
+last_completed_package: rust-architecture-conformance-3
+current_package: rust-architecture-conformance-3
+current_package_status: accepted_and_locally_integrated
+next_package: unassigned
+next_package_status: not_specified
 concord_status: paused_pending_meridian_rust_release
 release_version: unassigned
 release_gate: closed
-owner_decision_date: 2026-09-21
+owner_decision_date: 2026-09-23
 ```
 
 Настоящая ревизия фиксирует решение владельца §5.13 и результат полного
@@ -4630,3 +4693,13 @@ package commit и отдельным `--no-ff` merge-коммитом по де�
 используемый `GitInspector` и переиспользуется принятый `WorkspaceReader`.
 Остальные четыре семейства 7b, два семейства 7c, весь 7d и пакет 8 остаются
 неоткрытыми.
+
+
+**Обновление (2026-09-23, §5.17, итоговый вердикт архитектора).** Пакет
+`rust-architecture-conformance-3` принят после независимого ревью и полного
+финального gate: workspace Rust tests — 814/814, conformance harness — 99/99,
+`kernel-validate.test.mjs` — 293/293. Он локально интегрирован отдельным
+package commit и отдельным `--no-ff` merge-коммитом без публикации.
+`current_package_status` синхронизирован как `accepted_and_locally_integrated`;
+следующий пакет ещё не специфицирован. Сначала должны быть назначены оставшиеся
+семейства 7b, затем 7c; 7d и пакет 8 остаются закрытыми.

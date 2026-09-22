@@ -26,6 +26,7 @@ pub mod existing_project_compatibility_mode;
 pub mod field_evaluation;
 pub mod functional_parity;
 pub mod instruction_source_registry;
+pub mod reference_portability;
 pub mod role_and_human_control;
 pub mod task_pattern_registry;
 pub mod task_specification;

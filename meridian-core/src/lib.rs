@@ -29,6 +29,7 @@ mod json;
 pub mod mechanical_integrity;
 pub mod migration;
 pub mod resolver;
+pub mod task_contracts;
 pub mod types;
 
 /// Identifies this crate in composition-root diagnostics.

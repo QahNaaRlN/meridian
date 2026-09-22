@@ -1,4 +1,4 @@
-//! Verbatim port of `scripts/lib/task-pattern-registry.mjs`: the
+//! Business-contract migration of `scripts/lib/task-pattern-registry.mjs`: the
 //! composite-consistency algorithm behind the `task-pattern-registry`
 //! check. `standards/workspace/task-pattern-registry.yaml` (the built-in
 //! universal task-type catalog) is a mandatory part of every Kernel. Its

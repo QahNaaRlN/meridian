@@ -5,10 +5,16 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-09-17
-updated: 2026-09-19
+updated: 2026-09-21
 ---
 
 # Conformance harness
+
+> Этот харнесс проверяет выбранный наблюдаемый контракт, но не архитектуру и
+> не качество Rust-реализации. Он не требует совпадения ради совпадения:
+> сохранённые бизнес-контракты должны совпадать, а намеренные Rust-native
+> улучшения получают отдельный ожидаемый результат, обоснование и тест.
+> Необъяснённое расхождение остаётся ошибкой.
 
 Package `rust-conformance-harness` (package 2 of the `meridian-rust-migration`
 program). This is an **independent verdict-comparison mechanism**: it runs two
@@ -26,6 +32,9 @@ two normalized results to an explicit `conformant` / `divergent` /
 - Does not define `Verdict`, `Diagnostic`, a resolver, or any other Meridian
   domain concept (`meridian-rust-target-architecture.md` §2, §5). It only
   understands "a process ran, here is what it printed and how it exited".
+- Does not approve crate boundaries, typed-domain conversion, ports, or the
+  placement of business logic. A conformant result cannot satisfy the
+  architecture gate by itself.
 - Does not substitute synthetic self-checks for product comparison. Package 4
   adds a real Node.js/Rust comparison for the introduced YAML and JSON Schema
   surface while retaining the synthetic cases that prove the mechanism can

@@ -1,4 +1,4 @@
-//! Verbatim port of `functionalParityConsistency` (`scripts/kernel-validate.mjs`,
+//! Business-contract migration of `functionalParityConsistency` (`scripts/kernel-validate.mjs`,
 //! the `functional-parity` check, subpackage 7b). `verification/functional-parity/`
 //! carries a portable functional-parity evidence contract, its JSON Schema
 //! and product-neutral fixtures. The inference rules the Draft 7 subset

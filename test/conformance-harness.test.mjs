@@ -35,6 +35,10 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { runProducer, normalizeDiagnostics, compareVerdicts, runCase, runCorpus, runConformanceCheck } from '../verification/conformance-harness/conformance-harness.mjs';
+import { evaluateControlledRuleIntake } from '../scripts/lib/controlled-rule-intake.mjs';
+import { makeRecordResolver } from '../scripts/lib/context-manifest.mjs';
+import { evaluateInstructionSourceRegistry } from '../scripts/lib/instruction-source-registry.mjs';
+import { evaluateExistingProjectCompatibilityMode } from '../scripts/lib/existing-project-compatibility-mode.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -845,6 +849,510 @@ for (const family of VALIDATE_MUTATION_FAMILIES_7B) {
       `реальный Node/Rust validate: schema-valid мутация "${family.id}" даёт полностью равные как мультимножество multiset-дельты (с учётом кратности) относительно baseline на обеих сторонах, непустые и несущие префикс "${family.expectedFailPrefix}" (подпакет 7b)`,
       () => {
         assertDeltaMultisetsEqual(family.write);
+      },
+    );
+  } finally {
+    fs.rmSync(mutationDir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(mutationDir), 1);
+  }
+}
+
+// Each `write` mutates exactly one bundled "valid" fixture's own document,
+// changing a value the JSON Schema itself places no constraint on (or an
+// enum member the schema accepts but the composite algorithm's own
+// recomputation rejects), chosen to violate exactly one composite rule with
+// no side effect on any other fixture or family (subpackage 7c):
+//   - evidence-and-handoff-contract: sets `payload.outcome.statement` to a
+//     rooted POSIX path — `outcome.statement` is schema-typed as a bare
+//     non-empty string with no path-shape constraint, so only
+//     `nonPortableReason` can object;
+//   - meridian-field-evaluation: sets an "observed" classification
+//     observation's `measurement.basis` to a rooted POSIX path — same
+//     reasoning, on the classification-basis field;
+//   - controlled-rule-intake: appends `-tampered` to a candidate's
+//     `origin.source_ref`, still a well-formed portable string the schema
+//     accepts, but no longer the canonical `instruction-source:<id>`
+//     mapping `checkOriginLink` requires (property 2/9);
+//   - existing-project-compatibility-mode: changes a connection's
+//     `payload.next_step` from the value its (empty) `findings` set
+//     actually computes to a DIFFERENT schema-valid enum member —
+//     `computeNextStep`'s closed priority is recomputed and compared
+//     exactly, not merely checked for enum membership.
+function VALIDATE_MUTATION_FAMILIES_7C_WRITE_evidenceAndHandoff(dir) {
+  const p = path.join(dir, 'registries', 'operating-model', 'fixtures', 'evidence-and-handoff.fixtures.json');
+  const bundle = JSON.parse(fs.readFileSync(p, 'utf8'));
+  bundle.valid[0].spec.payload.outcome.statement = '/etc/passwd';
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function VALIDATE_MUTATION_FAMILIES_7C_WRITE_fieldEvaluation(dir) {
+  const p = path.join(dir, 'registries', 'operating-model', 'fixtures', 'field-evaluation.fixtures.json');
+  const bundle = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const c = bundle.valid.find((c) => c.note === 'наблюдение obs-mech-correct-1');
+  assert(c, `${p} must carry a "наблюдение obs-mech-correct-1" valid fixture to mutate`);
+  c.spec.payload.measurement.basis = '/etc/passwd';
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function VALIDATE_MUTATION_FAMILIES_7C_WRITE_controlledRuleIntake(dir) {
+  const p = path.join(dir, 'registries', 'operating-model', 'fixtures', 'controlled-rule-intake.fixtures.json');
+  const bundle = JSON.parse(fs.readFileSync(p, 'utf8'));
+  bundle.valid[0].registry.rule_candidates[0].origin.source_ref += '-tampered';
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function VALIDATE_MUTATION_FAMILIES_7C_WRITE_existingProjectCompatibilityMode(dir) {
+  const p = path.join(dir, 'registries', 'operating-model', 'fixtures', 'existing-project-compatibility-mode.fixtures.json');
+  const bundle = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const conn = bundle.valid[0].registry.workspace_connections[0];
+  assert(
+    conn.payload.next_step === 'continue-compatibility-mode',
+    `${p} valid[0]'s first connection must have next_step "continue-compatibility-mode" to mutate`,
+  );
+  conn.payload.next_step = 'resolve-conflict';
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+const VALIDATE_MUTATION_FAMILIES_7C = [
+  {
+    id: 'evidence-and-handoff-contract',
+    write: VALIDATE_MUTATION_FAMILIES_7C_WRITE_evidenceAndHandoff,
+    expectedFailPrefix: 'evidence-and-handoff-contract:',
+  },
+  {
+    id: 'meridian-field-evaluation',
+    write: VALIDATE_MUTATION_FAMILIES_7C_WRITE_fieldEvaluation,
+    expectedFailPrefix: 'meridian-field-evaluation:',
+  },
+  {
+    id: 'controlled-rule-intake',
+    write: VALIDATE_MUTATION_FAMILIES_7C_WRITE_controlledRuleIntake,
+    expectedFailPrefix: 'controlled-rule-intake:',
+  },
+  {
+    id: 'existing-project-compatibility-mode',
+    write: VALIDATE_MUTATION_FAMILIES_7C_WRITE_existingProjectCompatibilityMode,
+    expectedFailPrefix: 'existing-project-compatibility-mode:',
+  },
+];
+
+for (const family of VALIDATE_MUTATION_FAMILIES_7C) {
+  const mutationDir = fs.mkdtempSync(path.join(os.tmpdir(), `conformance-harness-kernel-validate-mutation-7c-${family.id}-`));
+  createdTempDirs.push(mutationDir);
+  try {
+    copyRepoWithoutGitOrTarget(mutationDir);
+    const assertDeltaMultisetsEqual = assertMutationDeltaMultisetsEqual(
+      mutationDir,
+      family.expectedFailPrefix,
+      family.id,
+    );
+    check(
+      `реальный Node/Rust validate: schema-valid мутация "${family.id}" даёт полностью равные как мультимножество multiset-дельты (с учётом кратности) относительно baseline на обеих сторонах, непустые и несущие префикс "${family.expectedFailPrefix}" (подпакет 7c)`,
+      () => {
+        assertDeltaMultisetsEqual(family.write);
+      },
+    );
+  } finally {
+    fs.rmSync(mutationDir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(mutationDir), 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Corrective round `rust-architecture-conformance-1`, item 10: an
+// INTENTIONAL, permanent divergence, not a defect to converge — recorded
+// in `COMPATIBILITY.md`. `scripts/lib/controlled-rule-intake.mjs`'s
+// `checkCluster` compares two `semantic_key`-cluster members' scope with
+// `scopeKey = \`${type}::${id}\`` (`type`/`id` only); the Rust
+// implementation (`meridian_core::controlled_rule_intake::checks::check_cluster`)
+// compares full `Scope` identity, the same rule `same_scope`/`checkSupersedes`
+// already applies to instance-data-migration plans. This adds a second
+// cluster member that is IDENTICAL to the bundled valid fixture's one
+// candidate except for a different `id`, a different `boundary` (so the
+// "same origin repeated" check stays silent — only the scope divergence is
+// exercised) and a `scope.workspace_id` naming a different workspace. Node
+// accepts this cleanly (its `scopeKey` never looks at `workspace_id`); Rust
+// rejects it. This is NOT run through the generic `conformant`/`divergent`
+// harness (which would wrongly report a "defect") — it states plainly,
+// like the resolver-unknown-field-order boundary above, that the two sides
+// genuinely and permanently differ here.
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-kernel-validate-mutation-7c-cluster-scope-workspace-divergence-'));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const baseline = computeFailLines(dir);
+
+    const fixturesPath = path.join(dir, 'registries', 'operating-model', 'fixtures', 'controlled-rule-intake.fixtures.json');
+    const bundle = JSON.parse(fs.readFileSync(fixturesPath, 'utf8'));
+    const template = bundle.valid[0];
+    assert(
+      template?.registry?.rule_candidates?.[0]?.scope?.workspace_id === 'sample-workspace',
+      `${fixturesPath} valid[0]'s first candidate must be scoped to workspace_id "sample-workspace" to mutate`,
+    );
+    const original = template.registry.rule_candidates[0];
+    const divergentMember = JSON.parse(JSON.stringify(original));
+    divergentMember.id = 'sample-agents-md-branch-naming-candidate-workspace-divergence';
+    divergentMember.scope.workspace_id = 'a-different-workspace';
+    divergentMember.payload.boundary = { unit: 'whole-source' };
+    template.registry.rule_candidates.push(divergentMember);
+    fs.writeFileSync(fixturesPath, JSON.stringify(bundle));
+
+    const mutated = computeFailLines(dir);
+    const nodeDelta = multisetDelta(baseline.nodeFails, mutated.nodeFails);
+    const rustDelta = multisetDelta(baseline.rustFails, mutated.rustFails);
+
+    check(
+      'реальный Node/Rust validate: намеренная граница «cluster scope divergence» (COMPATIBILITY.md) — Node принимает кластер с расходящимся workspace_id чисто (scopeKey смотрит только на type/id), новых FAIL нет',
+      () => {
+        assert(nodeDelta.length === 0, `ожидалась пустая Node-дельта (Node не видит расхождения по workspace_id), получено: ${JSON.stringify(nodeDelta)}`);
+      },
+    );
+
+    check(
+      'реальный Node/Rust validate: намеренная граница «cluster scope divergence» (COMPATIBILITY.md) — Rust отклоняет тот же кластер: полное тождество Scope ловит расхождение по workspace_id, которое Node молча пропускает',
+      () => {
+        assert(rustDelta.length > 0, `ожидалась непустая Rust-дельта, получено: ${JSON.stringify(rustDelta)}`);
+        assert(
+          rustDelta.every((l) => l.includes('more than one scope')),
+          `ожидалось, что вся Rust-дельта состоит из диагностик "more than one scope", получено: ${JSON.stringify(rustDelta)}`,
+        );
+      },
+    );
+
+    check('намеренная граница «cluster scope divergence»: полный вывод действительно расходится — этот случай НЕ помечается conformant', () => {
+      assert(
+        !multisetsEqual(mutated.nodeFails, mutated.rustFails),
+        'ожидалось настоящее расхождение полного вывода (иначе граница не названа честно, а спрятана)',
+      );
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Corrective round `rust-architecture-conformance-1`, item 3: this
+// disproves, by REAL executable path, an over-broad claim an earlier round
+// of this pilot made in a doc comment — replaced here with what the
+// executable paths actually show, per that round's own "document and test
+// the divergence, OR fix the wrong statement" instruction.
+//
+// Source-level fact (verified by reading both files directly, unchanged by
+// this test): `scripts/lib/controlled-rule-intake.mjs`'s
+// `evaluateControlledRuleIntake` never stops at a schema violation (only at
+// a schema-COMPILE exception) and unconditionally keeps computing the full
+// composite analysis; the Rust `evaluate_controlled_rule_intake` stops
+// immediately at any schema violation (earlier corrective-round item 2).
+// This is a real, intentional difference in how MANY diagnostics each
+// function computes internally.
+//
+// But `scripts/kernel-validate.mjs`'s own controlled-rule-intake self-test
+// (`fail(\`...was rejected (...): ${p[0]}\`)`, line ~1952) and this
+// crate's own CLI wrapper (`meridian-cli/src/commands/validate/controlled_rule_intake.rs`,
+// `problems[0].message()`) BOTH report only the FIRST diagnostic for a
+// wrongly-rejected fixture — and a schema violation is always pushed
+// before any composite check on both sides, so `[0]` is the same schema
+// diagnostic either way. The diagnostic-COUNT difference above is
+// therefore NOT observable through this Kernel's only current executable
+// path for controlled-rule-intake documents (there is no standalone CLI
+// command reading an arbitrary such document directly — the contract's
+// registry DATA is Instance data, per this module's own doc comment, and
+// Instance is frozen). This mutates ONE candidate with a schema violation
+// (deletes the required `payload.classification_basis`) alongside a
+// SEPARATE composite-level defect (tampers `origin.source_ref`, the same
+// mutation `VALIDATE_MUTATION_FAMILIES_7C`'s own "controlled-rule-intake"
+// family already proves is composite-invalid on its own) and asserts what
+// is ACTUALLY true at this executable surface: both sides' deltas carry
+// ONLY the schema diagnostic, identically — CONFORMANT here, not divergent.
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-kernel-validate-mutation-7c-schema-short-circuit-'));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const baseline = computeFailLines(dir);
+
+    const fixturesPath = path.join(dir, 'registries', 'operating-model', 'fixtures', 'controlled-rule-intake.fixtures.json');
+    const bundle = JSON.parse(fs.readFileSync(fixturesPath, 'utf8'));
+    const candidate = bundle.valid[0]?.registry?.rule_candidates?.[0];
+    assert(candidate?.payload?.classification_basis, `${fixturesPath} valid[0]'s first candidate must carry payload.classification_basis to mutate`);
+    candidate.origin.source_ref += '-tampered';
+    delete candidate.payload.classification_basis;
+    fs.writeFileSync(fixturesPath, JSON.stringify(bundle));
+
+    const mutated = computeFailLines(dir);
+    const nodeDelta = multisetDelta(baseline.nodeFails, mutated.nodeFails);
+    const rustDelta = multisetDelta(baseline.rustFails, mutated.rustFails);
+
+    check(
+      'реальный Node/Rust validate: «schema short-circuit» — оба self-test wrapper (kernel-validate.mjs строка ~1952 и Rust CLI) сообщают ТОЛЬКО первую диагностику (schema), поэтому разница в количестве вычисляемых диагностик внутри библиотек не наблюдаема на этом исполняемом пути — Node- и Rust-дельта несут одну и ту же диагностику схемы',
+      () => {
+        assert(
+          nodeDelta.some((l) => l.includes('classification_basis') || l.includes('required')),
+          `ожидалась диагностика схемы (classification_basis/required) в Node-дельте, получено: ${JSON.stringify(nodeDelta)}`,
+        );
+        assert(
+          nodeDelta.every((l) => !l.includes('does not name the same source')),
+          `Node-дельта на этом исполняемом пути НЕ должна нести составную диагностику origin/source_ref (wrapper сообщает только p[0]), получено: ${JSON.stringify(nodeDelta)}`,
+        );
+        assert(
+          rustDelta.every((l) => !l.includes('does not name the same source')),
+          `Rust-дельта не должна нести диагностику origin/source_ref, получено: ${JSON.stringify(rustDelta)}`,
+        );
+      },
+    );
+
+    check('«schema short-circuit»: на этом исполняемом пути стороны действительно conformant (полный wrapped-вывод совпадает) — библиотечное расхождение реально, но здесь не наблюдаемо, что и требовалось честно установить', () => {
+      assert(
+        multisetsEqual(mutated.nodeFails, mutated.rustFails),
+        `ожидалось совпадение полного wrapped-вывода на этом исполняемом пути, получено node=${JSON.stringify(mutated.nodeFails)} rust=${JSON.stringify(mutated.rustFails)}`,
+      );
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Corrective round `rust-architecture-conformance-1`, third round item 6,
+// fourth round item 3.3, fifth round item 1: a DIRECT library-level test —
+// `evaluateControlledRuleIntake` imported and called straight from
+// `scripts/lib/controlled-rule-intake.mjs`, bypassing
+// `scripts/kernel-validate.mjs`'s self-test wrapper entirely (which the
+// "schema short-circuit" check right above this one already proved hides
+// the library-level difference by only ever reporting `p[0]`). This is the
+// Node half of a matched pair with the Rust half in
+// `meridian-app/src/operating_model/controlled_rule_intake/mod.rs`'s own
+// `#[test] fn schema_and_composite_defect_together_produce_exactly_one_schema_diagnostic_matching_the_node_reference`
+// (also a direct library call, via `cargo test`, not through any CLI
+// wrapper): both halves load THIS SAME real fixture file
+// (`registries/operating-model/fixtures/controlled-rule-intake.fixtures.json`,
+// `valid[0].registry`) and apply the SAME two mutations below — not an
+// "analogous shape" input on each side, the identical document.
+//
+// The mutation is deliberately NOT "delete a required field" (fifth round
+// item 1: the previous mutation, deleting `payload.classification_basis`,
+// had no teeth on the Rust side — that field is both schema-required AND a
+// non-optional `String` of `dto::PayloadDto`, so Rust's own closed-DTO
+// deserialization would already produce a single diagnostic even with the
+// schema gate entirely removed). Instead: `registry_id` is changed to a
+// wrong, non-empty string — the schema's `registry_id: {const:
+// "controlled-rule-intake"}` rejects it, while Rust's own
+// `dto::RegistryDto.registry_id` is a plain, unvalidated `String` that
+// would accept any value equally well, so this mutation can only be caught
+// by the schema gate specifically (empirically confirmed on the Rust side;
+// see that test's own doc comment and this round's transfer record).
+//
+// That Rust test asserts EXACTLY 1 diagnostic (schema only, explicitly NOT
+// the origin/source_ref one); this Node test asserts AT LEAST 2 (schema AND
+// composite), using this Kernel's own real schema/fixtures files. Together
+// they are the direct proof, on both real language runtimes, of the
+// library-level fact `COMPATIBILITY.md` records.
+{
+  const criSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/controlled-rule-intake.schema.json'), 'utf8'));
+  const envelopeSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/scoped-record.schema.json'), 'utf8'));
+  const bundle = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/fixtures/controlled-rule-intake.fixtures.json'), 'utf8'));
+  const registry = JSON.parse(JSON.stringify(bundle.valid[0].registry));
+  assert(
+    registry.registry_id === 'controlled-rule-intake',
+    `controlled-rule-intake.fixtures.json valid[0].registry.registry_id must start as "controlled-rule-intake", got: ${JSON.stringify(registry.registry_id)}`,
+  );
+  registry.registry_id = 'wrong-registry-id';
+  const candidate = registry.rule_candidates[0];
+  candidate.origin.source_ref += '-tampered';
+
+  check(
+    'библиотечный (не через kernel-validate.mjs) Node-прогон: evaluateControlledRuleIntake, вызванная напрямую, возвращает ОБЕ независимые диагностики (схема И origin/source_ref) на документе с двумя одновременными независимыми дефектами — прямое доказательство корректирующего раунда item 6, парное с Rust-юнит-тестом schema_and_composite_defect_together_produce_exactly_one_schema_diagnostic_matching_the_node_reference',
+    () => {
+      const problems = evaluateControlledRuleIntake(registry, {
+        registrySchema: criSchema,
+        envelopeSchema,
+        resolveSource: makeRecordResolver(bundle.resolution),
+      });
+      assert(
+        problems.some((p) => p.includes('registry_id')),
+        `ожидалась диагностика схемы по registry_id, получено: ${JSON.stringify(problems)}`,
+      );
+      assert(
+        problems.some((p) => p.includes('does not name the same source')),
+        `ожидалась диагностика origin/source_ref, получено: ${JSON.stringify(problems)}`,
+      );
+      assert(problems.length >= 2, `ожидалось минимум 2 диагностики (схема + composite), получено ${problems.length}: ${JSON.stringify(problems)}`);
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// `rust-architecture-conformance-2`: direct library-level Node half of the
+// matched pair documented in `meridian-app/src/operating_model/instruction_source_registry/mod.rs`'s
+// own doc comment and `COMPATIBILITY.md` — `evaluateInstructionSourceRegistry`
+// has no closed-transport-DTO concept the way the Rust port's
+// `#[serde(deny_unknown_fields)]` does, so an entry carrying BOTH an unknown
+// field AND a separate read-channel coherence defect still gets its
+// business check computed on the Node side; the Rust unit test
+// `a_transport_parse_failure_skips_business_checks_for_that_entry_only`
+// (same real fixture, same two mutations) asserts the opposite: the
+// business diagnostic never appears there, because domain construction is
+// unreachable once the closed DTO parse itself fails.
+{
+  const isrSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/instruction-source-registry.schema.json'), 'utf8'));
+  const envelopeSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/scoped-record.schema.json'), 'utf8'));
+  const bundle = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/fixtures/instruction-source-registry.fixtures.json'), 'utf8'));
+  const registry = JSON.parse(JSON.stringify(bundle.valid[1].registry));
+  const entry = registry.instruction_sources[0];
+  assert(entry, 'instruction-source-registry.fixtures.json valid[1].registry must carry at least one instruction source');
+  entry.payload.unexpected_field = true;
+  entry.payload.read_channel.agent_auto_read = true;
+
+  check(
+    'библиотечный Node-прогон: evaluateInstructionSourceRegistry, вызванная напрямую, возвращает ОБЕ независимые диагностики (лишнее поле payload.unexpected_field И read_channel coherence) на записи с двумя одновременными независимыми дефектами',
+    () => {
+      const problems = evaluateInstructionSourceRegistry(registry, { registrySchema: isrSchema, envelopeSchema });
+      assert(
+        problems.some((p) => p.includes('unexpected_field') || p.includes('additionalProperties')),
+        `ожидалась диагностика схемы по лишнему полю, получено: ${JSON.stringify(problems)}`,
+      );
+      assert(
+        problems.some((p) => p.includes('agent_auto_read is true but kind is')),
+        `ожидалась диагностика read_channel coherence, получено: ${JSON.stringify(problems)}`,
+      );
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// `rust-architecture-conformance-2`: same matched-pair shape as directly
+// above, for `existing-project-compatibility-mode` — Node half. Rust half:
+// `meridian-app/src/operating_model/existing_project_compatibility_mode/mod.rs::tests::a_transport_parse_failure_skips_business_checks_for_that_entry_only`.
+{
+  const epcmSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/existing-project-compatibility-mode.schema.json'), 'utf8'));
+  const envelopeSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/scoped-record.schema.json'), 'utf8'));
+  const sourceRegistrySchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/instruction-source-registry.schema.json'), 'utf8'));
+  const ruleIntakeSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/controlled-rule-intake.schema.json'), 'utf8'));
+  const bundle = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/fixtures/existing-project-compatibility-mode.fixtures.json'), 'utf8'));
+  const registry = JSON.parse(JSON.stringify(bundle.valid[1].registry));
+  const payload = registry.workspace_connections[0].payload;
+  payload.unexpected_field = true;
+  payload.next_step = 'resolve-conflict';
+
+  check(
+    'библиотечный Node-прогон: evaluateExistingProjectCompatibilityMode, вызванная напрямую, возвращает ОБЕ независимые диагностики (лишнее поле payload.unexpected_field И неверный next_step) на записи с двумя одновременными независимыми дефектами',
+    () => {
+      const problems = evaluateExistingProjectCompatibilityMode(registry, {
+        registrySchema: epcmSchema, envelopeSchema, sourceRegistrySchema, ruleIntakeSchema,
+      });
+      assert(
+        problems.some((p) => p.includes('unexpected_field') || p.includes('additionalProperties')),
+        `ожидалась диагностика схемы по лишнему полю, получено: ${JSON.stringify(problems)}`,
+      );
+      assert(
+        problems.some((p) => p.includes('next_step is')),
+        `ожидалась диагностика next_step, получено: ${JSON.stringify(problems)}`,
+      );
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// `rust-architecture-conformance-2` corrective round, item 5: intentional
+// Rust-native boundary, accepted by the architect (`COMPATIBILITY.md`, same
+// precedent as `controlled-rule-intake`'s schema short-circuit). Node's
+// `sameLocation` compares a discovery_plan slot's RAW path/container_ref
+// fields against a discovered source's RAW location fields UNCONDITIONALLY —
+// even when the slot's own `checkPlanLocation` already flagged it invalid.
+// Rust's `plan_by_id` only holds slots whose OWN domain construction (a typed
+// `Location`) succeeded, so when a slot's location is itself invalid, Rust
+// skips the location-match comparison for any discovered source naming that
+// slot entirely. The slot's own primary defect and the connection's overall
+// verdict are unchanged on both sides; outcome partition still counts the
+// slot by its independently typed `SemanticId`. Only the SECONDARY "location
+// does not match" diagnostic is absent on the Rust side. This is the Node
+// half of a matched pair with the Rust half in
+// `meridian-app/src/operating_model/existing_project_compatibility_mode/mod.rs::tests::a_discovered_source_naming_an_invalid_plan_slot_gets_no_secondary_location_mismatch_diagnostic`
+// — same real fixture, same two mutations.
+{
+  const epcmSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/existing-project-compatibility-mode.schema.json'), 'utf8'));
+  const envelopeSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/scoped-record.schema.json'), 'utf8'));
+  const sourceRegistrySchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/instruction-source-registry.schema.json'), 'utf8'));
+  const ruleIntakeSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/controlled-rule-intake.schema.json'), 'utf8'));
+  const bundle = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/fixtures/existing-project-compatibility-mode.fixtures.json'), 'utf8'));
+  const registry = JSON.parse(JSON.stringify(bundle.valid[1].registry));
+  const payload = registry.workspace_connections[0].payload;
+  payload.discovery_plan[0].path = '../escape.md';
+  payload.discovered_sources[0].payload.location.path = 'a-different-valid-path.md';
+
+  check(
+    'намеренная граница «invalid plan slot secondary location match» (принято архитектором): библиотечный Node-прогон сообщает "location does not match" в дополнение к собственному дефекту слота, где Rust-сторона намеренно сообщает только первичный дефект слота (см. doc-комментарий парного Rust-теста и COMPATIBILITY.md)',
+    () => {
+      const problems = evaluateExistingProjectCompatibilityMode(registry, {
+        registrySchema: epcmSchema, envelopeSchema, sourceRegistrySchema, ruleIntakeSchema,
+      });
+      assert(
+        problems.some((p) => p.includes('root-agents-md') && (p.includes('".."') || p.includes('segment'))),
+        `ожидалась диагностика собственного дефекта слота, получено: ${JSON.stringify(problems)}`,
+      );
+      assert(
+        problems.some((p) => p.includes('location does not match')),
+        `ожидалась диагностика location does not match (текущее поведение Node), получено: ${JSON.stringify(problems)}`,
+      );
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Subpackage 7c, corrective round: `meridian-field-evaluation`'s
+// `measurement.start_ts`/`end_ts` interval check
+// (`meridian-app/src/operating_model/field_evaluation.rs`,
+// `parse_datetime_millis`) matched `(?:\.\d+)?` for fractional seconds
+// WITHOUT capturing them, so it silently dropped fractional seconds
+// entirely — two timestamps differing only in their fraction (e.g.
+// `.100Z` vs `.200Z`) parsed to the SAME millisecond, and a genuinely
+// later `end_ts` compared as not-after `start_ts`: a real, schema-valid
+// interval was wrongly rejected. This is the opposite shape from every
+// `VALIDATE_MUTATION_FAMILIES_*` check above (which mutate a valid fixture
+// into something that MUST be rejected) — this one adds a genuinely valid
+// fixture the fix must ACCEPT, and both real Node and real Rust `validate`
+// must agree on that, not merely each pass its own unit tests in
+// isolation. The added fixture reuses `obs-context-time-1`'s own
+// `execution_run_ref`/evidence identity (already resolvable through this
+// bundle's own `resolution` map) rather than inventing a new one, cloned
+// from the bundled invalid fixture that already proves the OPPOSITE
+// interval (`end_ts` before `start_ts`) is rejected — so only the
+// fractional-seconds precision itself is exercised, nothing else about
+// the composition.
+function VALIDATE_MUTATION_FAMILIES_7C_EXTRA_WRITE_fieldEvaluationSubSecondInterval(dir) {
+  const p = path.join(dir, 'registries', 'operating-model', 'fixtures', 'field-evaluation.fixtures.json');
+  const bundle = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const template = bundle.invalid.find((c) => c.note === 'невозможный временной интервал (конец раньше начала)');
+  assert(template, `${p} must carry a "невозможный временной интервал (конец раньше начала)" invalid fixture to clone`);
+  const spec = JSON.parse(JSON.stringify(template.spec));
+  spec.id = 'obs-context-time-fraction-check';
+  spec.title = 'Наблюдение: context-entry-time (доля секунды различает интервал)';
+  spec.payload.measurement.start_ts = '2026-08-03T12:00:00.100Z';
+  spec.payload.measurement.end_ts = '2026-08-03T12:00:00.200Z';
+  bundle.valid.push({
+    note: 'интервал длиной 100мс, различающийся только долей секунды после запятой — обязан приниматься',
+    spec,
+  });
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+{
+  const mutationDir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-kernel-validate-mutation-7c-field-evaluation-subsecond-'));
+  createdTempDirs.push(mutationDir);
+  try {
+    copyRepoWithoutGitOrTarget(mutationDir);
+    VALIDATE_MUTATION_FAMILIES_7C_EXTRA_WRITE_fieldEvaluationSubSecondInterval(mutationDir);
+    check(
+      'реальный Node/Rust validate: добавленная meridian-field-evaluation valid-fixture с интервалом, различающимся только долей секунды (.100Z раньше .200Z), принимается ОДИНАКОВО на обеих сторонах — регрессия для исправления fractional-seconds в parse_datetime_millis (подпакет 7c)',
+      () => {
+        const result = runCase(mutatedKernelValidateCase('cli-validate-mutation-7c-field-evaluation-subsecond-interval', mutationDir));
+        assert(
+          result.status === 'conformant',
+          `ожидался conformant (обе стороны принимают интервал .100Z → .200Z как валидный — доля секунды не отбрасывается), получено ${result.status}: ${JSON.stringify(result)}`,
+        );
       },
     );
   } finally {

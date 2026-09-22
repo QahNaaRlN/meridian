@@ -1,4 +1,4 @@
-//! Verbatim port of `scripts/lib/task-specification.mjs`: the
+//! Business-contract migration of `scripts/lib/task-specification.mjs`: the
 //! composite-consistency algorithm behind the `task-specification-contract`
 //! check. `registries/operating-model/task-specification.schema.json` is
 //! the COMPLETE schema for one task specification (`record_type:

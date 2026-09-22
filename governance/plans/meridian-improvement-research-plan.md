@@ -5,18 +5,25 @@ status: active
 scope: workspace
 owner: workspace-owner
 created: 2026-09-20
-updated: 2026-09-20
+updated: 2026-09-21
 related_documents:
   - $MERIDIAN_KERNEL/governance/research/README.md
   - $MERIDIAN_KERNEL/governance/research/hypothesis-registry.yaml
   - $MERIDIAN_KERNEL/governance/research/knowledge-bases-and-agent-hypotheses.md
   - $MERIDIAN_KERNEL/governance/plans/meridian-rust-migration-program-plan.md
+  - $MERIDIAN_KERNEL/standards/workspace/rust-migration-quality.md
   - $MERIDIAN_KERNEL/governance/meridian-owner-intent-contract.md
 ---
 
 # Исследовательская программа улучшения Meridian
 
 Идентификатор программы: `meridian-self-improvement-research`.
+
+Эта исследовательская программа не может ослаблять правила Rust-миграции.
+Для любого пересечения с ней наивысший приоритет имеют соблюдение выбранной
+Rust-архитектуры и обязательное использование более надёжного Rust-native
+варианта при сохранении бизнес-ценности
+(`standards/workspace/rust-migration-quality.md`).
 
 Программа превращает наблюдения об улучшении самого Meridian в проверяемые
 гипотезы, отделяет уже обоснованные архитектурные основания от экспериментов и

@@ -1,4 +1,4 @@
-//! Verbatim port of `scripts/lib/execution-state.mjs`: the
+//! Business-contract migration of `scripts/lib/execution-state.mjs`: the
 //! composite-consistency algorithm behind the `execution-state-model`
 //! check. `registries/operating-model/execution-state.schema.json` is the
 //! COMPLETE schema for the state of ONE execution run (`record_type:

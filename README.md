@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-20
+updated: 2026-09-21
 ---
 
 # Meridian
@@ -51,6 +51,16 @@ Meridian: с 2026-09-19 её контур самоуправления (виде
 Граница нормативна, а не стилистична:
 [`standards/workspace/kernel-boundary.md`](standards/workspace/kernel-boundary.md).
 Проверяется механически: [`scripts/kernel-validate.mjs`](scripts/kernel-validate.mjs).
+
+Для текущей миграции на Rust действует отдельный нормативный приоритет:
+соблюдать выбранную Rust-архитектуру и обязательно использовать более
+надёжные возможности Rust, не копируя устройство или дефекты Node.js ради
+паритета. Правило зафиксировано в
+[`rust-migration-quality.md`](standards/workspace/rust-migration-quality.md),
+а полный аудит текущей Rust-кодовой базы — в
+[`meridian-rust-codebase-architecture-audit.md`](governance/audits/meridian-rust-codebase-architecture-audit.md).
+До корректирующего пакета `rust-architecture-conformance` пакет 7 и следующие
+пакеты архитектурно заблокированы.
 
 ## 2. Зачем нужны логические области
 

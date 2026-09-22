@@ -26,6 +26,7 @@ pub mod evidence;
 pub mod existing_project_compatibility_mode;
 pub mod instruction_source;
 mod json;
+pub mod mechanical_integrity;
 pub mod migration;
 pub mod resolver;
 pub mod types;

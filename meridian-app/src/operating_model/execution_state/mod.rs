@@ -37,6 +37,8 @@ use super::run_contract_boundary::{
 use crate::workspace::{ReadError, WorkspaceReader};
 
 const SCHEMA_NAME: &str = "execution-state.schema.json";
+/// How the schema gate names this family's schema.
+pub(crate) const SCHEMA_LABEL: &str = "execution-state";
 const SCHEMA_PATH: &str = "registries/operating-model/execution-state.schema.json";
 const ENVELOPE_PATH: &str = "registries/operating-model/scoped-record.schema.json";
 const FIXTURES_PATH: &str = "registries/operating-model/fixtures/execution-state.fixtures.json";
@@ -53,7 +55,7 @@ pub struct Outcome {
     pub diagnostics: Vec<Diagnostic>,
 }
 
-fn evaluate_case(doc: &Value, schemas: &RecordSchemas<'_>) -> CaseOutcome<ExecutionRun> {
+pub(crate) fn evaluate_case(doc: &Value, schemas: &RecordSchemas<'_>) -> CaseOutcome<ExecutionRun> {
     evaluate_record(
         doc,
         schemas,
@@ -142,7 +144,7 @@ pub fn evaluate(reader: &dyn WorkspaceReader) -> Outcome {
     let schemas = RecordSchemas {
         envelope: &envelope,
         record: &schema,
-        label: "execution-state",
+        label: SCHEMA_LABEL,
     };
     let mut groups = groups.into_iter();
     for case in groups.next().unwrap_or_default() {
@@ -197,7 +199,7 @@ mod tests {
         f(&RecordSchemas {
             envelope: &envelope,
             record: &record,
-            label: "execution-state",
+            label: SCHEMA_LABEL,
         })
     }
 
@@ -270,7 +272,7 @@ mod tests {
         let schemas = RecordSchemas {
             envelope: &permissive,
             record: &permissive,
-            label: "execution-state",
+            label: SCHEMA_LABEL,
         };
         let outcome = evaluate_case(&doc, &schemas);
         assert!(matches!(outcome, CaseOutcome::ConversionDrift(_)));

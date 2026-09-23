@@ -29,5 +29,6 @@ pub use catalog::{
 pub use portability::{non_portable_reason, resolve_schema_ref, CANONICAL_RECORD_BASE};
 pub use specification::{
     check_task_specification, spec_id_label, AcceptanceCriterionInput, DeclaredPattern,
-    SpecificationFields, TaskSpecification, ALLOWED_SCOPE_TYPES, RECORD_TYPE, RUN_STATE_FIELDS,
+    DeclaredScope, SpecificationFields, TaskSpecification, ALLOWED_SCOPE_TYPES, RECORD_TYPE,
+    RUN_STATE_FIELDS,
 };

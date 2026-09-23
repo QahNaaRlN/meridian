@@ -344,6 +344,10 @@ pub struct SpecificationFields<'a> {
     pub record_type: &'a str,
     pub title: Option<&'a str>,
     pub scope_type: Option<&'a str>,
+    /// `scope.id` and `scope.workspace_id` — carried onto the accepted
+    /// [`TaskSpecification`] for a composing record, never checked here.
+    pub scope_id: Option<&'a str>,
+    pub scope_workspace_id: Option<&'a str>,
     pub origin_kind: Option<&'a str>,
     pub origin_source_ref: Option<&'a str>,
     pub authority_ref: Option<&'a str>,
@@ -372,6 +376,18 @@ pub fn spec_id_label(id: Option<&str>) -> &str {
 pub struct TaskSpecification {
     id: SemanticId,
     kind: WorkItemKind,
+    task_pattern: SemanticId,
+    scope: DeclaredScope,
+}
+
+/// The accepted specification's declared scope, as the envelope states it
+/// (`rust-architecture-conformance-7`: the composition point
+/// `upgrade-integration-qualification` reads the workspace from).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeclaredScope {
+    pub scope_type: Option<String>,
+    pub id: Option<String>,
+    pub workspace_id: Option<String>,
 }
 
 impl TaskSpecification {
@@ -381,6 +397,15 @@ impl TaskSpecification {
 
     pub fn kind(&self) -> WorkItemKind {
         self.kind
+    }
+
+    /// The id of the catalogue pattern the specification resolved to.
+    pub fn task_pattern(&self) -> &SemanticId {
+        &self.task_pattern
+    }
+
+    pub fn scope(&self) -> &DeclaredScope {
+        &self.scope
     }
 }
 
@@ -464,8 +489,21 @@ pub fn check_task_specification(
         match (
             fields.id.and_then(|s| SemanticId::new(s).ok()),
             resolved_kind,
+            fields
+                .declared_pattern
+                .and_then(|p| p.id)
+                .and_then(|s| SemanticId::new(s).ok()),
         ) {
-            (Some(id), Some(kind)) => Some(TaskSpecification { id, kind }),
+            (Some(id), Some(kind), Some(task_pattern)) => Some(TaskSpecification {
+                id,
+                kind,
+                task_pattern,
+                scope: DeclaredScope {
+                    scope_type: fields.scope_type.map(str::to_string),
+                    id: fields.scope_id.map(str::to_string),
+                    workspace_id: fields.scope_workspace_id.map(str::to_string),
+                },
+            }),
             _ => None,
         }
     } else {
@@ -516,6 +554,8 @@ mod tests {
             record_type: RECORD_TYPE,
             title: Some("Пример спецификации"),
             scope_type: Some("repository-scope"),
+            scope_id: Some("sample-repository"),
+            scope_workspace_id: Some("sample-workspace"),
             origin_kind: Some("declared"),
             origin_source_ref: Some("sources/example"),
             authority_ref: Some("repository-maintainer"),

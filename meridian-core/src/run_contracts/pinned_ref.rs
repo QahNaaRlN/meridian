@@ -18,6 +18,9 @@ use super::identity::{PortableRef, RecordText};
 use super::revision::{pin_defect, PinSha256};
 
 /// The record kinds a pinned reference, or a resolver response, may name.
+/// The last five are the composed records the two qualification contracts
+/// pin by content digest (`crate::qualification`); no run-contract schema's
+/// closed `record_type` enum admits them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PinnedRecordKind {
     ExecutionRun,
@@ -26,6 +29,11 @@ pub enum PinnedRecordKind {
     ContextManifest,
     FieldEvaluationObservation,
     EvidenceResult,
+    WorkspaceConnectionScan,
+    InstanceMigrationPlan,
+    InstanceCanonicalExport,
+    EvidenceAndHandoff,
+    FieldEvaluationReport,
 }
 
 impl PinnedRecordKind {
@@ -37,6 +45,11 @@ impl PinnedRecordKind {
             PinnedRecordKind::ContextManifest => "context-manifest",
             PinnedRecordKind::FieldEvaluationObservation => "field-evaluation-observation",
             PinnedRecordKind::EvidenceResult => "evidence-result",
+            PinnedRecordKind::WorkspaceConnectionScan => "workspace-connection-scan",
+            PinnedRecordKind::InstanceMigrationPlan => "instance-migration-plan",
+            PinnedRecordKind::InstanceCanonicalExport => "instance-canonical-export",
+            PinnedRecordKind::EvidenceAndHandoff => "evidence-and-handoff",
+            PinnedRecordKind::FieldEvaluationReport => "field-evaluation-report",
         }
     }
 
@@ -48,6 +61,11 @@ impl PinnedRecordKind {
             "context-manifest" => Some(PinnedRecordKind::ContextManifest),
             "field-evaluation-observation" => Some(PinnedRecordKind::FieldEvaluationObservation),
             "evidence-result" => Some(PinnedRecordKind::EvidenceResult),
+            "workspace-connection-scan" => Some(PinnedRecordKind::WorkspaceConnectionScan),
+            "instance-migration-plan" => Some(PinnedRecordKind::InstanceMigrationPlan),
+            "instance-canonical-export" => Some(PinnedRecordKind::InstanceCanonicalExport),
+            "evidence-and-handoff" => Some(PinnedRecordKind::EvidenceAndHandoff),
+            "field-evaluation-report" => Some(PinnedRecordKind::FieldEvaluationReport),
             _ => None,
         }
     }

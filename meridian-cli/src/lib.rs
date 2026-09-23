@@ -265,14 +265,8 @@ mod tests {
             &recording,
         );
 
-        // Not `exit_code::OK`: this Kernel checkout still carries
-        // `BLOCKED_CHECKS` (`commands::validate::BLOCKED_CHECKS` is
-        // non-empty until the remaining operating-model composite
-        // contracts are ported), so `validate` correctly reports
-        // `exit_code::DOMAIN_NEGATIVE` even with zero real `failures` — see
-        // `commands::validate::run`. What must still hold for this
-        // event-sink comparison to be meaningful is that this checkout has
-        // no *real* failures of its own, only blocked-pending-port checks.
+        // What must hold for this event-sink comparison to be meaningful
+        // is that this checkout has no real `validate` failures of its own.
         let envelope: serde_json::Value =
             serde_json::from_slice(&stdout_noop).expect("validate --format json is one document");
         assert!(

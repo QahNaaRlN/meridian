@@ -43,27 +43,16 @@
 //! unset are reproduced verbatim: this package wires no `--instance` flag
 //! (deferred to package 8, `meridian-rust-migration-program-plan.md` §4).
 //!
-//! **Not yet ported — explicit, itemised `blocked` list, never silently
-//! passed and never silently failed** ([`BLOCKED_CHECKS`]): the 4 remaining
-//! operating-model composite contracts, all belonging to subpackage 7d
-//! (`validate-migration-qualification`) — `instance-data-migration`,
-//! `instance-canonical-export`, `workspace-compatibility-qualification`,
-//! `upgrade-integration-qualification` — each pair a JSON Schema with a
-//! bespoke composite-consistency algorithm from its own
-//! `scripts/lib/*.mjs` module; one of those pure algorithms already exists
-//! in `meridian-core` (`migration::checks`) but is not yet wired to real
-//! fixture files by this CLI, and the remaining three have no Rust port at
-//! all. The owner has decided the split and order
-//! (`governance/plans/meridian-rust-migration-program-plan.md` §5.5c):
-//! subpackages 7a and 7b are `accepted`/`integrated`
-//! (`meridian-rust-migration-program-plan.md` §5.7, §5.10); 7c is
-//! implemented by this module (this doc comment's own record) and passed
-//! to independent review as `READY_FOR_ARCHITECT_REVIEW` (§5.11); 7d
+//! As of `rust-architecture-conformance-7`, the four migration and
+//! qualification families of historical subpackage 7d
 //! (`instance-data-migration`, `instance-canonical-export`,
 //! `workspace-compatibility-qualification`,
-//! `upgrade-integration-qualification`) is not started by this module.
-//! Package 8 (`meridian-cli-migration`) stays blocked on the acceptance and
-//! integration of all of 7a–7d, not only 7a–7c.
+//! `upgrade-integration-qualification`) run as app operations over the same
+//! reader, after `existing-project-compatibility-mode` — the Node
+//! reference's own relative order. No mandatory gate family is blocked any
+//! longer, so the former `BLOCKED_CHECKS` mechanism (and its `blocked`
+//! result field and `BLOCKED` human verdict) is removed: `validate` reports
+//! `ok` exactly when every family it runs is clean.
 
 mod agent_instruction_identity;
 mod bounded_context_manifest;
@@ -76,7 +65,9 @@ mod existing_project_compatibility_mode;
 mod field_evaluation;
 mod functional_parity;
 mod git_provenance;
+mod instance_canonical_export;
 mod instance_context;
+mod instance_data_migration;
 mod instruction_source_registry;
 mod instruction_topics;
 mod kernel_purity;
@@ -90,6 +81,8 @@ mod sha_provenance;
 mod stack_profiles;
 mod task_pattern_registry;
 mod task_specification;
+mod upgrade_integration_qualification;
+mod workspace_compatibility_qualification;
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -98,7 +91,7 @@ use meridian_app::events::EventSink;
 use meridian_app::validation::mechanical_integrity::OperationError;
 use meridian_app::workspace::{GitInspector, GitInspectorError};
 use meridian_core::types::{Diagnostic, DiagnosticLevel, NonEmptyString, WorkspaceRelativePath};
-use serde_json::{json, Value};
+use serde_json::json;
 
 use crate::adapters::git_inspector::{CachedGitInspector, RealGitInspector};
 use crate::cli::{OutputFormat, ParsedArgs};
@@ -182,15 +175,6 @@ fn with_family_prefix(family: &str, messages: Vec<String>) -> Vec<String> {
 
 const COMMAND: &str = "validate";
 pub const ALLOWED_FLAGS: &[&str] = &["kernel", "format"];
-
-/// See the module documentation above for why each of these is not yet
-/// implemented, and what porting it would require.
-pub const BLOCKED_CHECKS: &[(&str, &str)] = &[
-    ("instance-data-migration", "meridian-core::migration::checks ports the pure plan-check algorithm, but the file-facing fixture harness is not yet wired into this CLI"),
-    ("instance-canonical-export", "needs scripts/lib/instance-data-migration.mjs's export-side composite algorithm ported"),
-    ("workspace-compatibility-qualification", "needs scripts/lib/workspace-compatibility-qualification.mjs's composite algorithm ported"),
-    ("upgrade-integration-qualification", "needs scripts/lib/upgrade-integration-qualification.mjs's composite algorithm ported"),
-];
 
 struct Collected {
     failures: Vec<String>,
@@ -390,6 +374,20 @@ fn collect_with_git_result(
     let existing_project_compatibility_mode = existing_project_compatibility_mode::run(kernel_root);
     failures.extend(existing_project_compatibility_mode.failures);
 
+    let instance_data_migration = instance_data_migration::run(kernel_root);
+    failures.extend(instance_data_migration.failures);
+
+    let instance_canonical_export = instance_canonical_export::run(kernel_root);
+    failures.extend(instance_canonical_export.failures);
+
+    let workspace_compatibility_qualification =
+        workspace_compatibility_qualification::run(kernel_root);
+    failures.extend(workspace_compatibility_qualification.failures);
+
+    let upgrade_integration_qualification =
+        upgrade_integration_qualification::run(kernel_root, task_patterns.catalog.as_ref());
+    failures.extend(upgrade_integration_qualification.failures);
+
     warnings.push(
         "front-matter/path-placement: no Instance root, working-memory artifacts were NOT checked"
             .to_string(),
@@ -452,24 +450,12 @@ pub fn run(
         Err(error) => return crate::report_environment_error(err, &error),
     };
 
-    // A Kernel is never reported `ok` while any mandatory gate family is
-    // blocked pending a port, even when every check this binary actually
-    // ran came back clean: an unrun gate is not a passed gate
-    // (`AGENTS.md`, `meridian-rust-migration-program-plan.md`, item 1 of the
-    // second `CHANGES_REQUESTED` round on package `meridian-cli-foundation`
-    // — "`meridian validate` не должен возвращать код 0/status ok, пока
-    // часть обязательного гейта blocked или не исполнялась").
-    let ok = collected.failures.is_empty() && BLOCKED_CHECKS.is_empty();
-    let blocked: Vec<Value> = BLOCKED_CHECKS
-        .iter()
-        .map(|(check, reason)| json!({"check": check, "reason": reason}))
-        .collect();
+    let ok = collected.failures.is_empty();
     let result = json!({
         "kernel": kernel_path,
         "checked_files": collected.checked_files,
         "failures": collected.failures,
         "warnings": collected.warnings,
-        "blocked": blocked,
         "ok": ok,
         "stats": {
             "document_identity_checked": collected.identity_checked,
@@ -508,23 +494,11 @@ pub fn run(
             }
             let _ = writeln!(
                 out,
-                "{} failure(s), {} warning(s), {} check(s) blocked pending a new architecture decision",
+                "{} failure(s), {} warning(s)",
                 collected.failures.len(),
-                collected.warnings.len(),
-                BLOCKED_CHECKS.len()
+                collected.warnings.len()
             );
-            // Three distinct human verdicts, not two: a Kernel with zero
-            // real failures but a non-empty `blocked` list is not "OK" (it
-            // was not fully checked) and is not "FAIL" either (nothing this
-            // binary actually ran found a real problem) — collapsing it
-            // into either word would misreport which of the two is true.
-            let verdict = if ok {
-                "OK"
-            } else if collected.failures.is_empty() {
-                "BLOCKED"
-            } else {
-                "FAIL"
-            };
+            let verdict = if ok { "OK" } else { "FAIL" };
             let _ = writeln!(out, "{verdict}");
         }
     }
@@ -1382,3 +1356,7 @@ mod rust_architecture_conformance_6 {
         }
     }
 }
+
+/// Structural and route gates of `rust-architecture-conformance-7`.
+#[cfg(test)]
+mod rust_architecture_conformance_7;

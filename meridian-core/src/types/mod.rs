@@ -28,6 +28,7 @@ pub use authority::{Authority, AuthorityError, AuthorityKind};
 pub use content_digest::{ContentDigest, ContentDigestError, DigestAlgorithm};
 pub use diagnostic::{Diagnostic, DiagnosticError, DiagnosticLevel, DiagnosticReference};
 pub use entry_name::{EntryName, EntryNameError};
+pub(crate) use evidence_ref::opaque_ref_fault;
 pub use evidence_ref::{EvidenceRef, EvidenceRefError};
 pub use nonempty::{NonEmptyString, NonEmptyStringError};
 pub use origin::{Origin, OriginError, OriginKind};

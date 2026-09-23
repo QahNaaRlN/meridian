@@ -1,91 +1,261 @@
-//! The already-resolved external data a migration-plan check compares
-//! against — `meridian-core` never resolves an `EvidenceRef` or a source
-//! snapshot itself (it does not know `EvidenceRepository`, SQLite, Git or
-//! the filesystem exist); the caller resolves it through whatever port it
-//! has and passes the closed result in.
+//! The typed responses of the migration contracts' external resolution
+//! boundaries (`scripts/lib/instance-data-migration.mjs`:
+//! `makeSourceSnapshotResolver`, `makeRefResolver` and the maps a fixture
+//! bundle carries for them) and the catalogues they are looked up in.
 //!
-//! These mirror the "closed transformer response" shapes
-//! `resolveAndCheckSourceSnapshot`/`resolveAndCheckEvidence`/
-//! `resolveAndCheckRollbackSnapshot`/`resolveAndCheckDeterministicPlan`/
-//! `resolveAndCheckRestorationEvidence`/`checkSupersedes` check against in
-//! `scripts/lib/instance-data-migration.mjs`, minus the fields that check
-//! only that the (JSON) response itself was closed to a known field set —
-//! a `meridian-core` caller can only ever construct one of these typed
-//! structs, so there is no "unknown field" to reject.
+//! A response is not schema-checked before it reaches this crate: its
+//! closed field set IS the contract's domain rule. So every known field is
+//! a [`ResponseField`] (absent, of the expected shape, or a
+//! [`ForeignValue`](crate::run_contracts::ForeignValue) kept only for its
+//! diagnostic) and every other key is kept by name, sorted, so the rule can
+//! report it deterministically. `meridian-core` never looks a response up
+//! anywhere but in a [`ResponseCatalogue`] its caller built once.
 
-use crate::types::{ContentDigest, EvidenceRef, Revision, Scope, SemanticId};
+use std::collections::BTreeMap;
 
-/// The result of resolving `payload.source` through `resolveSourceSnapshot`
-/// (`instance-data-migration.md` §2). `record_type` matching is not
-/// modelled — a caller can only construct a `ResolvedSourceSnapshot`, never
-/// a same-shaped response of the wrong kind.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ResolvedSourceSnapshot {
-    pub repository_ref: EvidenceRef,
-    pub revision: Revision,
-    pub digest: ContentDigest,
-    pub working_tree_clean: bool,
+use crate::canonical::CanonicalJson;
+use crate::run_contracts::{ResponseField, ResponseItem};
+
+/// Responses keyed by the exact string the contract queries with. A map
+/// entry that is not an object never enters the catalogue: it does not
+/// resolve, exactly as the reference resolver's `isObject` check.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResponseCatalogue<T> {
+    entries: BTreeMap<String, T>,
 }
 
-/// Which sub-verdict a resolved evidence record confirms
-/// (`instance-data-migration.md` §6).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum EvidenceKind {
-    Coverage,
-    ApplicabilityPreservation,
+impl<T> Default for ResponseCatalogue<T> {
+    fn default() -> Self {
+        Self {
+            entries: BTreeMap::new(),
+        }
+    }
 }
 
-/// The result of resolving a `verification.*.evidence_ref` through
-/// `resolveEvidence` (`instance-data-migration.md` §6).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ResolvedEvidence {
-    pub evidence_ref: EvidenceRef,
-    pub kind: EvidenceKind,
-    pub plan_ref: SemanticId,
-    pub plan_fingerprint: ContentDigest,
-    pub confirms: bool,
+impl<T> ResponseCatalogue<T> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn insert(&mut self, key: impl Into<String>, response: T) {
+        self.entries.insert(key.into(), response);
+    }
+
+    pub fn resolve(&self, key: &str) -> Option<&T> {
+        self.entries.get(key)
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
 }
 
-/// The result of resolving `rollback.source_snapshot_ref` through
-/// `resolveRollbackSnapshot` (`instance-data-migration.md` §5).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ResolvedRollbackSnapshot {
-    pub source_snapshot_ref: EvidenceRef,
-    pub repository_ref: EvidenceRef,
-    pub revision: Revision,
-    pub digest: ContentDigest,
+/// A resolved `{ algorithm, value }` digest object. A non-object `digest`
+/// reads as `Absent`/`Foreign` at the enclosing field and compares as `{}`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DigestResponse {
+    pub algorithm: ResponseField<String>,
+    pub value: ResponseField<String>,
+    pub unknown_keys: Vec<String>,
 }
 
-/// The result of resolving `rollback.deterministic_plan_ref` through
-/// `resolveDeterministicPlan` (`instance-data-migration.md` §5).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ResolvedDeterministicPlan {
-    pub deterministic_plan_ref: EvidenceRef,
-    pub source_snapshot_ref: EvidenceRef,
-    pub plan_ref: SemanticId,
-    pub plan_fingerprint: ContentDigest,
-    pub applicable: bool,
+/// `resolveSourceSnapshot`'s response (`instance-source-snapshot`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SourceSnapshotResponse {
+    pub record_type: ResponseField<String>,
+    pub repository_ref: ResponseField<String>,
+    pub revision: ResponseField<String>,
+    pub digest: ResponseField<DigestResponse>,
+    pub working_tree_clean: ResponseField<bool>,
+    pub unknown_keys: Vec<String>,
 }
 
-/// The result of resolving `rollback.restoration_evidence_ref` through
-/// `resolveRestorationEvidence` (`instance-data-migration.md` §5).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ResolvedRestorationEvidence {
-    pub evidence_ref: EvidenceRef,
-    pub plan_ref: SemanticId,
-    pub plan_fingerprint: ContentDigest,
-    pub source_snapshot_ref: EvidenceRef,
-    pub confirms: bool,
+/// `resolveEvidence`'s response (`instance-migration-evidence`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct EvidenceResponse {
+    pub record_type: ResponseField<String>,
+    pub evidence_ref: ResponseField<String>,
+    pub kind: ResponseField<String>,
+    pub plan_ref: ResponseField<String>,
+    pub plan_fingerprint: ResponseField<String>,
+    pub confirms: ResponseField<bool>,
+    pub unknown_keys: Vec<String>,
 }
 
-/// The result of resolving `payload.supersedes` through
-/// `resolveSupersededPlan`, used only when the named predecessor is not
-/// present in the same batch of plans being checked
-/// (`instance-data-migration.md` §7).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ResolvedSupersededPlan {
-    pub plan_ref: SemanticId,
-    pub scope: Scope,
-    pub repository_ref: EvidenceRef,
-    pub revision: Revision,
+/// `resolveRollbackSnapshot`'s response (`instance-rollback-snapshot`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RollbackSnapshotResponse {
+    pub record_type: ResponseField<String>,
+    pub source_snapshot_ref: ResponseField<String>,
+    pub repository_ref: ResponseField<String>,
+    pub revision: ResponseField<String>,
+    pub digest: ResponseField<DigestResponse>,
+    pub unknown_keys: Vec<String>,
+}
+
+/// `resolveDeterministicPlan`'s response
+/// (`instance-deterministic-reconstruction-plan`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DeterministicPlanResponse {
+    pub record_type: ResponseField<String>,
+    pub deterministic_plan_ref: ResponseField<String>,
+    pub source_snapshot_ref: ResponseField<String>,
+    pub plan_ref: ResponseField<String>,
+    pub plan_fingerprint: ResponseField<String>,
+    pub applicable: ResponseField<bool>,
+    pub unknown_keys: Vec<String>,
+}
+
+/// `resolveRestorationEvidence`'s response (`instance-restoration-evidence`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RestorationEvidenceResponse {
+    pub record_type: ResponseField<String>,
+    pub evidence_ref: ResponseField<String>,
+    pub plan_ref: ResponseField<String>,
+    pub plan_fingerprint: ResponseField<String>,
+    pub source_snapshot_ref: ResponseField<String>,
+    pub confirms: ResponseField<bool>,
+    pub unknown_keys: Vec<String>,
+}
+
+/// A resolved scope object.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ScopeResponse {
+    pub scope_type: ResponseField<String>,
+    pub id: ResponseField<String>,
+    pub workspace_id: ResponseField<String>,
+    pub organization_profile_id: ResponseField<String>,
+    pub unknown_keys: Vec<String>,
+}
+
+/// `resolveSupersededPlan`'s response (`instance-superseded-plan`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SupersededPlanResponse {
+    pub record_type: ResponseField<String>,
+    pub plan_ref: ResponseField<String>,
+    pub scope: ResponseField<ScopeResponse>,
+    pub repository_ref: ResponseField<String>,
+    pub revision: ResponseField<String>,
+    pub unknown_keys: Vec<String>,
+}
+
+/// Every external boundary a migration plan is checked against, each
+/// already parsed into its typed catalogue.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct PlanResolution {
+    /// Keyed `"<repository_ref>@<revision>"`.
+    pub source_snapshots: ResponseCatalogue<SourceSnapshotResponse>,
+    pub evidence: ResponseCatalogue<EvidenceResponse>,
+    pub rollback_snapshots: ResponseCatalogue<RollbackSnapshotResponse>,
+    pub deterministic_plans: ResponseCatalogue<DeterministicPlanResponse>,
+    pub restoration_evidence: ResponseCatalogue<RestorationEvidenceResponse>,
+    pub superseded_plans: ResponseCatalogue<SupersededPlanResponse>,
+}
+
+/// A resolved source-unit record as `resolveMigrationPlan` returns it.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RecordUnitResponse {
+    pub id: ResponseField<String>,
+    pub unit_ref: ResponseField<String>,
+}
+
+/// An open object, kept only as its members' canonical values — the
+/// target record a resolved mapping carries, compared field for field.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct OpenObject {
+    members: Vec<(String, CanonicalJson)>,
+}
+
+impl OpenObject {
+    /// A repeated member keeps its LAST value.
+    pub fn new(members: Vec<(String, CanonicalJson)>) -> Self {
+        let mut deduped: Vec<(String, CanonicalJson)> = Vec::with_capacity(members.len());
+        for (name, value) in members {
+            match deduped.iter_mut().find(|(n, _)| *n == name) {
+                Some(slot) => slot.1 = value,
+                None => deduped.push((name, value)),
+            }
+        }
+        Self { members: deduped }
+    }
+
+    pub fn member(&self, name: &str) -> Option<&CanonicalJson> {
+        self.members.iter().find(|(n, _)| n == name).map(|(_, v)| v)
+    }
+
+    /// The object of just the named members that are present —
+    /// `JSON.stringify` of `{ a: o.a, b: o.b, … }` drops undefined ones.
+    pub(crate) fn pick(&self, names: &[&str]) -> CanonicalJson {
+        CanonicalJson::object(
+            names
+                .iter()
+                .filter_map(|n| self.member(n).map(|v| ((*n).to_string(), v.clone())))
+                .collect(),
+        )
+    }
+
+    pub(crate) fn whole(&self) -> CanonicalJson {
+        CanonicalJson::object(self.members.clone())
+    }
+}
+
+/// A resolved mapping's target: its `id` as the contract reads it, and the
+/// whole object for the structural comparison.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct TargetResponse {
+    pub id: ResponseField<String>,
+    pub record: OpenObject,
+}
+
+/// A resolved mapping. `target` is `None` when the mapping carries no
+/// target object.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct MappingResponse {
+    pub unit_id: ResponseField<String>,
+    pub disposition: ResponseField<String>,
+    pub target: Option<TargetResponse>,
+    pub merge_rule_ref: ResponseField<String>,
+    pub retained_reason: ResponseField<String>,
+}
+
+/// A resolved `{ repository_ref, revision, digest }` source identity.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SourceIdentityResponse {
+    pub repository_ref: ResponseField<String>,
+    pub revision: ResponseField<String>,
+    pub digest: ResponseField<DigestResponse>,
+}
+
+/// `resolveMigrationPlan`'s response (`instance-migration-plan`): the
+/// closed projection of a plan a canonical export is checked against.
+/// Array members that are not objects are dropped, as `filter(isObject)`.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct MigrationPlanResponse {
+    pub record_type: ResponseField<String>,
+    pub plan_ref: ResponseField<String>,
+    pub plan_fingerprint: ResponseField<String>,
+    pub scope: ResponseField<ScopeResponse>,
+    pub source: ResponseField<SourceIdentityResponse>,
+    pub record_units: Vec<RecordUnitResponse>,
+    pub mappings: Vec<MappingResponse>,
+    pub unknown_keys: Vec<String>,
+}
+
+/// `resolveSourceContent`'s response (`instance-source-content`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SourceContentResponse {
+    pub record_type: ResponseField<String>,
+    pub repository_ref: ResponseField<String>,
+    pub revision: ResponseField<String>,
+    pub unit_refs: ResponseField<Vec<ResponseItem>>,
+    pub merge_rule_ref: ResponseField<Option<String>>,
+    pub media_type: ResponseField<String>,
+    pub encoding: ResponseField<String>,
+    pub content: ResponseField<String>,
+    pub digest: ResponseField<DigestResponse>,
+    pub unknown_keys: Vec<String>,
 }

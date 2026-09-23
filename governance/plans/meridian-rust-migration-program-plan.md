@@ -81,9 +81,9 @@ Kernel (§4, §5.1). Пакет 2 (`rust-conformance-harness`) принят и
 архитектурное исправление пакета 7 (`meridian-cli-foundation`) по §5.13
 завершено: пакеты 1–7 `rust-architecture-conformance` и исправление 7a
 приняты и локально интегрированы, все семейства 7a–7d закрыты. Следующим
-остаётся пакет 8 (`meridian-cli-migration`); он ещё не специфицирован и не
-начат. Ни эксперимент исследовательского реестра этой синхронизацией не
-начинается.
+остаётся пакет 8 (`meridian-cli-migration`); он специфицирован и открыт к
+исполнению в §5.22, но ещё не реализован. Ни эксперимент исследовательского
+реестра этой синхронизацией не начинается.
 
 ## 1. Активационный рубеж
 
@@ -159,7 +159,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Типизированные контракты исполнения и управления запуском (`rust-architecture-conformance-5`) | Перевести связные `execution-state-model`, `role-and-human-control` и `bounded-context-manifest` на общие typed core contracts; app оставить transport/schema/resolution orchestration, CLI — composition/presentation; сохранить временный тонкий фасад только для двух ещё не перенесённых семейств 7c | `rust-architecture-conformance-4`, §5.13 | accepted — принято и локально интегрировано (§5.19.8) |
 | — | Типизированные доказательства и полевая оценка (`rust-architecture-conformance-6`) | Перевести оставшиеся семейства 7c `evidence-and-handoff-contract` и `meridian-field-evaluation` на общий typed core/app pipeline, удалить временные resolver/portability фасады и оставить CLI слоем composition/presentation | `rust-architecture-conformance-5`, §5.13 | accepted — принято и локально интегрировано (§5.20.9) |
 | — | Типизированная миграционная и upgrade-квалификация (`rust-architecture-conformance-7`) | Перевести весь связный 7d: `instance-data-migration`, `instance-canonical-export`, `workspace-compatibility-qualification`, `upgrade-integration-qualification`; расширить существующий migration owner и композиционно переиспользовать принятые операции 7b/7c | `rust-architecture-conformance-6`, §5.13 | accepted — принято и локально интегрировано (§5.21.9) |
-| 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | planned — следующий пакет, ещё не специфицирован и не начат |
+| 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | specified — открыт к исполнению (§5.22) |
 | 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | planned |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
 
@@ -5675,6 +5675,346 @@ conformance harness — 129 passed, 0 failed; `kernel-validate.test.mjs` —
 `--no-ff` merge-коммитом без публикации. Архитектурное исправление 7a–7d
 завершено; пакет 8 этим решением не начинается.
 
+## 5.22. Пакет 8 `meridian-cli-migration` (задание, 2026-09-24)
+
+### 5.22.1. Статус и условие старта
+
+Статус: **`SPECIFIED_NOT_STARTED`**.
+
+Пакет открыт только после независимой приёмки и локальной интеграции
+`rust-architecture-conformance-7`. Условие выполнено: package commit
+`fa9f1c02be5e129da861ba322c6d164066e23f41` достижим из `dev` через
+отдельный `--no-ff` merge-коммит `a0d3cf42cebdf3e10752fa65cbabe49f18e6af61`.
+Стартовый `dev` архитектурной спецификации —
+`6f9b6661afb3c62304b921bcf427eb396d978d43`; рабочее дерево было чистым.
+
+Переходный источник разрешён только для этого пакета и только для чтения.
+Строгий preflight прошёл с явно заданными `MERIDIAN_KERNEL` и локальным
+`MERIDIAN_INSTANCE`, содержащим принятый комплект
+`migration/instance-data`. Абсолютный путь является локальной проводкой и
+не записывается в код, фикстуры, документацию либо вывод CLI. Каноническая
+идентичность источника берётся только из самого принятого bundle:
+
+- `repository_ref` — точное значение принятого bundle, не встроенная
+  константа Kernel;
+- `revision: 59f2fa220d015cde8eed873629750aa74f72dbbe`;
+- source digest и алгоритм — из `source-snapshot.json`;
+- `plan_id` — точное значение принятого bundle, не встроенная константа
+  Kernel;
+- `plan_fingerprint: 6e426393b62c8d918def095ef34d06e871f44bfa3c6d524868103fa46e6def76`;
+- 346 record units = 336 migrated + 10 retained-transitional + 0 merged.
+
+Целевой статус первой передачи — `READY_FOR_ARCHITECT_REVIEW`, не
+`ACCEPTED`. Исполнитель не выполняет Git write-операций.
+
+### 5.22.2. Результат и граница пакета
+
+Пакет добавляет пять production-команд: `import` и
+`migration plan|apply|verify|rollback`.
+
+`import` имеет ровно два закрытых вида входа:
+
+- **`frozen-instance`** — принятый bundle
+  `migration/instance-data` вместе с Git-источником, содержащим его
+  закреплённую ревизию; этот путь доказывает фактический перенос прежнего
+  Instance;
+- **`canonical-records`** — полный закрытый JSON-конверт, который
+  производит `meridian export --format json`, с
+  `command: "export"`, `status: "ok"` и массивом канонических
+  `scoped-record` в `result`; этот путь существует для доказуемого
+  round trip `import → export → import`, а не как общий ingestion API.
+
+Вид входа всегда задаётся явно. Автоматическое угадывание формата,
+fallback между видами и принятие произвольного дерева документов запрещены.
+`frozen-instance` направляет все 336 продуктовых записей только в базу
+роли `workspace`; 10 `retained-transitional` не минтятся и остаются
+явно отражены в результате. `canonical-records` маршрутизирует уже
+канонические записи через `StorageRouter` по их типизированной области:
+`built-in-methodology` — в `tool`, остальные области — в `workspace`.
+
+`import frozen-instance` — один публичный orchestration route:
+`plan → apply → verify`. Он не создаёт второй алгоритм рядом с
+`migration plan|apply|verify`; обе поверхности обязаны вызывать те же
+app operations и те же accepted domain values.
+
+### 5.22.3. Точный контракт CLI
+
+```text
+meridian import --kernel <path> --kind frozen-instance --source <instance-repository-path> --tool-db <path> --workspace-db <path> --confirm <plan-fingerprint> [--format human|json]
+meridian import --kernel <path> --kind canonical-records --input <json-path> --tool-db <path> --workspace-db <path> --confirm <sha256-of-input> [--format human|json]
+meridian migration plan --kernel <path> --source <instance-repository-path> [--format human|json]
+meridian migration apply --kernel <path> --source <instance-repository-path> --workspace-db <path> [--dry-run true|false] [--confirm <plan-fingerprint>] [--format human|json]
+meridian migration verify --kernel <path> --source <instance-repository-path> --workspace-db <path> [--format human|json]
+meridian migration rollback --kernel <path> --source <instance-repository-path> --workspace-db <path> --run <migration-run-id> --confirm <migration-run-id> [--format human|json]
+```
+
+Правила:
+
+1. `--format` и коды завершения наследуют §7.1 технической спецификации:
+   0 — положительный предметный результат; 1 — корректный отрицательный
+   результат; 2 — usage; 3 — вход/окружение не позволили получить
+   предметный результат.
+2. JSON использует общий конверт
+   `{"status","command","result"}`; `command` равен `import`,
+   `migration plan`, `migration apply`, `migration verify` или
+   `migration rollback`.
+3. `migration apply` по умолчанию имеет `--dry-run true`. Только точная
+   пара `--dry-run false --confirm <recomputed plan fingerprint>` может
+   изменить состояние. Для dry-run присутствующий несовпадающий confirm
+   также является отказом, а не игнорируется.
+4. `import` изменяет состояние только после совпадения `--confirm`:
+   fingerprint принятого плана для `frozen-instance` либо SHA-256 точных
+   входных байтов для `canonical-records`.
+5. `migration rollback` требует совпадения `--run` и `--confirm`;
+   подтверждение плана вместо конкретного запуска недостаточно.
+6. Значения `--kind` и `--dry-run` — закрытые перечисления. Неизвестное
+   значение является usage error, не truthy-строкой и не fallback.
+7. Ни одна команда не читает `MERIDIAN_INSTANCE`. Переходный источник
+   передаётся только явным `--source`; обычные `validate`, `resolve`,
+   `doctor`, `export` и `init` не получают скрытый fallback к нему.
+8. Результат в stdout — ровно один документ. Ошибки и предупреждения —
+   только stderr. Событийный sink не меняет stdout, stderr, exit code либо
+   сохранённое состояние.
+
+Минимальный JSON result:
+
+- `plan`: source identity, plan id, recomputed fingerprint/idempotency key,
+  346/336/10/0 counts, verification status и diagnostics;
+- `apply`: dry-run, run id либо `null`, fingerprint, created, updated,
+  already-applied, retained, checkpoint digest и status;
+- `verify`: run/plan identity, expected/imported/missing/extra/changed/
+  duplicate counts, applicability-equivalence verdict и overall status;
+- `rollback`: run id, checkpoint digest, restored record-state digest и
+  status;
+- `import`: kind, входной digest, итог apply/import и verify без
+  дублирования внутренних записей.
+
+### 5.22.4. Обязательная архитектура
+
+```text
+explicit CLI paths and confirmation
+  -> CLI source/checkpoint adapters
+  -> closed app DTO + accepted plan/export/canonical records
+  -> pure core migration/import/verification model
+  -> app-owned MigrationRepository + existing RecordRepository ports
+  -> meridian-storage-sqlite transaction/checkpoint adapter
+  -> typed outcome
+  -> one CLI presentation boundary
+```
+
+1. **Предметный владелец.** `meridian-core` владеет чистыми типами write set, expected
+   record state, verification diff и migration outcome. Он переиспользует
+   принятые `MigrationPlan`, `CanonicalExport`, fingerprints,
+   idempotency и content envelope; параллельный migration model запрещён.
+   Предметное ядро не знает SQLite, пути, Git, env, stdout или
+   checkpoint-файлы.
+2. **App.** `meridian-app` владеет orchestration, закрытыми transport DTO,
+   преобразованием accepted export/canonical record в строгий
+   `PutRecordRequest`, а также новым adapter-neutral
+   `MigrationRepository` port. App не открывает файлы или базы и не знает
+   конкретный SQLite adapter.
+3. **Storage.** `meridian-storage-sqlite` реализует
+   `MigrationRepository` и остаётся единственным владельцем SQL,
+   транзакции, checkpoint/restore и `migration_runs`. Нужное расширение
+   схемы выполняется новой последовательной атомарной миграцией; существующая
+   версия схемы не переписывается задним числом.
+4. **CLI.** `meridian-cli` владеет nested command grammar, явными путями,
+   адаптерами source/Git/checkpoint, подтверждением и представлением. В CLI
+   нет предметного сравнения записей, вычисления migration fingerprint,
+   преобразования произвольного JSON в domain либо SQL.
+5. **Четыре уровня.** Каждый вход проходит:
+   `bytes → schema/closed DTO → domain validation → accepted typed value`.
+   Schema-clean DTO/conversion failure — drift слоёв и fail-closed.
+6. **Один source snapshot.** Bundle разбирается один раз за операцию.
+   `registry.json`, `canonical-export.json`, source/rollback snapshots,
+   reconstruction plan и evidence разрешаются из одного закреплённого
+   source view. Нельзя смешать working-tree файл одного checkout с
+   `git show` другой ревизии.
+7. **Git boundary.** Проверка revision, tree digest и `git show` живёт в
+   одном CLI adapter/port. Аргументы передаются в `Command` раздельно,
+   shell-строка не строится. Отсутствующий Git, revision или object
+   различаются типизированно.
+8. **Workspace-only apply.** Frozen bundle должен содержать только записи,
+   допустимые для `workspace`. Любая built-in запись блокирует всю
+   операцию до записи первой строки; автоматическое перенаправление в
+   `tool` запрещено.
+9. **Одна транзакция.** Accepted frozen write set и строка
+   `migration_runs` применяются одной SQLite-транзакцией. Ошибка любой
+   записи откатывает весь batch и не оставляет applied run.
+10. **Идемпотентность.** Повтор того же source revision/fingerprint
+    возвращает typed `AlreadyApplied`, не создаёт revisions, второй
+    checkpoint или второй migration run. Тот же idempotency key с иным
+    содержимым — конфликт.
+11. **Canonical import.** Конверт и весь массив `result` сначала полностью
+    принимаются, затем записи дедуплицируются по `RecordKey` и только
+    после этого разбиваются по роли.
+    Mixed-role импорт заранее создаёт checkpoints обеих баз и использует
+    компенсационный restore при ошибке второй базы: общей транзакции двух
+    SQLite-файлов контракт не выдумывает.
+12. **Проверка применимости.** Эквивалентность 61 контролируемой нормы
+    вычисляется отдельно из закреплённого источника и из payload реально
+    прочитанных обратно SQLite-записей. Повторное чтение источника вместо
+    candidate projection не считается доказательством.
+13. **События.** Input, decision, check и outcome используют существующий
+    versioned `ObservedEvent`; события не заменяют `migration_runs`.
+
+### 5.22.5. Rollback и checkpoint
+
+Rollback не может означать удаление append-only `record_revisions` либо
+перезапись опубликованной истории. Перед первым state-changing apply адаптер
+создаёт согласованный checkpoint точного pre-state workspace DB и вычисляет
+его digest. Checkpoint получает identity конкретного `migration_run_id`, а
+run хранит plan id/fingerprint, idempotency key, pre-state digest, expected
+post-state digest и checkpoint digest.
+
+Требования:
+
+- checkpoint создаётся SQLite-механизмом согласованного backup, а не
+  копированием открытого файла обычным filesystem API;
+- apply начинается только после успешного checkpoint; неудачный apply
+  удаляет созданный им незапечатанный checkpoint;
+- rollback разрешён только для applied run, который ещё не rolled back, и
+  только если после него нет более нового migration run или иной revision
+  затронутого `RecordKey`; иначе операция fail-closed и не меняет БД;
+- checkpoint identity/digest и текущий post-state проверяются до restore;
+- restore выполняется storage adapter, после чего база заново открывается,
+  её роль/Kernel edition проверяются, а канонический record-state digest
+  обязан совпасть с pre-state;
+- факт rollback записывается после восстановления без изменения
+  восстановленного набора текущих records. Равенство `apply → rollback`
+  означает байт-идентичный канонический экспорт records, ту же
+  `database_metadata`/schema version и отсутствие частичного эффекта;
+  audit-строка о выполненном rollback может отличаться.
+
+### 5.22.6. Критерии приёмки
+
+Пакет получает `ACCEPTED` только если одновременно доказано:
+
+1. Все пять production-команд существуют, проходят реальный binary route и
+   соблюдают §5.22.3.
+2. Frozen source pin и tree digest пересчитаны; bundle проходит уже
+   принятые production operations пакета 7d, а не отдельный упрощённый
+   validator.
+3. Реальный импорт даёт ровно 336 SQLite records и 10 retained entries;
+   все 346 record units учтены ровно один раз, missing/extra/duplicate = 0.
+4. Каждая импортированная запись после чтения из SQLite равна принятому
+   target по schema/id/title/type/scope/origin/authority/payload.
+5. Applicability proof охватывает все 61 записи и сравнивает pinned source с
+   импортированным candidate; lost/added/changed/duplicate = 0.
+6. Второй frozen import и второй apply возвращают `AlreadyApplied`, не
+   меняют export digest, revision counts, checkpoint count или migration run
+   count.
+7. `import canonical-records` принимает реальный вывод `meridian export`;
+   следующий export байт-в-байт равен первому, а повторный импорт не создаёт
+   эффект.
+8. Dry-run не создаёт и не меняет database, migration run или checkpoint.
+   Wrong/missing confirmation также не меняет состояние.
+9. Контролируемый сбой на записи в середине 336-entry batch оставляет
+   record-state, revisions и migration journal равными pre-state.
+10. Apply реального frozen bundle, затем rollback того же run возвращают
+    канонический record-state к pre-state; повторный rollback и rollback
+    поверх более новой revision отклоняются без изменения.
+11. Corrupt/missing/wrong-role/wrong-edition DB, damaged checkpoint,
+    missing revision, wrong source digest, stale plan/export pin,
+    source-content mismatch и plan substitution fail-closed.
+12. Обычные команды не читают `MERIDIAN_INSTANCE`; offline-тест блокирует
+    сеть и все пять новых команд успешно работают на локальных входах.
+13. NoOp/Recording event sinks дают одинаковые stdout/stderr/exit code и
+    одинаковое состояние для каждой новой команды.
+14. Human/JSON вывод детерминирован; diagnostics и порядок records/runs не
+    зависят от `HashMap`, SQLite row order или порядка файлов.
+15. Production panic audit не оставляет `unwrap`/`expect` на внешнем
+    вводе, I/O, Git, SQLite, JSON, checkpoint или confirmation boundary.
+
+### 5.22.7. Явно вне объёма
+
+- Metis source adapters, Confluence, произвольный Git/Markdown ingestion,
+  code search, snapshots/index/graph/embeddings;
+- изменение или импорт 10 `retained-transitional` записей без нового
+  owner authority;
+- PostgreSQL, сервер, сеть, daemon, GUI и многопользовательская блокировка;
+- изменение нормативных migration schemas или принятого source bundle ради
+  упрощения реализации;
+- удаление Node.js, архивирование Instance и выпуск — решения пакетов 9–10
+  и владельца после их ворот;
+- общий backup/restore/GC CLI, произвольное удаление records или
+  переписывание append-only history;
+- рефакторинг принятых validate/qualification operations, кроме минимальных
+  typed composition points, реально используемых новыми командами;
+- запуск эксперимента Исследовательского отдела, Metis или Concord;
+- Git branch/switch/add/commit/merge/rebase/reset/stash/tag/push исполнителем.
+
+### 5.22.8. Ворота исполнения
+
+Первая передача выполняет targeted gates:
+
+```bash
+cargo fmt --all -- --check
+cargo clippy -p meridian-core -p meridian-app -p meridian-storage-sqlite -p meridian-cli --all-targets --all-features -- -D warnings
+cargo test -p meridian-core migration
+cargo test -p meridian-app migration
+cargo test -p meridian-storage-sqlite migration
+cargo test -p meridian-cli migration
+cargo test -p meridian-cli --test binary_runs migration
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
+MERIDIAN_KERNEL=/home/krmiftakhov/PersonalProjects/meridian MERIDIAN_INSTANCE=<local-frozen-source> node --test --test-name-pattern 'meridian-cli-migration' test/conformance-harness.test.mjs
+MERIDIAN_KERNEL=/home/krmiftakhov/PersonalProjects/meridian MERIDIAN_INSTANCE=<local-frozen-source> node scripts/kernel-validate.mjs
+git diff --check
+git diff --cached --check
+```
+
+`<local-frozen-source>` — локальная проводка, не литерал для коммита.
+Если Cargo или Node child process получает sandbox `EPERM`, повторяется
+ровно та же команда через разрешённый путь; инфраструктурная блокировка не
+становится кодовым вердиктом. Полные `cargo test --workspace`,
+полный `kernel-validate.test.mjs` и повторный полный conformance назначает
+архитектор только финальному кандидату по `AGENTS.md` §9.
+
+Обязательные отдельные тестовые наборы:
+
+- positive real bundle 346/336/10 и 61 applicability records;
+- round trip canonical import/export;
+- idempotent import/apply;
+- mid-transaction failure;
+- apply/rollback real bundle;
+- stale/newer-state rollback refusal;
+- damaged source/checkpoint/DB/pin/confirmation;
+- CLI help/usage/exit codes/stdout-stderr/event-sink parity;
+- structural crate-boundary and no-`MERIDIAN_INSTANCE` production scan.
+
+### 5.22.9. Готовое задание исполнителю
+
+> Работай только в
+> `/home/krmiftakhov/PersonalProjects/meridian` от текущего `dev`.
+> Прочитай `AGENTS.md`, `standards/workspace/rust-migration-quality.md`,
+> §5.22/§6.5–§6.5a этого плана, Rust target architecture, CLI RFC и
+> `migration/instance-data/README.md` замороженного источника. Перед
+> изменениями выполни строгий preflight с явно заданными
+> `MERIDIAN_KERNEL` и локальным `MERIDIAN_INSTANCE`; абсолютный путь
+> источника не записывай в репозиторий.
+>
+> Реализуй ровно пакет `meridian-cli-migration`: два закрытых вида import,
+> nested `migration plan|apply|verify|rollback`, app-owned
+> `MigrationRepository`, SQLite transaction/checkpoint adapter и реальные
+> доказательства 346/336/10, 61 applicability records, round trip,
+> idempotency и rollback. Переиспользуй принятые typed
+> `MigrationPlan`/`CanonicalExport` и production operations 7d; не
+> создавай параллельную Value-реализацию.
+>
+> Сначала составь owner map и schema-migration/rollback design. Если
+> append-only invariants, двухбазовая компенсация или точный CLI контракт
+> требуют нарушения §5.22, остановись с
+> `BLOCKED_FOR_ARCHITECT_DECISION`; не выбирай упрощение самостоятельно.
+> Любое наблюдаемое отличие от принятого контракта воспроизведи, опиши в
+> `COMPATIBILITY.md` и передай на решение архитектора.
+>
+> Не выполняй Git write-операций и не меняй посторонние файлы. Для первой
+> передачи выполни targeted gates §5.22.8. Передай
+> `READY_FOR_ARCHITECT_REVIEW` (не `ACCEPTED`), точный список файлов,
+> owner map, schema migration, rollback/checkpoint model, production panic
+> audit, результаты каждой команды и явно названные невыполненные полные
+> gates.
+
 ## 6. Ворота Rust
 
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
@@ -5947,10 +6287,10 @@ program_status: active
 activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
 last_completed_package: rust-architecture-conformance-7
-current_package: rust-architecture-conformance-7
-current_package_status: accepted_and_locally_integrated
-next_package: meridian-cli-migration
-next_package_status: not_specified
+current_package: meridian-cli-migration
+current_package_status: specified_not_started
+next_package: rust-business-contract-qualification
+next_package_status: blocked_pending_package_8_acceptance
 concord_status: paused_pending_meridian_rust_release
 release_version: unassigned
 release_gate: closed
@@ -6123,3 +6463,16 @@ tests, 129/129 conformance harness и 293/293
 merge-коммитом без публикации. Архитектурное исправление исторических
 семейств 7a–7d завершено. Следующим остаётся
 `meridian-cli-migration`, но пакет 8 ещё не специфицирован и не начат.
+
+**Обновление (2026-09-24, §5.22, пакет 8).** После приёмки и локальной
+интеграции `rust-architecture-conformance-7` канонический указатель
+продвинут на `meridian-cli-migration` со статусом
+`specified_not_started`. Пакет фиксирует два закрытых import-входа
+(`frozen-instance` и `canonical-records`), точный CLI
+`migration plan|apply|verify|rollback`, app-owned
+`MigrationRepository`, транзакционный SQLite apply и проверяемый
+checkpoint rollback. Обязательные доказательства охватывают реальный bundle
+346/336/10, 61 applicability records, round trip, идемпотентность,
+mid-transaction failure и возврат pre-state. Пакет 9 остаётся закрытым до
+независимой приёмки и локальной интеграции пакета 8; Metis и Concord не
+открываются.

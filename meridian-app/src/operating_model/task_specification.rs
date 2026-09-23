@@ -118,6 +118,8 @@ struct Extracted<'a> {
     record_type: &'a str,
     title: Option<&'a str>,
     scope_type: Option<&'a str>,
+    scope_id: Option<&'a str>,
+    scope_workspace_id: Option<&'a str>,
     origin_kind: Option<&'a str>,
     origin_source_ref: Option<&'a str>,
     authority_ref: Option<&'a str>,
@@ -185,6 +187,8 @@ fn extract(doc: &Value) -> Extracted<'_> {
         record_type: field(root, "record_type").unwrap_or(""),
         title: field(root, "title"),
         scope_type: field(scope, "type"),
+        scope_id: field(scope, "id"),
+        scope_workspace_id: field(scope, "workspace_id"),
         origin_kind: field(origin, "kind"),
         origin_source_ref: field(origin, "source_ref"),
         authority_ref: field(authority, "authority_ref"),
@@ -255,7 +259,7 @@ fn check_schema_declaration(id_label: &str, declared: Option<&str>) -> Vec<Diagn
 /// called across a crate or module boundary, so `&Value` never needs to
 /// appear in a signature outside this module's own private transport
 /// boundary.
-fn evaluate_document(
+pub(crate) fn evaluate_document(
     doc: &Value,
     record_schema: &Value,
     envelope_schema: &Value,
@@ -305,6 +309,8 @@ fn evaluate_document(
         record_type: extracted.record_type,
         title: extracted.title,
         scope_type: extracted.scope_type,
+        scope_id: extracted.scope_id,
+        scope_workspace_id: extracted.scope_workspace_id,
         origin_kind: extracted.origin_kind,
         origin_source_ref: extracted.origin_source_ref,
         authority_ref: extracted.authority_ref,

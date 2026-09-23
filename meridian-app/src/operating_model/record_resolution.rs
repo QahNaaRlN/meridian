@@ -1,6 +1,7 @@
 //! The ONE transport-to-resolution conversion of every resolving family —
-//! `bounded-context-manifest`, `evidence-and-handoff-contract` and
-//! `meridian-field-evaluation`. A fixture bundle's `resolution` map is
+//! `bounded-context-manifest`, `evidence-and-handoff-contract`,
+//! `meridian-field-evaluation`, and (through the field helpers below) the
+//! resolver maps of the four migration/qualification families. A fixture bundle's `resolution` map is
 //! TRANSPORT: this module turns it into the typed [`ResolutionCatalogue`]
 //! `meridian-core` checks.
 //!
@@ -18,7 +19,7 @@ use meridian_core::run_contracts::{
 };
 use serde_json::{Map, Value};
 
-fn kind(value: &Value) -> ResponseValueKind {
+pub(crate) fn kind(value: &Value) -> ResponseValueKind {
     match value {
         Value::Null => ResponseValueKind::Null,
         Value::Bool(_) => ResponseValueKind::Boolean,
@@ -30,7 +31,7 @@ fn kind(value: &Value) -> ResponseValueKind {
 }
 
 /// `String(x)` for a JSON value, as a template literal interpolates it.
-fn string_coercion(value: &Value) -> String {
+pub(crate) fn string_coercion(value: &Value) -> String {
     match value {
         Value::Null => "null".to_string(),
         Value::Bool(b) => b.to_string(),
@@ -48,11 +49,14 @@ fn string_coercion(value: &Value) -> String {
     }
 }
 
-fn foreign(value: &Value) -> ForeignValue {
+pub(crate) fn foreign(value: &Value) -> ForeignValue {
     ForeignValue::new(kind(value), value.to_string(), string_coercion(value))
 }
 
-fn field<T>(value: Option<&Value>, expected: impl FnOnce(&Value) -> Option<T>) -> ResponseField<T> {
+pub(crate) fn field<T>(
+    value: Option<&Value>,
+    expected: impl FnOnce(&Value) -> Option<T>,
+) -> ResponseField<T> {
     match value {
         None => ResponseField::Absent,
         Some(v) => expected(v).map_or_else(
@@ -63,7 +67,7 @@ fn field<T>(value: Option<&Value>, expected: impl FnOnce(&Value) -> Option<T>) -
 }
 
 /// A field whose JSON `null` is `Present(None)`.
-fn nullable<T>(
+pub(crate) fn nullable<T>(
     value: Option<&Value>,
     expected: impl FnOnce(&Value) -> Option<T>,
 ) -> ResponseField<Option<T>> {
@@ -73,7 +77,7 @@ fn nullable<T>(
     })
 }
 
-fn text_field(value: Option<&Value>) -> ResponseField<String> {
+pub(crate) fn text_field(value: Option<&Value>) -> ResponseField<String> {
     field(value, |v| v.as_str().map(str::to_string))
 }
 
@@ -89,7 +93,7 @@ fn number_field(value: Option<&Value>) -> ResponseField<JsonNumber> {
     field(value, json_number)
 }
 
-fn items_field(value: Option<&Value>) -> ResponseField<Vec<ResponseItem>> {
+pub(crate) fn items_field(value: Option<&Value>) -> ResponseField<Vec<ResponseItem>> {
     field(value, |v| {
         v.as_array().map(|items| {
             items
@@ -103,7 +107,7 @@ fn items_field(value: Option<&Value>) -> ResponseField<Vec<ResponseItem>> {
     })
 }
 
-fn unknown_keys(object: &Map<String, Value>, known: &[&str]) -> Vec<String> {
+pub(crate) fn unknown_keys(object: &Map<String, Value>, known: &[&str]) -> Vec<String> {
     let mut keys: Vec<String> = object
         .keys()
         .filter(|k| !known.contains(&k.as_str()))

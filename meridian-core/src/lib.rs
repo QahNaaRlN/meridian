@@ -4,7 +4,10 @@
 //!
 //! Synchronous, side-effect-free domain logic: strict domain types
 //! ([`types`]), the rule resolver ([`resolver`]), instance-data-migration
-//! plans and their checks ([`migration`]), evidence/verdict structures
+//! plans and canonical exports ([`migration`]), the workspace-compatibility
+//! and upgrade-integration qualifications that compose them and the run
+//! contracts ([`qualification`]), canonical JSON for open content
+//! ([`canonical`]), evidence/verdict structures
 //! ([`evidence`]), the `controlled-rule-intake` domain types and pure
 //! checks ([`controlled_rule_intake`]), the canonical instruction-source
 //! model ([`instruction_source`]), and the
@@ -24,6 +27,7 @@
 //! content; adapters, ports and orchestration belong to `meridian-app` and
 //! its own adapter crates, added by later packages of the same program.
 
+pub mod canonical;
 pub mod controlled_rule_intake;
 pub mod evidence;
 pub mod existing_project_compatibility_mode;
@@ -34,6 +38,7 @@ mod json;
 pub mod mechanical_integrity;
 pub mod migration;
 mod ordered;
+pub mod qualification;
 pub mod resolver;
 pub mod run_contracts;
 pub mod task_contracts;

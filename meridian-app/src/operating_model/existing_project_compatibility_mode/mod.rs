@@ -64,6 +64,7 @@ use super::controlled_rule_intake::{
     SourceResolution, SourceResolverError,
 };
 use super::instruction_source_registry::{convert_registry, EvalSchemas as IsrEvalSchemas};
+use meridian_core::qualification::workspace::ConnectionFacts;
 
 pub use domain::{
     compute_next_step, ConnectionMode, DiscoveryPlanSlot, DiscoveryStatus, Finding, FindingKind,
@@ -296,6 +297,79 @@ pub fn evaluate_existing_project_compatibility_mode(
     doc: &Value,
     opts: &EvalOpts,
 ) -> Vec<Diagnostic> {
+    evaluate_attributed(doc, opts).diagnostics
+}
+
+/// One evaluation with every problem attributed: the document's problems in
+/// the reference order, and per `workspace_connections` entry its accepted
+/// facts — `Some` only for an entry with no problem of its own and no
+/// problem of the container as a whole.
+pub(crate) struct AttributedOutcome {
+    pub diagnostics: Vec<Diagnostic>,
+    pub accepted: Vec<Option<ConnectionFacts>>,
+}
+
+/// The composition point `workspace-compatibility-qualification` uses: the
+/// SAME pipeline over the container the reference builds around the
+/// pin-confirmed resolved connections.
+pub(crate) fn compose_connections(
+    title: String,
+    connections: &[&Value],
+    opts: &EvalOpts,
+) -> AttributedOutcome {
+    let container = serde_json::json!({
+        "schema_version": 1,
+        "registry_id": REGISTRY_SCHEMA_SPEC.registry_id,
+        "title": title,
+        "workspace_connections": connections,
+    });
+    evaluate_attributed(&container, opts)
+}
+
+/// The entry index a container-schema message names
+/// (`/workspace_connections/<i>/…` or `/workspace_connections/<i>: …`).
+fn attributed_entry(message: &str) -> Option<usize> {
+    let rest = message.strip_prefix("/workspace_connections/")?;
+    let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+    let after = &rest[digits.len()..];
+    if digits.is_empty() || !(after.starts_with('/') || after.starts_with(':')) {
+        return None;
+    }
+    digits.parse().ok()
+}
+
+fn evaluate_attributed(doc: &Value, opts: &EvalOpts) -> AttributedOutcome {
+    let entry_count = doc
+        .get("workspace_connections")
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len);
+    let mut owners: Vec<Option<usize>> = Vec::new();
+    let mut facts: Vec<Option<ConnectionFacts>> = vec![None; entry_count];
+    let diagnostics = evaluate_owned(doc, opts, &mut owners, &mut facts);
+    let whole_container_failed = owners.iter().any(Option::is_none);
+    let accepted = facts
+        .into_iter()
+        .enumerate()
+        .map(|(i, f)| {
+            if whole_container_failed || owners.contains(&Some(i)) {
+                None
+            } else {
+                f
+            }
+        })
+        .collect();
+    AttributedOutcome {
+        diagnostics,
+        accepted,
+    }
+}
+
+fn evaluate_owned(
+    doc: &Value,
+    opts: &EvalOpts,
+    owners: &mut Vec<Option<usize>>,
+    facts: &mut [Option<ConnectionFacts>],
+) -> Vec<Diagnostic> {
     let registry_failure = check_registry_schema_identity(
         Some(opts.registry_schema),
         "registrySchema",
@@ -324,7 +398,8 @@ pub fn evaluate_existing_project_compatibility_mode(
     .collect();
     if !failing.is_empty() {
         let failing_keys: Vec<&str> = failing.iter().map(|(k, _)| *k).collect();
-        let detail: Vec<&str> = failing.iter().map(|(_, f)| f.as_deref().unwrap()).collect();
+        let detail: Vec<&str> = failing.iter().filter_map(|(_, f)| f.as_deref()).collect();
+        owners.push(None);
         return vec![fail(format!(
             "existing-project-compatibility-mode composition requires the real {} contract schema(s); discovered_sources compose with the instruction-source-registry contract and rule_candidates compose with the controlled-rule-intake contract regardless of whether either array is populated in this document, and an absent, inapplicable, unsupported or wrong-contract ({{}} included) schema is rejected closed, never silently skipped: {}",
             failing_keys.join(", "),
@@ -335,11 +410,17 @@ pub fn evaluate_existing_project_compatibility_mode(
     let mut problems = Vec::new();
 
     match json_schema::validate(doc, opts.registry_schema) {
-        Ok(errors) => problems.extend(errors.into_iter().map(fail)),
+        Ok(errors) => {
+            for message in errors {
+                owners.push(attributed_entry(&message));
+                problems.push(fail(message));
+            }
+        }
         Err(error) => {
+            owners.push(None);
             return vec![fail(format!(
                 "container/payload schema could not be applied: {error}"
-            ))]
+            ))];
         }
     }
 
@@ -351,12 +432,14 @@ pub fn evaluate_existing_project_compatibility_mode(
 
     for (i, entry) in entries.iter().enumerate() {
         match json_schema::validate(entry, opts.envelope_schema) {
-            Ok(errors) => problems.extend(
-                errors
-                    .into_iter()
-                    .map(|m| fail(format!("entry {i} envelope {m}"))),
-            ),
+            Ok(errors) => {
+                for m in errors {
+                    owners.push(Some(i));
+                    problems.push(fail(format!("entry {i} envelope {m}")));
+                }
+            }
             Err(error) => {
+                owners.push(Some(i));
                 problems.push(fail(format!(
                     "entry {i} envelope could not be applied: {error}"
                 )));
@@ -374,6 +457,7 @@ pub fn evaluate_existing_project_compatibility_mode(
             .map(str::to_string)
             .unwrap_or_else(|| format!("#{i}"));
         let at = format!("workspace connection scan \"{id_text}\"");
+        let before = problems.len();
         if let Some(declared_id) = declared_id {
             if !seen_ids.insert(declared_id.to_string()) {
                 problems.push(fail(format!("{at} is declared more than once")));
@@ -386,6 +470,7 @@ pub fn evaluate_existing_project_compatibility_mode(
                 problems.push(fail(format!(
                     "{at} could not be parsed into the closed transport shape: {error}"
                 )));
+                owners.extend(std::iter::repeat_n(Some(i), problems.len() - before));
                 continue;
             }
         };
@@ -396,18 +481,24 @@ pub fn evaluate_existing_project_compatibility_mode(
             )));
         }
 
-        evaluate_connection(&at, &entry_dto, opts, &mut problems);
+        let entry_facts = evaluate_connection(&at, &entry_dto, opts, &mut problems);
+        owners.extend(std::iter::repeat_n(Some(i), problems.len() - before));
+        if let Some(slot) = facts.get_mut(i) {
+            *slot = entry_facts;
+        }
     }
 
     problems
 }
 
+/// Checks one connection and returns the facts a composing qualification
+/// reads from it, when its scope, repository and next step are typed.
 fn evaluate_connection(
     at: &str,
     entry: &dto::ConnectionEntryDto,
     opts: &EvalOpts,
     problems: &mut Vec<Diagnostic>,
-) {
+) -> Option<ConnectionFacts> {
     let payload = &entry.payload;
 
     if entry.origin.kind != REQUIRED_ORIGIN_KIND {
@@ -740,13 +831,16 @@ fn evaluate_connection(
     ));
 
     let expected_next_step = domain::compute_next_step(&findings);
-    match domain::NextStep::parse(&payload.next_step) {
-        Some(declared) if declared == expected_next_step => {}
-        _ => problems.push(fail(format!(
+    let next_step = match domain::NextStep::parse(&payload.next_step) {
+        Some(declared) if declared == expected_next_step => Some(declared),
+        _ => {
+            problems.push(fail(format!(
             "{at} next_step is \"{}\", but the declared priority (a blocking \"conflict\" finding requires \"resolve-conflict\"; else a blocking \"ambiguous-scope\" finding requires \"resolve-ambiguity\"; else any other blocking finding requires \"await-owner-decision\"; else \"continue-compatibility-mode\") computes \"{expected_next_step}\"",
             payload.next_step
-        ))),
-    }
+            )));
+            None
+        }
+    };
 
     // Property 5: discovery mints no decision. Rule candidates compose with
     // the ACTUAL controlled-rule-intake contract, resolved through a
@@ -806,6 +900,25 @@ fn evaluate_connection(
                 json_stringify(state.map(|s| Value::String(s.to_string())).as_ref())
             )));
         }
+    }
+
+    // The same narrow peek, read once for a composing qualification: does
+    // any rule candidate still await an owner decision?
+    let has_undecided_candidates = payload.rule_candidates.iter().any(|w| {
+        w.candidate
+            .get("payload")
+            .and_then(|p| p.get("applicability_state"))
+            .and_then(Value::as_str)
+            == Some("candidate")
+    });
+    match (scope, repository, next_step) {
+        (Some(scope), Some(repository), Some(next_step)) => Some(ConnectionFacts {
+            scope,
+            repository_id: repository.id().clone(),
+            next_step,
+            has_undecided_candidates,
+        }),
+        _ => None,
     }
 }
 

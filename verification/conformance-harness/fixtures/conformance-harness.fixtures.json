@@ -258,8 +258,8 @@
     },
     {
       "name": "real-node-rust-cli-validate-clean-kernel",
-      "description": "Package meridian-cli-foundation, item 2: the actual frozen Node.js scripts/kernel-validate.mjs and the actual compiled `meridian` binary's `validate` subcommand — spawned as a real subprocess by meridian-cli/examples/validate_cli_producer.rs, which only reformats that subprocess's own real --format json stdout into FAIL/WARN lines, never calling collect_diagnostics or any other library function itself — evaluate the real, current Kernel checkout. expected_status is deliberately \"divergent\", not \"conformant\": `meridian validate` correctly refuses exit code 0 while any BLOCKED_CHECKS family remains unported (item 1 of the second CHANGES_REQUESTED round), so its exit code legitimately differs from the complete Node reference's even on an otherwise-clean tree with zero real FAIL/WARN differences. test/conformance-harness.test.mjs additionally asserts the exact shape of this expected divergence (exit_code.match: false, but empty fail/warn missing/added on both sides) — a plain expected_status: \"divergent\" alone would not catch a regression that also broke diagnostic-content agreement.",
-      "expected_status": "divergent",
+      "description": "Package meridian-cli-foundation, item 2: the actual frozen Node.js scripts/kernel-validate.mjs and the actual compiled `meridian` binary's `validate` subcommand — spawned as a real subprocess by meridian-cli/examples/validate_cli_producer.rs, which only reformats that subprocess's own real --format json stdout into FAIL/WARN lines, never calling collect_diagnostics or any other library function itself — evaluate the real, current Kernel checkout. Since rust-architecture-conformance-7 ported the last four mandatory gate families and removed BLOCKED_CHECKS, expected_status is \"conformant\": the two sides agree on the FAIL/WARN sets AND the exit code (0 on the clean tree). test/conformance-harness.test.mjs additionally asserts that exact shape.",
+      "expected_status": "conformant",
       "left": {
         "command": "$NODE",
         "args": ["../../../scripts/kernel-validate.mjs"],

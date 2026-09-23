@@ -204,36 +204,35 @@ fn resolve_distinguishes_a_usage_error_from_a_rejected_request_by_exit_code() {
 // validate — positive, against the real Kernel checkout.
 // ---------------------------------------------------------------------
 
-/// This Kernel checkout has zero *real* `validate` failures, but `validate`
-/// still correctly reports `exit_code::DOMAIN_NEGATIVE` / `status: "fail"` /
-/// `result.ok: false`, never `0`/`"ok"`/`true` — `BLOCKED_CHECKS`
-/// (`meridian-cli/src/commands/validate/mod.rs`) is non-empty, and an unrun
-/// mandatory gate family is not a passed one
-/// (`meridian-rust-migration-program-plan.md`, item 1 of the second
-/// `CHANGES_REQUESTED` round on package `meridian-cli-foundation`).
+/// This Kernel checkout has zero *real* `validate` failures, and — since
+/// `rust-architecture-conformance-7` ported the last four mandatory gate
+/// families and removed the `BLOCKED_CHECKS` mechanism — `validate` reports
+/// `exit_code::OK` / `status: "ok"` / `result.ok: true`, with no `blocked`
+/// result field and no `BLOCKED` human verdict.
 #[test]
-fn validate_reports_blocked_not_ok_on_this_kernel_with_zero_real_failures() {
+fn validate_reports_ok_on_this_kernel_with_zero_real_failures() {
     let kernel = kernel_root();
     let kernel = kernel.to_str().unwrap();
 
     let human = run(&["validate", "--kernel", kernel]);
     assert_eq!(
         human.status.code(),
-        Some(1),
+        Some(0),
         "stderr: {}",
         stderr_of(&human)
     );
     let human_out = stdout_of(&human);
     assert!(human_out.contains("0 failure(s)"), "stdout: {human_out}");
-    assert!(human_out.contains("BLOCKED"), "stdout: {human_out}");
-    assert!(!human_out.contains("\nOK\n") && !human_out.ends_with("OK\n"));
+    assert!(!human_out.contains("BLOCKED"), "stdout: {human_out}");
+    assert!(!human_out.contains("blocked"), "stdout: {human_out}");
+    assert!(human_out.ends_with("OK\n"), "stdout: {human_out}");
 
     let json_output = run(&["validate", "--kernel", kernel, "--format", "json"]);
-    assert_eq!(json_output.status.code(), Some(1));
+    assert_eq!(json_output.status.code(), Some(0));
     let value = json_result(&json_output);
-    assert_eq!(value["status"], "fail");
+    assert_eq!(value["status"], "ok");
     assert_eq!(value["command"], "validate");
-    assert_eq!(value["result"]["ok"], false);
+    assert_eq!(value["result"]["ok"], true);
     assert_eq!(value["result"]["failures"].as_array().unwrap().len(), 0);
     // `document_identity_checked` must equal the Kernel's ACTUAL tracked
     // file count, derived HERE, independently, at test-run time — never a
@@ -293,14 +292,10 @@ fn validate_reports_blocked_not_ok_on_this_kernel_with_zero_real_failures() {
         value["result"]["stats"]["agent_instruction_identity_undeclared_other"],
         32
     );
-    // 20 before subpackage 7a, 15 after 7a removed its own five families;
-    // subpackage 7b then removed its own seven families, and subpackage 7c
-    // its own four (`evidence-and-handoff-contract`,
-    // `meridian-field-evaluation`, `controlled-rule-intake`,
-    // `existing-project-compatibility-mode`) from `BLOCKED_CHECKS`
-    // (`meridian-cli/src/commands/validate/mod.rs`) — 4 remain, all
-    // belonging to 7d.
-    assert_eq!(value["result"]["blocked"].as_array().unwrap().len(), 4);
+    // 20 before subpackage 7a; 7a, 7b and 7c removed theirs, and
+    // `rust-architecture-conformance-7` the last four (7d) together with
+    // the empty mechanism itself.
+    assert!(value["result"].get("blocked").is_none(), "{value}");
     assert!(stderr_of(&json_output).is_empty());
 }
 

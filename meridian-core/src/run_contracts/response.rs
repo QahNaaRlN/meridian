@@ -93,6 +93,11 @@ impl ForeignValue {
     pub fn kind(&self) -> ResponseValueKind {
         self.kind
     }
+
+    /// `String(x)` — how a template literal interpolates this value.
+    pub(crate) fn coerced(&self) -> &str {
+        &self.string_coercion
+    }
 }
 
 /// One field of a resolver response (or of a measurement).

@@ -175,7 +175,7 @@ pub(crate) fn built_in_methodology_scope(scope_type: &str, id: &str) -> Converte
     }
 }
 
-fn origin(dto: OriginDto) -> Converted<RecordOrigin> {
+pub(crate) fn origin(dto: OriginDto) -> Converted<RecordOrigin> {
     let kind = ORIGIN_KINDS
         .into_iter()
         .find(|k| k.as_str() == dto.kind)
@@ -191,7 +191,7 @@ fn origin(dto: OriginDto) -> Converted<RecordOrigin> {
     }
 }
 
-fn authority(dto: AuthorityDto) -> Converted<RecordAuthority> {
+pub(crate) fn authority(dto: AuthorityDto) -> Converted<RecordAuthority> {
     let kind = AUTHORITY_KINDS
         .into_iter()
         .find(|k| k.as_str() == dto.kind)

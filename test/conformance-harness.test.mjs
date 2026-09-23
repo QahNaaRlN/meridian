@@ -42,6 +42,15 @@ import { evaluateInstructionSourceRegistry } from '../scripts/lib/instruction-so
 import { evaluateExistingProjectCompatibilityMode } from '../scripts/lib/existing-project-compatibility-mode.mjs';
 import { evaluateEvidenceAndHandoff } from '../scripts/lib/evidence-and-handoff.mjs';
 import { evaluateFieldEvaluation } from '../scripts/lib/field-evaluation.mjs';
+import { yamlParse } from '../scripts/lib/yaml.mjs';
+import {
+  evaluateInstanceDataMigration, evaluateInstanceCanonicalExport, checkOpaqueRef,
+  makeSourceSnapshotResolver, makeEvidenceResolver, makeRollbackSnapshotResolver,
+  makeDeterministicPlanResolver, makeRestorationEvidenceResolver, makeSupersededPlanResolver,
+  makeMigrationPlanResolver, makeSourceContentResolver, makeRefResolver,
+} from '../scripts/lib/instance-data-migration.mjs';
+import { evaluateWorkspaceCompatibilityQualification, computeConnectionDigest } from '../scripts/lib/workspace-compatibility-qualification.mjs';
+import { evaluateUpgradeIntegrationQualification, computeContentDigest } from '../scripts/lib/upgrade-integration-qualification.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -299,19 +308,18 @@ check('повторный прогон контролируемого корпу
   assert(JSON.stringify(again) === JSON.stringify(corpusResults), 'повторный прогон дал другой результат на тех же входах');
 });
 
-// A bare "divergent" match above is not enough for this one case: it would
-// also pass if a real FAIL/WARN regression appeared alongside the expected
-// exit-code difference. `meridian validate` is expected to differ from the
-// Node reference on exit code ONLY (BLOCKED_CHECKS is non-empty, so it never
-// returns 0 on this Kernel, even though it has zero real failures of its
-// own) — so this asserts that exact shape, not merely "some divergence".
-check('real-node-rust-cli-validate-clean-kernel: единственное расхождение — код завершения (BLOCKED_CHECKS), диагностики совпадают полностью', () => {
+// `rust-architecture-conformance-7` ported the last four mandatory gate
+// families (7d) and removed `BLOCKED_CHECKS`, so on the clean checkout the
+// real Node reference and the real `meridian validate` now agree on
+// EVERYTHING — exit code included. A bare "conformant" match already
+// implies this; the exact shape is asserted too, so a regression that
+// reintroduced a Rust-only non-zero exit could not hide.
+check('real-node-rust-cli-validate-clean-kernel: Node и Rust совпадают полностью — код завершения 0 на обеих сторонах, FAIL/WARN-множества равны', () => {
   const result = corpusResults.find((r) => r.name === 'real-node-rust-cli-validate-clean-kernel');
   assert(result, 'fixture case real-node-rust-cli-validate-clean-kernel not found');
   const comparison = result.detail.comparison;
-  assert(comparison.exit_code.match === false, `ожидалось расхождение кода завершения (Node ${comparison.exit_code.left} vs Rust ${comparison.exit_code.right} из-за непустого BLOCKED_CHECKS), получено match=${comparison.exit_code.match}`);
-  assert(comparison.exit_code.left === 0, `ожидался Node exit 0 (эталон полностью проверяет чистое дерево), получено ${comparison.exit_code.left}`);
-  assert(comparison.exit_code.right === 1, `ожидался Rust exit 1 (validate не возвращает 0 пока BLOCKED_CHECKS непусто), получено ${comparison.exit_code.right}`);
+  assert(comparison.exit_code.match === true, `ожидалось совпадение кода завершения, получено Node ${comparison.exit_code.left} vs Rust ${comparison.exit_code.right}`);
+  assert(comparison.exit_code.left === 0 && comparison.exit_code.right === 0, `ожидался код 0 на обеих сторонах, получено Node ${comparison.exit_code.left} vs Rust ${comparison.exit_code.right}`);
   assert(comparison.fail.missing.length === 0 && comparison.fail.added.length === 0, `FAIL-множества должны совпадать полностью: ${JSON.stringify(comparison.fail)}`);
   assert(comparison.warn.missing.length === 0 && comparison.warn.added.length === 0, `WARN-множества должны совпадать полностью: ${JSON.stringify(comparison.warn)}`);
 });
@@ -566,7 +574,7 @@ for (const family of VALIDATE_MUTATION_FAMILIES_7A) {
 // lesson learned the hard way earlier in this same round: duplicating
 // task-pattern-registry.yaml's whole list once collided every real pattern
 // id, cascading into task-specification-contract's and — worse —
-// upgrade-integration-qualification's (7d, still `BLOCKED_CHECKS`) own
+// upgrade-integration-qualification's own
 // fixtures, an unavoidable, permanent `divergent` that had nothing to do
 // with task-pattern-registry itself; see `duplicateOneTaskPatternWithNewId`
 // below for the narrower mutation that replaced it).
@@ -709,13 +717,23 @@ function removeOneOccurrence(lines, target) {
 const TASK_SPECIFICATION_NO_CATALOG_LINE =
   'task-specification-contract: no task-pattern catalog is available; task-pattern-registry must be checked first';
 
+// `rust-architecture-conformance-7`: `upgrade-integration-qualification`
+// composes task specifications against the SAME published catalogue, so it
+// fails closed the same way (one dependent line). Node's upgrade block
+// re-parses the raw YAML itself and reports nothing new. This extends the
+// accepted boundary above to its second consumer — accepted by the
+// architect in rust-architecture-conformance-7 (COMPATIBILITY.md).
+const UPGRADE_NO_CATALOG_LINE =
+  'upgrade-integration-qualification: no task-pattern catalog is available; task-pattern-registry must be checked first';
+
 // `task-pattern-registry`'s own accepted-boundary check, replacing the
 // generic `assertMutationDeltaMultisetsEqual` for this ONE family only:
 // proves the `task-pattern-registry` diagnostics themselves still agree
 // completely (as a multiset) between Node and Rust, that Rust's delta
-// carries EXACTLY the one documented extra `task-specification-contract`
-// line above and Node's never does, and that removing that single line
-// from Rust's delta leaves the two sides identical — not merely
+// carries EXACTLY the two documented extra dependent lines above
+// (`task-specification-contract` and `upgrade-integration-qualification`)
+// and Node's never does, and that removing exactly those two lines from
+// Rust's delta leaves the two sides identical — not merely
 // "intersecting," and not a blanket relaxation that would also hide an
 // unrelated real divergence in either family.
 function assertTaskPatternRegistryMutationAcceptedDivergence(dir, expectedFailPrefix, label) {
@@ -750,10 +768,22 @@ function assertTaskPatternRegistryMutationAcceptedDivergence(dir, expectedFailPr
       rustNoCatalogCount === 1,
       `${label}: expected the Rust delta to carry the dependent "no task-pattern catalog is available" line exactly once (the one accepted rust-architecture-conformance-3 divergence, COMPATIBILITY.md), found ${rustNoCatalogCount}; rust-delta=${JSON.stringify(rustDelta)}`,
     );
-    const rustDeltaWithoutAcceptedLine = removeOneOccurrence(rustDelta, TASK_SPECIFICATION_NO_CATALOG_LINE);
+    assert(
+      !nodeDelta.includes(UPGRADE_NO_CATALOG_LINE),
+      `${label}: Node must never produce the upgrade qualification's dependent "no task-pattern catalog" line; node-delta=${JSON.stringify(nodeDelta)}`,
+    );
+    const rustUpgradeNoCatalogCount = rustDelta.filter((l) => l === UPGRADE_NO_CATALOG_LINE).length;
+    assert(
+      rustUpgradeNoCatalogCount === 1,
+      `${label}: expected the Rust delta to carry the upgrade qualification's dependent "no task-pattern catalog" line exactly once (COMPATIBILITY.md, rust-architecture-conformance-7, accepted), found ${rustUpgradeNoCatalogCount}; rust-delta=${JSON.stringify(rustDelta)}`,
+    );
+    const rustDeltaWithoutAcceptedLine = removeOneOccurrence(
+      removeOneOccurrence(rustDelta, TASK_SPECIFICATION_NO_CATALOG_LINE),
+      UPGRADE_NO_CATALOG_LINE,
+    );
     assert(
       multisetsEqual(nodeDelta, rustDeltaWithoutAcceptedLine),
-      `${label}: after removing the ONE accepted extra Rust line, expected the Node and Rust deltas to be equal as multisets (same lines, same counts) — anything else here would be a REAL, undocumented divergence; node-delta=${JSON.stringify(nodeDelta)} rust-delta-without-accepted-line=${JSON.stringify(rustDeltaWithoutAcceptedLine)}`,
+      `${label}: after removing the TWO accepted dependent Rust lines (task-specification-contract, rust-architecture-conformance-3; upgrade-integration-qualification, rust-architecture-conformance-7), expected the Node and Rust deltas to be equal as multisets (same lines, same counts) — anything else here would be a REAL, undocumented divergence; node-delta=${JSON.stringify(nodeDelta)} rust-delta-without-accepted-lines=${JSON.stringify(rustDeltaWithoutAcceptedLine)}`,
     );
   };
 }
@@ -770,10 +800,10 @@ function duplicateYamlListToEnd(filePath, marker) {
 // duplicateYamlListToEnd would) collides EVERY real pattern id at once —
 // including the seven ids task-specification-contract's and
 // upgrade-integration-qualification's own bundled fixtures reference by
-// name, which cascades this one mutation into families this Kernel's Rust
-// side has not yet ported (upgrade-integration-qualification is 7d,
-// BLOCKED_CHECKS) and can therefore never report — an unavoidable, permanent
-// divergence that has nothing to do with task-pattern-registry itself. This
+// name, which cascades this one mutation into composing families whose
+// Rust side fails closed on an unpublished catalogue while Node re-parses
+// the raw list — a divergence that has nothing to do with
+// task-pattern-registry itself. This
 // narrower mutation instead appends two copies of the FIRST pattern entry
 // under one brand-new id ("mutation-probe-pattern") no other bundled fixture
 // references by name, so the only families it can possibly disturb are
@@ -1050,6 +1080,162 @@ for (const family of VALIDATE_MUTATION_FAMILIES_7C) {
   } finally {
     fs.rmSync(mutationDir, { recursive: true, force: true });
     createdTempDirs.splice(createdTempDirs.indexOf(mutationDir), 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// `rust-architecture-conformance-7`: the four migration/qualification
+// families (historical 7d) through the same real Node/Rust `validate`
+// multiset-delta comparison. Each `write` mutates one bundled VALID
+// fixture's own document in a way the schema accepts and that touches no
+// pinned or fingerprinted content, so exactly one composite rule objects:
+//   - instance-data-migration: a plan declares itself as `supersedes`
+//     (`supersedes` is outside the fingerprint and the idempotency key);
+//   - instance-canonical-export: an export's `idempotency_key` is replaced
+//     by another well-formed hex value (outside the export digest);
+//   - workspace-compatibility-qualification: the envelope's
+//     `origin.source_ref` no longer names the pinned connection set (the
+//     qualification record itself is not pinned by anything);
+//   - upgrade-integration-qualification: a QUALIFIED record declares a
+//     blocker, which is closed to BLOCKED.
+// ---------------------------------------------------------------------------
+function readBundle(dir, name) {
+  const p = path.join(dir, 'registries', 'operating-model', 'fixtures', name);
+  return [p, JSON.parse(fs.readFileSync(p, 'utf8'))];
+}
+
+function VALIDATE_MUTATION_FAMILIES_7D_WRITE_instanceDataMigration(dir) {
+  const [p, bundle] = readBundle(dir, 'instance-data-migration.fixtures.json');
+  const plan = bundle.valid[1].registry.migration_plans[0];
+  plan.payload.supersedes = plan.id;
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function VALIDATE_MUTATION_FAMILIES_7D_WRITE_instanceCanonicalExport(dir) {
+  const [p, bundle] = readBundle(dir, 'instance-canonical-export.fixtures.json');
+  bundle.valid[1].registry.exports[0].payload.idempotency_key = 'a'.repeat(64);
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function VALIDATE_MUTATION_FAMILIES_7D_WRITE_workspaceCompatibilityQualification(dir) {
+  const [p, bundle] = readBundle(dir, 'workspace-compatibility-qualification.fixtures.json');
+  const c = bundle.valid.find((v) => v.note.startsWith('decision-matrix branch 5'));
+  assert(c, `${p} must carry a "decision-matrix branch 5" valid fixture to mutate`);
+  c.registry.qualifications[0].origin.source_ref = 'workspace-connection-scan:tampered';
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function VALIDATE_MUTATION_FAMILIES_7D_WRITE_upgradeIntegrationQualification(dir) {
+  const [p, bundle] = readBundle(dir, 'upgrade-integration-qualification.fixtures.json');
+  const q = bundle.valid[0].registry.qualifications[0];
+  assert(q.payload.qualification_state === 'QUALIFIED', `${p} valid[0] must be QUALIFIED to mutate`);
+  q.payload.blockers = ['a blocker declared over a QUALIFIED record'];
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+const VALIDATE_MUTATION_FAMILIES_7D = [
+  { id: 'instance-data-migration', write: VALIDATE_MUTATION_FAMILIES_7D_WRITE_instanceDataMigration },
+  { id: 'instance-canonical-export', write: VALIDATE_MUTATION_FAMILIES_7D_WRITE_instanceCanonicalExport },
+  { id: 'workspace-compatibility-qualification', write: VALIDATE_MUTATION_FAMILIES_7D_WRITE_workspaceCompatibilityQualification },
+  { id: 'upgrade-integration-qualification', write: VALIDATE_MUTATION_FAMILIES_7D_WRITE_upgradeIntegrationQualification },
+];
+
+// The adversarial composition cases of §5.21.3 point 14, each with the
+// family that must object:
+//   - stale pin: a composed connection record's content changes under the
+//     SAME reference, so its recomputed digest no longer equals the pin;
+//   - wrong kind: a composed execution run declares another record kind;
+//   - scope mismatch: an export's resolved plan is scoped to another
+//     workspace;
+//   - incomplete scenario set: one of the three neutral scenarios is gone.
+function ADVERSARIAL_7D_stalePin(dir) {
+  const [p, bundle] = readBundle(dir, 'workspace-compatibility-qualification.fixtures.json');
+  for (const record of Object.values(bundle.connection_record_resolution)) {
+    record.title = `${record.title} (изменено под той же ссылкой)`;
+  }
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function ADVERSARIAL_7D_wrongKind(dir) {
+  const [p, bundle] = readBundle(dir, 'upgrade-integration-qualification.fixtures.json');
+  for (const record of Object.values(bundle.execution_state_resolution)) {
+    record.record_type = 'task-specification';
+  }
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function ADVERSARIAL_7D_scopeMismatch(dir) {
+  const [p, bundle] = readBundle(dir, 'instance-canonical-export.fixtures.json');
+  bundle.plan_resolution['sample-migration-plan-one'].scope = { type: 'project-workspace', id: 'another-project' };
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+function ADVERSARIAL_7D_incompleteScenarioSet(dir) {
+  const [p, bundle] = readBundle(dir, 'upgrade-integration-qualification.fixtures.json');
+  bundle.valid[0].registry.qualifications[0].payload.scenario_classifications.pop();
+  fs.writeFileSync(p, JSON.stringify(bundle));
+}
+
+const ADVERSARIAL_7D = [
+  { id: 'stale-pin', family: 'workspace-compatibility-qualification', write: ADVERSARIAL_7D_stalePin },
+  { id: 'wrong-kind', family: 'upgrade-integration-qualification', write: ADVERSARIAL_7D_wrongKind },
+  { id: 'scope-mismatch', family: 'instance-canonical-export', write: ADVERSARIAL_7D_scopeMismatch },
+  { id: 'incomplete-scenario-set', family: 'upgrade-integration-qualification', write: ADVERSARIAL_7D_incompleteScenarioSet },
+];
+
+for (const c of [
+  ...VALIDATE_MUTATION_FAMILIES_7D.map((f) => ({ id: f.id, family: f.id, write: f.write, kind: 'мутация семейства' })),
+  ...ADVERSARIAL_7D.map((a) => ({ ...a, kind: 'состязательный случай' })),
+]) {
+  const mutationDir = fs.mkdtempSync(path.join(os.tmpdir(), `conformance-harness-kernel-validate-mutation-7d-${c.id}-`));
+  createdTempDirs.push(mutationDir);
+  try {
+    copyRepoWithoutGitOrTarget(mutationDir);
+    const assertDeltaMultisetsEqual = assertMutationDeltaMultisetsEqual(mutationDir, `${c.family}:`, c.id);
+    check(
+      `реальный Node/Rust validate: ${c.kind} "${c.id}" даёт равные как мультимножество непустые multiset-дельты с префиксом "${c.family}:" (rust-architecture-conformance-7)`,
+      () => {
+        assertDeltaMultisetsEqual(c.write);
+      },
+    );
+  } finally {
+    fs.rmSync(mutationDir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(mutationDir), 1);
+  }
+}
+
+// Plan substitution: a plan resolver placed next to the composed export's
+// own boundary, mapping the SAME plan id to a different plan, reaches
+// neither implementation — both check the composed export only against
+// the plan the qualification itself pinned. Both deltas stay EMPTY.
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-kernel-validate-mutation-7d-plan-substitution-'));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const baseline = computeFailLines(dir);
+    const [p, bundle] = readBundle(dir, 'workspace-compatibility-qualification.fixtures.json');
+    const branch9 = bundle.valid.find((v) => v.note.startsWith('decision-matrix branch 9'));
+    assert(branch9, `${p} must carry a "decision-matrix branch 9" valid fixture`);
+    const planId = branch9.registry.qualifications[0].payload.migration_plan_ref.id;
+    bundle.export_resolution.plan_resolution = {
+      [planId]: {
+        record_type: 'instance-migration-plan', plan_ref: planId, plan_fingerprint: '0'.repeat(64),
+        scope: { type: 'project-workspace', id: 'substitute' }, source: {}, record_units: [], mappings: [],
+      },
+    };
+    fs.writeFileSync(p, JSON.stringify(bundle));
+    const mutated = computeFailLines(dir);
+    check(
+      'реальный Node/Rust validate: подмена плана под тем же id рядом с границей экспорта не влияет ни на одну сторону — обе дельты пусты (rust-architecture-conformance-7)',
+      () => {
+        assert(multisetDelta(baseline.nodeFails, mutated.nodeFails).length === 0, 'Node delta must be empty');
+        assert(multisetDelta(baseline.rustFails, mutated.rustFails).length === 0, 'Rust delta must be empty');
+      },
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
   }
 }
 
@@ -2490,6 +2676,269 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
     assert(problems[0].includes('/payload/observed_at'), `первой ожидалась диагностика схемы по observed_at, получено: ${JSON.stringify(problems)}`);
     assert(problems.some((p) => p.includes('observed_at is not a valid date')), `ожидалась доменная диагностика даты, получено: ${JSON.stringify(problems)}`);
     assert(problems.some((p) => p.includes('measurement.basis contains')), `ожидалась доменная диагностика basis, получено: ${JSON.stringify(problems)}`);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Package `rust-architecture-conformance-7`, corrective round 1: the Node
+// halves of the matched library-level cases behind the four accepted
+// `COMPATIBILITY.md` boundaries of this package. Each case calls the Node
+// library directly (bypassing `kernel-validate.mjs`, which reports only
+// `p[0]`) on the SAME real fixture document with the SAME mutation as its
+// named Rust half, with the options `kernel-validate.mjs` builds from the
+// real schemas and fixture bundles. The expected strings below are the
+// Rust route's own output (asserted verbatim by the Rust halves); each
+// check proves the Node output differs from it by EXACTLY the accepted
+// difference and nothing else.
+// ---------------------------------------------------------------------------
+{
+  const om = (name) => JSON.parse(fs.readFileSync(path.join(ROOT, 'registries', 'operating-model', name), 'utf8'));
+  const fixtureBundle = (family) => om(`fixtures/${family}.fixtures.json`);
+  const envelope = om('scoped-record.schema.json');
+  const planOptions = (b) => ({
+    registrySchema: om('instance-data-migration.schema.json'),
+    envelopeSchema: envelope,
+    resolveSourceSnapshot: makeSourceSnapshotResolver(b.source_snapshot_resolution),
+    resolveEvidence: makeEvidenceResolver(b.evidence_resolution),
+    resolveRollbackSnapshot: makeRollbackSnapshotResolver(b.rollback_snapshot_resolution),
+    resolveDeterministicPlan: makeDeterministicPlanResolver(b.deterministic_plan_resolution),
+    resolveRestorationEvidence: makeRestorationEvidenceResolver(b.restoration_evidence_resolution),
+    resolveSupersededPlan: makeSupersededPlanResolver(b.superseded_plan_resolution),
+  });
+  const exportOptions = (b) => ({
+    registrySchema: om('instance-canonical-export.schema.json'),
+    envelopeSchema: envelope,
+    resolveMigrationPlan: makeMigrationPlanResolver(b.plan_resolution),
+    resolveSourceContent: makeSourceContentResolver(b.source_content_resolution),
+  });
+  const workspaceOptions = (b) => {
+    const mr = b.migration_resolution || {};
+    const er = b.export_resolution || {};
+    return {
+      registrySchema: om('workspace-compatibility-qualification.schema.json'),
+      envelopeSchema: envelope,
+      resolveConnectionRecord: makeRefResolver(b.connection_record_resolution),
+      resolvePlanRecord: makeRefResolver(b.plan_record_resolution),
+      resolveExportRecord: makeRefResolver(b.export_record_resolution),
+      compatOptions: {
+        registrySchema: om('existing-project-compatibility-mode.schema.json'),
+        envelopeSchema: envelope,
+        sourceRegistrySchema: om('instruction-source-registry.schema.json'),
+        ruleIntakeSchema: om('controlled-rule-intake.schema.json'),
+      },
+      migrationOptions: planOptions(mr),
+      exportOptions: {
+        registrySchema: om('instance-canonical-export.schema.json'),
+        envelopeSchema: envelope,
+        resolveSourceContent: makeSourceContentResolver(er.source_content_resolution),
+      },
+    };
+  };
+  const taskPatterns = yamlParse(fs.readFileSync(path.join(ROOT, 'standards', 'workspace', 'task-pattern-registry.yaml'), 'utf8'))
+    .task_patterns.map((p) => ({ id: p.id, work_kind: p.payload.work_kind, change_class: p.payload.change_class ?? null }));
+  const upgradeOptions = (b) => ({
+    registrySchema: om('upgrade-integration-qualification.schema.json'),
+    envelopeSchema: envelope,
+    resolveTaskJourney: makeRefResolver(b.task_journey_resolution),
+    resolveFieldEvaluationReport: makeRefResolver(b.field_evaluation_resolution),
+    resolveTaskSpecification: makeRefResolver(b.task_specification_resolution),
+    resolveExecutionState: makeRefResolver(b.execution_state_resolution),
+    taskJourneyOptions: { recordSchema: om('evidence-and-handoff.schema.json'), envelopeSchema: envelope, resolveRecords: makeRecordResolver(b.task_journey_nested_resolution) },
+    fieldEvaluationOptions: { recordSchema: om('field-evaluation.schema.json'), envelopeSchema: envelope, resolveRecords: makeRecordResolver(b.field_evaluation_nested_resolution) },
+    taskSpecificationOptions: { recordSchema: om('task-specification.schema.json'), envelopeSchema: envelope, taskPatterns },
+    executionStateOptions: { recordSchema: om('execution-state.schema.json'), envelopeSchema: envelope },
+  });
+  const sameList = (actual, expected, what) => assert(
+    JSON.stringify(actual) === JSON.stringify(expected),
+    `${what}: expected ${JSON.stringify(expected, null, 1)}, got ${JSON.stringify(actual, null, 1)}`,
+  );
+  const validCase = (b, prefix) => {
+    const c = b.valid.find((v) => v.note.startsWith(prefix));
+    assert(c, `the bundle must carry a valid fixture whose note starts with "${prefix}"`);
+    return c.registry;
+  };
+
+  // (a) Raw decision inputs of a composed record its own contract rejects.
+  {
+    const b = fixtureBundle('workspace-compatibility-qualification');
+    const reference = 'connection:sample-connection-clean';
+    const connection = b.connection_record_resolution[reference];
+    connection.scope.id = 'sample-project-other';
+    connection.payload.repository.id = 'sample-project-repository-unscanned';
+    const doc = validCase(b, 'decision-matrix branch 5');
+    const digest = computeConnectionDigest(connection);
+    doc.qualifications[0].payload.workspace_connection_refs[0].sha256 = digest;
+    const at = 'qualification "sample-qualification-compatibility-only"';
+    const composed = `${at} workspace_connection_refs: workspace connection scan "sample-connection-clean" payload.repository.workspace_id "sample-project" does not match scope.id "sample-project-other"; scope names the exact workspace this scan covers`;
+    const rustOnly = `${at} qualification_state is "QUALIFIED", but the closed decision matrix over the composed records' own next_steps/pending rule-candidate decisions/verification.overall_status/canonical export coverage computes "UNVERIFIED"`;
+    const rust = [composed, rustOnly];
+    check('библиотечный Node-прогон (rust-architecture-conformance-7, принятая граница): workspace-compatibility-qualification читает scope, repository.id и next_step ОТКЛОНЁННОГО собственным контрактом соединения — первая строка Node (raw scope) отличается от первой строки Rust (диагностика композиции); ровно три raw-строки только у Node, ровно одна строка матрицы (UNVERIFIED) только у Rust — парный Rust-тест workspace_compatibility_qualification_a_rejected_connection_contributes_no_raw_decision_input', () => {
+      assert(digest === 'bc0bb0c68d12be6a79df75c125216e1fa59c51cce77dc5d3fe8f5070cc8bdbdb', `Node и Rust должны пинить одно и то же содержимое, получено ${digest}`);
+      const node = evaluateWorkspaceCompatibilityQualification(doc, workspaceOptions(b));
+      sameList(node, [
+        `${at} scope does not match the resolved payload.workspace_connection_refs[0] record's scope; a qualification cannot claim a different scope than any connection scan it pins`,
+        composed,
+        `${at} payload.workspace_repository_ids is missing ["sample-project-repository-unscanned"], actually scanned by a resolved connection but not declared`,
+        `${at} payload.workspace_repository_ids declares ["sample-project-repository"], which no resolved connection's payload.repository.id names`,
+      ], 'Node');
+      sameList(node.filter((l) => rust.includes(l)), [composed], 'общая с Rust диагностика');
+      assert(!node.includes(rustOnly), 'Node не должен вычислять UNVERIFIED: он читает raw next_step отклонённого соединения');
+      assert(node[0] !== rust[0], 'первичная диагностика должна различаться ровно так, как записано в COMPATIBILITY.md');
+    });
+  }
+  {
+    const b = fixtureBundle('upgrade-integration-qualification');
+    const reference = 'field-evaluation-report:report-2026-08';
+    b.field_evaluation_resolution[reference].payload.workspace_id = 'ws-other';
+    const digest = computeContentDigest(b.field_evaluation_resolution[reference]);
+    const doc = b.valid[0].registry;
+    doc.qualifications[0].payload.field_evaluation_report_ref.sha256 = digest;
+    const at = 'qualification "uiq-qualified-example"';
+    const rust = [
+      ...Array.from({ length: 18 }, (_, i) => `${at} payload.field_evaluation_report_ref: field evaluation report "report-2026-08" included_observations[${i}] belongs to workspace "ws-meridian", not this report's workspace "ws-other"; samples from different workspaces are not mixed without an explicit comparability rule`),
+      `${at} payload.qualification_state is declared "QUALIFIED" but recomputes to "BLOCKED"; a qualification_state is recomputed, never trusted on its own`,
+      `${at} qualification_state recomputes to BLOCKED but payload.blockers is empty`,
+    ];
+    const nodeOnly = `${at} payload.field_evaluation_report_ref resolves to payload.workspace_id "ws-other", not this qualification's own workspace "ws-meridian"; the task journey, the field-evaluation report and every scenario must belong to the same workspace`;
+    check('библиотечный Node-прогон (rust-architecture-conformance-7, принятая граница): upgrade-integration-qualification читает workspace_id ОТКЛОНЁННОГО собственным контрактом field-evaluation report — первая диагностика совпадает, Node-вывод равен Rust-выводу плюс ровно одна raw-строка workspace identity — парный Rust-тест upgrade_integration_qualification_a_rejected_report_contributes_no_raw_workspace', () => {
+      assert(digest === '055a75ace5235a222d11fc36275b9afbb0e3bea21555e57d7b4998aa8798ff8d', `Node и Rust должны пинить одно и то же содержимое, получено ${digest}`);
+      const node = evaluateUpgradeIntegrationQualification(doc, upgradeOptions(b));
+      assert(node[0] === rust[0], `первичная диагностика должна совпадать, получено ${JSON.stringify(node[0])}`);
+      sameList(node.filter((l) => l !== nodeOnly), rust, 'Node без raw-строки');
+      assert(node.filter((l) => l === nodeOnly).length === 1, `ожидалась ровно одна raw-строка workspace identity: ${JSON.stringify(node)}`);
+    });
+  }
+
+  // (b) A schema-invalid composed plan/export is pinned by Node over raw JSON.
+  for (const c of [
+    {
+      what: 'plan', map: 'plan_record_resolution', reference: 'plan:sample-migration-plan-one', rustTest: 'workspace_compatibility_qualification_a_schema_invalid_composed_plan_is_never_pinned_by_raw_json',
+      nodeFirst: /^qualification "sample-qualification-migrated-and-exported" payload\.migration_plan_ref\.sha256 "[0-9a-f]{64}" does not equal the resolved plan's own recomputed plan_fingerprint "[0-9a-f]{64}"; /,
+      rustFirst: 'qualification "sample-qualification-migrated-and-exported" migration_plan_ref: /migration_plans/0/payload/source/unexpected_field: additional property not allowed',
+      ownRoute: (b, record) => evaluateInstanceDataMigration({ schema_version: 1, registry_id: 'instance-data-migration', title: 'sample-qualification-migrated-and-exported — composed migration plan', migration_plans: [record] }, workspaceOptions(b).migrationOptions),
+    },
+    {
+      what: 'export', map: 'export_record_resolution', reference: 'export:sample-canonical-export-one', rustTest: 'workspace_compatibility_qualification_a_schema_invalid_composed_export_is_never_pinned_by_raw_json',
+      nodeFirst: /^qualification "sample-qualification-migrated-and-exported" payload\.canonical_export_ref\.sha256 "[0-9a-f]{64}" does not equal the resolved export's own recomputed digest "[0-9a-f]{64}"; /,
+      rustFirst: 'qualification "sample-qualification-migrated-and-exported" canonical_export_ref: /exports/0/payload/source/unexpected_field: additional property not allowed',
+      ownRoute: (b, record) => evaluateInstanceCanonicalExport({ schema_version: 1, registry_id: 'instance-canonical-export', title: 'sample-qualification-migrated-and-exported — composed canonical export', exports: [record] }, { ...workspaceOptions(b).exportOptions, resolveMigrationPlan: () => null }),
+    },
+  ]) {
+    const b = fixtureBundle('workspace-compatibility-qualification');
+    b[c.map][c.reference].payload.source.unexpected_field = 'schema-only';
+    const doc = validCase(b, 'decision-matrix branch 9');
+    check(`библиотечный Node-прогон (rust-architecture-conformance-7, принятая граница): schema-invalid composed ${c.what} Node пинит по сырому JSON — первая и единственная диагностика записи у Node — raw sha256-несовпадение, у Rust — собственная диагностика схемы записи под префиксом композиции (та же, что первой сообщает собственный Node-маршрут записи), вторые строки совпадают — парный Rust-тест ${c.rustTest}`, () => {
+      const node = evaluateWorkspaceCompatibilityQualification(doc, workspaceOptions(b));
+      assert(node.length === 2, `ожидались ровно две Node-диагностики, получено ${JSON.stringify(node)}`);
+      assert(c.nodeFirst.test(node[0]), `первой ожидалась raw sha256-диагностика, получено ${JSON.stringify(node[0])}`);
+      const own = c.ownRoute(b, b[c.map][c.reference]);
+      const prefix = `qualification "sample-qualification-migrated-and-exported" ${c.what === 'plan' ? 'migration_plan_ref' : 'canonical_export_ref'}: `;
+      assert(`${prefix}${own[0]}` === c.rustFirst, `собственный Node-маршрут записи должен первой сообщить ту же диагностику схемы, что Rust: ${JSON.stringify(own)}`);
+      const rustSecond = c.what === 'plan'
+        ? 'qualification "sample-qualification-migrated-and-exported" payload.canonical_export_ref is present without a resolvable payload.migration_plan_ref; an export proves a plan\'s own targets and cannot be composed without one'
+        : 'qualification "sample-qualification-migrated-and-exported" qualification_state is "QUALIFIED", but the closed decision matrix over the composed records\' own next_steps/pending rule-candidate decisions/verification.overall_status/canonical export coverage computes "UNVERIFIED"';
+      assert(node[1] === rustSecond, `вторая диагностика должна совпадать с Rust, получено ${JSON.stringify(node[1])}`);
+    });
+  }
+
+  // (c) Container/envelope schema short-circuit in all four families.
+  const shortCircuit = [
+    {
+      family: 'instance-data-migration', entries: 'migration_plans', evaluate: evaluateInstanceDataMigration, options: planOptions,
+      rustTest: 'instance_data_migration_a_container_or_envelope_schema_violation_short_circuits_before_the_domain',
+      doc: (b) => { const d = b.valid[1].registry; d.migration_plans[0].payload.supersedes = d.migration_plans[0].id; return d; },
+      domain: 'migration plan "sample-migration-plan-one" supersedes its own id; a plan cannot supersede itself',
+    },
+    {
+      family: 'instance-canonical-export', entries: 'exports', evaluate: evaluateInstanceCanonicalExport, options: exportOptions,
+      rustTest: 'instance_canonical_export_a_container_or_envelope_schema_violation_short_circuits_before_the_domain',
+      doc: (b) => { const d = b.valid[1].registry; d.exports[0].payload.idempotency_key = 'a'.repeat(64); return d; },
+      domain: `canonical export "sample-canonical-export-one" idempotency_key "${'a'.repeat(64)}" does not match the recomputed key "6a679cf719f91ef64593485de9c3f5a5a62f2a8ad118b6a8b327ac24fb3e3149" derived from this export's own plan_ref and plan_fingerprint; idempotency_key is never an arbitrary free-form string`,
+    },
+    {
+      family: 'workspace-compatibility-qualification', entries: 'qualifications', evaluate: evaluateWorkspaceCompatibilityQualification, options: workspaceOptions,
+      rustTest: 'workspace_compatibility_qualification_a_container_or_envelope_schema_violation_short_circuits_before_the_domain',
+      doc: (b) => { const d = validCase(b, 'decision-matrix branch 5'); d.qualifications[0].origin.source_ref = 'workspace-connection-scan:tampered'; return d; },
+      domain: 'qualification "sample-qualification-compatibility-only" origin.source_ref "workspace-connection-scan:tampered" does not equal "workspace-connection-scan:sample-connection-clean"; the envelope and payload must pin the SAME set of composed workspace connections',
+    },
+    {
+      family: 'upgrade-integration-qualification', entries: 'qualifications', evaluate: evaluateUpgradeIntegrationQualification, options: upgradeOptions,
+      rustTest: 'upgrade_integration_qualification_a_container_or_envelope_schema_violation_short_circuits_before_the_domain',
+      doc: (b) => { const d = b.valid[0].registry; d.qualifications[0].payload.blockers = ['a blocker declared over a QUALIFIED record']; return d; },
+      domain: 'qualification "uiq-qualified-example" qualification_state recomputes to "QUALIFIED" but payload.blockers is non-empty; blockers is closed to BLOCKED',
+    },
+  ];
+  for (const c of shortCircuit) {
+    const b = fixtureBundle(c.family);
+    const opts = c.options(b);
+    const doc = c.doc(b);
+    check(`библиотечный Node-прогон (rust-architecture-conformance-7, принятая граница): ${c.family} — независимый доменный дефект один даёт ровно [доменная строка] (как и Rust); с добавленным schema-only дефектом (пустой title контейнера, затем envelope записи) Node возвращает [диагностика схемы, доменная строка], а Rust — только [диагностика схемы] — парный Rust-тест ${c.rustTest}`, () => {
+      sameList(c.evaluate(doc, opts), [c.domain], 'только доменный дефект');
+      const container = JSON.parse(JSON.stringify(doc));
+      container.title = '';
+      sameList(c.evaluate(container, opts), ['/title: shorter than 1', c.domain], 'контейнер');
+      const entry = JSON.parse(JSON.stringify(doc));
+      entry[c.entries][0].title = '';
+      sameList(c.evaluate(entry, opts), ['entry 0 envelope /title: shorter than 1', c.domain], 'envelope записи');
+    });
+  }
+
+  // (d) Invalid JSON content: the same rejection, only the parser tail differs.
+  const neutralTail = 'the content does not parse as a single JSON value';
+  const invalidJsonLine = /^(.* content is not valid JSON for media_type "application\/json": )(.+)$/;
+  const tailOnly = (node, rust, what) => {
+    assert(node.length === rust.length, `${what}: одинаковое число диагностик ожидалось, Node ${JSON.stringify(node)}`);
+    let tails = 0;
+    node.forEach((line, i) => {
+      const m = invalidJsonLine.exec(line);
+      if (m) {
+        tails += 1;
+        assert(`${m[1]}${neutralTail}` === rust[i], `${what}: строка ${i} должна отличаться от Rust только хвостом, Node ${JSON.stringify(line)} vs Rust ${JSON.stringify(rust[i])}`);
+        assert(m[2] !== neutralTail && m[2].trim() !== '', `${what}: Node-хвост должен быть собственным сообщением парсера, получено ${JSON.stringify(m[2])}`);
+      } else {
+        assert(line === rust[i], `${what}: строка ${i} должна совпадать с Rust, Node ${JSON.stringify(line)} vs Rust ${JSON.stringify(rust[i])}`);
+      }
+    });
+    assert(tails === 1, `${what}: ровно одна строка invalid-JSON ожидалась, найдено ${tails}`);
+  };
+  {
+    const b = fixtureBundle('instance-data-migration');
+    const doc = b.valid[1].registry;
+    doc.migration_plans[0].payload.mappings[0].target.payload.content = '{not valid json';
+    const plan = 'migration plan "sample-migration-plan-one"';
+    const stale = 'resolved plan_fingerprint "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae" does not match this plan\'s own recomputed fingerprint "02a92cef0a7bb16f79379b189f3ca914ac3343a3b6b6d5e7c29f3ae2cc536b2f"';
+    const rust = [
+      `${plan} rollback.deterministic_plan_ref "rollback-plan:sample-revision-0001-to-migration-plan-one": ${stale}; a reconstruction plan pinned to a stale or different version of this plan's content never confirms the current one (property 5)`,
+      `${plan} target "sample-migrated-record-one" payload content is not valid JSON for media_type "application/json": ${neutralTail}`,
+      `${plan} evidence "evidence:coverage-migration-plan-one": ${stale}; evidence pinned to a stale or different version of this plan's content never confirms the current one (property 6)`,
+      `${plan} evidence "evidence:applicability-migration-plan-one": ${stale}; evidence pinned to a stale or different version of this plan's content never confirms the current one (property 6)`,
+      `${plan} plan_fingerprint "3c465ef1b7f0b4a65d2ed1e7497fcc749e1e1be0c018b9db827cd90d8971f9ae" does not match the recomputed fingerprint "02a92cef0a7bb16f79379b189f3ca914ac3343a3b6b6d5e7c29f3ae2cc536b2f" of its own documented canonical projection (source, record_units, mappings, rollback); the same pinned input must always compute the same fingerprint`,
+    ];
+    check('библиотечный Node-прогон (rust-architecture-conformance-7, принятая граница): instance-data-migration отклоняет невалидный JSON content тем же набором и порядком диагностик, что Rust; отличается только хвост сообщения парсера — парный Rust-тест instance_data_migration_invalid_json_content_is_rejected_like_the_reference', () => {
+      tailOnly(evaluateInstanceDataMigration(doc, planOptions(b)), rust, 'instance-data-migration');
+    });
+  }
+  {
+    const b = fixtureBundle('instance-canonical-export');
+    const c = b.invalid[21];
+    const exp = 'canonical export "sample-canonical-export-one"';
+    const rust = [
+      `${exp} exported record "sample-migrated-record-one" diverges from the plan's own target for the same group; the exported record and the plan's target must be structurally identical, including $schema (property: completeness)`,
+      `${exp} exported record "sample-migrated-record-one" payload content is not valid JSON for media_type "application/json": ${neutralTail}`,
+      `${exp} target "sample-migrated-record-one": exported payload does not match the resolved actual content of its contributing source unit(s) byte-for-byte (media_type/encoding/content/digest); a changed value or byte is never accepted as preserved (property: content preservation)`,
+    ];
+    check('библиотечный Node-прогон (rust-architecture-conformance-7, принятая граница): instance-canonical-export на реальном invalid[21] (невалидный JSON content) даёт тот же набор и порядок диагностик, что Rust; отличается только хвост сообщения парсера — парный Rust-тест instance_canonical_export_invalid_json_content_is_rejected_like_the_reference', () => {
+      assert(c.note === 'planted an exported record whose application/json payload content is not valid JSON', `invalid[21] должен быть случаем невалидного JSON, получено ${JSON.stringify(c.note)}`);
+      tailOnly(evaluateInstanceCanonicalExport(c.registry, exportOptions(b)), rust, 'instance-canonical-export');
+    });
+  }
+
+  // Opaque-ref convergence: a multi-byte character straddling the seventh
+  // byte. Node returns an ordinary result; the Rust prefix check no longer
+  // panics there (`meridian-core/src/types/evidence_ref.rs::a_multibyte_prefix_is_checked_without_panicking`).
+  check('сближение opaque-ref (rust-architecture-conformance-7): Node checkOpaqueRef возвращает обычный результат для ref с многобайтным символом на границе седьмого байта — парный Rust-тест a_multibyte_prefix_is_checked_without_panicking', () => {
+    assert(checkOpaqueRef('abcdefж/record', 'ref') === null, 'ожидался null (ref допустим)');
+    assert(checkOpaqueRef('ффф:x', 'ref') === null, 'ожидался null (ref допустим)');
   });
 }
 

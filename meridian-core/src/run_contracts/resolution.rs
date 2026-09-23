@@ -1,164 +1,35 @@
-//! The external record-resolution boundary of the context manifest, typed.
+//! The external record-resolution boundary, typed.
 //!
-//! A pinned reference is resolved OUTSIDE the manifest: a
+//! A pinned reference is resolved OUTSIDE the record that names it: a
 //! [`ResolutionCatalogue`] maps a portable reference to the
-//! [`ResolvedEntry`] a transformer returned for it. Unlike a record, a
-//! resolver response is NOT schema-checked before it reaches this crate —
-//! the closed transformer-response contract IS this module's domain rule —
-//! so a response field is a [`ResponseField`]: absent, a value of the
-//! expected shape, or a [`ForeignValue`] of some other JSON kind that is
-//! kept (kind plus its rendered text) only so the diagnostic can name it.
-//! Nothing here is a general JSON value: every field has its own expected
-//! shape, and unknown keys are carried only by name.
+//! [`ResolvedEntry`] a transformer returned for it. The response shapes live
+//! in [`super::response`]; this module owns the ONE closed
+//! transformer-response contract (`resolvePinnedReference`) the three
+//! resolving families share — `bounded-context-manifest`,
+//! `evidence-and-handoff-contract` and `meridian-field-evaluation` — with the
+//! family-specific wording, closed key sets and completeness tails selected
+//! by [`RecordFamily`], never copied.
 //!
-//! `check_resolved_entry` is `resolvePinnedReference`; [`ResolvedStateField`]
-//! is the closed vocabulary of the checkpoint axes an execution-run
-//! response carries (`resolved_state`), and `check_resolved_state` its
-//! closed contract. `same_resolved_edition` compares two resolved
-//! editions of one slot.
+//! [`ResolvedStateField`] is the closed vocabulary of the checkpoint axes an
+//! execution-run response carries (`resolved_state`), and
+//! `check_resolved_state` its closed contract. `same_resolved_edition`
+//! compares two resolved editions of one manifest slot.
 
 use std::collections::{BTreeMap, HashSet};
 
 use crate::task_contracts::non_portable_reason;
 use crate::types::{ContentDigest, Diagnostic, SemanticId};
 
+use super::envelope::RecordFamily;
 use super::identity::RecordText;
-use super::pinned_ref::{site_label, PinSite, PinnedRecordKind, PinnedRef, PinnedSlot};
+use super::pinned_ref::{PinnedRecordKind, PinnedRef, PinnedSlot};
+use super::response::{
+    EvidenceResultResponse, ExtensionKey, ObservationResponse, ResponseField, ResponseItem,
+    SpecificationResponse,
+};
 use super::revision::{is_sha256_text, RevisionClass};
 use super::vocabulary::{LifecycleStage, WorkStatus};
 use super::{fail, json_quote};
-
-/// The JSON kind of a [`ForeignValue`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ResponseValueKind {
-    Null,
-    Boolean,
-    Number,
-    String,
-    Array,
-    Object,
-}
-
-impl ResponseValueKind {
-    /// JavaScript `typeof` for this kind.
-    fn type_of(self) -> &'static str {
-        match self {
-            ResponseValueKind::Null | ResponseValueKind::Array | ResponseValueKind::Object => {
-                "object"
-            }
-            ResponseValueKind::Boolean => "boolean",
-            ResponseValueKind::Number => "number",
-            ResponseValueKind::String => "string",
-        }
-    }
-
-    /// `null`, else `typeof` — how a non-string response value is named.
-    fn null_or_type_of(self) -> &'static str {
-        match self {
-            ResponseValueKind::Null => "null",
-            other => other.type_of(),
-        }
-    }
-
-    fn with_article(self) -> &'static str {
-        match self {
-            ResponseValueKind::Null => "null",
-            ResponseValueKind::Boolean => "a boolean",
-            ResponseValueKind::Number => "a number",
-            ResponseValueKind::String => "a string",
-            ResponseValueKind::Array => "an array",
-            ResponseValueKind::Object => "an object",
-        }
-    }
-}
-
-/// A response value of an unexpected JSON kind, kept only for its
-/// diagnostic: its kind, its JSON text (`JSON.stringify`) and its string
-/// coercion (`String(x)` / template interpolation).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ForeignValue {
-    kind: ResponseValueKind,
-    json_text: String,
-    string_coercion: String,
-}
-
-impl ForeignValue {
-    pub fn new(
-        kind: ResponseValueKind,
-        json_text: impl Into<String>,
-        string_coercion: impl Into<String>,
-    ) -> Self {
-        Self {
-            kind,
-            json_text: json_text.into(),
-            string_coercion: string_coercion.into(),
-        }
-    }
-
-    pub fn null() -> Self {
-        Self::new(ResponseValueKind::Null, "null", "null")
-    }
-
-    pub fn kind(&self) -> ResponseValueKind {
-        self.kind
-    }
-}
-
-/// One field of a resolver response.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ResponseField<T> {
-    Absent,
-    Present(T),
-    Foreign(ForeignValue),
-}
-
-impl<T> ResponseField<T> {
-    fn is_present(&self) -> bool {
-        !matches!(self, ResponseField::Absent)
-    }
-
-    fn value(&self) -> Option<&T> {
-        match self {
-            ResponseField::Present(v) => Some(v),
-            _ => None,
-        }
-    }
-}
-
-impl ResponseField<String> {
-    fn text(&self) -> Option<&str> {
-        self.value().map(String::as_str)
-    }
-
-    fn non_blank(&self) -> Option<&str> {
-        self.text().filter(|s| !s.trim().is_empty())
-    }
-
-    /// `JSON.stringify(x ?? null)`.
-    fn json_or_null(&self) -> String {
-        match self {
-            ResponseField::Absent => "null".to_string(),
-            ResponseField::Present(s) => json_quote(s),
-            ResponseField::Foreign(f) => f.json_text.clone(),
-        }
-    }
-
-    /// `` `${x ?? null}` ``.
-    fn string_or_null(&self) -> String {
-        match self {
-            ResponseField::Absent => "null".to_string(),
-            ResponseField::Present(s) => s.clone(),
-            ResponseField::Foreign(f) => f.string_coercion.clone(),
-        }
-    }
-}
-
-/// One element of a response array.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ResponseItem {
-    Text(String),
-    Foreign(ForeignValue),
-}
 
 /// The closed vocabulary of the axes an execution-run response's
 /// `resolved_state` carries — every one required, nothing else allowed.
@@ -245,9 +116,11 @@ pub struct ResolvedStateResponse {
     pub unknown_fields: Vec<String>,
 }
 
-/// One transformer response. `other_fields` are the names of keys outside
-/// the eight this contract knows, in sorted order.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// One transformer response. The common fields, then the extension each
+/// record kind may carry; `other_fields` are the names of keys outside
+/// every known one, in sorted order. Which extension keys a response may
+/// carry is its family's closed key set (`allowed_keys`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ResolvedEntry {
     pub record_type: ResponseField<String>,
     pub id: ResponseField<String>,
@@ -257,7 +130,63 @@ pub struct ResolvedEntry {
     pub source_bytes: ResponseField<String>,
     pub resolved_state: ResponseField<ResolvedStateResponse>,
     pub linked_run_ref: ResponseField<String>,
+    pub specification: SpecificationResponse,
+    pub evidence_result: EvidenceResultResponse,
+    pub observation: ObservationResponse,
     pub other_fields: Vec<String>,
+}
+
+impl ResolvedEntry {
+    /// Every extension key this response carries.
+    fn present_extension_keys(&self) -> Vec<ExtensionKey> {
+        let spec = &self.specification;
+        let ev = &self.evidence_result;
+        let ob = &self.observation;
+        [
+            (
+                ExtensionKey::ResolvedState,
+                self.resolved_state.is_present(),
+            ),
+            (ExtensionKey::LinkedRunRef, self.linked_run_ref.is_present()),
+            (
+                ExtensionKey::AcceptanceCriteria,
+                spec.acceptance_criteria.is_present(),
+            ),
+            (
+                ExtensionKey::MandatoryChecks,
+                spec.mandatory_checks.is_present(),
+            ),
+            (
+                ExtensionKey::ObservedResult,
+                ev.observed_result.is_present(),
+            ),
+            (ExtensionKey::Covers, ev.covers.is_present()),
+            (ExtensionKey::CheckRef, ev.check_ref.is_present()),
+            (
+                ExtensionKey::SpecialisedContract,
+                ev.specialised_contract.is_present(),
+            ),
+            (
+                ExtensionKey::RecordedVerdict,
+                ev.recorded_verdict.is_present(),
+            ),
+            (ExtensionKey::MetricRef, ev.metric_ref.is_present()),
+            (ExtensionKey::MetricId, ob.metric_id.is_present()),
+            (ExtensionKey::Status, ob.status.is_present()),
+            (ExtensionKey::Measurement, ob.measurement.is_present()),
+            (ExtensionKey::WorkspaceId, ob.workspace_id.is_present()),
+            (ExtensionKey::ObservedAt, ob.observed_at.is_present()),
+            (ExtensionKey::SupersedesId, ob.supersedes_id.is_present()),
+            (
+                ExtensionKey::ObservationPeriod,
+                ob.observation_period.is_present(),
+            ),
+            (ExtensionKey::Coverage, ob.coverage.is_present()),
+        ]
+        .into_iter()
+        .filter_map(|(key, present)| present.then_some(key))
+        .collect()
+    }
 }
 
 /// The typed resolution input: portable reference -> the one response a
@@ -315,80 +244,155 @@ fn confirmed_digest(entry: &ResolvedEntry) -> ConfirmedDigest {
     }
 }
 
-fn allowed_keys(wanted: PinnedRecordKind) -> Vec<&'static str> {
-    let mut keys = RESOLVED_ENTRY_COMMON_KEYS.to_vec();
-    match wanted {
-        PinnedRecordKind::ExecutionRun => keys.push("resolved_state"),
-        PinnedRecordKind::RunHumanControl => keys.push("linked_run_ref"),
-        PinnedRecordKind::TaskSpecification => {}
+/// The closed extension key set of a response for `wanted`, in `family`'s
+/// contract order (`RESOLVED_ENTRY_KEYS_BY_TYPE` of each Node module). The
+/// field evaluation knows no execution-run extension: a `resolved_state`
+/// there is an unknown field.
+fn allowed_extensions(family: RecordFamily, wanted: PinnedRecordKind) -> &'static [ExtensionKey] {
+    use ExtensionKey as K;
+    match (family, wanted) {
+        (
+            RecordFamily::ContextManifest | RecordFamily::EvidenceAndHandoff,
+            PinnedRecordKind::ExecutionRun,
+        ) => &[K::ResolvedState],
+        (RecordFamily::ContextManifest, PinnedRecordKind::RunHumanControl)
+        | (
+            RecordFamily::EvidenceAndHandoff,
+            PinnedRecordKind::RunHumanControl | PinnedRecordKind::ContextManifest,
+        ) => &[K::LinkedRunRef],
+        (RecordFamily::EvidenceAndHandoff, PinnedRecordKind::TaskSpecification) => {
+            &[K::AcceptanceCriteria, K::MandatoryChecks]
+        }
+        (RecordFamily::EvidenceAndHandoff, PinnedRecordKind::EvidenceResult) => &[
+            K::ObservedResult,
+            K::Covers,
+            K::CheckRef,
+            K::SpecialisedContract,
+            K::RecordedVerdict,
+        ],
+        (
+            RecordFamily::FieldEvaluationObservation | RecordFamily::FieldEvaluationReport,
+            PinnedRecordKind::FieldEvaluationObservation,
+        ) => &[
+            K::MetricId,
+            K::Status,
+            K::Measurement,
+            K::WorkspaceId,
+            K::ObservedAt,
+            K::SupersedesId,
+            K::ObservationPeriod,
+            K::Coverage,
+        ],
+        (
+            RecordFamily::FieldEvaluationObservation | RecordFamily::FieldEvaluationReport,
+            PinnedRecordKind::EvidenceResult,
+        ) => &[K::ObservedResult, K::MetricRef],
+        _ => &[],
     }
+}
+
+/// The closed key set's names, common keys first.
+fn allowed_keys(family: RecordFamily, wanted: PinnedRecordKind) -> Vec<&'static str> {
+    let mut keys = RESOLVED_ENTRY_COMMON_KEYS.to_vec();
+    keys.extend(
+        allowed_extensions(family, wanted)
+            .iter()
+            .map(|k| k.as_str()),
+    );
     keys
 }
 
-/// Every key of `entry` outside `wanted`'s closed key set, sorted — the
+/// Every key of `entry` outside the closed key set, sorted — the
 /// deterministic order the Rust port has always reported
 /// (`COMPATIBILITY.md`: Node names them in source-text order).
-fn unknown_entry_keys(entry: &ResolvedEntry, wanted: PinnedRecordKind) -> Vec<String> {
+fn unknown_entry_keys(
+    entry: &ResolvedEntry,
+    family: RecordFamily,
+    wanted: PinnedRecordKind,
+) -> Vec<String> {
+    let allowed = allowed_extensions(family, wanted);
     let mut unknown = entry.other_fields.clone();
-    if entry.resolved_state.is_present() && wanted != PinnedRecordKind::ExecutionRun {
-        unknown.push("resolved_state".to_string());
-    }
-    if entry.linked_run_ref.is_present() && wanted != PinnedRecordKind::RunHumanControl {
-        unknown.push("linked_run_ref".to_string());
-    }
+    unknown.extend(
+        entry
+            .present_extension_keys()
+            .into_iter()
+            .filter(|k| !allowed.contains(k))
+            .map(|k| k.as_str().to_string()),
+    );
     unknown.sort();
     unknown.dedup();
     unknown
 }
 
+/// How the family closes an unresolved reference: "… and the manifest fails
+/// closed".
+fn fails_closed_subject(family: RecordFamily) -> &'static str {
+    match family {
+        RecordFamily::ContextManifest => "the manifest",
+        RecordFamily::EvidenceAndHandoff => "the handoff",
+        _ => "the record",
+    }
+}
+
 /// Port of `resolvePinnedReference`: resolves one pinned reference through
-/// `catalogue` and checks the response against the closed
-/// transformer-response contract. Returns the response even when it has
-/// problems — the edition and link comparisons still read it.
+/// `catalogue` and checks the response against `family`'s closed
+/// transformer-response contract for `wanted`, including the family's
+/// completeness tail for that record kind. `field` is how the diagnostic
+/// names the reference. Returns the response even when it has problems —
+/// the edition and link comparisons, and a caller's own completeness check,
+/// still read it.
 pub(crate) fn check_resolved_entry<'c>(
+    family: RecordFamily,
     id: &str,
-    site: PinSite,
-    slot: PinnedSlot,
+    field: &str,
+    wanted: PinnedRecordKind,
     pin: &PinnedRef,
     catalogue: &'c ResolutionCatalogue,
     problems: &mut Vec<Diagnostic>,
 ) -> Option<&'c ResolvedEntry> {
-    let field = site_label(site, slot);
-    let wanted = slot.kind();
+    let label = family.label();
+    let subject = format!("{label} \"{id}\"");
     let want = wanted.as_str();
     let Some(entry) = catalogue.resolve(pin.reference.as_str()) else {
         problems.push(fail(format!(
-            "context manifest \"{id}\" {field} does not resolve to an actual {want} through the external resolver; a pinned reference that resolves to nothing is not a verified pin and the manifest fails closed"
+            "{subject} {field} does not resolve to an actual {want} through the external resolver; a pinned reference that resolves to nothing is not a verified pin and {} fails closed",
+            fails_closed_subject(family)
         )));
         return None;
     };
 
-    let allowed = allowed_keys(wanted).join(", ");
-    for key in unknown_entry_keys(entry, wanted) {
+    let allowed = allowed_keys(family, wanted).join(", ");
+    for key in unknown_entry_keys(entry, family, wanted) {
         problems.push(fail(format!(
-            "context manifest \"{id}\" {field}: the resolver returned a record with an unknown field \"{key}\"; the transformer response is closed to {{ {allowed} }}"
+            "{subject} {field}: the resolver returned a record with an unknown field \"{key}\"; the transformer response is closed to {{ {allowed} }}"
         )));
     }
 
     match entry.record_type.text().filter(|s| !s.is_empty()) {
         None => problems.push(fail(format!(
-            "context manifest \"{id}\" {field}: the resolver returned a record with no record_type; the transformer response is a closed contract"
+            "{subject} {field}: the resolver returned a record with no record_type; the transformer response is a closed contract"
         ))),
         Some(rt) if rt != want => problems.push(fail(format!(
-            "context manifest \"{id}\" {field} resolves to a \"{rt}\" record, not \"{want}\""
+            "{subject} {field} resolves to a \"{rt}\" record, not \"{want}\""
         ))),
         Some(_) => {}
     }
 
+    let id_mismatch_tail = match family {
+        RecordFamily::FieldEvaluationObservation | RecordFamily::FieldEvaluationReport => {
+            "; a pinned reference that resolves to a DIFFERENT record is not the same record that was pinned"
+        }
+        _ => "",
+    };
     match entry.id.non_blank() {
         None => problems.push(fail(format!(
-            "context manifest \"{id}\" {field}: the resolver returned a {want} with no id; a resolved record without an identity cannot be checked against the pin"
+            "{subject} {field}: the resolver returned a {want} with no id; a resolved record without an identity cannot be checked against the pin"
         ))),
         Some(eid) if SemanticId::new(eid).is_err() => problems.push(fail(format!(
-            "context manifest \"{id}\" {field}: the resolver returned a {want} whose id \"{eid}\" is not a stable semantic identifier"
+            "{subject} {field}: the resolver returned a {want} whose id \"{eid}\" is not a stable semantic identifier"
         ))),
         Some(eid) if eid != pin.id.as_str() => problems.push(fail(format!(
-            "context manifest \"{id}\" {field} pins id \"{}\" but the reference resolves to record id \"{eid}\"",
+            "{subject} {field} pins id \"{}\" but the reference resolves to record id \"{eid}\"{id_mismatch_tail}",
             pin.id.as_str()
         ))),
         Some(_) => {}
@@ -397,16 +401,16 @@ pub(crate) fn check_resolved_entry<'c>(
     if entry.reference.is_present() {
         match entry.reference.non_blank() {
             None => problems.push(fail(format!(
-                "context manifest \"{id}\" {field}: the resolver's stated reference is present but not a non-empty string"
+                "{subject} {field}: the resolver's stated reference is present but not a non-empty string"
             ))),
             Some(er) => {
                 if let Some(r) = non_portable_reason(Some(er)) {
                     problems.push(fail(format!(
-                        "context manifest \"{id}\" {field}: the resolver's stated reference contains {r}"
+                        "{subject} {field}: the resolver's stated reference contains {r}"
                     )));
                 } else if er != pin.reference.as_str() {
                     problems.push(fail(format!(
-                        "context manifest \"{id}\" {field}: the resolver's stated reference \"{er}\" is not the resolved reference \"{}\"",
+                        "{subject} {field}: the resolver's stated reference \"{er}\" is not the resolved reference \"{}\"",
                         pin.reference
                     )));
                 }
@@ -417,37 +421,37 @@ pub(crate) fn check_resolved_entry<'c>(
     if entry.content_digest.is_present() && !entry.content_digest.text().is_some_and(is_sha256_text)
     {
         problems.push(fail(format!(
-            "context manifest \"{id}\" {field}: the resolver's content_digest {} is not exactly 64 hexadecimal characters",
+            "{subject} {field}: the resolver's content_digest {} is not exactly 64 hexadecimal characters",
             entry.content_digest.json_or_null()
         )));
     }
     if let ResponseField::Foreign(f) = &entry.source_bytes {
         problems.push(fail(format!(
-            "context manifest \"{id}\" {field}: the resolver's source_bytes is {}, not a string",
-            f.kind.null_or_type_of()
+            "{subject} {field}: the resolver's source_bytes is {}, not a string",
+            f.kind().null_or_type_of()
         )));
     }
 
-    let revision_exact = check_response_revision(id, &field, &entry.revision, problems);
+    let revision_exact = check_response_revision(&subject, field, &entry.revision, problems);
     let confirmed = confirmed_digest(entry);
     if !revision_exact && confirmed.digest.is_none() {
         problems.push(fail(format!(
-            "context manifest \"{id}\" {field}: the resolver confirmed neither an exact revision nor a content digest for this edition; the pinned edition is unverified"
+            "{subject} {field}: the resolver confirmed neither an exact revision nor a content digest for this edition; the pinned edition is unverified"
         )));
     }
     if let Some(inconsistent) = &confirmed.inconsistent {
         problems.push(fail(format!(
-            "context manifest \"{id}\" {field}: the resolver's content_digest \"{inconsistent}\" does not match the SHA-256 of the resolved source bytes \"{}\"",
+            "{subject} {field}: the resolver's content_digest \"{inconsistent}\" does not match the SHA-256 of the resolved source bytes \"{}\"",
             confirmed.digest.as_deref().unwrap_or_default()
         )));
     }
     if let Some(pin_rev) = pin.revision.as_ref().filter(|r| !r.is_blank()) {
         match entry.revision.non_blank() {
             None => problems.push(fail(format!(
-                "context manifest \"{id}\" {field} pins revision \"{pin_rev}\" but the resolver confirmed no exact edition for this reference"
+                "{subject} {field} pins revision \"{pin_rev}\" but the resolver confirmed no exact edition for this reference"
             ))),
             Some(entry_rev) if entry_rev != pin_rev.as_str() => problems.push(fail(format!(
-                "context manifest \"{id}\" {field} pins revision \"{pin_rev}\" but the resolver confirmed edition \"{entry_rev}\""
+                "{subject} {field} pins revision \"{pin_rev}\" but the resolver confirmed edition \"{entry_rev}\""
             ))),
             Some(_) => {}
         }
@@ -455,40 +459,133 @@ pub(crate) fn check_resolved_entry<'c>(
     if let Some(pin_sha) = &pin.sha256 {
         match &confirmed.digest {
             None => problems.push(fail(format!(
-                "context manifest \"{id}\" {field} pins sha256 \"{pin_sha}\" but the resolver confirmed no content digest for this edition; a digest is verified against resolved source, never against a second copy of itself"
+                "{subject} {field} pins sha256 \"{pin_sha}\" but the resolver confirmed no content digest for this edition; a digest is verified against resolved source, never against a second copy of itself"
             ))),
             Some(d) if d.to_lowercase() != pin_sha.as_str().to_lowercase() => problems.push(fail(format!(
-                "context manifest \"{id}\" {field} pins sha256 \"{pin_sha}\" but the SHA-256 of the resolved source is \"{d}\""
+                "{subject} {field} pins sha256 \"{pin_sha}\" but the SHA-256 of the resolved source is \"{d}\""
             ))),
             Some(_) => {}
         }
     }
 
-    match wanted {
-        PinnedRecordKind::ExecutionRun => {
-            check_resolved_state(id, &field, &entry.resolved_state, problems)
-        }
-        PinnedRecordKind::RunHumanControl => match entry.linked_run_ref.non_blank() {
+    check_completeness(family, &subject, field, wanted, entry, problems);
+    Some(entry)
+}
+
+/// The family's completeness tail for one record kind. The manifest and the
+/// handoff check the run's `resolved_state` and a run-scoped record's
+/// `linked_run_ref`; the handoff also closes a task specification's
+/// machine lists. An evidence result's subject and the field evaluation's
+/// resolved records are completed by their own callers.
+fn check_completeness(
+    family: RecordFamily,
+    subject: &str,
+    field: &str,
+    wanted: PinnedRecordKind,
+    entry: &ResolvedEntry,
+    problems: &mut Vec<Diagnostic>,
+) {
+    let want = wanted.as_str();
+    let axes_owner = match family {
+        RecordFamily::ContextManifest => "the checkpoint axes",
+        _ => "the handoff axes",
+    };
+    match (family, wanted) {
+        (
+            RecordFamily::ContextManifest | RecordFamily::EvidenceAndHandoff,
+            PinnedRecordKind::ExecutionRun,
+        ) => check_resolved_state(subject, field, axes_owner, &entry.resolved_state, problems),
+        (RecordFamily::ContextManifest, PinnedRecordKind::RunHumanControl)
+        | (
+            RecordFamily::EvidenceAndHandoff,
+            PinnedRecordKind::RunHumanControl | PinnedRecordKind::ContextManifest,
+        ) => match entry.linked_run_ref.non_blank() {
             None => problems.push(fail(format!(
-                "context manifest \"{id}\" {field}: the resolver returned a run-human-control record with no linked_run_ref; the run it belongs to is unconfirmed"
+                "{subject} {field}: the resolver returned a {want} record with no linked_run_ref; the run it belongs to is unconfirmed"
             ))),
             Some(linked) => {
                 if let Some(r) = non_portable_reason(Some(linked)) {
                     problems.push(fail(format!(
-                        "context manifest \"{id}\" {field}: the resolved run-human-control record's linked_run_ref contains {r}"
+                        "{subject} {field}: the resolved {want} record's linked_run_ref contains {r}"
                     )));
                 }
             }
         },
-        PinnedRecordKind::TaskSpecification => {}
+        (RecordFamily::EvidenceAndHandoff, PinnedRecordKind::TaskSpecification) => {
+            check_resolved_acceptance_criteria(subject, field, &entry.specification, problems);
+            check_resolved_mandatory_checks(subject, field, &entry.specification, problems);
+        }
+        _ => {}
     }
+}
 
-    Some(entry)
+/// `checkResolvedAcceptanceCriteria`: a non-empty set of unique semantic ids.
+fn check_resolved_acceptance_criteria(
+    subject: &str,
+    field: &str,
+    spec: &SpecificationResponse,
+    problems: &mut Vec<Diagnostic>,
+) {
+    let ResponseField::Present(items) = &spec.acceptance_criteria else {
+        problems.push(fail(format!(
+            "{subject} {field}: the resolver returned a task-specification record with no acceptance_criteria array; the handoff closes the loop with the specification's acceptance criteria and the transformer must confirm their identifiers"
+        )));
+        return;
+    };
+    let at =
+        format!("{subject} {field}: the resolved task-specification record's acceptance_criteria");
+    if items.is_empty() {
+        problems.push(fail(format!(
+            "{at} is empty; a canonical task specification requires a non-empty acceptance-criteria set, so a handoff that closes its coverage loop against an empty set is rejected"
+        )));
+    }
+    let mut seen = HashSet::new();
+    for (i, item) in items.iter().enumerate() {
+        let Some(c) = item.text().filter(|c| SemanticId::new(*c).is_ok()) else {
+            problems.push(fail(format!("{at}[{i}] is not a stable semantic id")));
+            continue;
+        };
+        if !seen.insert(c) {
+            problems.push(fail(format!("{at} repeats \"{c}\"")));
+        }
+    }
+}
+
+/// `checkResolvedMandatoryChecks`: a list of unique portable references.
+fn check_resolved_mandatory_checks(
+    subject: &str,
+    field: &str,
+    spec: &SpecificationResponse,
+    problems: &mut Vec<Diagnostic>,
+) {
+    let ResponseField::Present(items) = &spec.mandatory_checks else {
+        problems.push(fail(format!(
+            "{subject} {field}: the resolver returned a task-specification record with no mandatory_checks array; the handoff closes the FULL set of mandatory checks against the specification and the transformer must confirm their references"
+        )));
+        return;
+    };
+    let at =
+        format!("{subject} {field}: the resolved task-specification record's mandatory_checks");
+    let mut seen = HashSet::new();
+    for (i, item) in items.iter().enumerate() {
+        let Some(c) = item.text().filter(|c| !c.trim().is_empty()) else {
+            problems.push(fail(format!(
+                "{at}[{i}] is not a non-empty portable reference"
+            )));
+            continue;
+        };
+        if let Some(r) = non_portable_reason(Some(c)) {
+            problems.push(fail(format!("{at}[{i}] contains {r}")));
+        }
+        if !seen.insert(c.trim()) {
+            problems.push(fail(format!("{at} repeats \"{c}\"")));
+        }
+    }
 }
 
 /// The response's own revision; `true` when it is an exact edition.
 fn check_response_revision(
-    id: &str,
+    subject: &str,
     field: &str,
     revision: &ResponseField<String>,
     problems: &mut Vec<Diagnostic>,
@@ -497,14 +594,14 @@ fn check_response_revision(
         ResponseField::Absent => false,
         ResponseField::Foreign(f) => {
             problems.push(fail(format!(
-                "context manifest \"{id}\" {field}: the resolver's revision is {}, not a string",
-                f.kind.with_article()
+                "{subject} {field}: the resolver's revision is {}, not a string",
+                f.kind().with_article()
             )));
             false
         }
         ResponseField::Present(s) if s.trim().is_empty() => {
             problems.push(fail(format!(
-                "context manifest \"{id}\" {field}: the resolver's revision is present but empty"
+                "{subject} {field}: the resolver's revision is present but empty"
             )));
             false
         }
@@ -513,7 +610,7 @@ fn check_response_revision(
                 true
             } else {
                 problems.push(fail(format!(
-                    "context manifest \"{id}\" {field}: the resolver confirmed revision {}, which is not an exact edition (a full Git SHA, a strict v?X.Y.Z tag or a SHA-256 digest); the transformer confirms a fixed edition, not a moving reference",
+                    "{subject} {field}: the resolver confirmed revision {}, which is not an exact edition (a full Git SHA, a strict v?X.Y.Z tag or a SHA-256 digest); the transformer confirms a fixed edition, not a moving reference",
                     json_quote(s)
                 )));
                 false
@@ -525,20 +622,19 @@ fn check_response_revision(
 /// The closed contract of an execution-run response's `resolved_state`
 /// (`checkResolvedState`).
 fn check_resolved_state(
-    id: &str,
+    record: &str,
     field: &str,
+    axes_owner: &str,
     state: &ResponseField<ResolvedStateResponse>,
     problems: &mut Vec<Diagnostic>,
 ) {
     let ResponseField::Present(rs) = state else {
         problems.push(fail(format!(
-            "context manifest \"{id}\" {field}: the resolver returned an execution-run record with no resolved_state; the checkpoint axes cannot be checked against the run's own state"
+            "{record} {field}: the resolver returned an execution-run record with no resolved_state; {axes_owner} cannot be checked against the run's own state"
         )));
         return;
     };
-    let subject = format!(
-        "context manifest \"{id}\" {field}: the resolved execution-run record's resolved_state"
-    );
+    let subject = format!("{record} {field}: the resolved execution-run record's resolved_state");
     let present = [
         rs.task_specification_ref.is_present(),
         rs.scope_revision.is_present(),
@@ -631,11 +727,7 @@ fn check_resolved_state(
 }
 
 fn scope_revision_json(value: &ResponseField<u64>) -> String {
-    match value {
-        ResponseField::Absent => "null".to_string(),
-        ResponseField::Present(n) => n.to_string(),
-        ResponseField::Foreign(f) => f.json_text.clone(),
-    }
+    value.json_or_null()
 }
 
 /// One `resolved_state` axis that must be an array of unique strings —
@@ -658,7 +750,7 @@ fn check_resolved_state_array(
         ResponseField::Foreign(f) => {
             problems.push(fail(format!(
                 "{at} is {}, not an array of {kind_label} strings",
-                f.kind.null_or_type_of()
+                f.kind().null_or_type_of()
             )));
             return;
         }
@@ -743,21 +835,14 @@ pub(crate) fn same_step(have: Option<&RecordText>, want: &ResponseField<Option<S
 
 /// `JSON.stringify` of a response next step.
 pub(crate) fn step_json(step: &ResponseField<Option<String>>) -> String {
-    match step {
-        ResponseField::Absent | ResponseField::Present(None) => "null".to_string(),
-        ResponseField::Present(Some(s)) => json_quote(s),
-        ResponseField::Foreign(f) => f.json_text.clone(),
-    }
+    step.json_or_null()
 }
 
 /// The string members of a response array, trimmed, as a set.
 pub(crate) fn response_text_set(items: &[ResponseItem]) -> HashSet<&str> {
     items
         .iter()
-        .filter_map(|item| match item {
-            ResponseItem::Text(s) => Some(s.trim()),
-            ResponseItem::Foreign(_) => None,
-        })
+        .filter_map(|item| item.text().map(str::trim))
         .collect()
 }
 

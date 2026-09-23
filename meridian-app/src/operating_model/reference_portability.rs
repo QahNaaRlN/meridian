@@ -7,13 +7,12 @@
 //! construction on portability itself, rather than leaving a second,
 //! optional pass to this crate's orchestration.
 //!
-//! This module stays in place, unchanged in its public shape, so every
-//! existing consumer — `super::task_specification`'s own `$schema`-envelope
-//! check, and (through that module's still-documented temporary facade)
-//! [`super::evidence_and_handoff`] and [`super::field_evaluation`] — keeps
-//! importing from exactly the same path it already did; only the
-//! definitions' home crate changed. The three run-contract families use
-//! `meridian_core::run_contracts`, which calls the core owner directly.
+//! This module stays in place, unchanged in its public shape, for its one
+//! remaining consumer: `super::task_specification`'s own
+//! `$schema`-envelope check. The run-contract, evidence-and-handoff and
+//! field-evaluation families check portability inside `meridian-core`,
+//! which calls the core owner directly (`rust-architecture-conformance-6`
+//! removed the last facade consumers).
 
 pub use meridian_core::task_contracts::{non_portable_reason, resolve_schema_ref};
 

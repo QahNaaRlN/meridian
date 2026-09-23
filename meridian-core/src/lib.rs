@@ -27,11 +27,13 @@
 pub mod controlled_rule_intake;
 pub mod evidence;
 pub mod existing_project_compatibility_mode;
+pub mod field_evaluation;
 pub mod functional_parity;
 pub mod instruction_source;
 mod json;
 pub mod mechanical_integrity;
 pub mod migration;
+mod ordered;
 pub mod resolver;
 pub mod run_contracts;
 pub mod task_contracts;

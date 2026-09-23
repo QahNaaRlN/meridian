@@ -33,7 +33,7 @@
 //! `$schema`-envelope declaration itself
 //! (`crate::operating_model::reference_portability::non_portable_reason`/
 //! `resolve_schema_ref`, both thin re-exports of
-//! `meridian_core::task_contracts::portability` now) — `$schema` is not a
+//! `meridian_core::task_contracts::portability`) — `$schema` is not a
 //! [`meridian_core::task_contracts::SpecificationFields`] domain field, so
 //! it is checked at this transport/envelope boundary instead.
 //!
@@ -58,21 +58,6 @@ use crate::operating_model::reference_portability;
 use crate::source_format::json_schema;
 use crate::validation::mechanical_integrity::OperationError;
 use crate::workspace::{ReadError, WorkspaceReader};
-
-// Re-exported facade (`rust-architecture-conformance-3` §5.17.3, point 6):
-// `non_portable_reason`/`resolve_schema_ref` used to be DEFINED in this
-// module; they moved to the neutral
-// `crate::operating_model::reference_portability` owner, which this module
-// itself now also imports (above). Two neighbouring modules —
-// `super::evidence_and_handoff` and `super::field_evaluation` — still import
-// both functions from `super::task_specification` (`use
-// super::task_specification::{non_portable_reason, resolve_schema_ref};`);
-// this re-export keeps those `use` lines working unchanged
-// (`rust-architecture-conformance-5` moved the other three former
-// consumers into `meridian_core::run_contracts`). No NEW consumer may be
-// added through this facade — the package that types those two families
-// should switch their import and delete this re-export.
-pub use reference_portability::{non_portable_reason, resolve_schema_ref};
 
 const SCHEMA_NAMESPACE_DIR: &str = "registries/operating-model";
 const EXPECTED_SCHEMA_BASENAME: &str = "task-specification.schema.json";
@@ -863,41 +848,47 @@ mod tests {
         );
     }
 
-    /// Structural gate (`rust-architecture-conformance-3` §5.17.3, point 6):
-    /// the temporary `non_portable_reason`/`resolve_schema_ref` re-export
-    /// facade this module carries has EXACTLY the documented consumers
-    /// (this module's own doc comment) — no new one may be added
-    /// through it. A future package that switches any of these five
-    /// imports to `crate::operating_model::reference_portability` directly
-    /// should shrink this list, and once it is empty the facade
-    /// (`pub use reference_portability::{non_portable_reason,
-    /// resolve_schema_ref};`) should be deleted.
+    /// Structural gate (`rust-architecture-conformance-6` §5.20.3, point
+    /// 12): the temporary `non_portable_reason`/`resolve_schema_ref`
+    /// re-export this module carried until its last two consumers were
+    /// typed is gone, and nothing imports either function through this
+    /// module again — consumers use `reference_portability` or the core
+    /// owner directly.
     #[test]
-    fn the_facade_re_export_has_no_new_consumers() {
-        let src_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/operating_model");
-        // `rust-architecture-conformance-5` removed the three run-contract
-        // families from this list: their domain now imports
-        // `meridian_core::task_contracts` directly.
-        let known_consumers = ["evidence_and_handoff.rs", "field_evaluation.rs"];
-        let entries = std::fs::read_dir(&src_dir).unwrap();
-        for entry in entries {
-            let path = entry.unwrap().path();
-            if path.extension().and_then(|e| e.to_str()) != Some("rs") {
-                continue;
+    fn the_portability_facade_re_export_is_gone_for_good() {
+        let src_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut files = Vec::new();
+        let mut stack = vec![src_dir];
+        while let Some(dir) = stack.pop() {
+            for entry in std::fs::read_dir(dir).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    stack.push(path);
+                } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+                    files.push(path);
+                }
             }
-            let name = path.file_name().unwrap().to_str().unwrap().to_string();
-            if name == "task_specification.rs" {
-                continue;
-            }
+        }
+        for path in files {
             let text = std::fs::read_to_string(&path).unwrap();
-            let imports_facade = text.contains("task_specification::{non_portable_reason")
-                || text.contains("task_specification::{resolve_schema_ref")
-                || text.contains("task_specification::non_portable_reason")
-                || text.contains("task_specification::resolve_schema_ref");
-            if imports_facade {
+            let code: String = text
+                .lines()
+                .filter(|line| !line.trim_start().starts_with("//"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            for facade in [
+                "pub use reference_portability::{non_portable_reason",
+                "task_specification::{non_portable_reason",
+                "task_specification::{resolve_schema_ref",
+                "task_specification::non_portable_reason",
+                "task_specification::resolve_schema_ref",
+            ] {
+                // This test names the patterns it forbids; skip its own file's test block.
+                let production = code.split("#[cfg(test)]").next().unwrap_or_default();
                 assert!(
-                    known_consumers.contains(&name.as_str()),
-                    "{name} imports the non_portable_reason/resolve_schema_ref facade but is not one of the documented consumers — either it is a genuinely new facade consumer (not allowed by this package) or the documented list is stale"
+                    !production.contains(facade),
+                    "{} re-introduces the task-specification portability facade (`{facade}`)",
+                    path.display()
                 );
             }
         }

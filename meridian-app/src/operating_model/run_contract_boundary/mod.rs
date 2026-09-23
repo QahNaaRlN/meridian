@@ -1,6 +1,8 @@
-//! The app-side boundary shared by the three run-contract families
+//! The app-side boundary shared by the run-contract families
 //! (`execution-state-model`, `role-and-human-control`,
-//! `bounded-context-manifest`; `rust-architecture-conformance-5`). Private
+//! `bounded-context-manifest`; `rust-architecture-conformance-5`) and the
+//! two families that extend them (`evidence-and-handoff-contract`,
+//! `meridian-field-evaluation`; `rust-architecture-conformance-6`). Private
 //! to [`crate::operating_model`]: nothing here is public API.
 //!
 //! One record travels
@@ -22,12 +24,14 @@
 
 pub(crate) mod envelope;
 
+use meridian_core::run_contracts::ResolutionCatalogue;
 use meridian_core::types::{Diagnostic, DiagnosticLevel, WorkspaceRelativePath};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
+use super::record_resolution;
 use crate::source_format::json_schema;
-use crate::workspace::ReadError;
+use crate::workspace::{ReadError, WorkspaceReader};
 
 /// Every caller passes a message that begins with fixed, non-empty text,
 /// so the non-blank [`Diagnostic`] invariant holds by construction.
@@ -265,4 +269,133 @@ pub(crate) fn assert_supported(
             false
         }
     }
+}
+
+/// The shared scoped-record envelope schema.
+pub(crate) const ENVELOPE_PATH: &str = "registries/operating-model/scoped-record.schema.json";
+
+/// The mandatory files and family wording of one family whose fixture
+/// bundle carries its own `resolution` map.
+pub(crate) struct ResolvingFamily {
+    /// The schema's file name (`… is not valid JSON`).
+    pub schema_name: &'static str,
+    pub schema_path: &'static str,
+    pub fixtures_path: &'static str,
+    /// After `<schema_path> is missing; `.
+    pub missing_schema: &'static str,
+    /// After `<ENVELOPE_PATH> is missing; `.
+    pub missing_envelope: &'static str,
+    /// The whole "no resolution object" message.
+    pub missing_resolution: &'static str,
+}
+
+/// The loaded, shape-checked fixture bundle of a resolving family.
+pub(crate) struct ResolvingBundle {
+    pub schema: Value,
+    pub envelope: Value,
+    pub valid: Vec<FixtureCase>,
+    pub invalid: Vec<FixtureCase>,
+    pub catalogue: ResolutionCatalogue,
+}
+
+fn read_mandatory(
+    reader: &dyn WorkspaceReader,
+    path: &'static str,
+    missing: impl FnOnce() -> String,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Option<String> {
+    match reader.read_text(&workspace_path(path)) {
+        Ok(text) => Some(text),
+        Err(ReadError::NotFound) => {
+            diagnostics.push(fail(missing()));
+            None
+        }
+        Err(error) => {
+            diagnostics.push(fail(unreadable(path, &error)));
+            None
+        }
+    }
+}
+
+/// The mandatory-file and bundle-shape gate of a resolving family, in the
+/// Node reference's order: schema (a missing one stops everything), the
+/// envelope, the supported-construct check, the fixture bundle (a missing
+/// one stops), then — only when every schema is usable — the bundle's JSON,
+/// its object shape, the FIRST missing non-empty `valid`/`invalid` array,
+/// and its `resolution` object. `NotFound` keeps the Node text; any other
+/// read error is the distinct fail-closed "could not be read".
+pub(crate) fn load_resolving_bundle(
+    reader: &dyn WorkspaceReader,
+    family: &ResolvingFamily,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Option<ResolvingBundle> {
+    let schema_raw = read_mandatory(
+        reader,
+        family.schema_path,
+        || {
+            format!(
+                "{} is missing; {}",
+                family.schema_path, family.missing_schema
+            )
+        },
+        diagnostics,
+    )?;
+    let schema = parse_json(&schema_raw, family.schema_name, diagnostics);
+    let mut ok = schema.is_some();
+    let envelope = read_mandatory(
+        reader,
+        ENVELOPE_PATH,
+        || format!("{ENVELOPE_PATH} is missing; {}", family.missing_envelope),
+        diagnostics,
+    )
+    .and_then(|raw| parse_json(&raw, "scoped-record.schema.json", diagnostics));
+    ok &= envelope.is_some();
+    if let Some(schema) = &schema {
+        ok &= assert_supported(schema, family.schema_name, diagnostics);
+    }
+    let fixtures_raw = read_mandatory(
+        reader,
+        family.fixtures_path,
+        || {
+            format!(
+                "the schema carries no fixtures ({}); a schema no run exercises is not one this gate has reached",
+                family.fixtures_path
+            )
+        },
+        diagnostics,
+    )?;
+    let (true, Some(schema), Some(envelope)) = (ok, schema, envelope) else {
+        return None;
+    };
+    let bundle = parse_json(&fixtures_raw, "the fixtures file", diagnostics)?;
+    if !bundle.is_object() {
+        diagnostics.push(fail(
+            "the fixtures file must be an object with non-empty \"valid\" and \"invalid\" arrays",
+        ));
+        return None;
+    }
+    let mut arrays = Vec::with_capacity(2);
+    for key in ["valid", "invalid"] {
+        let Some(cases) = non_empty_array(&bundle, key) else {
+            diagnostics.push(fail(format!(
+                "the fixtures file has no non-empty \"{key}\" array"
+            )));
+            return None;
+        };
+        arrays.push(fixture_cases(cases));
+    }
+    let Some(resolution) = bundle.get("resolution").and_then(Value::as_object) else {
+        diagnostics.push(fail(family.missing_resolution));
+        return None;
+    };
+    let catalogue = record_resolution::catalogue(resolution);
+    let invalid = arrays.pop().unwrap_or_default();
+    let valid = arrays.pop().unwrap_or_default();
+    Some(ResolvingBundle {
+        schema,
+        envelope,
+        valid,
+        invalid,
+        catalogue,
+    })
 }

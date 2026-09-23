@@ -14,10 +14,13 @@
 //! [`crate::workspace::WorkspaceReader`] (`rust-architecture-conformance-5`):
 //! their domain is [`meridian_core::run_contracts`], their closed DTOs and
 //! shared schema gate are private to this crate, and each exposes one
-//! `evaluate(reader)` returning prefix-free diagnostics;
-//! `bounded_context_manifest::compat_7c` is the temporary facade for the
-//! two 7c families only. The remaining unconverted submodules each still
-//! take an
+//! `evaluate(reader)` returning prefix-free diagnostics.
+//! [`evidence_and_handoff`] and [`field_evaluation`]
+//! (`rust-architecture-conformance-6`) extend that route: their domain is
+//! [`meridian_core::evidence`] and [`meridian_core::field_evaluation`], and
+//! all three resolving families share ONE transport-to-resolution
+//! conversion (`record_resolution`). The remaining unconverted submodules
+//! each still take an
 //! already-parsed [`serde_json::Value`] document plus the schema(s) it
 //! composes with, and returns a flat list of problem strings — empty means
 //! valid. None of them read a file, spawn Git, touch an environment
@@ -34,6 +37,7 @@ pub mod existing_project_compatibility_mode;
 pub mod field_evaluation;
 pub mod functional_parity;
 pub mod instruction_source_registry;
+mod record_resolution;
 pub mod reference_portability;
 pub mod role_and_human_control;
 mod run_contract_boundary;

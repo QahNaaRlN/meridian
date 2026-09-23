@@ -7,7 +7,7 @@ repository: meridian (Kernel)
 owner: workspace-owner
 reviewers: []
 created: 2026-08-19
-updated: 2026-09-21
+updated: 2026-09-24
 related_tickets: []
 related_documents:
   - standards/workspace/kernel-boundary.md
@@ -16,6 +16,7 @@ related_documents:
   - README.md
   - $MERIDIAN_KERNEL/governance/meridian-owner-intent-contract.md
   - $MERIDIAN_KERNEL/governance/decisions/meridian-rust-sqlite-architecture.md
+  - $MERIDIAN_KERNEL/governance/decisions/metis-federated-knowledge-architecture.md
   - $MERIDIAN_KERNEL/governance/specifications/meridian-rust-target-architecture.md
   - $MERIDIAN_KERNEL/governance/plans/meridian-rust-migration-program-plan.md
   - $MERIDIAN_KERNEL/governance/audits/meridian-rust-codebase-architecture-audit.md
@@ -441,7 +442,11 @@ Rust-native обоснования, записи совместимости и �
    `instance-data-migration.md` поверх `meridian-storage-sqlite`. Пакет
    обязан доказать полный импорт всех записей из применимого источника,
    эквивалентность применимых норм, идемпотентность и обратимость (§
-   «Критерии успеха»), а не только успешное выполнение команды.
+   «Критерии успеха»), а не только успешное выполнение команды. Эта команда
+   не является универсальным ingestion API Metis: она не подключает
+   Confluence, Git/Markdown knowledge source или code repository и не строит
+   snapshot/index/graph. Такие источники подключаются отдельными adapters по
+   `metis-federated-knowledge-architecture.md`.
 9. **Квалификация бизнес-контракта** (пакет
    `rust-business-contract-qualification`): харнесс
    запускается на одних и тех же деревьях — реальном Instance, синтетическом

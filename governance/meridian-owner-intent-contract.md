@@ -5,13 +5,15 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-27
-updated: 2026-09-21
+updated: 2026-09-24
 related_documents:
   - $MERIDIAN_KERNEL/governance/plans/meridian-rust-migration-program-plan.md
   - $MERIDIAN_KERNEL/governance/plans/meridian-improvement-research-plan.md
   - $MERIDIAN_KERNEL/governance/research/README.md
   - $MERIDIAN_KERNEL/governance/decisions/meridian-rust-sqlite-architecture.md
+  - $MERIDIAN_KERNEL/governance/decisions/metis-federated-knowledge-architecture.md
   - $MERIDIAN_KERNEL/governance/specifications/meridian-rust-target-architecture.md
+  - $MERIDIAN_KERNEL/governance/specifications/metis-federated-knowledge-plane.md
   - $MERIDIAN_KERNEL/AGENTS.md
 ---
 
@@ -202,36 +204,70 @@ Operating System**. Descriptor объясняет класс системы, н�
 
 ## 17. Metis — Knowledge Plane
 
-Metis становится переносимой подсистемой Meridian для канонических
-инженерных знаний. Граница хранения повторяет основную границу Meridian:
+Metis становится переносимой федеративной плоскостью инженерных знаний. Это
+не единая физическая база содержимого и не новый канон компании. Он даёт
+единые контракты источников, идентичности, области, полномочий, редакций,
+свежести, доступа, связей, запросов и проверяемых результатов retrieval.
 
-- **Kernel** хранит provider-neutral модель знания, schemas, lifecycle,
-  resolver, validator и контракты adapters;
-- **Instance** объявляет источники текущего продукта, их области,
-  авторитетность и маршруты, но не становится неограниченным хранилищем
-  продуктовой документации;
-- **Knowledge Source** хранит сами Knowledge Objects и может быть
-  Git/Markdown-репозиторием, canonical wiki или другим backend, объявленным
-  Instance;
-- **Derived Index** является перестраиваемым поисковым представлением, а не
-  источником истины;
+Граница хранения:
+
+- **Kernel / Tool Plane** хранит provider-neutral модель, schemas, lifecycle,
+  resolver и контракты adapters;
+- **Workspace Knowledge Control Plane** объявляет источники продукта,
+  маршруты, authority/access/freshness policies и устойчивые идентичности, но
+  не становится неограниченным хранилищем продуктовой документации;
+- **Knowledge Source** — Confluence, Git/Markdown, кодовый репозиторий или
+  иной объявленный backend — сохраняет каноническое содержимое и собственного
+  владельца;
+- **Snapshot Store** вправе хранить только разрешённые неизменяемые снимки с
+  точными revision/digest и политикой удаления;
+- **Derived Retrieval Plane** (chunks, lexical/semantic index, graph) является
+  полностью перестраиваемым представлением и никогда не выигрывает спор с
+  источником;
 - **`.agent`** остаётся рабочей и эпизодической памятью задач и не становится
   канонической базой знаний.
 
-Git/Markdown принимается как первый reference backend Metis, но не как
-единственный backend, зашитый в Kernel. Для одного Knowledge Object допускается
-несколько representations, но ровно одна каноническая representation в
-разрешённой области. Два неразрешённых канонических источника дают конфликт и
-STOP, а не случайный выбор.
+Полномочие принадлежит не документу или backend целиком, а сочетанию
+`source + scope + claim class + version/time applicability`. Confluence
+может быть каноническим для бизнес-политики, ADR — для принятого решения, а
+точная Git revision — для фактической реализации. Совпадение названия не
+создаёт общей идентичности. Только релевантный текущему решению конфликт
+несовместимых полномочных источников даёт STOP; иные расхождения остаются
+явными данными результата.
 
-Действующий `canonical_wiki` текущего Instance не меняется молча из-за
-появления Metis. Пока Instance не содержит принятого knowledge-source и
-authority mapping, существующий publication flow остаётся авторитетным.
+Подключение выполняют детерминированные adapters, а не агент как скрытый
+transport. Допустимы `reference-only`, закреплённый
+`mirrored-snapshot` и отдельно назначенный `managed-source`; локальная
+материализация не переносит каноническое владение. Производные данные
+наследуют access, retention и deletion исходника.
+
+Metis сначала маршрутизирует scope и authority, затем использует exact,
+structural и lexical retrieval; semantic retrieval остаётся заменяемым
+экспериментальным этапом внутри уже разрешённой области. Knowledge Resolver
+возвращает bounded Context Bundle с provenance, freshness, конфликтами,
+недоступными источниками и честной границей coverage, а не синтезированный
+ответ и не недоказанное обещание полноты.
+
+`tutorial`, `how-to`, `reference` и `explanation` сохраняются как
+Diátaxis-совместимый фасет информационного намерения документации и сигнал
+retrieval. Они не являются универсальной онтологией кода, ADR, норм,
+доказательств или состояния запуска.
 
 Rule Resolver и Knowledge Resolver остаются разными механизмами: первый
-вычисляет обязательные нормы, протоколы и gates; второй — релевантные знания и
-их provenance. Найденный Knowledge Object не становится agent norm только из-за
-попадания в retrieval.
+вычисляет обязательные нормы, протоколы и gates; второй — релевантные
+недоверенные знания и их provenance. Найденное содержимое не становится agent
+norm или инструкцией только из-за попадания в retrieval; эта граница защищает
+от prompt injection.
+
+Качество выше экономии токенов: сначала измеряются recall обязательного
+контекста, точность authority, обнаружение конфликтов и корректность решения,
+затем повторные проходы, время и токены. Общий корпоративный индекс,
+многопользовательский сервер и единая глобальная онтология не следуют из
+настоящего видения и требуют отдельных решений.
+
+Полное принятое решение и проверяемая модель находятся в
+`governance/decisions/metis-federated-knowledge-architecture.md` и
+`governance/specifications/metis-federated-knowledge-plane.md`.
 
 ## 18. Универсальная операционная модель задач
 
@@ -482,9 +518,10 @@ Meridian.
    подсистемы без нового явного решения владельца;
 9. использовать мифологическое имя вместо технического контракта так, что
    назначение schema, CLI, файла или поля нельзя определить без словаря;
-10. поместить product-specific Knowledge Objects в Kernel;
-11. объявить Derived Index или сырую Agent Memory каноническим знанием;
-12. автоматически повысить запись памяти до принятого Knowledge Object без
+10. поместить product-specific Knowledge Artifacts в Kernel;
+11. объявить Artifact Catalog, Snapshot Store, Derived Index или сырую Agent
+    Memory каноническим знанием;
+12. автоматически повысить запись памяти до принятого Knowledge Artifact без
     явного lifecycle и review.
 13. зашить в Kernel способ выполнения конкретного продуктового рефакторинга
     вместо универсального шаблона типа задачи и постановки в Instance;
@@ -523,14 +560,33 @@ Meridian.
     под предлогом вывода из эксплуатации его репозитория (§25).
 28. реализовать или применить эксперимент Исследовательского отдела без
     доказанных условий допуска и отдельного решения владельца (§26).
+29. назначить authority целому backend или документу без scope, claim class
+    и применимой версии/времени;
+30. использовать агента как скрытый source adapter либо считать
+    model-inferred classification/relation подтверждённым фактом;
+31. представить Context Bundle полным без закрытого coverage set и
+    доказательства проверки его обязательных источников;
+32. ослабить ACL, retention, revoke или deletion внешнего источника через
+    snapshot, chunk, embedding, graph, backup или иной derived artifact;
+33. применить retrieved content как инструкцию либо норму из-за его рейтинга,
+    совпадения или происхождения из внешней базы;
+34. сделать knowledge graph, vector database, embedding provider или общий
+    корпоративный сервер обязательной идентичностью Metis без отдельного
+    решения;
+35. использовать экономию токенов как достаточный успех при ухудшении recall
+    обязательного контекста, authority precision, conflict detection или
+    correctness.
 
 ## Что этот документ не описывает
 
-Пошаговые планы rule resolution, обновления операционной модели, знаний
-(Metis) и совместимого подключения, а также дальнее направление
-человеко-агентной среды, не перенесены в Kernel и их происхождение
-зафиксировано только в замороженном Instance — см. «Исторические источники»
-ниже; они не требуются для чтения этого контракта и не являются его частью.
+Пошаговые планы старых программ rule resolution, обновления операционной
+модели и совместимого подключения, а также прежняя концепция
+человеко-агентной среды не переносятся из замороженного Instance как
+действующие нормы. Текущая архитектура и программа знаний Metis, напротив,
+канонически находятся в Kernel:
+`governance/decisions/metis-federated-knowledge-architecture.md`,
+`governance/specifications/metis-federated-knowledge-plane.md` и
+`governance/plans/meridian-improvement-research-plan.md`.
 
 Порядок независимого исполнения, проверки и Git-интеграции по ролям —
 канонически определён в `$MERIDIAN_KERNEL/AGENTS.md` (§6); прежний протокол

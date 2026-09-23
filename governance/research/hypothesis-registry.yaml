@@ -2,7 +2,7 @@ schema_version: 1
 registry_id: meridian-self-improvement-hypotheses
 title: Реестр гипотез улучшения Meridian
 owner: workspace-owner
-updated: 2026-09-20
+updated: 2026-09-24
 canonical_lifecycle_ref: governance/research/README.md
 
 lifecycle_values:
@@ -51,17 +51,25 @@ hypotheses:
         - derived-index-is-not-source-of-truth
         - freshness-is-explicit
         - provider-neutral-adapters
+        - authority-is-contextual
+        - coverage-is-explicit
+        - derived-data-inherits-access
+        - untrusted-content-is-not-instruction
       roadmap_ref: governance/plans/meridian-improvement-research-plan.md#package-r2
     experiment:
       claim: Структурное или гибридное получение контекста улучшает локализацию нужного кода без ухудшения корректности решения.
       falsified_when: Экономия времени или токенов сопровождается худшей локализацией, корректностью либо большим числом лишних изменений.
       entry_conditions:
-        - Приняты модель объекта знания Metis и контракт источника знаний.
+        - Принят пакет metis-contract-foundation с восемью сущностями и двумя fixture source adapters.
         - Для каждого производного индекса определены исходная редакция, дайджест и явная проверка свежести.
         - Подготовлен один корпус задач для четырёх вариантов: агентский поиск, семантический поиск, структурное получение и гибрид.
         - Все варианты имеют одинаковые полномочия чтения и одинаковый бюджет выполнения.
         - Поставщик структурного индекса выбран как заменяемый адаптер, а не как норма Kernel.
-        - Утверждены метрики, пороги, правила сокрытия секретов и уничтожения экспериментальных индексов.
+        - Размечен обязательный контекст и заранее утверждены пороги recall, authority precision, скрытых конфликтов и correctness; токены и время вторичны.
+        - Каждый Context Bundle сообщает searched/stale/unavailable/prohibited sources и coverage state.
+        - Утверждены правила principal/ACL, сокрытия секретов, retention, revoke, удаления snapshots/chunks/embeddings/backups и уничтожения экспериментальных индексов.
+        - Prompt-like content остаётся untrusted knowledge, а model-inferred relation/classification — candidate.
+        - Экономия токенов при ухудшении любого заранее критичного показателя считается опровержением.
 
   - id: meridian-hypothesis-deterministic-navigation
     title: Модель не является поисковым алгоритмом
@@ -74,16 +82,21 @@ hypotheses:
         - database-role-routing
         - knowledge-resolver-separate-from-rule-resolver
         - fail-closed-on-stale-index
-      roadmap_ref: governance/plans/meridian-rust-migration-program-plan.md#knowledge-agent-foundation
+        - source-scope-claim-class-version-routing
+        - exact-before-semantic
+        - no-global-ontology-by-name
+      roadmap_ref: governance/plans/meridian-improvement-research-plan.md#package-k1
     experiment:
       claim: Детерминированный выбор базы и маршрута уменьшает объём исследовательского поиска модели без потери релевантного контекста.
       falsified_when: Маршрутизатор систематически исключает необходимый контекст, увеличивает число исправлений или не даёт выигрыша против контрольного поиска.
       entry_conditions:
-        - Выполнен корректирующий пакет knowledge-agent-foundation.
-        - Приняты источник знаний, карта полномочий и маршруты Metis.
+        - Выполнены knowledge-agent-foundation и metis-contract-foundation.
+        - Приняты source registry, namespaced identity, authority bindings и маршруты Metis.
         - Реализована явная диагностика отсутствующего, конфликтующего или устаревшего маршрута.
         - Подготовлен контрольный корпус запросов с размеченным необходимым контекстом.
-        - Определены полнота контекста, точность маршрута, стоимость и пороги отказа.
+        - Определены coverage against declared set, точность authority route, стоимость и пороги отказа.
+        - Доказано, что semantic retrieval не расширяет разрешённый source set и не повышает candidate до authority.
+        - Доказано query-time соблюдение access revoke и удаление производных данных.
         - Эксперимент не объединяет Knowledge Resolver с Rule Resolver и не превращает найденное знание в норму.
 
   - id: meridian-hypothesis-model-independent-decision-trace

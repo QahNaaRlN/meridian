@@ -5,7 +5,7 @@ status: draft
 scope: workspace
 owner: workspace-owner
 created: 2026-08-19
-updated: 2026-09-17
+updated: 2026-09-24
 related_documents:
   - ./document-status-model.md
   - ./document-quality.md
@@ -207,6 +207,14 @@ related_documents:
 | `tutorial` | как пройти путь впервые и чему научиться | результат обучения и проверяемые шаги | быть справочником по всем возможностям |
 | `how-to` | как выполнить конкретную задачу | цель, предусловия, порядок действий, проверку результата | обучать основам |
 | `explanation` | почему устроено именно так | причины, границы и компромиссы устройства | предписывать действия |
+
+Эти четыре типа образуют Diátaxis-совместимый фасет информационного намерения
+документации. Фасет не является универсальной онтологией Metis: ADR, нормы,
+evidence, code symbols, API и состояние запуска сохраняют собственные типы.
+При retrieval информационное намерение помогает выбрать подходящую форму
+документа, но не определяет scope, authority, freshness или access
+(`$MERIDIAN_KERNEL/governance/specifications/metis-federated-knowledge-plane.md`
+§4).
 
 ### 3.5. Предложения и решения
 

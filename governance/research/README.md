@@ -5,12 +5,14 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-09-20
-updated: 2026-09-20
+updated: 2026-09-24
 related_documents:
   - $MERIDIAN_KERNEL/governance/research/hypothesis-registry.yaml
   - $MERIDIAN_KERNEL/governance/research/knowledge-bases-and-agent-hypotheses.md
   - $MERIDIAN_KERNEL/governance/plans/meridian-improvement-research-plan.md
   - $MERIDIAN_KERNEL/governance/meridian-owner-intent-contract.md
+  - $MERIDIAN_KERNEL/governance/decisions/metis-federated-knowledge-architecture.md
+  - $MERIDIAN_KERNEL/governance/specifications/metis-federated-knowledge-plane.md
 ---
 
 # Исследовательский отдел Meridian
@@ -81,6 +83,20 @@ related_documents:
 9. назначены владелец эксперимента, исполнитель и проверяющий результат;
 10. владелец отдельно разрешил реализацию после проверки пунктов 1–9.
 
+Для retrieval/agent-context эксперимента дополнительно обязательны:
+
+11. принят `metis-contract-foundation`, а эксперимент не меняет его
+    authority/access/coverage contracts;
+12. размечен обязательный контекст и пороги recall/authority
+    precision/conflict detection/correctness заданы раньше токенов и времени;
+13. principal, ACL, retention, revoke и физическое удаление всех производных
+    данных проверяемы;
+14. недоступные, устаревшие и запрещённые sources отражаются в coverage;
+15. retrieved content остаётся untrusted knowledge, а model-inferred данные —
+    candidates;
+16. экономия токенов при ухудшении критичного показателя заранее объявлена
+    опровержением, а не компромиссом после результата.
+
 ## Правило маршрутизации результата
 
 - Архитектурное следствие, которое нужно независимо от исхода эксперимента,
@@ -103,4 +119,7 @@ related_documents:
 - не запускает Concord и не меняет продуктовые репозитории;
 - не разрешает сеть, PostgreSQL или многопользовательский режим;
 - не делает производный индекс источником истины;
+- не делает Artifact Catalog или snapshot новым каноном;
+- не разрешает агенту быть скрытым source adapter;
+- не обещает полноту retrieval без закрытого coverage set;
 - не заменяет активные планы и назначения ролей из `AGENTS.md`.

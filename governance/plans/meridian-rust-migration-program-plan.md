@@ -5,12 +5,13 @@ status: active
 scope: workspace
 owner: workspace-owner
 created: 2026-09-14
-updated: 2026-09-23
+updated: 2026-09-24
 related_documents:
   - $MERIDIAN_KERNEL/governance/meridian-owner-intent-contract.md
   - $MERIDIAN_KERNEL/governance/plans/meridian-improvement-research-plan.md
   - $MERIDIAN_KERNEL/governance/research/hypothesis-registry.yaml
   - $MERIDIAN_KERNEL/governance/decisions/meridian-rust-sqlite-architecture.md
+  - $MERIDIAN_KERNEL/governance/decisions/metis-federated-knowledge-architecture.md
   - $MERIDIAN_KERNEL/governance/specifications/meridian-rust-target-architecture.md
   - $MERIDIAN_KERNEL/governance/rfcs/meridian-cli-rfc.md
   - $MERIDIAN_KERNEL/governance/audits/meridian-rust-codebase-architecture-audit.md
@@ -5890,6 +5891,14 @@ conformance harness — 129 passed, 0 failed; `kernel-validate.test.mjs` —
   основания §5.4. Алгоритмы поиска, графы, производные индексы, выбор
   поставщика и проверка преимуществ остаются за пределами этой программы и
   закрыты условиями исследовательского реестра.
+- **Пакет 8 не является ingestion Metis.** `meridian import` переносит
+  только управляемые записи замороженного Instance по
+  `instance-data-migration.md`. Он не подключает Confluence, Git/Markdown
+  knowledge source или кодовый репозиторий, не копирует продуктовую базу
+  знаний и не создаёт snapshot/index/graph. Федеративная архитектура Metis и
+  будущий `metis-contract-foundation` ведутся отдельной исследовательской
+  программой по
+  `governance/decisions/metis-federated-knowledge-architecture.md`.
 - Не менять логическую модель областей (`workspace-scope-model.md`) ради
   удобства схемы SQLite — схема (§4 технической спецификации) обязана
   выражать существующие шесть областей, а не переопределять их.

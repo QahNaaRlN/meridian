@@ -5,10 +5,11 @@ status: draft
 scope: workspace
 owner: workspace-owner
 created: 2026-09-14
-updated: 2026-09-21
+updated: 2026-09-24
 related_documents:
   - $MERIDIAN_KERNEL/governance/meridian-owner-intent-contract.md
   - $MERIDIAN_KERNEL/governance/decisions/meridian-rust-sqlite-architecture.md
+  - $MERIDIAN_KERNEL/governance/decisions/metis-federated-knowledge-architecture.md
   - $MERIDIAN_KERNEL/governance/rfcs/meridian-cli-rfc.md
   - $MERIDIAN_KERNEL/governance/plans/meridian-rust-migration-program-plan.md
   - $MERIDIAN_KERNEL/standards/workspace/kernel-boundary.md
@@ -106,8 +107,10 @@ Git, не обращается к базе данных, не выполняет
 Оркестрирует `meridian-core` через порты, не зная деталей их реализации.
 Операции:
 
-- **import** — управляемый приём внешних правил и данных Экземпляра
-  (перенос `controlled-rule-intake.mjs`, `existing-project-compatibility-mode.mjs`);
+- **import** — управляемый приём внешних правил и данных замороженного
+  Экземпляра (перенос `controlled-rule-intake.mjs`,
+  `existing-project-compatibility-mode.mjs`); это не ingestion внешних
+  Knowledge Sources Metis;
 - **validate** — эквивалент `scripts/kernel-validate.mjs`;
 - **resolve** — эквивалент `scripts/rule-resolver.mjs`, вызывающий resolver
   `meridian-core`;
@@ -453,5 +456,8 @@ JSON-представления отличаются только формой, 
 - не начинает фактическую реализацию ни одного из четырёх крейтов;
 - не изменяет контракт `instance-data-migration.md` — она реализует его
   девять свойств на SQLite, не переопределяет их;
+- не определяет Knowledge Source adapters, snapshots, derived index, graph
+  или Knowledge Resolver Metis; `import` пакета 8 ограничен миграцией
+  управляемых записей замороженного Instance;
 - не выбирает PostgreSQL, сеть или многопользовательский доступ
   (`meridian-rust-sqlite-architecture.md` §6, §14).

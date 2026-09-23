@@ -2090,6 +2090,172 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Package `rust-architecture-conformance-4` (§5.18.3 point 7), corrective
+// round item 5: the one pre-accepted schema-I/O divergence — Node's
+// `readIfExists` (`scripts/kernel-validate.mjs`) catches ANY error reading
+// `verification/functional-parity/functional-parity-evidence.schema.json`,
+// not only `ENOENT`, and folds all of them into the same silent
+// `info('...nothing to check')` skip; the Rust port
+// (`meridian_app::operating_model::functional_parity::evaluate`) keeps that
+// behaviour ONLY for `ReadError::NotFound` and now reports a `FAIL` for any
+// other I/O failure. A directory sitting where the schema FILE is expected
+// is the safe, portable way to force a non-`ENOENT` read failure on both
+// sides without relying on platform-specific permission bits: `fs.readFileSync`
+// on a directory throws `EISDIR` (still caught by `readIfExists`), and Rust's
+// `fs::read_to_string` returns an `Err` whose `ErrorKind` is not `NotFound`
+// either way `meridian_app::workspace::ReadError`'s own `map_io_error`
+// classifies it. Manually confirmed on this real toolchain before being
+// written here: Node prints exactly `INFO  functional-parity: no PHASE D
+// evidence schema in this Kernel; nothing to check` and no functional-parity
+// FAIL; the real compiled `meridian` binary reports exactly one FAIL,
+// `functional-parity: functional-parity-evidence.schema.json: Is a
+// directory (os error 21)` (message text is OS-dependent, so only the
+// prefix and basename are asserted below, not the trailing OS string).
+// ---------------------------------------------------------------------------
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-functional-parity-schema-io-'));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const schemaPath = path.join(
+      dir,
+      'verification',
+      'functional-parity',
+      'functional-parity-evidence.schema.json',
+    );
+    fs.rmSync(schemaPath);
+    fs.mkdirSync(schemaPath);
+
+    const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+      cwd: ROOT,
+      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      encoding: 'utf8',
+    });
+    check('намеренная граница: Node-эталон молча пропускает functional-parity, когда путь схемы — каталог (readIfExists глотает EISDIR так же, как ENOENT)', () => {
+      assert(nodeRun.error === undefined, `spawnSync не должен был сообщить об ошибке запуска, получено: ${nodeRun.error}`);
+      assert(
+        nodeRun.stdout.includes('functional-parity: no PHASE D evidence schema in this Kernel; nothing to check'),
+        `ожидалась строка INFO про "nothing to check", получено stdout: ${JSON.stringify(nodeRun.stdout)}`,
+      );
+      assert(
+        !nodeRun.stdout.includes('FAIL  functional-parity:'),
+        `Node не должен был сообщить ни один FAIL для functional-parity, получено stdout: ${JSON.stringify(nodeRun.stdout)}`,
+      );
+    });
+
+    const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    check('намеренная граница: реальный `meridian validate` сообщает FAIL, когда путь схемы functional-parity — каталог, а не ENOENT (fail-closed, не молчаливый skip)', () => {
+      assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
+      let value;
+      try {
+        value = JSON.parse(rustRun.stdout.trim());
+      } catch (e) {
+        throw new Error(`ожидался ровно один JSON-документ на stdout, получено: ${JSON.stringify(rustRun.stdout)} (${e.message})`);
+      }
+      const relevant = value.result.failures.filter((f) => f.startsWith('functional-parity: functional-parity-evidence.schema.json:'));
+      assert(
+        relevant.length === 1,
+        `ожидался ровно один FAIL с префиксом "functional-parity: functional-parity-evidence.schema.json:", получено: ${JSON.stringify(value.result.failures)}`,
+      );
+      const otherFunctionalParityFailures = value.result.failures.filter(
+        (f) => f.startsWith('functional-parity:') && !relevant.includes(f),
+      );
+      assert(
+        otherFunctionalParityFailures.length === 0,
+        `не должно быть других functional-parity FAIL, получено: ${JSON.stringify(otherFunctionalParityFailures)}`,
+      );
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Package `rust-architecture-conformance-4`, second corrective round item 3:
+// the fixture-I/O boundary (`COMPATIBILITY.md`, functional-parity boundary 2
+// of 2). Once the schema itself is readable, a non-`ENOENT` failure reading
+// `verification/functional-parity/fixtures/functional-parity-evidence.fixtures.json`
+// is folded by Node's `readIfExists` into `null` and reported with the SAME
+// generic "carries no fixtures" text as a missing file; the Rust port
+// distinguishes it and reports "<fixtures path> could not be read: ...".
+// The verdict is failing on BOTH sides — only the exact diagnostic text
+// differs. As in the schema-I/O case above, a directory standing where the
+// fixtures FILE is expected is the portable non-`ENOENT` failure; the
+// OS-dependent tail of the Rust message is not compared.
+// ---------------------------------------------------------------------------
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-functional-parity-fixtures-io-'));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const fixturesPath = path.join(
+      dir,
+      'verification',
+      'functional-parity',
+      'fixtures',
+      'functional-parity-evidence.fixtures.json',
+    );
+    fs.rmSync(fixturesPath);
+    fs.mkdirSync(fixturesPath);
+
+    const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+      cwd: ROOT,
+      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      encoding: 'utf8',
+    });
+    check('намеренная граница: Node-эталон сообщает generic "carries no fixtures", когда путь fixtures functional-parity — каталог (readIfExists глотает EISDIR)', () => {
+      assert(nodeRun.error === undefined, `spawnSync не должен был сообщить об ошибке запуска, получено: ${nodeRun.error}`);
+      assert(nodeRun.status !== 0, `Node должен остаться failing, получен код ${nodeRun.status}`);
+      const relevant = nodeRun.stdout
+        .split(/\r?\n/)
+        .filter((l) => l.startsWith('FAIL  functional-parity:'));
+      assert(
+        relevant.length === 1,
+        `ожидался ровно один functional-parity FAIL, получено: ${JSON.stringify(relevant)}`,
+      );
+      assert(
+        relevant[0].startsWith('FAIL  functional-parity: the PHASE D evidence schema carries no fixtures ('),
+        `ожидался generic "carries no fixtures", получено: ${JSON.stringify(relevant[0])}`,
+      );
+    });
+
+    const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    check('намеренная граница: реальный `meridian validate` сообщает отдельный "could not be read", когда путь fixtures functional-parity — каталог (вердикт failing, как и у Node)', () => {
+      assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
+      assert(rustRun.status !== 0, `Rust должен остаться failing, получен код ${rustRun.status}`);
+      let value;
+      try {
+        value = JSON.parse(rustRun.stdout.trim());
+      } catch (e) {
+        throw new Error(`ожидался ровно один JSON-документ на stdout, получено: ${JSON.stringify(rustRun.stdout)} (${e.message})`);
+      }
+      assert(value.result.ok === false, `ожидался result.ok: false, получено ${JSON.stringify(value.result.ok)}`);
+      const relevant = value.result.failures.filter((f) => f.startsWith('functional-parity:'));
+      assert(
+        relevant.length === 1,
+        `ожидался ровно один functional-parity FAIL, получено: ${JSON.stringify(relevant)}`,
+      );
+      assert(
+        relevant[0].startsWith(
+          'functional-parity: verification/functional-parity/fixtures/functional-parity-evidence.fixtures.json could not be read:',
+        ),
+        `ожидался отдельный "could not be read", получено: ${JSON.stringify(relevant[0])}`,
+      );
+      assert(
+        !relevant[0].includes('carries no fixtures'),
+        `Rust не должен сворачивать I/O-ошибку в generic "carries no fixtures", получено: ${JSON.stringify(relevant[0])}`,
+      );
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+  }
+}
+
 // --- temp-directory hygiene: every singleCaseFixture() directory must have
 // already been removed by check()'s own finally block, per check, not by
 // this being the last line of a successful whole-suite run ---

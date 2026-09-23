@@ -152,10 +152,10 @@ Concord остаётся на паузе. Активационный рубеж 
 | 6 | Хранилище SQLite (`sqlite-storage-adapter`) | `meridian-storage-sqlite`: схема §4 технической спецификации, транзакционная запись, включённые foreign keys, неизменяемые редакции и доказательства, идемпотентный импорт, резервная копия, канонический экспорт | 3, 5, `instance-repository-retirement-baseline` | accepted — принят и локально интегрирован (§5.3) |
 | — | Корректирующий пакет: основание знаний и агентной среды (`knowledge-agent-foundation`) | Роли баз `tool`/`workspace`, привязка рабочей базы к редакции Kernel, последовательные миграции схемы, маршрутизация хранилищ, версионируемый конверт наблюдаемого события и отключаемый приёмник событий; спецификации `init`/`doctor`/`export` и импорта согласованы с этими границами | 6, `research-governance-foundation` | accepted — принят и интегрирован (§5.4) |
 | 7 | Основа CLI (`meridian-cli-foundation`) | `meridian-cli`: `init`, `doctor`, `validate`, `resolve`, `export`, `--format human|json`, стабильные коды завершения, разделение stdout/stderr; подпакеты 7a–7d остаются исторической декомпозицией объёма | 5–6, `knowledge-agent-foundation`, `rust-architecture-conformance` | architecture-blocked (§5.13): 7a/7b исторически integrated, но не release-ready; приёмка 7c отозвана; 7d не начат |
-| — | Корректирующий пакет архитектуры (`rust-architecture-conformance`) | Устранить нарушения аудита: типизированные границы DTO → domain, обязательные порты, typed diagnostics, перенос предметной логики из CLI, декомпозиция Value-центричных модулей; доказать сохранение бизнес-ценности и обоснованные Rust-native улучшения | 1–7b, аудит §5.13 | active — пакеты 1–3 и исправление 7a приняты и локально интегрированы; пакет 4 специфицирован, не начат (§5.18) |
+| — | Корректирующий пакет архитектуры (`rust-architecture-conformance`) | Устранить нарушения аудита: типизированные границы DTO → domain, обязательные порты, typed diagnostics, перенос предметной логики из CLI, декомпозиция Value-центричных модулей; доказать сохранение бизнес-ценности и обоснованные Rust-native улучшения | 1–7b, аудит §5.13 | active — пакеты 1–4 и исправление 7a приняты и локально интегрированы; следующий связный пакет ещё не специфицирован (§5.18.8) |
 | — | Архитектурное исправление исторического 7a (`meridian-cli-foundation-architecture-remediation`) | Перенести пять семейств 7a из CLI в typed core/app pipeline и ввести реально используемый app-owned `WorkspaceReader`; CLI оставить адаптером и presentation-слоем | `rust-architecture-conformance-1` и `-2`, §5.13 | accepted — принято и локально интегрировано (§5.16.8) |
 | — | Основание типизированных task-контрактов (`rust-architecture-conformance-3`) | Перевести `task-pattern-registry` и `task-specification-contract` на общий typed core/app pipeline; переиспользовать канонические `WorkKind`/`ChangeClass`, ввести реально используемый `GitInspector`, передавать принятую каталогизацию паттернов в спецификацию без повторного разбора | `meridian-cli-foundation-architecture-remediation`, §5.13 | accepted — принято и локально интегрировано (§5.17.8) |
-| — | Типизированное доказательство функционального паритета (`rust-architecture-conformance-4`) | Перевести `functional-parity` с `Value`-центричной CLI/app реализации на `WorkspaceReader -> private DTO -> typed core evidence/checks -> Diagnostic -> CLI presentation`, сохранив evidence-контракт и сделав I/O-сбои fail-closed | `rust-architecture-conformance-3`, §5.13 | specified, not started (§5.18) |
+| — | Типизированное доказательство функционального паритета (`rust-architecture-conformance-4`) | Перевести `functional-parity` с `Value`-центричной CLI/app реализации на `WorkspaceReader -> private DTO -> typed core evidence/checks -> Diagnostic -> CLI presentation`, сохранив evidence-контракт и сделав I/O-сбои fail-closed | `rust-architecture-conformance-3`, §5.13 | accepted — принято и локально интегрировано (§5.18.8) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | planned — заблокирован завершением корректирующего пакета и всех подпакетов 7 |
 | 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | planned |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
@@ -4358,14 +4358,45 @@ skipped; `git diff --check` — чисто. Полный вывод принят
 
 ### 5.18.1. Статус и условие старта
 
-Статус пакета: `SPECIFIED_NOT_STARTED`. Начинать его можно только от ревизии,
-в которой `rust-architecture-conformance-3` принят и локально интегрирован.
-Условие выполнено: стартовый `dev` —
+Стартовый статус пакета (историческая запись, не переписывается): при
+специфицировании — `SPECIFIED_NOT_STARTED`. Начинать его можно было только от
+ревизии, в которой `rust-architecture-conformance-3` принят и локально
+интегрирован. Условие было выполнено: стартовый `dev` —
 `6a3ff188a31b0e7e848b91a61ba3674dfbd28b0b`, отдельный package commit
 `ddb29dc3319c35f4afcc3ef55a6aac412eac0443` достижим через отдельный
 `--no-ff` merge-коммит; рабочее дерево перед спецификацией было чистым.
-Исполнитель не выполняет Git-записей и передаёт результат со статусом
-`READY_FOR_ARCHITECT_REVIEW`, не `ACCEPTED`.
+
+**Текущий статус (2026-09-23, после первой передачи и первого
+корректирующего раунда): `READY_FOR_ARCHITECT_REVIEW`, не `ACCEPTED`.**
+Исполнитель реализовал пакет в рабочем дереве (без Git-записей — ни одной
+операции branch/switch/add/commit/merge/rebase/reset/stash/tag/push за весь
+пакет) за первую передачу и один корректирующий раунд `CHANGES_REQUESTED`
+(полная типизированная evidence-модель вместо проекции; замена
+`NonEmptyString` на контрактный `EvidenceText` там, где схема задаёт только
+`minLength: 1`; типизированное разделение fixture pipeline на schema
+rejection / conversion drift / domain rejection / accepted evidence;
+различение `NotFound`/`Io` при чтении fixtures; matched Node/Rust case для
+принятого schema-I/O различия; точные multi-record diagnostic tests Node с
+ordered-регрессией). Целевой набор ворот §5.18.6 зелёный на обоих раундах.
+Итоговый вердикт пакета — решение архитектора после независимой проверки, не
+самопровозглашённый исполнителем.
+
+**Второй корректирующий раунд (2026-09-23), статус сохраняется:
+`READY_FOR_ARCHITECT_REVIEW`, не `ACCEPTED`.** Исправлено без расширения
+пакета за `functional-parity` и без Git-записей: (1) принятое evidence больше
+не является проекцией — `RecordEvidence` владеет полным проверенным
+`RecordInput` в приватной обёртке, единственный конструктор которой вызывает
+`check_document`; core-регрессия подтверждает сохранение assertion statement,
+baseline/provenance/observed result, post-change conditions/result/link,
+evidence entry, gap и verdict с причинами; (2) `COMPATIBILITY.md` фиксирует
+две отдельные I/O-границы — schema non-`NotFound` I/O (Node: тихий skip,
+Rust: `FAIL`, вердикт меняется) и fixture non-`NotFound` I/O (Node: generic
+«carries no fixtures», Rust: отдельный «… could not be read: …», уже-failing
+вердикт не меняется, меняется текст); (3) добавлен matched Node/Rust
+mutated-tree case для fixture-I/O в `test/conformance-harness.test.mjs`;
+(4) rustdoc app-модуля перечисляет корректные пять исходов fixture case,
+включая `DomainRejected`. Целевой набор ворот §5.18.6 зелёный; полные
+Node-наборы и `cargo test --workspace` не запускались.
 
 ### 5.18.2. Почему следующий срез именно такой
 
@@ -4579,6 +4610,20 @@ Node-набора выполняются один раз на финальном
 > §5.18.6. Передай `READY_FOR_ARCHITECT_REVIEW` (не `ACCEPTED`), карту
 > `old symbol -> new owner/symbol`, production panic audit, точный список
 > файлов, результаты команд и явно перечисленные невыполненные полные gates.
+
+### 5.18.8. Итоговый вердикт архитектора и интеграция
+
+`ACCEPTED`, принято и локально интегрировано 2026-09-23. После
+двух корректирующих раундов независимое ревью подтвердило полную typed
+evidence-модель без проекции, закрытые DTO и enum-формы, единый
+constructor/check gate, детерминированные Node-compatible диагностики,
+однократное владение presentation prefix и две явно зафиксированные
+Rust-native I/O-границы. Полный финальный gate на неизменённом
+кандидате: workspace Rust tests — 852/852, conformance harness — 103/103,
+`kernel-validate.test.mjs` — 293/293; fmt, build, clippy с `-D warnings`, rustdoc
+с `-D warnings` и `git diff --check` также зелёные. Остальные три
+семейства 7b, оба семейства 7c, весь 7d и пакет 8 этим решением не
+открываются; следующий связный пакет ещё не специфицирован.
 
 ## 6. Ворота Rust
 
@@ -4843,9 +4888,9 @@ program_id: meridian-rust-migration
 program_status: active
 activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
-last_completed_package: rust-architecture-conformance-3
+last_completed_package: rust-architecture-conformance-4
 current_package: rust-architecture-conformance-4
-current_package_status: specified_not_started
+current_package_status: accepted_and_locally_integrated
 next_package: unassigned
 next_package_status: not_specified
 concord_status: paused_pending_meridian_rust_release
@@ -4939,3 +4984,32 @@ transport/WorkspaceReader orchestration в app и composition/presentation в
 CLI. `execution-state-model`, `role-and-human-control` и
 `bounded-context-manifest` остаются неоткрытым следующим связным срезом; оба
 семейства 7c, весь 7d и пакет 8 закрыты.
+
+**Обновление (2026-09-23, §5.18, первая передача и первый корректирующий
+раунд).** `current_package_status` синхронизирован:
+`ready_for_architect_review_not_accepted` — `rust-architecture-conformance-4`
+реализован исполнителем в рабочем дереве (без Git-записей) за первую
+передачу и один корректирующий раунд `CHANGES_REQUESTED` (§5.18.1 несёт
+полный список исправленных пунктов). Целевой набор ворот §5.18.6 зелёный на
+обоих раундах; полные Node-наборы и `cargo test --workspace` не запускались
+(назначаются владельцем/архитектором на финальном кандидате, `AGENTS.md`
+§9). Статус НЕ `ACCEPTED`: итоговый вердикт — решение архитектора после
+независимой проверки, не самопровозглашённое исполнителем. `execution-state-model`,
+`role-and-human-control`, `bounded-context-manifest`, оба семейства 7c, весь
+7d и пакет 8 этим обновлением не открываются.
+
+**Обновление (2026-09-23, §5.18, второй корректирующий раунд).**
+`current_package_status` остаётся `ready_for_architect_review_not_accepted`:
+исполнитель выполнил второй корректирующий раунд (полное принятое evidence
+вместо проекции, две раздельные I/O-границы в `COMPATIBILITY.md`, matched
+Node/Rust case для fixture-I/O, синхронизация §4/rustdoc/§5.18.1) в рабочем
+дереве без Git-записей; целевой набор ворот §5.18.6 зелёный. Статус НЕ
+`ACCEPTED`; остальные семейства 7b, 7c, 7d и пакет 8 не открываются.
+
+**Обновление (2026-09-23, §5.18, итоговый вердикт архитектора).**
+Пакет `rust-architecture-conformance-4` принят и локально интегрирован: полный
+финальный gate на неизменённом кандидате дал 852/852 workspace Rust tests,
+103/103 conformance harness и 293/293 `kernel-validate.test.mjs`; остальные
+финальные ворота также зелёные. `last_completed_package` и
+`current_package_status` синхронизированы с §5.18.8. Следующий связный пакет
+ещё не специфицирован; остальные семейства 7b/7c, 7d и пакет 8 не открываются.

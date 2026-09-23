@@ -1457,14 +1457,16 @@ function VALIDATE_MUTATION_FAMILIES_7C_EXTRA_WRITE_fieldEvaluationSubSecondInter
 // ---------------------------------------------------------------------------
 // Package meridian-cli-foundation, subpackage validate-operating-contracts,
 // corrective round, item 2: `bounded-context-manifest`'s resolved-entry
-// "unknown field" checks (`meridian-app/src/operating_model/bounded_context_manifest.rs`,
-// `check_resolved_state` and `resolve_pinned_reference`) obtain a genuine
-// Rust-native improvement over the Node reference: they iterate
-// `serde_json::Map` — a `BTreeMap` in this workspace — in stable
-// alphabetical order, never Node's `Object.keys()` source-text order. This
-// is kept, not reverted (a Rust unit test,
-// `unknown_fields_on_a_resolved_entry_are_reported_in_stable_alphabetical_order_across_repeated_calls`,
-// pins the alphabetical order and byte-identical repeated output). This is
+// "unknown field" checks obtain a genuine Rust-native improvement over the
+// Node reference: unknown keys are reported in stable sorted order, never
+// Node's `Object.keys()` source-text order. Since
+// `rust-architecture-conformance-5` the typed resolution catalogue carries
+// them by name in that order
+// (`meridian-app/src/operating_model/bounded_context_manifest/resolution.rs`)
+// and `meridian_core::run_contracts::resolution` reports them; kept, not
+// reverted (Rust unit test
+// `bounded_context_manifest::tests::unknown_resolver_fields_are_reported_in_stable_sorted_order`,
+// `COMPATIBILITY.md`). This is
 // the real-process counterpart: it constructs a resolver response with two
 // unknown fields named so their SOURCE-TEXT order is the opposite of their
 // alphabetical order — "zzzz_extra_field" written first, "aaaa_extra_field"
@@ -2249,6 +2251,100 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
         !relevant[0].includes('carries no fixtures'),
         `Rust не должен сворачивать I/O-ошибку в generic "carries no fixtures", получено: ${JSON.stringify(relevant[0])}`,
       );
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Package `rust-architecture-conformance-5` (§5.19.3 point 10): the
+// mandatory-read I/O boundary of `execution-state-model`,
+// `role-and-human-control` and `bounded-context-manifest` (`COMPATIBILITY.md`).
+// Every file of the three families is mandatory. Node's `readIfExists` folds
+// ANY read error into `null`, so an existing-but-unreadable file is reported
+// with the same "is missing" / "carries no fixtures" text as an absent one;
+// the Rust port keeps that text only for `ReadError::NotFound` and reports
+// any other `ReadError::Io` as "<path> could not be read: …". One mutated
+// tree replaces one mandatory file per family with a directory (the portable
+// non-`ENOENT` failure): the schema of `execution-state-model`, the canonical
+// catalogue of `role-and-human-control`, the fixture bundle of
+// `bounded-context-manifest`. Both sides stay failing with exactly one FAIL
+// per family; only the text differs. Manually confirmed on this toolchain
+// before being written here; the OS-dependent tail is not compared.
+// ---------------------------------------------------------------------------
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-run-contracts-mandatory-io-'));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const cases = [
+      {
+        family: 'execution-state-model',
+        rel: 'registries/operating-model/execution-state.schema.json',
+        nodeText: 'execution-state-model: registries/operating-model/execution-state.schema.json is missing; ',
+      },
+      {
+        family: 'role-and-human-control',
+        rel: 'standards/workspace/role-registry.yaml',
+        nodeText: 'role-and-human-control: standards/workspace/role-registry.yaml is missing; ',
+      },
+      {
+        family: 'bounded-context-manifest',
+        rel: 'registries/operating-model/fixtures/context-manifest.fixtures.json',
+        nodeText: 'bounded-context-manifest: the schema carries no fixtures (registries/operating-model/fixtures/context-manifest.fixtures.json); ',
+      },
+    ];
+    for (const c of cases) {
+      const target = path.join(dir, ...c.rel.split('/'));
+      fs.rmSync(target);
+      fs.mkdirSync(target);
+    }
+
+    const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+      cwd: ROOT,
+      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      encoding: 'utf8',
+    });
+    check('намеренная граница: Node-эталон сообщает прежний "is missing"/"carries no fixtures", когда обязательный файл execution-state-model / role-and-human-control / bounded-context-manifest — каталог (readIfExists глотает EISDIR)', () => {
+      assert(nodeRun.error === undefined, `spawnSync не должен был сообщить об ошибке запуска, получено: ${nodeRun.error}`);
+      assert(nodeRun.status !== 0, `Node должен остаться failing, получен код ${nodeRun.status}`);
+      const lines = nodeRun.stdout.split(/\r?\n/);
+      for (const c of cases) {
+        const relevant = lines.filter((l) => l.startsWith(`FAIL  ${c.family}:`));
+        assert(relevant.length === 1, `ожидался ровно один ${c.family} FAIL, получено: ${JSON.stringify(relevant)}`);
+        assert(
+          relevant[0].startsWith(`FAIL  ${c.nodeText}`),
+          `ожидался прежний Node-текст "${c.nodeText}", получено: ${JSON.stringify(relevant[0])}`,
+        );
+      }
+    });
+
+    const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    check('намеренная граница: реальный `meridian validate` сообщает отдельный "<путь> could not be read", когда обязательный файл трёх run-contract семейств — каталог (вердикт failing, как и у Node)', () => {
+      assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
+      assert(rustRun.status !== 0, `Rust должен остаться failing, получен код ${rustRun.status}`);
+      let value;
+      try {
+        value = JSON.parse(rustRun.stdout.trim());
+      } catch (e) {
+        throw new Error(`ожидался ровно один JSON-документ на stdout, получено: ${JSON.stringify(rustRun.stdout)} (${e.message})`);
+      }
+      assert(value.result.ok === false, `ожидался result.ok: false, получено ${JSON.stringify(value.result.ok)}`);
+      for (const c of cases) {
+        const relevant = value.result.failures.filter((f) => f.startsWith(`${c.family}:`));
+        assert(relevant.length === 1, `ожидался ровно один ${c.family} FAIL, получено: ${JSON.stringify(relevant)}`);
+        assert(
+          relevant[0].startsWith(`${c.family}: ${c.rel} could not be read:`),
+          `ожидался отдельный "could not be read", получено: ${JSON.stringify(relevant[0])}`,
+        );
+        assert(
+          !relevant[0].includes('is missing') && !relevant[0].includes('carries no fixtures'),
+          `Rust не должен сворачивать I/O-ошибку в текст отсутствия, получено: ${JSON.stringify(relevant[0])}`,
+        );
+      }
     });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });

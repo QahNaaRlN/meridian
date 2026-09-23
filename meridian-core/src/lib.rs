@@ -9,8 +9,10 @@
 //! checks ([`controlled_rule_intake`]), the canonical instruction-source
 //! model ([`instruction_source`]), and the
 //! `existing-project-compatibility-mode` domain types and pure checks
-//! ([`existing_project_compatibility_mode`]), and the `functional-parity`
-//! evidence contract's domain types and pure checks ([`functional_parity`]).
+//! ([`existing_project_compatibility_mode`]), the `functional-parity`
+//! evidence contract's domain types and pure checks ([`functional_parity`]),
+//! and the typed run contracts — execution state, universal roles and
+//! human control, and the bounded context manifest ([`run_contracts`]).
 //!
 //! This crate never opens a file, never talks to Git, a database or the
 //! network, never reads an environment variable, and never produces output
@@ -31,6 +33,7 @@ mod json;
 pub mod mechanical_integrity;
 pub mod migration;
 pub mod resolver;
+pub mod run_contracts;
 pub mod task_contracts;
 pub mod types;
 

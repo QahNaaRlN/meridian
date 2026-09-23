@@ -63,18 +63,15 @@ use crate::workspace::{ReadError, WorkspaceReader};
 // `non_portable_reason`/`resolve_schema_ref` used to be DEFINED in this
 // module; they moved to the neutral
 // `crate::operating_model::reference_portability` owner, which this module
-// itself now also imports (above). Five neighbouring modules —
-// `super::execution_state`, `super::role_and_human_control`,
-// `super::bounded_context_manifest`, `super::evidence_and_handoff` and
-// `super::field_evaluation` — still import both functions from
-// `super::task_specification` (`use super::task_specification::{non_portable_reason,
-// resolve_schema_ref};`); this re-export keeps every one of those five
-// `use` lines working unchanged, so none of those five (explicitly
-// out-of-scope for this package, `governance/plans/meridian-rust-migration-program-plan.md`
-// §5.17.4) needs to be edited. No NEW consumer may be added through this
-// facade — a future package that touches any of those five families should
-// switch its import to `crate::operating_model::reference_portability`
-// directly and, once all five are switched, delete this re-export.
+// itself now also imports (above). Two neighbouring modules —
+// `super::evidence_and_handoff` and `super::field_evaluation` — still import
+// both functions from `super::task_specification` (`use
+// super::task_specification::{non_portable_reason, resolve_schema_ref};`);
+// this re-export keeps those `use` lines working unchanged
+// (`rust-architecture-conformance-5` moved the other three former
+// consumers into `meridian_core::run_contracts`). No NEW consumer may be
+// added through this facade — the package that types those two families
+// should switch their import and delete this re-export.
 pub use reference_portability::{non_portable_reason, resolve_schema_ref};
 
 const SCHEMA_NAMESPACE_DIR: &str = "registries/operating-model";
@@ -868,8 +865,8 @@ mod tests {
 
     /// Structural gate (`rust-architecture-conformance-3` §5.17.3, point 6):
     /// the temporary `non_portable_reason`/`resolve_schema_ref` re-export
-    /// facade this module carries has EXACTLY the five documented
-    /// consumers (this module's own doc comment) — no new one may be added
+    /// facade this module carries has EXACTLY the documented consumers
+    /// (this module's own doc comment) — no new one may be added
     /// through it. A future package that switches any of these five
     /// imports to `crate::operating_model::reference_portability` directly
     /// should shrink this list, and once it is empty the facade
@@ -878,13 +875,10 @@ mod tests {
     #[test]
     fn the_facade_re_export_has_no_new_consumers() {
         let src_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/operating_model");
-        let known_consumers = [
-            "execution_state.rs",
-            "role_and_human_control.rs",
-            "bounded_context_manifest.rs",
-            "evidence_and_handoff.rs",
-            "field_evaluation.rs",
-        ];
+        // `rust-architecture-conformance-5` removed the three run-contract
+        // families from this list: their domain now imports
+        // `meridian_core::task_contracts` directly.
+        let known_consumers = ["evidence_and_handoff.rs", "field_evaluation.rs"];
         let entries = std::fs::read_dir(&src_dir).unwrap();
         for entry in entries {
             let path = entry.unwrap().path();
@@ -903,7 +897,7 @@ mod tests {
             if imports_facade {
                 assert!(
                     known_consumers.contains(&name.as_str()),
-                    "{name} imports the non_portable_reason/resolve_schema_ref facade but is not one of the five documented consumers — either it is a genuinely new facade consumer (not allowed by this package) or the documented list is stale"
+                    "{name} imports the non_portable_reason/resolve_schema_ref facade but is not one of the documented consumers — either it is a genuinely new facade consumer (not allowed by this package) or the documented list is stale"
                 );
             }
         }

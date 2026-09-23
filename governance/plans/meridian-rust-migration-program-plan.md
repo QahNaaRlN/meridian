@@ -4642,6 +4642,26 @@ Rust-native I/O-границы. Полный финальный gate на неи
 `ACCEPTED`. Исполнитель не выполняет Git write-операций. Пакет не
 открывает 7c, 7d или пакет 8.
 
+**Текущий статус (2026-09-23, первая передача исполнителя):
+`READY_FOR_ARCHITECT_REVIEW`, не `ACCEPTED`.** Исполнитель реализовал
+пакет в рабочем дереве от `dev` `61d9a49cea7183ccb7b02c85b01a7620fd514227`:
+декомпозированный `meridian_core::run_contracts` (vocabulary, identity,
+envelope, execution_state, roles, human_control, revision, pinned_ref,
+resolution, context_manifest), три app-операции над одним
+`WorkspaceReader` с приватными закрытыми DTO и общим schema gate
+(`meridian-app/src/operating_model/run_contract_boundary/`), типизированный
+`ResolutionCatalogue` вместо `Value`-замыкания, тонкие CLI-модули и
+временный фасад `bounded_context_manifest::compat_7c` ровно для четырёх
+7c-потребителей. Единственное новое наблюдаемое отличие —
+fail-closed различение `NotFound`/`Io` обязательных файлов — записано в
+`COMPATIBILITY.md` и покрыто fake-reader, real-adapter и matched
+Node/Rust case. Целевые ворота §5.19.6 выполнены; полные ворота не
+запускались. Во время работы исполнитель ошибочно выполнил одну
+Git-команду, изменившую индекс (`git mv` старого
+`bounded_context_manifest.rs`), и сразу вернул обе затронутые записи
+индекса к HEAD (`git restore --staged`); индекс чист, коммитов, веток и
+иных Git-записей нет. Итоговый вердикт — решение архитектора.
+
 ### 5.19.2. Почему три семейства составляют один связный пакет
 
 После §5.18 в историческом 7b остаются ровно
@@ -4838,6 +4858,20 @@ git diff --check
 > `old symbol -> new owner/symbol`, владельца каждого нового типа,
 > production panic audit, точный список файлов, результаты каждой команды
 > и явно названные невыполненные полные gates.
+
+### 5.19.8. Итоговый вердикт архитектора и интеграция
+
+`ACCEPTED`, принято и локально интегрировано 2026-09-23. Независимое ревью
+подтвердило typed core без transport- и I/O-зависимостей, приватные закрытые DTO
+и единый schema gate в app, типизированный `ResolutionCatalogue`, тонкую
+CLI-presentation и ограниченный четырьмя потребителями временный `compat_7c`.
+Намеренное Rust-native различение `NotFound`/`Io` для обязательных файлов
+записано как fail-closed улучшение и покрыто matched Node/Rust тестом. Полный
+финальный gate на неизменённом кандидате: workspace Rust tests — 910/910,
+conformance harness — 105/105, `kernel-validate.test.mjs` — 293/293; fmt, build,
+clippy с `-D warnings`, rustdoc с `-D warnings`, `node --check` и оба
+`git diff --check` также зелёные. Семейства 7c, 7d и пакет 8 этим решением не
+открываются; следующий пакет ещё не специфицирован.
 
 ## 6. Ворота Rust
 
@@ -5102,9 +5136,9 @@ program_id: meridian-rust-migration
 program_status: active
 activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
-last_completed_package: rust-architecture-conformance-4
+last_completed_package: rust-architecture-conformance-5
 current_package: rust-architecture-conformance-5
-current_package_status: specified_not_started
+current_package_status: accepted_and_locally_integrated
 next_package: unassigned
 next_package_status: not_specified
 concord_status: paused_pending_meridian_rust_release
@@ -5234,3 +5268,12 @@ Node/Rust case для fixture-I/O, синхронизация §4/rustdoc/§5.18
 семействами 7b: `execution-state-model`, `role-and-human-control` и
 `bounded-context-manifest`. Два семейства 7c остаются неоткрытыми и
 временно потребляют тонкий совместимый фасад; 7d и пакет 8 закрыты.
+
+**Обновление (2026-09-23, §5.19, итоговый вердикт архитектора).** Пакет
+`rust-architecture-conformance-5` принят после независимого ревью и полного
+финального gate: 910/910 workspace Rust tests, 105/105 conformance harness и
+293/293 `kernel-validate.test.mjs`; остальные финальные ворота также зелёные.
+Он локально интегрирован отдельным package commit и отдельным `--no-ff`
+merge-коммитом без публикации. `last_completed_package` и
+`current_package_status` синхронизированы с §5.19.8. Следующий пакет ещё не
+специфицирован; 7c, 7d и пакет 8 остаются закрытыми.

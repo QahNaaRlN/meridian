@@ -10,10 +10,10 @@
 //! This module stays in place, unchanged in its public shape, so every
 //! existing consumer — `super::task_specification`'s own `$schema`-envelope
 //! check, and (through that module's still-documented temporary facade)
-//! [`super::execution_state`], [`super::role_and_human_control`],
-//! [`super::bounded_context_manifest`], [`super::evidence_and_handoff`] and
-//! [`super::field_evaluation`] — keeps importing from exactly the same path
-//! it already did; only the definitions' home crate changed.
+//! [`super::evidence_and_handoff`] and [`super::field_evaluation`] — keeps
+//! importing from exactly the same path it already did; only the
+//! definitions' home crate changed. The three run-contract families use
+//! `meridian_core::run_contracts`, which calls the core owner directly.
 
 pub use meridian_core::task_contracts::{non_portable_reason, resolve_schema_ref};
 

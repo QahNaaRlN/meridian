@@ -48,14 +48,14 @@ use std::collections::{HashMap, HashSet};
 
 use serde_json::Value;
 
-use super::bounded_context_manifest::{
-    classify_revision, RecordResolver, REQUIRED_RESOLVED_STATE_FIELDS, RESOLVED_ENTRY_COMMON_KEYS,
+use super::bounded_context_manifest::compat_7c::{
+    classify_revision, RecordResolver, LIFECYCLE_STAGES, REQUIRED_RESOLVED_STATE_FIELDS,
+    RESOLVED_ENTRY_COMMON_KEYS, TERMINAL_STATUSES, WORK_STATUSES,
 };
-use super::execution_state::{LIFECYCLE_STAGES, TERMINAL_STATUSES, WORK_STATUSES};
 use super::task_specification::{non_portable_reason, resolve_schema_ref};
 use crate::source_format::json_schema;
 
-pub use super::bounded_context_manifest::make_record_resolver as make_evidence_resolver;
+pub use super::bounded_context_manifest::compat_7c::make_record_resolver as make_evidence_resolver;
 
 pub const RECORD_TYPE: &str = "evidence-and-handoff";
 

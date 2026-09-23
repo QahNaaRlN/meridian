@@ -23,12 +23,17 @@
 //! `rule-resolution`, no composite algorithm beyond schema validation at
 //! all (see `rule_resolution_fixtures`); every operating-model family from
 //! 7b onward pairs a JSON Schema with a bespoke composite-consistency
-//! algorithm ported to `meridian_app::operating_model` — pure functions
-//! over already-parsed values, with the file/YAML/JSON I/O and, for
-//! `bounded-context-manifest`/`evidence-and-handoff-contract`/
-//! `meridian-field-evaluation`/`controlled-rule-intake`, the external
-//! pinned-record resolution boundary, staying in this crate's own module
-//! for that family; `existing-project-compatibility-mode` composes the
+//! algorithm ported to `meridian_app::operating_model`. `functional-parity`,
+//! `task-pattern-registry`, `task-specification-contract` and, since
+//! `rust-architecture-conformance-5`, `execution-state-model`,
+//! `role-and-human-control` and `bounded-context-manifest` run as app
+//! operations over [`FsWorkspaceReader`](crate::adapters::workspace_reader::FsWorkspaceReader);
+//! their command modules only compose and add the family prefix. For
+//! `evidence-and-handoff-contract`/`meridian-field-evaluation`/
+//! `controlled-rule-intake` the file/YAML/JSON I/O and the external
+//! pinned-record resolution boundary still stay in this crate's own module
+//! for that family;
+//! `existing-project-compatibility-mode` composes the
 //! REAL `instruction-source-registry`/`controlled-rule-intake` composite
 //! algorithms directly rather than a second copy of either contract's
 //! shape, and its rule-candidate resolver is built from that same scan's
@@ -834,5 +839,301 @@ mod rust_architecture_conformance_3_single_git_snapshot {
             "InvalidPath must never be reported as mere unavailability: {:?}",
             collected.warnings
         );
+    }
+}
+
+/// Gates for `rust-architecture-conformance-5`
+/// (`governance/plans/meridian-rust-migration-program-plan.md` §5.19):
+/// the three run-contract command modules are thin composition/presentation
+/// shims over `meridian-app`, the old `Value` entrypoints are gone, and the
+/// temporary 7c facade has exactly its four documented consumers.
+#[cfg(test)]
+mod rust_architecture_conformance_5 {
+    use std::path::{Path, PathBuf};
+
+    const MODULES: [(&str, &str); 3] = [
+        (
+            "src/commands/validate/execution_state.rs",
+            "execution-state-model",
+        ),
+        (
+            "src/commands/validate/role_and_human_control.rs",
+            "role-and-human-control",
+        ),
+        (
+            "src/commands/validate/bounded_context_manifest.rs",
+            "bounded-context-manifest",
+        ),
+    ];
+
+    fn workspace_root() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .to_path_buf()
+    }
+
+    fn production_text(path: &Path) -> String {
+        let text = std::fs::read_to_string(path)
+            .unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()));
+        let end = text.find("#[cfg(test)]").unwrap_or(text.len());
+        text[..end]
+            .lines()
+            .filter(|line| !line.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                rust_files(&path, out);
+            } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+                out.push(path);
+            }
+        }
+    }
+
+    fn production_sources() -> Vec<(String, String)> {
+        let root = workspace_root();
+        let mut files = Vec::new();
+        for krate in ["meridian-app/src", "meridian-cli/src", "meridian-core/src"] {
+            rust_files(&root.join(krate), &mut files);
+        }
+        files
+            .into_iter()
+            .map(|p| {
+                let rel = p
+                    .strip_prefix(&root)
+                    .unwrap()
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                (rel, production_text(&p))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_three_command_modules_carry_no_direct_io_value_or_domain_rules() {
+        for (rel, _) in MODULES {
+            let production = production_text(&Path::new(env!("CARGO_MANIFEST_DIR")).join(rel));
+            for forbidden in [
+                "std::fs",
+                "std::process",
+                "serde_json",
+                "json_schema",
+                "parse_yaml",
+                "make_record_resolver",
+                "compat_7c",
+                "run_contracts",
+                "evaluate_",
+            ] {
+                assert!(
+                    !production.contains(forbidden),
+                    "{rel} contains \"{forbidden}\" — it must stay a thin composition/presentation shim"
+                );
+            }
+            for required in [
+                "app::evaluate(",
+                "FsWorkspaceReader::new(",
+                "with_family_prefix(FAMILY",
+            ] {
+                assert!(
+                    production.contains(required),
+                    "{rel} must call `{required}`"
+                );
+            }
+        }
+    }
+
+    /// The pre-package `Value`/`Vec<String>` entrypoints of the three
+    /// families no longer exist anywhere in production code.
+    #[test]
+    fn the_legacy_value_entrypoints_are_gone() {
+        for (rel, text) in production_sources() {
+            for legacy in [
+                "evaluate_execution_state",
+                "evaluate_role_registry",
+                "evaluate_human_control",
+                "evaluate_context_manifest",
+                "RoleRegistrySchemas",
+                "HumanControlSchemas",
+            ] {
+                assert!(
+                    !text.contains(legacy),
+                    "{rel} still names the legacy entrypoint `{legacy}`"
+                );
+            }
+        }
+    }
+
+    /// The temporary 7c facade has EXACTLY the four documented consumers; a
+    /// fifth one fails this test.
+    #[test]
+    fn the_7c_facade_has_exactly_four_consumers() {
+        let facade_home = [
+            "meridian-app/src/operating_model/bounded_context_manifest/compat_7c.rs",
+            "meridian-app/src/operating_model/bounded_context_manifest/mod.rs",
+        ];
+        let mut consumers: Vec<String> = production_sources()
+            .into_iter()
+            .filter(|(rel, text)| {
+                !facade_home.contains(&rel.as_str()) && text.contains("compat_7c")
+            })
+            .map(|(rel, _)| rel)
+            .collect();
+        consumers.sort();
+        assert_eq!(
+            consumers,
+            [
+                "meridian-app/src/operating_model/evidence_and_handoff.rs",
+                "meridian-app/src/operating_model/field_evaluation.rs",
+                "meridian-cli/src/commands/validate/evidence_and_handoff.rs",
+                "meridian-cli/src/commands/validate/field_evaluation.rs",
+            ]
+        );
+    }
+
+    /// The facade only re-exports or adapts `meridian_core::run_contracts`
+    /// items: it builds no diagnostic and holds no rule of its own.
+    #[test]
+    fn the_7c_facade_holds_no_second_domain_implementation() {
+        let facade = production_text(
+            &workspace_root()
+                .join("meridian-app/src/operating_model/bounded_context_manifest/compat_7c.rs"),
+        );
+        for forbidden in [
+            "Diagnostic",
+            "format!",
+            "problems",
+            "HashSet",
+            "HashMap",
+            "fn check_",
+            "match ",
+        ] {
+            assert!(
+                !facade.contains(forbidden),
+                "compat_7c.rs contains \"{forbidden}\""
+            );
+        }
+        assert_eq!(
+            facade.matches("pub fn ").count(),
+            2,
+            "only classify_revision and make_record_resolver"
+        );
+        assert!(facade.contains("RevisionClass::classify(revision).as_str()"));
+    }
+
+    #[test]
+    fn the_real_adapter_route_is_clean_for_all_three_families() {
+        let root = workspace_root();
+        assert!(super::execution_state::run(&root).failures.is_empty());
+        assert!(super::role_and_human_control::run(&root)
+            .failures
+            .is_empty());
+        assert!(super::bounded_context_manifest::run(&root)
+            .failures
+            .is_empty());
+    }
+
+    struct TempRoot(PathBuf);
+    impl TempRoot {
+        fn new(label: &str) -> Self {
+            let dir = std::env::temp_dir().join(format!(
+                "rust-architecture-conformance-5-{label}-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            std::fs::create_dir_all(&dir).unwrap();
+            Self(dir)
+        }
+    }
+    impl Drop for TempRoot {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn run_family(family: &str, root: &Path) -> Vec<String> {
+        match family {
+            "execution-state-model" => super::execution_state::run(root).failures,
+            "role-and-human-control" => super::role_and_human_control::run(root).failures,
+            _ => super::bounded_context_manifest::run(root).failures,
+        }
+    }
+
+    /// An app-generated failure (every mandatory file absent) carries
+    /// EXACTLY ONE family prefix.
+    #[test]
+    fn an_app_generated_failure_carries_exactly_one_family_prefix() {
+        let empty = TempRoot::new("empty");
+        for (_, family) in MODULES {
+            let failures = run_family(family, &empty.0);
+            assert_eq!(failures.len(), 1, "{failures:?}");
+            let prefix = format!("{family}: ");
+            assert!(failures[0].starts_with(&prefix), "{}", failures[0]);
+            assert_eq!(failures[0].matches(&prefix).count(), 1, "{}", failures[0]);
+            assert!(failures[0].contains(" is missing; "), "{}", failures[0]);
+        }
+    }
+
+    /// Through the REAL `FsWorkspaceReader`, a directory standing where a
+    /// mandatory file is expected is `ReadError::Io`, never "missing".
+    #[test]
+    fn a_directory_in_place_of_a_mandatory_file_is_unreadable_not_missing() {
+        let cases = [
+            (
+                "execution-state-model",
+                "registries/operating-model/execution-state.schema.json",
+            ),
+            (
+                "role-and-human-control",
+                "standards/workspace/role-registry.yaml",
+            ),
+            (
+                "bounded-context-manifest",
+                "registries/operating-model/fixtures/context-manifest.fixtures.json",
+            ),
+        ];
+        let tree = TempRoot::new("directory");
+        let real = workspace_root();
+        for rel in [
+            "registries/operating-model/execution-state.schema.json",
+            "registries/operating-model/role-registry.schema.json",
+            "registries/operating-model/human-control.schema.json",
+            "registries/operating-model/context-manifest.schema.json",
+            "registries/operating-model/scoped-record.schema.json",
+            "registries/operating-model/fixtures/execution-state.fixtures.json",
+            "registries/operating-model/fixtures/role-and-human-control.fixtures.json",
+            "registries/operating-model/fixtures/context-manifest.fixtures.json",
+            "standards/workspace/role-registry.yaml",
+        ] {
+            let target = tree.0.join(rel);
+            std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+            if cases.iter().any(|(_, path)| *path == rel) {
+                std::fs::create_dir_all(&target).unwrap();
+            } else {
+                std::fs::copy(real.join(rel), &target).unwrap();
+            }
+        }
+        for (family, rel) in cases {
+            let failures = run_family(family, &tree.0);
+            assert_eq!(failures.len(), 1, "{family}: {failures:?}");
+            assert!(
+                failures[0].starts_with(&format!("{family}: {rel} could not be read: ")),
+                "{}",
+                failures[0]
+            );
+            assert!(!failures[0].contains("is missing"), "{}", failures[0]);
+            assert!(
+                !failures[0].contains("carries no fixtures"),
+                "{}",
+                failures[0]
+            );
+        }
     }
 }

@@ -17,7 +17,7 @@
 use std::fs;
 use std::path::Path;
 
-use meridian_app::operating_model::bounded_context_manifest::make_record_resolver;
+use meridian_app::operating_model::bounded_context_manifest::compat_7c::make_record_resolver;
 use meridian_app::operating_model::field_evaluation::{evaluate_field_evaluation, EvalOpts};
 use meridian_app::source_format::json_schema;
 use serde_json::Value;

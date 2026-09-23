@@ -9,7 +9,8 @@
 //! checks ([`controlled_rule_intake`]), the canonical instruction-source
 //! model ([`instruction_source`]), and the
 //! `existing-project-compatibility-mode` domain types and pure checks
-//! ([`existing_project_compatibility_mode`]).
+//! ([`existing_project_compatibility_mode`]), and the `functional-parity`
+//! evidence contract's domain types and pure checks ([`functional_parity`]).
 //!
 //! This crate never opens a file, never talks to Git, a database or the
 //! network, never reads an environment variable, and never produces output
@@ -24,6 +25,7 @@
 pub mod controlled_rule_intake;
 pub mod evidence;
 pub mod existing_project_compatibility_mode;
+pub mod functional_parity;
 pub mod instruction_source;
 mod json;
 pub mod mechanical_integrity;

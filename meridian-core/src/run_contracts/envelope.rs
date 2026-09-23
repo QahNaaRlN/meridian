@@ -1,9 +1,11 @@
 //! The scoped-record envelope every run-contract record carries, and the
-//! ONE envelope check the four record families share: logical `$schema`
-//! resolution, the Russian title, the `built-in` origin rejection and the
-//! portability of the envelope's reference strings. Before this package the
-//! same check existed as four drifting copies; [`RecordFamily`] now carries
-//! the only family-specific wording, so the algorithm has one owner.
+//! ONE envelope check every record family of the run contracts, the
+//! evidence-and-handoff contract and the field evaluation shares: logical
+//! `$schema` resolution, the Russian title, the `built-in` origin rejection
+//! and the portability of the envelope's reference strings. Before
+//! `rust-architecture-conformance-5` the same check existed as drifting
+//! copies; [`RecordFamily`] carries the only family-specific wording, so the
+//! algorithm has one owner.
 
 use crate::task_contracts::{non_portable_reason, resolve_schema_ref};
 use crate::types::{AuthorityKind, Diagnostic, OriginKind, SemanticId};
@@ -14,13 +16,16 @@ use super::{fail, has_cyrillic};
 const SCHEMA_NAMESPACE_DIR: &str = "registries/operating-model";
 const ENVELOPE_SCHEMA_BASENAME: &str = "scoped-record.schema.json";
 
-/// The four record families of this package.
+/// The record families that share the envelope check.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RecordFamily {
     ExecutionRun,
     RoleRegistry,
     HumanControl,
     ContextManifest,
+    EvidenceAndHandoff,
+    FieldEvaluationObservation,
+    FieldEvaluationReport,
 }
 
 impl RecordFamily {
@@ -31,6 +36,9 @@ impl RecordFamily {
             RecordFamily::RoleRegistry => "role registry",
             RecordFamily::HumanControl => "human-control record",
             RecordFamily::ContextManifest => "context manifest",
+            RecordFamily::EvidenceAndHandoff => "evidence and handoff",
+            RecordFamily::FieldEvaluationObservation => "field evaluation observation",
+            RecordFamily::FieldEvaluationReport => "field evaluation report",
         }
     }
 
@@ -41,6 +49,10 @@ impl RecordFamily {
             RecordFamily::RoleRegistry => "role-registry.schema.json",
             RecordFamily::HumanControl => "human-control.schema.json",
             RecordFamily::ContextManifest => "context-manifest.schema.json",
+            RecordFamily::EvidenceAndHandoff => "evidence-and-handoff.schema.json",
+            RecordFamily::FieldEvaluationObservation | RecordFamily::FieldEvaluationReport => {
+                "field-evaluation.schema.json"
+            }
         }
     }
 
@@ -50,6 +62,10 @@ impl RecordFamily {
             RecordFamily::RoleRegistry => "records/role-registry",
             RecordFamily::HumanControl => "records/run-human-control",
             RecordFamily::ContextManifest => "records/context-manifest",
+            RecordFamily::EvidenceAndHandoff => "records/evidence-and-handoff",
+            RecordFamily::FieldEvaluationObservation | RecordFamily::FieldEvaluationReport => {
+                "records/field-evaluation"
+            }
         }
     }
 
@@ -59,6 +75,10 @@ impl RecordFamily {
             RecordFamily::RoleRegistry => "the catalogue name",
             RecordFamily::HumanControl => "the record name",
             RecordFamily::ContextManifest => "the manifest name",
+            RecordFamily::EvidenceAndHandoff => "the handoff name",
+            RecordFamily::FieldEvaluationObservation | RecordFamily::FieldEvaluationReport => {
+                "the record name"
+            }
         }
     }
 
@@ -76,6 +96,12 @@ impl RecordFamily {
             RecordFamily::ContextManifest => {
                 Some("a manifest is written in a workspace, not shipped with the methodology")
             }
+            RecordFamily::EvidenceAndHandoff => {
+                Some("a handoff is written in a workspace, not shipped with the methodology")
+            }
+            RecordFamily::FieldEvaluationObservation | RecordFamily::FieldEvaluationReport => {
+                Some("evaluation data is written in a workspace, not shipped with the methodology")
+            }
         }
     }
 
@@ -84,6 +110,10 @@ impl RecordFamily {
             RecordFamily::ExecutionRun => "a run record is portable",
             RecordFamily::RoleRegistry | RecordFamily::HumanControl => "the record is portable",
             RecordFamily::ContextManifest => "a manifest is portable",
+            RecordFamily::EvidenceAndHandoff => "a handoff is portable",
+            RecordFamily::FieldEvaluationObservation | RecordFamily::FieldEvaluationReport => {
+                "a record is portable"
+            }
         }
     }
 }
@@ -143,6 +173,18 @@ pub(crate) fn check_envelope(
     envelope: &RecordEnvelope,
     problems: &mut Vec<Diagnostic>,
 ) {
+    check_envelope_around(family, envelope, problems, |_| {});
+}
+
+/// [`check_envelope`] with a family-specific check between the title and
+/// the origin — where the field evaluation reports its record-type-bound
+/// scope (`scripts/lib/field-evaluation.mjs`'s order).
+pub(crate) fn check_envelope_around(
+    family: RecordFamily,
+    envelope: &RecordEnvelope,
+    problems: &mut Vec<Diagnostic>,
+    between: impl FnOnce(&mut Vec<Diagnostic>),
+) {
     let label = family.label();
     let id = envelope.id.as_str();
     let basename = family.schema_basename();
@@ -182,6 +224,8 @@ pub(crate) fn check_envelope(
     if let Some(r) = non_portable_reason(Some(title)) {
         problems.push(fail(format!("{label} \"{id}\" title contains {r}")));
     }
+
+    between(problems);
 
     if let (RecordOrigin::BuiltIn, Some(why)) =
         (&envelope.origin, family.built_in_origin_rejection())

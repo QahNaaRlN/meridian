@@ -152,12 +152,12 @@ Concord остаётся на паузе. Активационный рубеж 
 | 6 | Хранилище SQLite (`sqlite-storage-adapter`) | `meridian-storage-sqlite`: схема §4 технической спецификации, транзакционная запись, включённые foreign keys, неизменяемые редакции и доказательства, идемпотентный импорт, резервная копия, канонический экспорт | 3, 5, `instance-repository-retirement-baseline` | accepted — принят и локально интегрирован (§5.3) |
 | — | Корректирующий пакет: основание знаний и агентной среды (`knowledge-agent-foundation`) | Роли баз `tool`/`workspace`, привязка рабочей базы к редакции Kernel, последовательные миграции схемы, маршрутизация хранилищ, версионируемый конверт наблюдаемого события и отключаемый приёмник событий; спецификации `init`/`doctor`/`export` и импорта согласованы с этими границами | 6, `research-governance-foundation` | accepted — принят и интегрирован (§5.4) |
 | 7 | Основа CLI (`meridian-cli-foundation`) | `meridian-cli`: `init`, `doctor`, `validate`, `resolve`, `export`, `--format human|json`, стабильные коды завершения, разделение stdout/stderr; подпакеты 7a–7d остаются исторической декомпозицией объёма | 5–6, `knowledge-agent-foundation`, `rust-architecture-conformance` | architecture-blocked (§5.13): 7a/7b исторически integrated, но не release-ready; приёмка 7c отозвана; 7d не начат |
-| — | Корректирующий пакет архитектуры (`rust-architecture-conformance`) | Устранить нарушения аудита: типизированные границы DTO → domain, обязательные порты, typed diagnostics, перенос предметной логики из CLI, декомпозиция Value-центричных модулей; доказать сохранение бизнес-ценности и обоснованные Rust-native улучшения | 1–7b, аудит §5.13 | active — пакеты 1–5 и исправление 7a приняты и локально интегрированы; пакет 6 специфицирован, но не начат (§5.20) |
+| — | Корректирующий пакет архитектуры (`rust-architecture-conformance`) | Устранить нарушения аудита: типизированные границы DTO → domain, обязательные порты, typed diagnostics, перенос предметной логики из CLI, декомпозиция Value-центричных модулей; доказать сохранение бизнес-ценности и обоснованные Rust-native улучшения | 1–7b, аудит §5.13 | active — пакеты 1–5 и исправление 7a приняты и локально интегрированы; пакет 6 передан на архитектурную проверку (`READY_FOR_ARCHITECT_REVIEW`, §5.20) |
 | — | Архитектурное исправление исторического 7a (`meridian-cli-foundation-architecture-remediation`) | Перенести пять семейств 7a из CLI в typed core/app pipeline и ввести реально используемый app-owned `WorkspaceReader`; CLI оставить адаптером и presentation-слоем | `rust-architecture-conformance-1` и `-2`, §5.13 | accepted — принято и локально интегрировано (§5.16.8) |
 | — | Основание типизированных task-контрактов (`rust-architecture-conformance-3`) | Перевести `task-pattern-registry` и `task-specification-contract` на общий typed core/app pipeline; переиспользовать канонические `WorkKind`/`ChangeClass`, ввести реально используемый `GitInspector`, передавать принятую каталогизацию паттернов в спецификацию без повторного разбора | `meridian-cli-foundation-architecture-remediation`, §5.13 | accepted — принято и локально интегрировано (§5.17.8) |
 | — | Типизированное доказательство функционального паритета (`rust-architecture-conformance-4`) | Перевести `functional-parity` с `Value`-центричной CLI/app реализации на `WorkspaceReader -> private DTO -> typed core evidence/checks -> Diagnostic -> CLI presentation`, сохранив evidence-контракт и сделав I/O-сбои fail-closed | `rust-architecture-conformance-3`, §5.13 | accepted — принято и локально интегрировано (§5.18.8) |
 | — | Типизированные контракты исполнения и управления запуском (`rust-architecture-conformance-5`) | Перевести связные `execution-state-model`, `role-and-human-control` и `bounded-context-manifest` на общие typed core contracts; app оставить transport/schema/resolution orchestration, CLI — composition/presentation; сохранить временный тонкий фасад только для двух ещё не перенесённых семейств 7c | `rust-architecture-conformance-4`, §5.13 | accepted — принято и локально интегрировано (§5.19.8) |
-| — | Типизированные доказательства и полевая оценка (`rust-architecture-conformance-6`) | Перевести оставшиеся семейства 7c `evidence-and-handoff-contract` и `meridian-field-evaluation` на общий typed core/app pipeline, удалить временные resolver/portability фасады и оставить CLI слоем composition/presentation | `rust-architecture-conformance-5`, §5.13 | specified, not started (§5.20) |
+| — | Типизированные доказательства и полевая оценка (`rust-architecture-conformance-6`) | Перевести оставшиеся семейства 7c `evidence-and-handoff-contract` и `meridian-field-evaluation` на общий typed core/app pipeline, удалить временные resolver/portability фасады и оставить CLI слоем composition/presentation | `rust-architecture-conformance-5`, §5.13 | accepted — принято и локально интегрировано (§5.20.9) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | planned — заблокирован завершением корректирующего пакета и всех подпакетов 7 |
 | 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | planned |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
@@ -4890,6 +4890,102 @@ clippy с `-D warnings`, rustdoc с `-D warnings`, `node --check` и оба
 `ACCEPTED`. Исполнитель не выполняет Git write-операций. Пакет не начинает
 7d или пакет 8.
 
+**Текущий статус (2026-09-23, первая передача исполнителя):
+`READY_FOR_ARCHITECT_REVIEW`, не `ACCEPTED`.** Исполнитель реализовал
+пакет в рабочем дереве от `dev` `481a9a29ee1fa8e3dcce27b98733eb7dd47a315e`:
+единственный владелец доказательств `meridian_core::evidence` (словарь,
+закреплённое evidence и его разрешение, вычисляемая связь claim/assertion/
+evidence, двадцать разделов handoff в `evidence::handoff`), новый
+`meridian_core::field_evaluation` (восемь закрытых метрик, валидируемые даты,
+timestamps и окна, одно правило измерения, пересчёт агрегатов из
+типизированных образцов, наблюдение и отчёт), расширенные общие примитивы
+`run_contracts` (виды записей, форма ответа resolver, один закрытый контракт
+ответа для трёх семейств), одна transport-to-resolution конверсия
+`meridian-app/src/operating_model/record_resolution.rs`, две app-операции с
+приватными закрытыми DTO и общим загрузчиком обязательных файлов, тонкие
+CLI-модули. `compat_7c` и re-export `task_specification::{non_portable_reason,
+resolve_schema_ref}` удалены; structural gates запрещают их возвращение. Все
+163 реальных fixture-случая проходят единственный production-маршрут.
+Наблюдаемые границы — заранее принятое различение `NotFound`/`Io` и
+библиотечный schema short-circuit — записаны в `COMPATIBILITY.md` и покрыты
+matched Node/Rust cases; одно библиотечное, не CLI-наблюдаемое сужение
+(отвергнутое разрешённое измерение не агрегируется) было записано там же
+для решения архитектора. Целевые ворота §5.20.7 выполнены; полные
+ворота не запускались. Во время работы исполнитель ошибочно выполнил одну
+Git-команду, изменившую индекс (`git mv` прежнего
+`bounded_context_manifest/resolution.rs`), и сразу вернул обе затронутые
+записи индекса к HEAD (`git restore --staged`); индекс чист, коммитов, веток и
+иных Git-записей нет. Итоговый вердикт — решение архитектора.
+
+**Корректирующий раунд 1 (2026-09-23): вердикт архитектора
+`CHANGES_REQUESTED`; после исправления — снова `READY_FOR_ARCHITECT_REVIEW`,
+не `ACCEPTED`.** Архитектор принял Rust-native границу: наблюдение,
+отвергнутое закрытым контрактом measurement или обязательного окна, не
+участвует в пересчёте aggregate/status; CLI-вердикт не меняется. Выявленный
+дефект: `meridian_core::field_evaluation::resolved::contribution` относил
+`observed`-наблюдение без measurement-объекта (отсутствует, `null`, не
+объект) к «прочим», а отсутствующее или `null` обязательное окно — к «без
+окна», и такие значения влияли на пересчёт. Исправлено: сначала
+обрабатывается `status`; при `observed` любое measurement, кроме
+`Present(Some(поля))`, прошедшего контракт, и для метрики с обязательным
+окном любое `observation_period`, кроме `Present(Some(окно))` с корректными
+датами и `coverage`, дают `NotComputable` — отвергнутые значения не
+становятся образцом. Прямой core-тест
+`field_evaluation_a_refused_resolved_measurement_or_window_is_never_aggregated`
+через реальный `check_field_evaluation` доказывает отсутствие вторичных
+диагностик статуса/агрегата для отсутствующего, `null` и не-объектного
+measurement, невалидного `measurement.seconds`, отсутствующего, `null` и
+не-объектного обязательного окна; проверен на зубы против прежней логики.
+`COMPATIBILITY.md` фиксирует границу как принятую архитектором. Целевые
+ворота раунда (`AGENTS.md` §9) успешны: `cargo fmt --all -- --check`,
+`cargo clippy -p meridian-core -p meridian-app -p meridian-cli --all-targets
+--all-features -- -D warnings`, `cargo test -p meridian-core field_evaluation`
+(25), `cargo test -p meridian-app field_evaluation` (8), `cargo test -p
+meridian-cli field_evaluation` (6), `RUSTDOCFLAGS="-D warnings" cargo doc
+--workspace --no-deps`, `git diff --check`, `git diff --cached --check`.
+Полный workspace/Node gate не запускался — он назначается после повторного
+архитектурного одобрения. Git write-операций в раунде не было.
+
+**Корректирующий раунд 2 (2026-09-23): вердикт архитектора
+`CHANGES_REQUESTED` по результату первого полного gate; после исправления —
+снова `READY_FOR_ARCHITECT_REVIEW`, не `ACCEPTED`.** Первый полный gate
+неизменяемого кандидата упал: `cargo test --workspace` — FAILED,
+`meridian-app` 265 passed / 1 failed
+(`tests::no_rs_file_performs_concrete_filesystem_io_in_production_code`);
+`node --test test/conformance-harness.test.mjs` — 109/0 и
+`node test/kernel-validate.test.mjs` — 293/0 были зелёными, но пакет не
+принят. Причина: purity-scanner `meridian-app/src/lib.rs` считал
+production-частью всё до первого `#[cfg(test)]` в файле и поэтому принимал
+отдельный тестовый module-файл `field_evaluation/tests.rs` (реальное чтение
+fixtures через `std::fs`) за production-код. Исправлено без ослабления gate:
+четыре отдельных тестовых module-файла пакета
+(`meridian-app/src/operating_model/{evidence_and_handoff,field_evaluation}/tests.rs`,
+`meridian-core/src/evidence/handoff/tests.rs`,
+`meridian-core/src/field_evaluation/tests.rs`) явно маркированы внутренним
+атрибутом `#![cfg(test)]`; scanner (`production_part` в
+`meridian-app/src/lib.rs`, для обоих структурных тестов файла) считает
+файл test-only только тогда, когда `#![cfg(test)]` — его первая строка
+кода, иначе production-часть по-прежнему заканчивается на первом
+`#[cfg(test)]`; исключения по имени файла нет. Прежнее исключение по имени
+`tests.rs` в собственном structural gate пакета
+(`meridian-cli/src/commands/validate/mod.rs::rust_architecture_conformance_6`)
+заменено тем же правилом. Регрессия
+`meridian-app/src/lib.rs::tests::only_an_explicit_test_only_module_file_is_exempt_from_the_purity_gate`
+доказывает: явно test-only файл допускает `std::fs`; обычный файл, файл с
+упоминанием `#![cfg(test)]` в doc-комментарии или не в голове файла
+по-прежнему проверяется; реальные `tests.rs` двух семейств — test-only, их
+`mod.rs` — production. Предметная реализация пакета не менялась. Целевые
+проверки раунда успешны: `cargo fmt --all -- --check`; `cargo clippy -p
+meridian-core -p meridian-app -p meridian-cli --all-targets --all-features --
+-D warnings`; `cargo test -p meridian-app` — 267/0 (ранее упавший тест,
+соседний `no_workspace_reader_implementation_exists_in_this_crates_production_code`
+и новая регрессия зелёные); `cargo test -p meridian-cli
+rust_architecture_conformance` — 20/0; `cargo test -p meridian-core evidence`
+и `field_evaluation` — зелёные; `RUSTDOCFLAGS="-D warnings" cargo doc
+--workspace --no-deps`; `git diff --check`; `git diff --cached --check`.
+Повторный полный gate не запускался — он назначается после повторного
+архитектурного ревью. Git write-операций в раунде не было.
+
 ### 5.20.2. Почему два семейства составляют один связный пакет
 
 После §5.19 в историческом 7c остаются ровно два не переведённых семейства:
@@ -5168,6 +5264,42 @@ Rust-проверки, syntax check изменённого Node-файла и о
 > `old symbol -> new owner/symbol`, владельца каждого нового типа,
 > production panic audit, точный список файлов, результаты каждой команды и
 > явно названные невыполненные полные gates.
+
+### 5.20.9. Итоговый вердикт архитектора и интеграция
+
+**Итоговый вердикт архитектора: `ACCEPTED`.** Пакет реализован исполнителем
+без Git-записей, прошёл независимое архитектурное ревью и два корректирующих
+раунда. Финальный неизменяемый кандидат прошёл повторный полный gate §5.20.7
+и локально интегрирован сопровождающим эту запись package/merge flow. Ни
+пакетная ветвь, ни `dev` не публиковались; 7d и пакет 8 этим решением не
+начаты.
+
+`evidence-and-handoff-contract` и `meridian-field-evaluation` теперь идут по
+единственному production-маршруту `WorkspaceReader → schema gate → private
+closed DTO → typed resolution → meridian-core → Diagnostic → CLI
+presentation`. `meridian_core::evidence` остаётся единственным evidence-owner,
+а новый `meridian_core::field_evaluation` владеет восемью закрытыми метриками,
+валидируемыми observation/report и пересчётом агрегатов из типизированных
+образцов. Общий `ResolutionCatalogue` и transport-to-resolution conversion
+переиспользуются тремя семействами; `compat_7c`, старые Value-entrypoints и
+task-specification portability facade удалены. CLI-модули остались тонкими,
+а structural gates защищают core/app/CLI границы и явно отличают test-only
+module-файлы от production-кода без исключения по имени файла.
+
+Приняты три точно ограниченные границы `COMPATIBILITY.md`: прежнее
+fail-closed различение mandatory `NotFound`/`Io`; библиотечный schema
+short-circuit закрытого DTO; Rust-native отказ вычислять aggregate/status из
+resolved observation, отвергнутого закрытым measurement/window контрактом.
+Последняя граница сохраняет внешний вердикт, не позволяет отвергнутым данным
+влиять на принятый aggregate и покрыта прямым тестом полного report-check для
+семи отказных форм.
+
+Повторный полный gate на неизменённом кандидате зелёный: `cargo fmt`, workspace
+build, workspace clippy с `-D warnings` и rustdoc с `-D warnings`; workspace
+Rust tests — 965 passed, 0 failed; conformance harness — 109 passed, 0 failed;
+`kernel-validate.test.mjs` — 293 passed, 0 failed, 0 skipped; оба
+`git diff --check` — exit 0. Начальный и конечный HEAD совпали:
+`481a9a29ee1fa8e3dcce27b98733eb7dd47a315e`; индекс до интеграции был чист.
 
 ## 6. Ворота Rust
 

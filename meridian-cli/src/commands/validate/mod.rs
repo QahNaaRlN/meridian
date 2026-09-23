@@ -50,10 +50,10 @@
 //! `instance-canonical-export`, `workspace-compatibility-qualification`,
 //! `upgrade-integration-qualification` — each pair a JSON Schema with a
 //! bespoke composite-consistency algorithm from its own
-//! `scripts/lib/*.mjs` module; two of those pure algorithms already exist in
-//! `meridian-core` (`migration::checks`, `evidence::aggregate`) but are not
-//! yet wired to real fixture files by this CLI, and the remaining two have
-//! no Rust port at all. The owner has decided the split and order
+//! `scripts/lib/*.mjs` module; one of those pure algorithms already exists
+//! in `meridian-core` (`migration::checks`) but is not yet wired to real
+//! fixture files by this CLI, and the remaining three have no Rust port at
+//! all. The owner has decided the split and order
 //! (`governance/plans/meridian-rust-migration-program-plan.md` §5.5c):
 //! subpackages 7a and 7b are `accepted`/`integrated`
 //! (`meridian-rust-migration-program-plan.md` §5.7, §5.10); 7c is
@@ -845,8 +845,9 @@ mod rust_architecture_conformance_3_single_git_snapshot {
 /// Gates for `rust-architecture-conformance-5`
 /// (`governance/plans/meridian-rust-migration-program-plan.md` §5.19):
 /// the three run-contract command modules are thin composition/presentation
-/// shims over `meridian-app`, the old `Value` entrypoints are gone, and the
-/// temporary 7c facade has exactly its four documented consumers.
+/// shims over `meridian-app` and the old `Value` entrypoints are gone. The
+/// temporary 7c facade this package introduced was deleted by
+/// `rust-architecture-conformance-6`.
 #[cfg(test)]
 mod rust_architecture_conformance_5 {
     use std::path::{Path, PathBuf};
@@ -968,61 +969,17 @@ mod rust_architecture_conformance_5 {
         }
     }
 
-    /// The temporary 7c facade has EXACTLY the four documented consumers; a
-    /// fifth one fails this test.
+    /// `rust-architecture-conformance-6` deleted the temporary 7c facade
+    /// this package introduced; it never comes back
+    /// (`rust_architecture_conformance_6` holds the full gate).
     #[test]
-    fn the_7c_facade_has_exactly_four_consumers() {
-        let facade_home = [
-            "meridian-app/src/operating_model/bounded_context_manifest/compat_7c.rs",
-            "meridian-app/src/operating_model/bounded_context_manifest/mod.rs",
-        ];
-        let mut consumers: Vec<String> = production_sources()
-            .into_iter()
-            .filter(|(rel, text)| {
-                !facade_home.contains(&rel.as_str()) && text.contains("compat_7c")
-            })
-            .map(|(rel, _)| rel)
-            .collect();
-        consumers.sort();
-        assert_eq!(
-            consumers,
-            [
-                "meridian-app/src/operating_model/evidence_and_handoff.rs",
-                "meridian-app/src/operating_model/field_evaluation.rs",
-                "meridian-cli/src/commands/validate/evidence_and_handoff.rs",
-                "meridian-cli/src/commands/validate/field_evaluation.rs",
-            ]
-        );
-    }
-
-    /// The facade only re-exports or adapts `meridian_core::run_contracts`
-    /// items: it builds no diagnostic and holds no rule of its own.
-    #[test]
-    fn the_7c_facade_holds_no_second_domain_implementation() {
-        let facade = production_text(
-            &workspace_root()
-                .join("meridian-app/src/operating_model/bounded_context_manifest/compat_7c.rs"),
-        );
-        for forbidden in [
-            "Diagnostic",
-            "format!",
-            "problems",
-            "HashSet",
-            "HashMap",
-            "fn check_",
-            "match ",
-        ] {
-            assert!(
-                !facade.contains(forbidden),
-                "compat_7c.rs contains \"{forbidden}\""
-            );
+    fn the_7c_facade_is_gone() {
+        assert!(!workspace_root()
+            .join("meridian-app/src/operating_model/bounded_context_manifest/compat_7c.rs")
+            .exists());
+        for (rel, text) in production_sources() {
+            assert!(!text.contains("compat_7c"), "{rel} names compat_7c");
         }
-        assert_eq!(
-            facade.matches("pub fn ").count(),
-            2,
-            "only classify_revision and make_record_resolver"
-        );
-        assert!(facade.contains("RevisionClass::classify(revision).as_str()"));
     }
 
     #[test]
@@ -1111,6 +1068,294 @@ mod rust_architecture_conformance_5 {
             "registries/operating-model/fixtures/role-and-human-control.fixtures.json",
             "registries/operating-model/fixtures/context-manifest.fixtures.json",
             "standards/workspace/role-registry.yaml",
+        ] {
+            let target = tree.0.join(rel);
+            std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+            if cases.iter().any(|(_, path)| *path == rel) {
+                std::fs::create_dir_all(&target).unwrap();
+            } else {
+                std::fs::copy(real.join(rel), &target).unwrap();
+            }
+        }
+        for (family, rel) in cases {
+            let failures = run_family(family, &tree.0);
+            assert_eq!(failures.len(), 1, "{family}: {failures:?}");
+            assert!(
+                failures[0].starts_with(&format!("{family}: {rel} could not be read: ")),
+                "{}",
+                failures[0]
+            );
+            assert!(!failures[0].contains("is missing"), "{}", failures[0]);
+            assert!(
+                !failures[0].contains("carries no fixtures"),
+                "{}",
+                failures[0]
+            );
+        }
+    }
+}
+
+/// Gates for `rust-architecture-conformance-6`
+/// (`governance/plans/meridian-rust-migration-program-plan.md` §5.20): the
+/// evidence-and-handoff and field-evaluation command modules are thin
+/// composition/presentation shims, the old `Value` entrypoints and both
+/// temporary facades are gone for good, the core stays free of I/O and the
+/// app free of the concrete adapter, and each family's prefix is applied
+/// exactly once over the real adapter.
+#[cfg(test)]
+mod rust_architecture_conformance_6 {
+    use std::path::{Path, PathBuf};
+
+    const MODULES: [(&str, &str); 2] = [
+        (
+            "src/commands/validate/evidence_and_handoff.rs",
+            "evidence-and-handoff-contract",
+        ),
+        (
+            "src/commands/validate/field_evaluation.rs",
+            "meridian-field-evaluation",
+        ),
+    ];
+
+    fn workspace_root() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .to_path_buf()
+    }
+
+    fn production_text(path: &Path) -> String {
+        let text = std::fs::read_to_string(path)
+            .unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()));
+        // A module file that declares itself test-only (`#![cfg(test)]` as
+        // its first code line) has no production part; nothing is exempted
+        // by its file name.
+        let first_code_line = text
+            .lines()
+            .map(str::trim)
+            .find(|line| !line.is_empty() && !line.starts_with("//"));
+        if first_code_line == Some("#![cfg(test)]") {
+            return String::new();
+        }
+        let end = text.find("#[cfg(test)]").unwrap_or(text.len());
+        text[..end]
+            .lines()
+            .filter(|line| !line.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                rust_files(&path, out);
+            } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+                out.push(path);
+            }
+        }
+    }
+
+    fn sources(krate: &str) -> Vec<(String, String)> {
+        let root = workspace_root();
+        let mut files = Vec::new();
+        rust_files(&root.join(krate), &mut files);
+        files
+            .into_iter()
+            .map(|p| {
+                let rel = p
+                    .strip_prefix(&root)
+                    .unwrap()
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                (rel, production_text(&p))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn evidence_and_handoff_and_field_evaluation_command_modules_are_thin_shims() {
+        for (rel, _) in MODULES {
+            let production = production_text(&Path::new(env!("CARGO_MANIFEST_DIR")).join(rel));
+            for forbidden in [
+                "std::fs",
+                "std::process",
+                "serde_json",
+                "Value",
+                "json_schema",
+                "fixtures",
+                "resolution",
+                "make_record_resolver",
+                "compat_7c",
+                "meridian_core",
+                "evaluate_",
+                "unwrap",
+                "expect(",
+            ] {
+                assert!(
+                    !production.contains(forbidden),
+                    "{rel} contains \"{forbidden}\" — it must stay a thin composition/presentation shim"
+                );
+            }
+            for required in [
+                "app::evaluate(",
+                "FsWorkspaceReader::new(",
+                "with_family_prefix(FAMILY",
+            ] {
+                assert!(
+                    production.contains(required),
+                    "{rel} must call `{required}`"
+                );
+            }
+        }
+    }
+
+    /// The pre-package `Value` entrypoints, resolver closures and both
+    /// temporary facades exist nowhere in production code.
+    #[test]
+    fn evidence_and_handoff_and_field_evaluation_legacy_entrypoints_and_facades_are_gone() {
+        let mut all = sources("meridian-app/src");
+        all.extend(sources("meridian-cli/src"));
+        all.extend(sources("meridian-core/src"));
+        for (rel, text) in all {
+            for legacy in [
+                "evaluate_evidence_and_handoff",
+                "evaluate_field_evaluation",
+                "evidence_and_handoff::EvalSchemas",
+                "field_evaluation::EvalOpts",
+                "RecordResolver",
+                "make_record_resolver",
+                "make_evidence_resolver",
+                "compat_7c",
+                "task_specification::{non_portable_reason",
+                "task_specification::non_portable_reason",
+                "task_specification::resolve_schema_ref",
+            ] {
+                assert!(
+                    !text.contains(legacy),
+                    "{rel} still names the legacy item `{legacy}`"
+                );
+            }
+        }
+    }
+
+    /// The two families' core owners carry no transport or I/O; the app
+    /// never names the concrete adapter.
+    #[test]
+    fn evidence_and_field_evaluation_core_is_pure_and_the_app_is_adapter_free() {
+        for (rel, text) in sources("meridian-core/src")
+            .into_iter()
+            .filter(|(rel, _)| rel.contains("/evidence/") || rel.contains("/field_evaluation/"))
+        {
+            for forbidden in [
+                "serde",
+                "Value",
+                "std::fs",
+                "std::io",
+                "std::env",
+                "std::process",
+                "println!",
+            ] {
+                assert!(!text.contains(forbidden), "{rel} contains \"{forbidden}\"");
+            }
+        }
+        for (rel, text) in sources("meridian-app/src").into_iter().filter(|(rel, _)| {
+            rel.contains("/evidence_and_handoff/")
+                || rel.contains("/field_evaluation/")
+                || rel.contains("/record_resolution")
+                || rel.contains("/run_contract_boundary/")
+        }) {
+            for forbidden in [
+                "FsWorkspaceReader",
+                "std::fs",
+                "std::process",
+                "HashMap",
+                "HashSet",
+            ] {
+                assert!(!text.contains(forbidden), "{rel} contains \"{forbidden}\"");
+            }
+        }
+    }
+
+    #[test]
+    fn evidence_and_handoff_and_field_evaluation_real_adapter_route_is_clean() {
+        let root = workspace_root();
+        assert_eq!(
+            super::evidence_and_handoff::run(&root).failures,
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            super::field_evaluation::run(&root).failures,
+            Vec::<String>::new()
+        );
+    }
+
+    struct TempRoot(PathBuf);
+    impl TempRoot {
+        fn new(label: &str) -> Self {
+            let dir = std::env::temp_dir().join(format!(
+                "rust-architecture-conformance-6-{label}-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            std::fs::create_dir_all(&dir).unwrap();
+            Self(dir)
+        }
+    }
+    impl Drop for TempRoot {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn run_family(family: &str, root: &Path) -> Vec<String> {
+        match family {
+            "evidence-and-handoff-contract" => super::evidence_and_handoff::run(root).failures,
+            _ => super::field_evaluation::run(root).failures,
+        }
+    }
+
+    /// An app-generated failure (every mandatory file absent) carries
+    /// EXACTLY ONE family prefix.
+    #[test]
+    fn evidence_and_handoff_and_field_evaluation_failures_carry_exactly_one_prefix() {
+        let empty = TempRoot::new("empty");
+        for (_, family) in MODULES {
+            let failures = run_family(family, &empty.0);
+            assert_eq!(failures.len(), 1, "{failures:?}");
+            let prefix = format!("{family}: ");
+            assert!(failures[0].starts_with(&prefix), "{}", failures[0]);
+            assert_eq!(failures[0].matches(&prefix).count(), 1, "{}", failures[0]);
+            assert!(failures[0].contains(" is missing; "), "{}", failures[0]);
+        }
+    }
+
+    /// Through the REAL `FsWorkspaceReader`, a directory standing where a
+    /// mandatory file is expected is `ReadError::Io`, never "missing" —
+    /// for the schema of one family and the fixture bundle of the other.
+    #[test]
+    fn evidence_and_handoff_and_field_evaluation_unreadable_is_not_missing() {
+        let cases = [
+            (
+                "evidence-and-handoff-contract",
+                "registries/operating-model/fixtures/evidence-and-handoff.fixtures.json",
+            ),
+            (
+                "meridian-field-evaluation",
+                "registries/operating-model/field-evaluation.schema.json",
+            ),
+        ];
+        let tree = TempRoot::new("directory");
+        let real = workspace_root();
+        for rel in [
+            "registries/operating-model/evidence-and-handoff.schema.json",
+            "registries/operating-model/field-evaluation.schema.json",
+            "registries/operating-model/scoped-record.schema.json",
+            "registries/operating-model/fixtures/evidence-and-handoff.fixtures.json",
+            "registries/operating-model/fixtures/field-evaluation.fixtures.json",
         ] {
             let target = tree.0.join(rel);
             std::fs::create_dir_all(target.parent().unwrap()).unwrap();

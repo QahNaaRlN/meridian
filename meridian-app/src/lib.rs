@@ -101,10 +101,13 @@ mod tests {
     /// its PRODUCTION code — this crate's own module doc comment claims it
     /// (`workspace::WorkspaceReader` is a port; the one concrete adapter
     /// lives in `meridian-cli`), and this test makes the claim mechanically
-    /// checked. Scoped to the text of each file BEFORE its first
-    /// `#[cfg(test)]` (this codebase's own convention: production code
-    /// first, `#[cfg(test)] mod tests { ... }` last — the same exemption
-    /// `meridian-core`'s own equivalent structural test relies on), and
+    /// checked. Scoped to each file's [`production_part`]: the text BEFORE
+    /// its first `#[cfg(test)]` (this codebase's own convention: production
+    /// code first, `#[cfg(test)] mod tests { ... }` last — the same
+    /// exemption `meridian-core`'s own equivalent structural test relies
+    /// on), or nothing for a separate test module file that declares itself
+    /// test-only with the inner attribute `#![cfg(test)]` (never by its
+    /// file name alone), and
     /// comment-only lines are stripped first so a doc comment is free to
     /// NAME `std::fs` while explaining this very guarantee (as several
     /// modules' own doc comments do) without tripping the check.
@@ -121,8 +124,7 @@ mod tests {
         for file in files {
             let text = std::fs::read_to_string(&file)
                 .unwrap_or_else(|e| panic!("{} is readable: {e}", file.display()));
-            let production_end = text.find("#[cfg(test)]").unwrap_or(text.len());
-            let production: String = text[..production_end]
+            let production: String = production_part(&text)
                 .lines()
                 .filter(|line| !line.trim_start().starts_with("//"))
                 .collect::<Vec<_>>()
@@ -142,6 +144,59 @@ mod tests {
                     file.display()
                 );
             }
+        }
+    }
+
+    /// The production part of one source file. A file whose first code
+    /// line (after inner doc comments) is the inner attribute
+    /// `#![cfg(test)]` is a test-only module file and has none — the
+    /// compiler itself drops it outside tests. Any other file is production
+    /// up to its first `#[cfg(test)]`. A file is never exempted by its name.
+    fn production_part(text: &str) -> &str {
+        let first_code_line = text
+            .lines()
+            .map(str::trim)
+            .find(|line| !line.is_empty() && !line.starts_with("//"));
+        if first_code_line == Some("#![cfg(test)]") {
+            return "";
+        }
+        let production_end = text.find("#[cfg(test)]").unwrap_or(text.len());
+        &text[..production_end]
+    }
+
+    /// Regression (`rust-architecture-conformance-6`, corrective round 2):
+    /// an explicitly test-only module file may use `std::fs`; an ordinary
+    /// production file — including one named `tests.rs`, or one that
+    /// merely mentions `#![cfg(test)]` anywhere but its head — is still
+    /// checked.
+    #[test]
+    fn only_an_explicit_test_only_module_file_is_exempt_from_the_purity_gate() {
+        let test_only = "//! Tests.\n#![cfg(test)]\n\nuse std::fs::read_to_string;\n";
+        assert_eq!(production_part(test_only), "");
+        let production = "//! Mentions #![cfg(test)] in a doc.\nuse std::fs::read_to_string;\n";
+        assert!(production_part(production).contains("std::fs::"));
+        let late_marker = "fn f() {}\nconst S: &str = \"#![cfg(test)]\";\nuse std::fs::read;\n";
+        assert!(production_part(late_marker).contains("std::fs::"));
+        let outer = "use std::fs::read;\n#[cfg(test)]\nmod tests { use std::fs::write; }\n";
+        assert_eq!(production_part(outer), "use std::fs::read;\n");
+
+        let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/operating_model");
+        for family in ["evidence_and_handoff", "field_evaluation"] {
+            let tests = std::fs::read_to_string(src.join(family).join("tests.rs")).unwrap();
+            assert_eq!(
+                production_part(&tests),
+                "",
+                "{family}/tests.rs is test-only"
+            );
+            assert!(
+                tests.contains("std::fs::"),
+                "{family}/tests.rs keeps its test I/O"
+            );
+            let module = std::fs::read_to_string(src.join(family).join("mod.rs")).unwrap();
+            assert!(
+                production_part(&module).contains("pub fn evaluate("),
+                "{family}/mod.rs stays production"
+            );
         }
     }
 
@@ -176,8 +231,7 @@ mod tests {
         for file in files {
             let text = std::fs::read_to_string(&file)
                 .unwrap_or_else(|e| panic!("{} is readable: {e}", file.display()));
-            let production_end = text.find("#[cfg(test)]").unwrap_or(text.len());
-            let production: String = text[..production_end]
+            let production: String = production_part(&text)
                 .lines()
                 .filter(|line| !line.trim_start().starts_with("//"))
                 .collect::<Vec<_>>()

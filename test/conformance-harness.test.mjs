@@ -40,6 +40,8 @@ import { evaluateControlledRuleIntake } from '../scripts/lib/controlled-rule-int
 import { makeRecordResolver } from '../scripts/lib/context-manifest.mjs';
 import { evaluateInstructionSourceRegistry } from '../scripts/lib/instruction-source-registry.mjs';
 import { evaluateExistingProjectCompatibilityMode } from '../scripts/lib/existing-project-compatibility-mode.mjs';
+import { evaluateEvidenceAndHandoff } from '../scripts/lib/evidence-and-handoff.mjs';
+import { evaluateFieldEvaluation } from '../scripts/lib/field-evaluation.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -2350,6 +2352,145 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
     fs.rmSync(dir, { recursive: true, force: true });
     createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Package `rust-architecture-conformance-6` (§5.20.3 points 10 and 14):
+// the mandatory-read I/O boundary of `evidence-and-handoff-contract` and
+// `meridian-field-evaluation` (`COMPATIBILITY.md`), the same accepted
+// Rust-native distinction package 5 established for the run-contract
+// families. One mutated tree replaces the fixture bundle of the handoff
+// family and the schema of the field-evaluation family with directories
+// (the portable non-`ENOENT` failure). Node's `readIfExists` reports its
+// old "carries no fixtures" / "is missing" text; the Rust port reports the
+// distinct "<path> could not be read: …". Both sides stay failing with
+// exactly one FAIL per family; the OS-dependent tail is not compared.
+// ---------------------------------------------------------------------------
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-evidence-field-mandatory-io-'));
+  createdTempDirs.push(dir);
+  try {
+    copyRepoWithoutGitOrTarget(dir);
+    const cases = [
+      {
+        family: 'evidence-and-handoff-contract',
+        rel: 'registries/operating-model/fixtures/evidence-and-handoff.fixtures.json',
+        nodeText: 'evidence-and-handoff-contract: the schema carries no fixtures (registries/operating-model/fixtures/evidence-and-handoff.fixtures.json); ',
+      },
+      {
+        family: 'meridian-field-evaluation',
+        rel: 'registries/operating-model/field-evaluation.schema.json',
+        nodeText: 'meridian-field-evaluation: registries/operating-model/field-evaluation.schema.json is missing; ',
+      },
+    ];
+    for (const c of cases) {
+      const target = path.join(dir, ...c.rel.split('/'));
+      fs.rmSync(target);
+      fs.mkdirSync(target);
+    }
+
+    const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+      cwd: ROOT,
+      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      encoding: 'utf8',
+    });
+    check('намеренная граница: Node-эталон сообщает прежний "carries no fixtures"/"is missing", когда обязательный файл evidence-and-handoff-contract / meridian-field-evaluation — каталог (readIfExists глотает EISDIR)', () => {
+      assert(nodeRun.error === undefined, `spawnSync не должен был сообщить об ошибке запуска, получено: ${nodeRun.error}`);
+      assert(nodeRun.status !== 0, `Node должен остаться failing, получен код ${nodeRun.status}`);
+      const lines = nodeRun.stdout.split(/\r?\n/);
+      for (const c of cases) {
+        const relevant = lines.filter((l) => l.startsWith(`FAIL  ${c.family}:`));
+        assert(relevant.length === 1, `ожидался ровно один ${c.family} FAIL, получено: ${JSON.stringify(relevant)}`);
+        assert(
+          relevant[0].startsWith(`FAIL  ${c.nodeText}`),
+          `ожидался прежний Node-текст "${c.nodeText}", получено: ${JSON.stringify(relevant[0])}`,
+        );
+      }
+    });
+
+    const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    check('намеренная граница: реальный `meridian validate` сообщает отдельный "<путь> could not be read", когда обязательный файл evidence-and-handoff-contract / meridian-field-evaluation — каталог (вердикт failing, как и у Node)', () => {
+      assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
+      assert(rustRun.status !== 0, `Rust должен остаться failing, получен код ${rustRun.status}`);
+      let value;
+      try {
+        value = JSON.parse(rustRun.stdout.trim());
+      } catch (e) {
+        throw new Error(`ожидался ровно один JSON-документ на stdout, получено: ${JSON.stringify(rustRun.stdout)} (${e.message})`);
+      }
+      assert(value.result.ok === false, `ожидался result.ok: false, получено ${JSON.stringify(value.result.ok)}`);
+      for (const c of cases) {
+        const relevant = value.result.failures.filter((f) => f.startsWith(`${c.family}:`));
+        assert(relevant.length === 1, `ожидался ровно один ${c.family} FAIL, получено: ${JSON.stringify(relevant)}`);
+        assert(
+          relevant[0].startsWith(`${c.family}: ${c.rel} could not be read:`),
+          `ожидался отдельный "could not be read", получено: ${JSON.stringify(relevant[0])}`,
+        );
+        assert(
+          !relevant[0].includes('is missing') && !relevant[0].includes('carries no fixtures'),
+          `Rust не должен сворачивать I/O-ошибку в текст отсутствия, получено: ${JSON.stringify(relevant[0])}`,
+        );
+      }
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Package `rust-architecture-conformance-6` (§5.20.3 point 14): the Node
+// halves of the two matched library-level schema short-circuit cases
+// (`COMPATIBILITY.md`). The Rust halves are
+// `meridian-app/src/operating_model/evidence_and_handoff/tests.rs::evidence_and_handoff_a_schema_violation_short_circuits_before_the_domain`
+// and `meridian-app/src/operating_model/field_evaluation/tests.rs::field_evaluation_a_schema_violation_short_circuits_before_the_domain`:
+// the same real fixture document with the same two mutations — a defect
+// ONLY the schema catches (a duplicated `covers` entry against
+// `uniqueItems`; an `observed_at` breaking the `date_str` pattern) and an
+// independent domain defect. The Rust route stops at the schema gate (only
+// schema diagnostics); the Node libraries, called directly (bypassing
+// `kernel-validate.mjs`, which reports only `p[0]`, the same schema
+// diagnostic on both sides), also compute the domain diagnostics. The
+// difference is the full list of SECONDARY diagnostics only.
+// ---------------------------------------------------------------------------
+{
+  const envelopeSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/scoped-record.schema.json'), 'utf8'));
+  const ehSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/evidence-and-handoff.schema.json'), 'utf8'));
+  const ehBundle = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/fixtures/evidence-and-handoff.fixtures.json'), 'utf8'));
+  const handoff = JSON.parse(JSON.stringify(ehBundle.valid[0].spec));
+  const covers = handoff.payload.evidence[0].covers;
+  assert(Array.isArray(covers) && covers.length > 0, 'evidence-and-handoff.fixtures.json valid[0].payload.evidence[0].covers must be a non-empty array to duplicate');
+  covers.push(covers[0]);
+  handoff.payload.outcome.statement = '/etc/passwd';
+  check('библиотечный (не через kernel-validate.mjs) Node-прогон: evaluateEvidenceAndHandoff возвращает И диагностику схемы (uniqueItems), И независимые доменные диагностики на документе, который Rust-маршрут останавливает на schema gate — парный Rust-тест evidence_and_handoff_a_schema_violation_short_circuits_before_the_domain', () => {
+    const problems = evaluateEvidenceAndHandoff(handoff, {
+      recordSchema: ehSchema,
+      envelopeSchema,
+      resolveRecords: makeRecordResolver(ehBundle.resolution),
+    });
+    assert(problems[0].includes('/payload/evidence/0/covers'), `первой ожидалась диагностика схемы по covers, получено: ${JSON.stringify(problems)}`);
+    assert(problems.some((p) => p.includes('outcome statement contains')), `ожидалась доменная диагностика outcome statement, получено: ${JSON.stringify(problems)}`);
+    assert(problems.some((p) => p.includes('more than once')), `ожидалась доменная диагностика повторного covers, получено: ${JSON.stringify(problems)}`);
+  });
+
+  const feSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/field-evaluation.schema.json'), 'utf8'));
+  const feBundle = JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/fixtures/field-evaluation.fixtures.json'), 'utf8'));
+  const source = feBundle.valid.find((c) => c.note === 'наблюдение obs-mech-correct-1');
+  assert(source, 'field-evaluation.fixtures.json must carry a "наблюдение obs-mech-correct-1" valid fixture');
+  const observation = JSON.parse(JSON.stringify(source.spec));
+  observation.payload.observed_at = '2026-8-3';
+  observation.payload.measurement.basis = '/etc/passwd';
+  check('библиотечный (не через kernel-validate.mjs) Node-прогон: evaluateFieldEvaluation возвращает И диагностику схемы (date_str pattern), И независимые доменные диагностики на документе, который Rust-маршрут останавливает на schema gate — парный Rust-тест field_evaluation_a_schema_violation_short_circuits_before_the_domain', () => {
+    const problems = evaluateFieldEvaluation(observation, {
+      recordSchema: feSchema,
+      envelopeSchema,
+      resolveRecords: makeRecordResolver(feBundle.resolution),
+    });
+    assert(problems[0].includes('/payload/observed_at'), `первой ожидалась диагностика схемы по observed_at, получено: ${JSON.stringify(problems)}`);
+    assert(problems.some((p) => p.includes('observed_at is not a valid date')), `ожидалась доменная диагностика даты, получено: ${JSON.stringify(problems)}`);
+    assert(problems.some((p) => p.includes('measurement.basis contains')), `ожидалась доменная диагностика basis, получено: ${JSON.stringify(problems)}`);
+  });
 }
 
 // --- temp-directory hygiene: every singleCaseFixture() directory must have

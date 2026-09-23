@@ -5,8 +5,9 @@
 //! `String` that the boundary turns into [`super::CaseOutcome::ConversionDrift`].
 
 use meridian_core::run_contracts::{
-    ActorRef, PortableRef, RecordAuthority, RecordEnvelope, RecordOrigin, RecordText, RunId,
-    RunStateScope, ScopeRevision, SourcedOriginKind, TransitionSequence,
+    ActorRef, PinSha256, PinnedRecordKind, PinnedRef, PortableRef, RecordAuthority, RecordEnvelope,
+    RecordOrigin, RecordText, RunId, RunStateScope, ScopeRevision, SourcedOriginKind,
+    TransitionSequence,
 };
 use meridian_core::types::{AuthorityKind, OriginKind, SemanticId, WorkspaceId};
 use serde::Deserialize;
@@ -35,6 +36,44 @@ pub(crate) struct AuthorityDto {
     pub kind: String,
     pub authority_ref: String,
     pub decision_ref: Option<String>,
+}
+
+/// A closed structured pinned reference
+/// (`definitions.pinned_ref` of the context-manifest, evidence-and-handoff
+/// and field-evaluation schemas; the field-evaluation schema admits no
+/// `run_id`, which its schema gate rejects before this DTO).
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct PinnedRefDto {
+    record_type: String,
+    id: String,
+    #[serde(default)]
+    run_id: Option<String>,
+    reference: String,
+    #[serde(default)]
+    revision: Option<String>,
+    #[serde(default)]
+    sha256: Option<String>,
+}
+
+impl PinnedRefDto {
+    pub(crate) fn into_pin(self, field: &str) -> Converted<PinnedRef> {
+        Ok(PinnedRef {
+            record_type: closed(field, &self.record_type, PinnedRecordKind::parse)?,
+            id: semantic_id(field, self.id)?,
+            run_id: self.run_id.map(|v| semantic_id(field, v)).transpose()?,
+            reference: portable(field, self.reference)?,
+            revision: optional_text(field, self.revision)?,
+            sha256: sha256(field, self.sha256)?,
+        })
+    }
+}
+
+/// A schema `sha256` (64 hexadecimal characters).
+pub(crate) fn sha256(field: &str, value: Option<String>) -> Converted<Option<PinSha256>> {
+    value
+        .map(|v| PinSha256::new(v).map_err(|e| format!("{field}: {e}")))
+        .transpose()
 }
 
 /// The envelope header fields of one record DTO, borrowed for conversion.

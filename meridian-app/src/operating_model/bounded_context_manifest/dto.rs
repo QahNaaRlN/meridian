@@ -4,16 +4,15 @@
 
 use meridian_core::run_contracts::{
     ApplicableNorm, AuthoritativeSource, ContextManifestInput, IdentifiedItem, LifecycleStage,
-    ManifestBody, PinSha256, PinnedRecordKind, PinnedRef, PinnedRefs, RunStateCheckpoint,
-    WorkStatus,
+    ManifestBody, PinnedRefs, RunStateCheckpoint, WorkStatus,
 };
 use serde::Deserialize;
 
 use crate::operating_model::execution_state::BlockerDto;
 use crate::operating_model::run_contract_boundary::envelope::{
     closed, optional_text, portable, portable_list, record_envelope, run_state_scope,
-    scope_revision, semantic_id, text, AuthorityDto, Converted, EnvelopeParts, OriginDto,
-    RunStateScopeDto,
+    scope_revision, semantic_id, sha256, text, AuthorityDto, Converted, EnvelopeParts, OriginDto,
+    PinnedRefDto, RunStateScopeDto,
 };
 
 const RECORD_TYPE: &str = "context-manifest";
@@ -31,20 +30,6 @@ pub(super) struct ContextManifestDto {
     origin: OriginDto,
     authority: AuthorityDto,
     payload: PayloadDto,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct PinnedRefDto {
-    record_type: String,
-    id: String,
-    #[serde(default)]
-    run_id: Option<String>,
-    reference: String,
-    #[serde(default)]
-    revision: Option<String>,
-    #[serde(default)]
-    sha256: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -128,25 +113,6 @@ struct PayloadDto {
     known_gaps: Vec<GapDto>,
     blockers: Vec<BlockerDto>,
     run_state_checkpoint: CheckpointDto,
-}
-
-fn sha256(field: &str, value: Option<String>) -> Converted<Option<PinSha256>> {
-    value
-        .map(|v| PinSha256::new(v).map_err(|e| format!("{field}: {e}")))
-        .transpose()
-}
-
-impl PinnedRefDto {
-    fn into_pin(self, field: &str) -> Converted<PinnedRef> {
-        Ok(PinnedRef {
-            record_type: closed(field, &self.record_type, PinnedRecordKind::parse)?,
-            id: semantic_id(field, self.id)?,
-            run_id: self.run_id.map(|v| semantic_id(field, v)).transpose()?,
-            reference: portable(field, self.reference)?,
-            revision: optional_text(field, self.revision)?,
-            sha256: sha256(field, self.sha256)?,
-        })
-    }
 }
 
 fn pins(

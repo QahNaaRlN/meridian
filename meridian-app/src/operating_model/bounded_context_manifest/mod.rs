@@ -5,7 +5,7 @@
 //! ```text
 //! WorkspaceReader
 //!   -> context-manifest.schema.json + scoped-record.schema.json + fixture bundle
-//!   -> bundle `resolution` map -> typed ResolutionCatalogue (resolution.rs)
+//!   -> bundle `resolution` map -> typed ResolutionCatalogue (super::record_resolution)
 //!   -> schema gate -> private closed DTO (dto.rs)
 //!   -> meridian_core::run_contracts::ContextManifestInput
 //!   -> meridian_core::run_contracts::check_context_manifest(input, Some(&catalogue))
@@ -15,17 +15,14 @@
 //! Every file is mandatory; `ReadError::NotFound` keeps the Node
 //! reference's text and any other `ReadError::Io` is reported as
 //! "… could not be read: …" (`COMPATIBILITY.md`).
-//!
-//! [`compat_7c`] is the temporary facade for the two 7c families only.
 
-pub mod compat_7c;
 mod dto;
-mod resolution;
 
 use meridian_core::run_contracts::{check_context_manifest, ContextManifest, ResolutionCatalogue};
 use meridian_core::types::Diagnostic;
 use serde_json::Value;
 
+use super::record_resolution as resolution;
 use super::run_contract_boundary::{
     assert_supported, evaluate_record, fail, fixture_cases, non_empty_array, parse_json,
     report_invalid_case, report_valid_case, unreadable, workspace_path, CaseOutcome, CasePhrases,

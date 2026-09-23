@@ -18,12 +18,13 @@ use crate::types::{Diagnostic, SemanticId};
 use super::envelope::{check_envelope, RecordEnvelope, RecordFamily};
 use super::execution_state::{check_blocker_list, check_unique_refs, Blocker};
 use super::identity::{PortableRef, RecordText, RunStateScope, ScopeRevision};
-use super::pinned_ref::{check_pinned_ref, PinSite, PinnedRef, PinnedSlot};
+use super::pinned_ref::{check_pinned_ref, site_label, PinSite, PinnedRef, PinnedSlot};
 use super::resolution::{
     check_resolved_entry, response_scope_revision_json, response_text, response_text_json,
     response_text_set, same_resolved_edition, same_step, step_json, ResolutionCatalogue,
-    ResolvedEntry, ResponseField,
+    ResolvedEntry,
 };
+use super::response::ResponseField;
 use super::revision::{pin_defect, PinSha256, RevisionClass};
 use super::vocabulary::{LifecycleStage, WorkStatus};
 use super::{fail, json_quote, NextStep};
@@ -518,9 +519,10 @@ fn check_resolution(
     // manifest's three, then the checkpoint's three).
     let manifest: [Option<&ResolvedEntry>; 3] = PinnedSlot::ALL.map(|slot| {
         check_resolved_entry(
+            RecordFamily::ContextManifest,
             id,
-            PinSite::Manifest,
-            slot,
+            &site_label(PinSite::Manifest, slot),
+            slot.kind(),
             body.pins.get(slot),
             catalogue,
             problems,
@@ -528,9 +530,10 @@ fn check_resolution(
     });
     let checkpoint: [Option<&ResolvedEntry>; 3] = PinnedSlot::ALL.map(|slot| {
         check_resolved_entry(
+            RecordFamily::ContextManifest,
             id,
-            PinSite::Checkpoint,
-            slot,
+            &site_label(PinSite::Checkpoint, slot),
+            slot.kind(),
             cp.pins.get(slot),
             catalogue,
             problems,
@@ -636,9 +639,8 @@ mod tests {
     use crate::run_contracts::envelope::tests::envelope;
     use crate::run_contracts::identity::RunId;
     use crate::run_contracts::pinned_ref::PinnedRecordKind;
-    use crate::run_contracts::resolution::{
-        ForeignValue, ResolvedStateResponse, ResponseValueKind,
-    };
+    use crate::run_contracts::resolution::ResolvedStateResponse;
+    use crate::run_contracts::response::{ForeignValue, ResponseValueKind};
     use crate::types::WorkspaceId;
 
     fn text(s: &str) -> RecordText {
@@ -732,9 +734,7 @@ mod tests {
             revision: present("v1.0.0"),
             content_digest: ResponseField::Absent,
             source_bytes: ResponseField::Absent,
-            resolved_state: ResponseField::Absent,
-            linked_run_ref: ResponseField::Absent,
-            other_fields: Vec::new(),
+            ..ResolvedEntry::default()
         }
     }
 

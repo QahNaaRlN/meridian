@@ -29,8 +29,11 @@
 //!   history of one run;
 //! - [`revision`] — revision classification and the pin rule;
 //! - [`pinned_ref`] — pinned-record kinds and slots;
-//! - [`resolution`] — the typed resolution catalogue and the resolved
-//!   checkpoint vocabulary;
+//! - [`response`] — the typed shape of a transformer response, shared by
+//!   every resolving family;
+//! - [`resolution`] — the typed resolution catalogue, the ONE closed
+//!   transformer-response contract (selected per [`RecordFamily`]) and the
+//!   resolved checkpoint vocabulary;
 //! - [`context_manifest`] — the bounded context manifest.
 //!
 //! Every public `check_*` returns its accepted type only when it found
@@ -45,6 +48,7 @@ pub mod human_control;
 pub mod identity;
 pub mod pinned_ref;
 pub mod resolution;
+pub mod response;
 pub mod revision;
 pub mod roles;
 pub mod vocabulary;
@@ -72,8 +76,13 @@ pub use identity::{
 };
 pub use pinned_ref::{PinnedRecordKind, PinnedRef, PinnedSlot};
 pub use resolution::{
-    ForeignValue, ResolutionCatalogue, ResolvedEntry, ResolvedStateField, ResolvedStateResponse,
-    ResponseField, ResponseItem, ResponseValueKind, RESOLVED_ENTRY_COMMON_KEYS,
+    ResolutionCatalogue, ResolvedEntry, ResolvedStateField, ResolvedStateResponse,
+    RESOLVED_ENTRY_COMMON_KEYS,
+};
+pub use response::{
+    EvidenceResultResponse, ForeignValue, JsonNumber, MeasurementFields, ObservationResponse,
+    ResponseField, ResponseItem, ResponseValueKind, SpecificationResponse, WindowFields,
+    KNOWN_RESPONSE_KEYS,
 };
 pub use revision::{PinSha256, PinSha256Error, RevisionClass};
 pub use roles::{check_role_registry, RoleCatalogue, RoleDefinition, RoleRegistryInput};
@@ -101,7 +110,7 @@ fn has_cyrillic(s: &str) -> bool {
 }
 
 /// `JSON.stringify` of a string, as the diagnostics quote it.
-fn json_quote(s: &str) -> String {
+pub(crate) fn json_quote(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 2);
     out.push('"');
     for c in s.chars() {

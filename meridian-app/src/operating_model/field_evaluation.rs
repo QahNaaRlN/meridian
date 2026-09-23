@@ -38,7 +38,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde_json::Value;
 
-use super::bounded_context_manifest::{
+use super::bounded_context_manifest::compat_7c::{
     classify_revision, RecordResolver, RESOLVED_ENTRY_COMMON_KEYS,
 };
 use super::task_specification::{non_portable_reason, resolve_schema_ref};

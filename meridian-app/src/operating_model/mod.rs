@@ -8,8 +8,16 @@
 //! reference pilot: its domain types and pure checks live in
 //! [`meridian_core::controlled_rule_intake`], this crate owns only its
 //! closed transport DTOs, DTO -> domain conversion and orchestration, and
-//! it returns typed [`meridian_core::types::Diagnostic`]s, not strings. The
-//! remaining submodules are not yet converted: each still takes an
+//! it returns typed [`meridian_core::types::Diagnostic`]s, not strings.
+//! [`execution_state`], [`role_and_human_control`] and
+//! [`bounded_context_manifest`] follow the same route over one
+//! [`crate::workspace::WorkspaceReader`] (`rust-architecture-conformance-5`):
+//! their domain is [`meridian_core::run_contracts`], their closed DTOs and
+//! shared schema gate are private to this crate, and each exposes one
+//! `evaluate(reader)` returning prefix-free diagnostics;
+//! `bounded_context_manifest::compat_7c` is the temporary facade for the
+//! two 7c families only. The remaining unconverted submodules each still
+//! take an
 //! already-parsed [`serde_json::Value`] document plus the schema(s) it
 //! composes with, and returns a flat list of problem strings — empty means
 //! valid. None of them read a file, spawn Git, touch an environment
@@ -28,5 +36,6 @@ pub mod functional_parity;
 pub mod instruction_source_registry;
 pub mod reference_portability;
 pub mod role_and_human_control;
+mod run_contract_boundary;
 pub mod task_pattern_registry;
 pub mod task_specification;

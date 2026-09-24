@@ -11,5 +11,5 @@ workspace = true
 [dependencies]
 meridian-app = { path = "../meridian-app" }
 meridian-core = { path = "../meridian-core" }
-rusqlite = { version = "0.40.2", default-features = false, features = ["bundled"] }
+rusqlite = { version = "0.40.2", default-features = false, features = ["bundled", "backup"] }
 serde_json = "1.0.151"

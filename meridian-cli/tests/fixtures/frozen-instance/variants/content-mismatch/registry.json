@@ -1,0 +1,344 @@
+{
+  "$schema": "../../registries/operating-model/instance-data-migration.schema.json",
+  "schema_version": 1,
+  "registry_id": "instance-data-migration",
+  "title": "Sample frozen-Instance migration",
+  "migration_plans": [
+    {
+      "$schema": "registries/operating-model/scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-frozen-instance-plan",
+      "title": "Sample frozen-Instance migration plan",
+      "record_type": "instance-migration-plan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-directive:sample-frozen-instance"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "instance-data-migration-run:sample-frozen-instance-plan"
+      },
+      "payload": {
+        "source": {
+          "revision": "8b82b86238dc6b47dd578067c564e332e9c06fa8",
+          "digest": {
+            "algorithm": "sha-256",
+            "value": "fb6627013317038e5d96d8a5cf39c7518ec4fb048a414c203e1be1c3d617821d"
+          },
+          "repository_ref": "sample-frozen-instance",
+          "working_tree_clean": true,
+          "qualification": "reproducible"
+        },
+        "record_units": [
+          {
+            "id": "notes-readme-txt",
+            "unit_ref": "notes/readme.txt",
+            "classification_basis": "fixture unit notes-readme-txt, classified by its own carrier and position"
+          },
+          {
+            "id": "inventory-items-alpha",
+            "unit_ref": "inventory/items.yaml#items/alpha",
+            "classification_basis": "fixture unit inventory-items-alpha, classified by its own carrier and position"
+          },
+          {
+            "id": "inventory-items-beta-gamma",
+            "unit_ref": "inventory/items.yaml#items/beta%20gamma",
+            "classification_basis": "fixture unit inventory-items-beta-gamma, classified by its own carrier and position"
+          },
+          {
+            "id": "rule-applicability-0",
+            "unit_ref": "rule-resolution/applicability.yaml#records/0",
+            "classification_basis": "fixture unit rule-applicability-0, classified by its own carrier and position"
+          },
+          {
+            "id": "rule-applicability-1",
+            "unit_ref": "rule-resolution/applicability.yaml#records/1",
+            "classification_basis": "fixture unit rule-applicability-1, classified by its own carrier and position"
+          },
+          {
+            "id": "foreign-keep-txt",
+            "unit_ref": "foreign/keep.txt",
+            "classification_basis": "fixture unit foreign-keep-txt, classified by its own carrier and position"
+          }
+        ],
+        "mappings": [
+          {
+            "unit_id": "notes-readme-txt",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "notes-readme-txt",
+              "title": "notes/readme.txt",
+              "record_type": "workspace-file",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:notes-readme-txt"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "text/plain",
+                "encoding": "utf-8",
+                "content": "# Sample notes\r\n\r\nA carrier kept byte for byte, CRLF included.\r\n",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "6b2f8664142adac3c9981db33ae9e609fc4ffb51e93a18b0df779fce15a2deef"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "inventory-items-alpha",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "inventory-items-alpha",
+              "title": "Item alpha",
+              "record_type": "inventory-item",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:inventory-items-alpha"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"id\":\"alpha\",\"size\":99,\"tags\":[\"first\"]}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "870d323d4ee7104be31e5ad436105ec3385660e69e4aa5467b2f6e44d1f78648"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "inventory-items-beta-gamma",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "inventory-items-beta-gamma",
+              "title": "Item beta gamma",
+              "record_type": "inventory-item",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:inventory-items-beta-gamma"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"id\":\"beta gamma\",\"size\":2}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "1fd733274a3d997038efa14df7bcafc7f25d8376cc05f49b6c3abb21fdb14b86"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "rule-applicability-0",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "rule-applicability-0",
+              "title": "Applicability of AGENTS.md#operational-roles",
+              "record_type": "rule-applicability-record",
+              "scope": {
+                "type": "repository-scope",
+                "id": "sample-repo",
+                "workspace_id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:rule-applicability-0"
+              },
+              "authority": {
+                "kind": "repository-maintainer",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"activation\":\"always\",\"digest\":\"013e7155d519b0a183ad8bd70395ff7fd910939f2b7f5cb797a332c855e9d57b\",\"intake_record\":{\"recorded_at\":\"2026-01-01\",\"register\":\"instruction-intake/sample-repo.yaml\",\"verdict\":\"keep-local\"},\"norm\":{\"path\":\"AGENTS.md\",\"region\":\"operational-roles\",\"repository\":\"sample-repo\"},\"recorded_at\":\"2026-01-02\",\"repository\":\"sample-repo\",\"scope\":\"repository\",\"source\":\"repository\",\"status\":\"resolved\"}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "7c5ea2ec49e157ed752bddb8b7996da15c06a2cd10836197a57cfd56c4c9eb5d"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "rule-applicability-1",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "rule-applicability-1",
+              "title": "Applicability of AGENTS.md#repository-context",
+              "record_type": "rule-applicability-record",
+              "scope": {
+                "type": "repository-scope",
+                "id": "sample-repo",
+                "workspace_id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:rule-applicability-1"
+              },
+              "authority": {
+                "kind": "repository-maintainer",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"activation\":\"path-glob\",\"digest\":\"cc5463dc3a765c3cedc18af3544063dd119ce25ae1b849537bfb360b4a0aebb1\",\"globs\":[\"src/**\",\"docs/**\"],\"intake_record\":{\"recorded_at\":\"2026-01-01\",\"register\":\"instruction-intake/sample-repo.yaml\",\"verdict\":\"keep-local\"},\"norm\":{\"path\":\"AGENTS.md\",\"region\":\"repository-context\",\"repository\":\"sample-repo\"},\"recorded_at\":\"2026-01-02\",\"repository\":\"sample-repo\",\"scope\":\"repository\",\"source\":\"repository\",\"status\":\"resolved\"}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "866e56c180db396a7e1fe5b361142ca62d6d7f945d1bb12b09d39336bba035a4"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "foreign-keep-txt",
+            "disposition": "retained-transitional",
+            "retained_reason": "foreign content stays transitional until its owner decides"
+          }
+        ],
+        "rollback": {
+          "source_snapshot_ref": "snapshot:sample-frozen-instance@8b82b86238dc6b47dd578067c564e332e9c06fa8",
+          "plan": "deterministic-reconstruction",
+          "deterministic_plan_ref": "deterministic-plan:sample-frozen-instance-plan",
+          "rewrites_published_history": false
+        },
+        "verification": {
+          "coverage": {
+            "status": "verified",
+            "evidence_ref": "evidence:coverage-sample-frozen-instance-plan"
+          },
+          "applicability_preservation": {
+            "status": "verified",
+            "evidence_ref": "evidence:applicability-sample-frozen-instance-plan"
+          },
+          "overall_status": "VERIFIED"
+        },
+        "plan_fingerprint": "2e4bf7b6c6274dd4e0ea551bd0a37845d30c000b2d5a06cd29da47e9b5966402",
+        "idempotency_key": "de85ae24ad41260cbd19fabb5a71fdfc861bae73dee9dc79f79a690ae0bc2955"
+      }
+    }
+  ]
+}

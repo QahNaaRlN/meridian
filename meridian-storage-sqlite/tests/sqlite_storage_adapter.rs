@@ -161,7 +161,7 @@ fn creates_and_reopens_the_same_database_without_reapplying_the_migration() {
 
     {
         let storage = SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
-        assert_eq!(storage.schema_version().unwrap(), 2);
+        assert_eq!(storage.schema_version().unwrap(), 3);
         storage
             .put(request(
                 project_key("branch-naming"),
@@ -179,7 +179,7 @@ fn creates_and_reopens_the_same_database_without_reapplying_the_migration() {
     // `CREATE TABLE` of already-existing tables) and must still see the data
     // written before the first handle was dropped.
     let reopened = SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
-    assert_eq!(reopened.schema_version().unwrap(), 2);
+    assert_eq!(reopened.schema_version().unwrap(), 3);
     let record = reopened
         .get(&project_key("branch-naming"))
         .unwrap()
@@ -200,11 +200,11 @@ fn foreign_keys_pragma_is_on() {
 }
 
 #[test]
-fn all_nine_tables_exist_and_are_queryable_and_schema_version_is_the_one_supported_version() {
+fn all_ten_tables_exist_and_are_queryable_and_schema_version_is_the_one_supported_version() {
     let __dir_tables = TempDir::new("tables");
     let storage =
         SqliteStorage::open_path(__dir_tables.join("db.sqlite3"), workspace_metadata()).unwrap();
-    assert_eq!(TABLE_NAMES.len(), 9);
+    assert_eq!(TABLE_NAMES.len(), 10);
     for table in TABLE_NAMES {
         // Every table exists and is queryable; `schema_migrations` and
         // `database_metadata` alone are never empty post-bootstrap — each
@@ -220,7 +220,7 @@ fn all_nine_tables_exist_and_are_queryable_and_schema_version_is_the_one_support
             "table {table} has an unexpected row count"
         );
     }
-    assert_eq!(storage.schema_version().unwrap(), 2);
+    assert_eq!(storage.schema_version().unwrap(), 3);
 }
 
 // ---------------------------------------------------------------------------
@@ -235,7 +235,7 @@ fn rejects_an_unrecognised_schema_version_with_a_typed_error() {
     {
         let raw = rusqlite::Connection::open(&path).unwrap();
         raw.execute(
-            "UPDATE schema_migrations SET version = 99 WHERE version = 2",
+            "UPDATE schema_migrations SET version = 99 WHERE version = 3",
             [],
         )
         .unwrap();

@@ -5,7 +5,7 @@
 //! The only crate that knows SQLite exists (`meridian-rust-sqlite-architecture.md`
 //! §"Принятое решение" 4): it implements
 //! [`meridian_app::storage::RecordRepository`] and
-//! [`meridian_app::storage::EvidenceRepository`] over nine tables
+//! [`meridian_app::storage::EvidenceRepository`] over ten tables
 //! (`meridian-rust-target-architecture.md` §4.1), owning the connection,
 //! schema, schema-migration ladder, database-role guard, transactions,
 //! backup and row⇄domain-type translation. It carries no CLI, no workspace
@@ -16,11 +16,15 @@
 //! (`meridian-rust-migration-program-plan.md` §4) established this crate's
 //! original content; corrective package `knowledge-agent-foundation` (§5.4)
 //! adds database roles, schema migration beyond version 1, and the
-//! role-boundary guard on every write. `init`/`import`/`export`/`migration`
-//! CLI commands belong to later packages (`meridian-cli-foundation`,
-//! `meridian-cli-migration`).
+//! role-boundary guard on every write. Package `meridian-cli-migration` adds
+//! schema version 3 (the migration-run journal: separate append-only
+//! `migration_runs` and `migration_rollbacks` facts) and the
+//! `MigrationRepository` implementation (`migration`): one transaction per
+//! apply, checkpoints through SQLite's online backup API, and a verified
+//! restore on rollback.
 
 mod codec;
+mod migration;
 mod open_error;
 mod schema;
 mod storage;
@@ -28,9 +32,10 @@ mod storage;
 pub use open_error::OpenError;
 pub use storage::SqliteStorage;
 
-/// Names of the nine tables a fully-migrated database carries
+/// Names of the ten tables a fully-migrated database carries
 /// (`meridian-rust-target-architecture.md` §4.1; `database_metadata` added
-/// by `meridian-rust-migration-program-plan.md` §5.4) — re-exported for
+/// by `meridian-rust-migration-program-plan.md` §5.4, `migration_rollbacks`
+/// by §5.22.5) — re-exported for
 /// tests and diagnostics that want to check schema completeness without
 /// duplicating the list.
 pub use schema::TABLE_NAMES;

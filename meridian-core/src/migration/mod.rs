@@ -16,6 +16,7 @@
 //! comparison live here once and are reused by both contracts and by the
 //! qualifications that compose them (`crate::qualification`).
 
+pub mod applicability;
 mod base64;
 pub mod content;
 pub mod export;
@@ -24,6 +25,8 @@ pub mod plan;
 pub(crate) mod projection;
 pub mod record;
 pub mod resolved;
+pub mod run;
+pub mod write_set;
 
 mod owner_decision;
 

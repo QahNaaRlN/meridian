@@ -91,6 +91,14 @@ pub fn run(
             };
             commands::export::run(&parsed, stdout, stderr, sink)
         }
+        "import" => {
+            let parsed = match parse_flags("import", rest, commands::import::ALLOWED_FLAGS) {
+                Ok(parsed) => parsed,
+                Err(error) => return report_usage_error(stderr, &error),
+            };
+            commands::import::run(&parsed, stdout, stderr, sink)
+        }
+        "migration" => commands::migration::run(rest, stdout, stderr, sink),
         other => report_usage_error(stderr, &CliError::UnknownCommand(other.to_string())),
     }
 }

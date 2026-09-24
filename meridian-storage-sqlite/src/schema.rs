@@ -25,7 +25,7 @@ use crate::open_error::OpenError;
 
 /// The current, highest schema version this build understands and migrates
 /// existing databases up to.
-pub const SUPPORTED_SCHEMA_VERSION: i64 = 2;
+pub const SUPPORTED_SCHEMA_VERSION: i64 = 3;
 
 /// All eight record-bearing and journal tables of package
 /// `sqlite-storage-adapter`, created together with `schema_migrations` in
@@ -190,10 +190,76 @@ CREATE TABLE database_metadata (
 ) WITHOUT ROWID;
 "#;
 
+/// Schema version 3 (`meridian-rust-migration-program-plan.md` §5.22.5):
+/// the migration journal becomes the full record of one run — plan
+/// identity, the exact pre- and post-state and the checkpoint that can
+/// restore the pre-state. Version 1's `migration_runs` carried none of this
+/// and no production operation ever wrote it, so the step replaces the table
+/// outright — refusing, typed, when the old table is not empty rather than
+/// inventing digests for rows it cannot vouch for.
+///
+/// The journal holds two SEPARATE append-only facts: `migration_runs` is the
+/// immutable fact that a run was applied, and `migration_rollbacks` is the
+/// later fact that it was rolled back. A rollback never edits, replaces or
+/// deletes the applied row; a run's status is derived from whether its
+/// rollback fact exists, so no row carries an editable status column.
+const MIGRATION_RUNS_V3_DDL: &str = r#"
+DROP TABLE migration_runs;
+
+CREATE TABLE migration_runs (
+  migration_run_id      TEXT    NOT NULL PRIMARY KEY,
+  run_sequence          INTEGER NOT NULL UNIQUE CHECK (run_sequence > 0),
+  plan_ref              TEXT    NOT NULL,
+  plan_fingerprint      TEXT    NOT NULL,
+  idempotency_key       TEXT    NOT NULL UNIQUE,
+  source_repository_ref TEXT    NOT NULL,
+  source_revision       TEXT    NOT NULL,
+  pre_state_digest      TEXT    NOT NULL,
+  pre_revision_count    INTEGER NOT NULL CHECK (pre_revision_count >= 0),
+  post_state_digest     TEXT    NOT NULL,
+  post_revision_count   INTEGER NOT NULL CHECK (post_revision_count >= 0),
+  checkpoint_digest     TEXT    NOT NULL,
+  written_record_count  INTEGER NOT NULL CHECK (written_record_count >= 0),
+  recorded_at           TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+) WITHOUT ROWID;
+
+CREATE TABLE migration_rollbacks (
+  migration_run_id        TEXT    NOT NULL PRIMARY KEY
+                                  REFERENCES migration_runs(migration_run_id),
+  restored_state_digest   TEXT    NOT NULL,
+  restored_revision_count INTEGER NOT NULL CHECK (restored_revision_count >= 0),
+  recorded_at             TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+) WITHOUT ROWID;
+
+CREATE TRIGGER migration_runs_no_update
+BEFORE UPDATE ON migration_runs
+BEGIN
+  SELECT RAISE(ABORT, 'migration_runs rows are append-only; record a rollback in migration_rollbacks');
+END;
+
+CREATE TRIGGER migration_runs_no_delete
+BEFORE DELETE ON migration_runs
+BEGIN
+  SELECT RAISE(ABORT, 'migration_runs rows are append-only; delete is not permitted');
+END;
+
+CREATE TRIGGER migration_rollbacks_no_update
+BEFORE UPDATE ON migration_rollbacks
+BEGIN
+  SELECT RAISE(ABORT, 'migration_rollbacks rows are append-only; edit is not permitted');
+END;
+
+CREATE TRIGGER migration_rollbacks_no_delete
+BEFORE DELETE ON migration_rollbacks
+BEGIN
+  SELECT RAISE(ABORT, 'migration_rollbacks rows are append-only; delete is not permitted');
+END;
+"#;
+
 /// Names of every table a fully-migrated (current-version) database
 /// carries, for the "all tables exist" test to check against without
 /// duplicating the DDL's own list.
-pub const TABLE_NAMES: [&str; 9] = [
+pub const TABLE_NAMES: [&str; 10] = [
     "schema_migrations",
     "records",
     "record_revisions",
@@ -202,10 +268,11 @@ pub const TABLE_NAMES: [&str; 9] = [
     "owner_decisions",
     "execution_runs",
     "migration_runs",
+    "migration_rollbacks",
     "database_metadata",
 ];
 
-fn map_err(e: rusqlite::Error) -> OpenError {
+pub(crate) fn map_err(e: rusqlite::Error) -> OpenError {
     let message = e.to_string();
     let lower = message.to_ascii_lowercase();
     if lower.contains("file is not a database")
@@ -217,7 +284,7 @@ fn map_err(e: rusqlite::Error) -> OpenError {
     }
 }
 
-fn table_exists(conn: &Connection, name: &str) -> Result<bool, OpenError> {
+pub(crate) fn table_exists(conn: &Connection, name: &str) -> Result<bool, OpenError> {
     let mut stmt = conn
         .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?1")
         .map_err(map_err)?;
@@ -274,6 +341,7 @@ fn bootstrap(conn: &mut Connection, metadata: &DatabaseMetadata) -> Result<(), O
     tx.execute_batch(DATABASE_METADATA_TABLE_DDL)
         .map_err(map_err)?;
     insert_database_metadata_row(&tx, metadata)?;
+    tx.execute_batch(MIGRATION_RUNS_V3_DDL).map_err(map_err)?;
     tx.execute(
         "INSERT INTO schema_migrations (version) VALUES (?1)",
         [SUPPORTED_SCHEMA_VERSION],
@@ -352,6 +420,18 @@ fn apply_migration_step(
                 .map_err(map_err)?;
             2
         }
+        2 => {
+            let legacy: i64 = tx
+                .query_row("SELECT COUNT(*) FROM migration_runs", [], |row| row.get(0))
+                .map_err(map_err)?;
+            if legacy != 0 {
+                return Err(OpenError::LegacyMigrationRunsPresent { count: legacy });
+            }
+            tx.execute_batch(MIGRATION_RUNS_V3_DDL).map_err(map_err)?;
+            tx.execute("INSERT INTO schema_migrations (version) VALUES (3)", [])
+                .map_err(map_err)?;
+            3
+        }
         other => return Err(OpenError::UnsupportedSchemaVersion { found: other }),
     };
     // As in `bootstrap`: an error above drops `tx` uncommitted, rolling
@@ -423,6 +503,34 @@ pub fn prepare(
     // got it there (or found it already there): read back the recorded
     // metadata — the only authoritative source — and require it to match
     // the caller's assertion on both fields before returning it.
+    let recorded = read_database_metadata(conn)?;
+    if recorded != *metadata {
+        return Err(OpenError::DatabaseMetadataMismatch {
+            expected: metadata.clone(),
+            found: recorded,
+        });
+    }
+    Ok(recorded)
+}
+
+/// Verifies an existing database WITHOUT changing it: the schema must
+/// already be at [`SUPPORTED_SCHEMA_VERSION`] (an older one is reported as
+/// needing an upgrade — a read-only open never migrates), and the recorded
+/// role and Kernel edition must match `metadata` exactly.
+pub fn verify_read_only(
+    conn: &Connection,
+    metadata: &DatabaseMetadata,
+) -> Result<DatabaseMetadata, OpenError> {
+    if !table_exists(conn, "schema_migrations")? {
+        return Err(OpenError::MissingSchemaVersion);
+    }
+    let version = read_schema_version(conn)?.ok_or(OpenError::MissingSchemaVersion)?;
+    if (1..SUPPORTED_SCHEMA_VERSION).contains(&version) {
+        return Err(OpenError::SchemaUpgradeRequired { found: version });
+    }
+    if version != SUPPORTED_SCHEMA_VERSION {
+        return Err(OpenError::UnsupportedSchemaVersion { found: version });
+    }
     let recorded = read_database_metadata(conn)?;
     if recorded != *metadata {
         return Err(OpenError::DatabaseMetadataMismatch {

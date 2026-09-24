@@ -12,6 +12,7 @@ mod database_metadata;
 mod database_role;
 mod error;
 mod evidence_repository;
+mod migration_repository;
 mod model;
 mod record_repository;
 mod role;
@@ -20,6 +21,10 @@ pub use database_metadata::DatabaseMetadata;
 pub use database_role::{DatabaseRole, DatabaseRoleError};
 pub use error::PortError;
 pub use evidence_repository::EvidenceRepository;
+pub use migration_repository::{
+    AppliedMigration, Checkpoint, MigrationApplyRequest, MigrationPortError, MigrationRepository,
+    RolledBackMigration,
+};
 pub use model::{
     IdempotencyKey, IdempotencyKeyError, ManagedRecord, Payload, PayloadError, PutEvidenceRequest,
     PutRecordOutcome, PutRecordRequest, PutRecordRequestError, RecordKey, RecordRevision,

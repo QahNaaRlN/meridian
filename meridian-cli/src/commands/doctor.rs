@@ -1,4 +1,5 @@
-//! `meridian doctor` — read-only health check of the Kernel, the workspace
+//! `meridian doctor` — read-only health check of the Kernel (its edition and
+//! that it is under Git, as `scripts/preflight.mjs` checks), the workspace
 //! directory and both databases (`meridian-cli-rfc.md`, command `doctor`).
 //!
 //! Never writes: it neither creates a missing database
@@ -61,6 +62,14 @@ pub fn run(
     };
     let kernel_edition = read_edition.ok();
 
+    let kernel_git_check = match kernel::check_kernel_under_git(kernel_root) {
+        Ok(()) => json!({"path": kernel_path, "ok": true}),
+        Err(error) => {
+            healthy = false;
+            json!({"path": kernel_path, "ok": false, "error": error.to_string()})
+        }
+    };
+
     let workspace_root = Path::new(workspace_path);
     let workspace_check = if workspace_root.is_dir() {
         json!({"path": workspace_path, "ok": true, "exists": true})
@@ -77,6 +86,7 @@ pub fn run(
 
     let result = json!({
         "kernel": kernel_check,
+        "kernel_git": kernel_git_check,
         "workspace": workspace_check,
         "tool_db": tool_check,
         "workspace_db": workspace_check_db,
@@ -169,6 +179,16 @@ fn print_human(out: &mut dyn Write, result: &Value) {
             .map(|e| format!("edition {e}"))
             .unwrap_or_else(|| result["kernel"]["error"].as_str().unwrap_or("").to_string())
     );
+    let kernel_git = &result["kernel_git"];
+    if kernel_git["ok"].as_bool().unwrap_or(false) {
+        let _ = writeln!(out, "Kernel Git: OK");
+    } else {
+        let _ = writeln!(
+            out,
+            "Kernel Git: FAIL ({})",
+            kernel_git["error"].as_str().unwrap_or("unknown error")
+        );
+    }
     let _ = writeln!(
         out,
         "Workspace: {}",

@@ -240,6 +240,23 @@
       }
     },
     {
+      "name": "real-node-rust-rule-resolution-fail-closed",
+      "description": "Package rust-business-contract-qualification: the fail-closed branches of the resolver request/result contract (unknown repository, stale or missing norm text, undecidable same-date precedence, cyclic, self and dangling supersedes) plus three resolutions that report unresolved/superseded state. Kept out of the shared corpus because the CLI producer reports a rejection with its exit code, which the Node producer does not.",
+      "expected_status": "conformant",
+      "left": {
+        "command": "$NODE",
+        "args": ["../rule-resolution-node-producer.mjs", "rule-resolution-fail-closed-corpus.json"],
+        "cwd": ".",
+        "env": {}
+      },
+      "right": {
+        "command": "../../../target/debug/examples/rule_resolution_producer",
+        "args": ["rule-resolution-fail-closed-corpus.json"],
+        "cwd": ".",
+        "env": {}
+      }
+    },
+    {
       "name": "real-node-rust-cli-resolve",
       "description": "Package meridian-cli-foundation, item 2: the actual frozen Node.js resolver and the actual compiled `meridian` binary's `resolve` subcommand (spawned as a real subprocess per request, request piped on stdin — meridian-cli/examples/resolve_cli_producer.rs) resolve the same shared corpus. Distinct from real-node-rust-rule-resolution above, which only reaches meridian-app in-process.",
       "expected_status": "conformant",

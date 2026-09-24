@@ -103,13 +103,15 @@ use crate::kernel::{self, WalkError};
 /// [`WalkError`]), or a port-based `mechanical_integrity` check's own
 /// [`OperationError`] — an access/encoding/walk failure reading the Kernel
 /// workspace through `WorkspaceReader`, distinct from that check's ordinary
-/// domain diagnostics. Both are environment problems from `validate`'s own
-/// point of view: neither ever becomes a false "clean" or "domain-negative"
-/// result.
+/// domain diagnostics, or an unreadable current directory while resolving a
+/// schema path under a relative Kernel path (`registry_schema`). All are
+/// environment problems from `validate`'s own point of view: none ever
+/// becomes a false "clean" or "domain-negative" result.
 #[derive(Debug)]
 pub enum CollectError {
     Walk(WalkError),
     Workspace(OperationError),
+    CurrentDirectory(String),
 }
 
 impl std::fmt::Display for CollectError {
@@ -117,6 +119,10 @@ impl std::fmt::Display for CollectError {
         match self {
             CollectError::Walk(error) => write!(f, "{error}"),
             CollectError::Workspace(error) => write!(f, "{error}"),
+            CollectError::CurrentDirectory(message) => write!(
+                f,
+                "cannot resolve a schema path under the relative Kernel path: the current directory is unreadable: {message}"
+            ),
         }
     }
 }

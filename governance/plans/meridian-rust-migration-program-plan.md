@@ -5,7 +5,7 @@ status: active
 scope: workspace
 owner: workspace-owner
 created: 2026-09-14
-updated: 2026-09-24
+updated: 2026-09-25
 related_documents:
   - $MERIDIAN_KERNEL/governance/meridian-owner-intent-contract.md
   - $MERIDIAN_KERNEL/governance/plans/meridian-improvement-research-plan.md
@@ -160,7 +160,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Типизированные доказательства и полевая оценка (`rust-architecture-conformance-6`) | Перевести оставшиеся семейства 7c `evidence-and-handoff-contract` и `meridian-field-evaluation` на общий typed core/app pipeline, удалить временные resolver/portability фасады и оставить CLI слоем composition/presentation | `rust-architecture-conformance-5`, §5.13 | accepted — принято и локально интегрировано (§5.20.9) |
 | — | Типизированная миграционная и upgrade-квалификация (`rust-architecture-conformance-7`) | Перевести весь связный 7d: `instance-data-migration`, `instance-canonical-export`, `workspace-compatibility-qualification`, `upgrade-integration-qualification`; расширить существующий migration owner и композиционно переиспользовать принятые операции 7b/7c | `rust-architecture-conformance-6`, §5.13 | accepted — принято и локально интегрировано (§5.21.9) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | accepted — принят и локально интегрирован (§5.22.11) |
-| 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | specified — not started (§5.23) |
+| 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | in progress — корректирующие передачи: `NOT_QUALIFIED`, GAP-09 открыт (§5.23.10) |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
 
 ### После выпуска (вне этой программы, но зависимые от неё)
@@ -6380,6 +6380,104 @@ conformance запускается с тем же frozen source, но Rust binar
 > коды и счётчики всех ворот, fingerprint кандидата, пустой индекс и все
 > отклонения.
 
+### 5.23.10. Передачи исполнителя (2026-09-25)
+
+**Первая передача.**
+
+Заявленный результат квалификации — **`NOT_QUALIFIED`**; статус передачи —
+**`BLOCKED_FOR_ARCHITECT_DECISION`** (не `ACCEPTED`). Git write-операций
+исполнитель не выполнял; индекс пуст. Отчёт —
+`governance/audits/meridian-rust-business-contract-qualification.md`:
+закрытая матрица из 131 строки (50 `CONFORMANT`, 28
+`ACCEPTED_RUST_NATIVE`, 42 `RUST_ONLY_CONTRACT`, 11 `GAP`), карта
+владельцев, четыре уровня, production panic audit и построчный аудит
+`COMPATIBILITY.md`.
+
+Закрыто минимальными исправлениями (`gap -> owner -> fix -> evidence`,
+отчёт §9.1):
+
+1. авария `meridian validate` (код 101) на Kernel-документе с пустым
+   Front Matter — новый единственный владелец
+   `meridian_app::source_format::front_matter_block`;
+2. общий проход `$schema` терял путь схемы в тексте отказа строгого слоя и
+   не нормализовал путь схемы, как эталон;
+3. строгий слой YAML отдавал вход библиотеке раньше собственного lint и
+   reader (RFC D-A), подменяя тексты отказа эталона;
+4. отрицательное Node/Rust доказательство семейства `rule-resolution`;
+5. межъязыковое доказательство fail-closed ветвей resolver (отдельный
+   корпус `rule-resolution-fail-closed-corpus.json`);
+6. доказательство работы без сети для `init`/`doctor`/`validate`/
+   `resolve`/`export`;
+7. в реестр `COMPATIBILITY.md` внесено уже принятое (§5.16.3 п. 9) отличие
+   `stack-profiles` неверного типа;
+8. шаблонные ссылки строк реестра заменены точными именами тестов.
+
+Открыто и передано на решение архитектора (отчёт §9.2): поверхность
+Instance у `kernel-validate.mjs`/`validate-and-log.mjs` без Rust-аналога и
+классификации; класс хвоста сообщения о невалидном JSON; текст
+`schema` для несуществующей схемы; вердикт по тексту, который подмножество
+YAML эталона принимает, хотя это не YAML; текст `instruction-topics`
+неверного типа; отсутствие проверки Git в `doctor` при заявленной
+эквивалентности `preflight`; Node-поверхности `validate-branch-name`,
+`hooks/pre-push` и CI без пакета.
+
+Коды и счётчики полного набора §5.23.7 — в передаче исполнителя. (Условие
+интеграции первой передачи — правка литерала
+`agent_instruction_identity_undeclared_other` после индексации отчёта —
+снято корректирующим раундом, см. ниже.)
+
+**Корректирующий раунд (вердикт архитектора `CHANGES_REQUESTED`).**
+Заявленный результат и статус передачи — **`NOT_QUALIFIED`** (не
+`ACCEPTED`). Git write-операций исполнитель не выполнял; индекс пуст.
+Матрица пересчитана: 134 строки (53 `CONFORMANT`, 36
+`ACCEPTED_RUST_NATIVE`, 42 `RUST_ONLY_CONTRACT`, 3 `GAP`).
+
+1. По решениям архитектора GAP-10 (хвост сообщения о невалидном JSON —
+   класс), GAP-11 (текст отсутствующей схемы называет только Kernel),
+   GAP-12 (fail-closed отказ от YAML, который Node принимает с потерей
+   данных) и GAP-13 (`instruction-topics` неверного типа) классифицированы
+   `ACCEPTED_RUST_NATIVE`: четыре строки `COMPATIBILITY.md` и раздел
+   харнесса «accepted-rust-native» с точной формой каждого расхождения;
+   `exactTextNotRequired` удалён.
+2. GAP-14 исправлен: `meridian doctor` только чтением проверяет, что
+   Kernel под Git (критерий `preflight`), с новым полем `kernel_git`;
+   `validator present` не переносится.
+3. GAP-15 снят: `validate-branch-name`, `hooks/pre-push` и CI — переходное
+   governance/tooling вне квалифицируемой Rust-поверхности (отчёт §8.5,
+   решение D-F); удаление Node — отдельное решение после выпуска.
+4. GAP-02 доисправлен: путь схемы общего прохода `$schema` совпадает с
+   `path.resolve` Node и для относительного `--kernel`; доказано
+   production run.
+5. Счётчик `agent_instruction_identity_undeclared_other` выводится тестом
+   из отслеживаемого состояния, поэтому кандидат корректен и до, и после
+   индексации отчёта; остальные snapshot-счётчики не ослаблены.
+6. GAP-09 остаётся открытым: mapping каждой Instance-проверки Node (отчёт
+   §9.3) даёт непустую категорию «действительно утраченная бизнес-проверка»
+   — продуктовые литералы `kernel-purity`, форма payload импортированных
+   продуктовых записей, контекст Instance для скиллов, внешние
+   зависимости, сверка инвентаря, объявления stack-profile, ссылочная
+   целостность и полнота приёма инструкций, журнал метрик. Недостающий
+   контракт — проверка продуктового состояния рабочей базы только чтением
+   (и запись метрик) без `MERIDIAN_INSTANCE`; владельцы — `meridian-app`
+   над `RecordRepository` и `meridian-cli` `commands::validate`.
+
+Раунд выполнил только целевой рубеж `AGENTS.md` §9; полные
+`conformance-harness`, `kernel-validate` и остальной набор §5.23.7 —
+один раз на финальном кандидате после архитектурного одобрения.
+
+**Второй корректирующий раунд (вердикт архитектора `CHANGES_REQUESTED`,
+узкий).** Вывод GAP-09 подтверждён архитектором; итог и статус —
+**`NOT_QUALIFIED`**, GAP-09 открыт и в этом раунде не реализуется. Для
+COMPAT-29 добавлено matched Node/Rust negative evidence каждого оставшегося
+самостоятельного владельца парсера (`instruction_source_registry`,
+`controlled_rule_intake`, `existing_project_compatibility_mode`,
+`task_pattern_registry`, `task_specification`) изолированными копиями;
+класс доказан для всех девяти владельцев, сужение не потребовалось. Точный
+счёт GAP-10: 10 пар `FAIL` с расхождением только в хвосте парсера плюс две
+объявленные Rust-only строки каскада принятой границы «каталог публикуется
+только целиком»; прежнее «шесть» было ошибкой (фактически пять в
+combined-case). Матрица не изменилась: 134 строки, 3 `GAP`.
+
 ## 6. Ворота Rust
 
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
@@ -6653,7 +6751,7 @@ activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
 last_completed_package: meridian-cli-migration
 current_package: rust-business-contract-qualification
-current_package_status: specified_not_started
+current_package_status: not_qualified_gap_09_open
 next_package: meridian-rust-release
 next_package_status: blocked_pending_package_9_acceptance
 concord_status: paused_pending_meridian_rust_release
@@ -6904,3 +7002,18 @@ real-bundle tests; остальные финальные ворота также
 набор §6.1–§6.6; агрегатный зелёный прогон не заменяет построчных executable
 доказательств. `meridian-rust-release` заблокирован до независимой приёмки и
 интеграции пакета 9; Metis и Concord остаются вне области.
+
+**Обновление (2026-09-25, §5.23.10, первая передача пакета 9).**
+`current_package_status` синхронизирован как `blocked_for_architect_decision`:
+исполнитель построил закрытую квалификационную матрицу, закрыл восемь
+пробелов минимальными исправлениями и доказательствами и передал семь
+открытых наблюдаемых дельт и неклассифицированных Node-поверхностей на
+решение архитектора; заявленный результат — `NOT_QUALIFIED`. Статус НЕ
+`ACCEPTED`; `meridian-rust-release`, Metis и Concord не открываются.
+
+**Обновление (2026-09-25, §5.23.10, корректирующий раунд пакета 9).**
+`current_package_status` синхронизирован как `not_qualified_gap_09_open`:
+GAP-10…GAP-15 и GAP-02 закрыты по решениям архитектора, но mapping GAP-09
+нашёл утраченные бизнес-проверки продуктового состояния без
+production-владельца в Rust. Заявленный результат — `NOT_QUALIFIED`; статус
+НЕ `ACCEPTED`; `meridian-rust-release`, Metis и Concord не открываются.

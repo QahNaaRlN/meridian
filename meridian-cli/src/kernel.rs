@@ -101,6 +101,51 @@ pub fn read_kernel_edition(kernel_root: &Path) -> Result<Revision, KernelError> 
     Revision::new(raw.trim()).map_err(KernelError::InvalidVersion)
 }
 
+/// Why a Kernel root is not under Git — the `meridian doctor` form of the
+/// `preflight` "kernel is under Git" check (`meridian-cli-rfc.md`, command
+/// `doctor`). Read-only: nothing is created, and no `git` process runs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KernelGitError {
+    Missing { path: PathBuf },
+    Unreadable { path: PathBuf, message: String },
+}
+
+impl std::fmt::Display for KernelGitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KernelGitError::Missing { path } => {
+                write!(f, "Kernel is not under Git: no {} entry", path.display())
+            }
+            KernelGitError::Unreadable { path, message } => write!(
+                f,
+                "Kernel Git state is unknown: cannot inspect {}: {message}",
+                path.display()
+            ),
+        }
+    }
+}
+
+impl std::error::Error for KernelGitError {}
+
+/// The Kernel root is under Git when it carries a `.git` entry — a
+/// directory in a primary checkout, a `gitdir:` file in a linked worktree —
+/// exactly the `preflight` criterion (`fs.existsSync(path.join(KERNEL,
+/// '.git'))`) and `validate`'s own `git-provenance`. An entry that cannot
+/// be inspected is not confirmed either.
+pub fn check_kernel_under_git(kernel_root: &Path) -> Result<(), KernelGitError> {
+    let path = kernel_root.join(".git");
+    match fs::metadata(&path) {
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            Err(KernelGitError::Missing { path })
+        }
+        Err(error) => Err(KernelGitError::Unreadable {
+            path,
+            message: error.to_string(),
+        }),
+    }
+}
+
 /// One entry found while walking a directory tree: its full path and
 /// whether it is a directory. Fail-closed: produced only by
 /// [`walk_all_entries`], which stops and returns [`WalkError`] rather than

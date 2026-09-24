@@ -160,7 +160,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Типизированные доказательства и полевая оценка (`rust-architecture-conformance-6`) | Перевести оставшиеся семейства 7c `evidence-and-handoff-contract` и `meridian-field-evaluation` на общий typed core/app pipeline, удалить временные resolver/portability фасады и оставить CLI слоем composition/presentation | `rust-architecture-conformance-5`, §5.13 | accepted — принято и локально интегрировано (§5.20.9) |
 | — | Типизированная миграционная и upgrade-квалификация (`rust-architecture-conformance-7`) | Перевести весь связный 7d: `instance-data-migration`, `instance-canonical-export`, `workspace-compatibility-qualification`, `upgrade-integration-qualification`; расширить существующий migration owner и композиционно переиспользовать принятые операции 7b/7c | `rust-architecture-conformance-6`, §5.13 | accepted — принято и локально интегрировано (§5.21.9) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | accepted — принят и локально интегрирован (§5.22.11) |
-| 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | planned |
+| 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | specified — not started (§5.23) |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
 
 ### После выпуска (вне этой программы, но зависимые от неё)
@@ -6179,6 +6179,207 @@ merge-коммитом без публикации. Пакет 9 этим реш
 `rust-business-contract-qualification` ещё нет отдельной спецификации и
 назначения исполнения.
 
+## 5.23. Пакет 9 `rust-business-contract-qualification` (задание, 2026-09-24)
+
+### 5.23.1. Статус и условие старта
+
+Статус: **`SPECIFIED_NOT_STARTED`**. Документальная спецификация не является
+началом исполнения пакета (§8). Целевой статус первой передачи исполнителя —
+`READY_FOR_ARCHITECT_REVIEW`, не `ACCEPTED`; исполнитель не выполняет Git
+write-операций.
+
+Предшествующий пакет `meridian-cli-migration` принят и локально интегрирован:
+package commit `6a68620ff7af4efde492dab897d566e7763f410b` достижим из `dev` через отдельный
+`--no-ff` merge-коммит `e85a73fec4bb7eb6b0ac0497bc043a9d2c445c03`.
+Пакет 9 вправе начаться отдельным исполнением только от этого или более нового
+чистого `dev`, в котором эти коммиты остаются достижимы.
+
+### 5.23.2. Результат и граница пакета
+
+Пакет даёт один закрытый ответ на вопрос: вся ли перенесённая в Rust механика
+Meridian сохраняет объявленные бизнес- и публичные контракты, а каждое
+наблюдаемое отличие от Node.js является явно принятым Rust-native усилением с
+исполняемым доказательством.
+
+Обязательный результат:
+
+1. новый отчёт
+   `governance/audits/meridian-rust-business-contract-qualification.md` с
+   итоговым вердиктом `QUALIFIED` либо `NOT_QUALIFIED`;
+2. закрытая матрица всей реализованной поверхности: source formats, все
+   семейства `validate`, `resolve`, `init`, `doctor`, `export`, `import` и
+   `migration plan|apply|verify|rollback`;
+3. для каждой строки матрицы — канонический контракт, Node-эталон либо
+   основание отсутствия прямого Node-аналога, production-маршрут Rust,
+   positive/negative executable evidence, ожидаемое отношение результатов и
+   фактический результат;
+4. полная сверка раздела «Намеренные Rust-native усиления» в
+   `COMPATIBILITY.md`: каждая наблюдаемая дельта имеет ровно одну
+   классификацию, бизнес-обоснование, границу наблюдаемости и положительный с
+   отрицательным тесты; устаревших, дублирующих и недоказанных записей нет;
+5. полный архитектурный аудит production Rust по
+   `rust-migration-quality.md`: crate ownership, порты, четыре уровня
+   проверки, строгие типы, отсутствие внешнего I/O в `meridian-core`,
+   отсутствие concrete adapters в `meridian-app`, production panic audit;
+6. одновременное исполнение полного набора §6.1–§6.5a, включая реальные
+   frozen-bundle сценарии, offline-поведение, стабильные exit/stdout/stderr и
+   NoOp/Recording event-sink эквивалентность.
+
+Отчёт не вправе выводить полноту из зелёного агрегатного счётчика. Каждая
+строка должна ссылаться на фактически исполняемый тест того же production
+алгоритма; projection-only сравнение или повторно написанный алгоритм
+доказательством не являются. Если существующее доказательство не покрывает
+контракт, исполнитель добавляет минимальный real-path case. Если обнаружен
+дефект реализации, разрешено минимальное исправление в правильном крейте и
+его regression test; новая функциональность не добавляется.
+
+### 5.23.3. Классификация результатов
+
+Каждая строка закрытой матрицы получает ровно один статус:
+
+- `CONFORMANT` — сохраняемый внешний или бизнес-контракт совпал;
+- `ACCEPTED_RUST_NATIVE` — отличие уже отражено в `COMPATIBILITY.md`, не
+  теряет бизнес-ценность и доказано matched positive/negative cases;
+- `RUST_ONLY_CONTRACT` — у принятой Rust/SQLite/CLI поверхности нет прямого
+  Node-аналога, но она полностью определяется действующим ADR, технической
+  спецификацией или нормативным контрактом и доказана executable tests;
+- `GAP` — контракт, доказательство либо классификация отсутствуют или
+  противоречат друг другу.
+
+Наличие хотя бы одного `GAP`, необъяснённой дельты, непрошедшего обязательного
+ворота или непроверенного обязательного real-bundle сценария принудительно
+даёт `NOT_QUALIFIED`. Исполнитель не вправе сам принять новую наблюдаемую
+дельту: он передаёт минимальное воспроизведение как
+`BLOCKED_FOR_ARCHITECT_DECISION`. Уже принятые записи `COMPATIBILITY.md` не
+переоткрываются без нового факта, но их ссылки и доказательства проверяются.
+
+### 5.23.4. Проверяемая полнота матрицы
+
+Инвентаризация строится от production entry points и канонических контрактов,
+а не только от уже существующих тестов. Отчёт обязан отдельно закрыть:
+
+- все команды и коды завершения `meridian-cli`;
+- все семейства, которые участвуют в production `validate`;
+- полный resolver request/result contract;
+- все роли, schema migrations, transaction/foreign-key и routing boundaries
+  SQLite;
+- canonical export, оба закрытых import kind и пять migration operations;
+- каждую строку реестра Rust-native усилений `COMPATIBILITY.md`;
+- все требования §6.3–§6.5a, включая те, у которых нет Node-аналога.
+
+Для каждого пункта указываются точные пути и имена тестов. Обобщённая ссылка
+«покрыто workspace tests» не принимается. Один тест может доказывать несколько
+строк только когда отчёт явно называет проверяемое утверждение для каждой из
+них. Счётчики полного прогона фиксируются отдельно и не заменяют матрицу.
+
+### 5.23.5. Разрешённые изменения
+
+Ожидаемый документальный минимум:
+
+- `governance/audits/meridian-rust-business-contract-qualification.md`;
+- `governance/plans/meridian-rust-migration-program-plan.md` — только запись
+  фактического раунда и синхронизация статуса;
+- `COMPATIBILITY.md` — только исправление неполной, устаревшей или неточной
+  классификации, найденной квалификацией.
+
+Тесты и production-файлы изменяются только при доказанном пробеле. Любое
+такое изменение перечисляется отдельно как `gap -> owner -> fix -> regression
+evidence`; оно делает ранее полученные полные gate-результаты устаревшими и
+требует одного повторного полного прогона на финальном кандидате.
+
+### 5.23.6. Явно вне объёма
+
+- выпуск, версия, `CHANGELOG`, release/promotion ветви и пакет 10;
+- удаление Node.js, архивирование или изменение замороженного Instance;
+- Metis, Concord, network API, PostgreSQL, daemon, GUI и новые команды;
+- изменение принятых бизнес-контрактов ради зелёного conformance;
+- принятие новой Rust-native дельты исполнителем;
+- рефакторинг без конкретного квалификационного пробела;
+- Git branch/switch/add/commit/merge/rebase/reset/stash/tag/push исполнителем.
+
+### 5.23.7. Ворота исполнения
+
+Пакет 9 сам является полным финальным квалификационным рубежом, поэтому его
+первая передача выполняет полный набор, а не сокращённый корректирующий gate:
+
+```bash
+node scripts/preflight.mjs
+MERIDIAN_KERNEL=/home/krmiftakhov/PersonalProjects/meridian MERIDIAN_INSTANCE=<local-frozen-source> node scripts/preflight.mjs --require-instance
+cargo fmt --all -- --check
+cargo build --workspace
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
+cargo test --workspace
+MERIDIAN_KERNEL=/home/krmiftakhov/PersonalProjects/meridian MERIDIAN_INSTANCE=<local-frozen-source> cargo test -p meridian-cli --test binary_runs migration_real_bundle -- --ignored
+MERIDIAN_KERNEL=/home/krmiftakhov/PersonalProjects/meridian MERIDIAN_INSTANCE=<local-frozen-source> node --test test/conformance-harness.test.mjs
+node test/kernel-validate.test.mjs
+env -u MERIDIAN_INSTANCE node scripts/kernel-validate.mjs
+git diff --check
+git diff --cached --check
+git diff --cached --name-only
+```
+
+`<local-frozen-source>` — локальная проводка, не литерал для коммита. Полный
+conformance запускается с тем же frozen source, но Rust binary получает путь
+только через явный `--source`; его штатное окружение остаётся без
+`MERIDIAN_INSTANCE`. Два ignored real-bundle tests обязаны фактически
+выполниться и дать `2 passed`, а не остаться пропущенными внутри workspace
+прогона.
+
+Если Cargo/Node child process получает sandbox `EPERM`, повторяется ровно та
+же команда через разрешённый путь. Инфраструктурный запрет не становится
+кодовым вердиктом. После любого исправления полный набор повторяется один раз
+на окончательном кандидате; в промежуточном корректирующем раунде действуют
+суженные правила `AGENTS.md` §9.
+
+### 5.23.8. Критерии передачи
+
+Передача исполнителя содержит:
+
+- статус `READY_FOR_ARCHITECT_REVIEW`, `BLOCKED_FOR_ARCHITECT_DECISION` либо
+  `NOT_QUALIFIED`, но никогда самоназначенный `ACCEPTED`;
+- точный HEAD до/после и fingerprint всех изменённых файлов кандидата;
+- итог матрицы по каждому из четырёх статусов §5.23.3 и список всех `GAP`;
+- точные новые/изменённые строки `COMPATIBILITY.md`, если они есть;
+- production owner map и production panic audit;
+- результаты каждой команды §5.23.7 с кодом и счётчиками;
+- точный список изменённых файлов и отдельно невыполненные проверки;
+- подтверждение отсутствия Git write-операций и пустого индекса.
+
+Пакет может получить `ACCEPTED` только после независимого чтения отчёта,
+фактического diff и executable evidence архитектором. Даже `QUALIFIED` в
+отчёте исполнителя является заявленным результатом, а не итоговым вердиктом.
+
+### 5.23.9. Готовое задание исполнителю
+
+> Работай над пакетом `rust-business-contract-qualification` строго по §5.23
+> `governance/plans/meridian-rust-migration-program-plan.md`.
+>
+> До изменений выполни оба preflight из §5.23.7; подтверди чистый базовый
+> `dev`, достижимость package commit `6a68620ff7af4efde492dab897d566e7763f410b`
+> через merge `e85a73fec4bb7eb6b0ac0497bc043a9d2c445c03` и отсутствие чужого dirty
+> diff. Локальный путь frozen source используй только как environment wiring,
+> никогда не записывай его в файлы.
+>
+> Построй закрытую квалификационную матрицу от production entry points и
+> канонических контрактов по §5.23.2–§5.23.4. Создай
+> `governance/audits/meridian-rust-business-contract-qualification.md`.
+> Для каждой строки укажи канон, Node reference либо основание Rust-only,
+> Rust production route, positive/negative executable evidence, ожидаемое
+> отношение и фактический статус. Проверь каждую запись Rust-native усиления
+> в `COMPATIBILITY.md`; зелёный общий счётчик не заменяет эту сверку.
+>
+> Не добавляй функциональность. Исправляй код или тесты только при конкретном
+> квалификационном пробеле и фиксируй `gap -> owner -> fix -> evidence`. Новую
+> наблюдаемую дельту не принимай: остановись с минимальным воспроизведением и
+> `BLOCKED_FOR_ARCHITECT_DECISION`.
+>
+> Выполни полный набор §5.23.7. Не выполняй branch/switch/add/commit/merge/
+> rebase/reset/stash/tag/push. Передай статус не выше
+> `READY_FOR_ARCHITECT_REVIEW`, точные файлы, матрицу, panic/owner audits,
+> коды и счётчики всех ворот, fingerprint кандидата, пустой индекс и все
+> отклонения.
+
 ## 6. Ворота Rust
 
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
@@ -6451,10 +6652,10 @@ program_status: active
 activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
 last_completed_package: meridian-cli-migration
-current_package: meridian-cli-migration
-current_package_status: accepted_and_locally_integrated
-next_package: rust-business-contract-qualification
-next_package_status: not_specified
+current_package: rust-business-contract-qualification
+current_package_status: specified_not_started
+next_package: meridian-rust-release
+next_package_status: blocked_pending_package_9_acceptance
 concord_status: paused_pending_meridian_rust_release
 release_version: unassigned
 release_gate: closed
@@ -6695,3 +6896,11 @@ real-bundle tests; остальные финальные ворота также
 `--no-ff` merge-коммитом без публикации. Следующий пакет
 `rust-business-contract-qualification` ещё не специфицирован и этим решением
 не начинается; Metis и Concord остаются закрыты до собственных рубежей.
+
+**Обновление (2026-09-24, §5.23, спецификация пакета 9).** Следующий пакет
+`rust-business-contract-qualification` специфицирован, но не начат:
+`current_package_status: specified_not_started`. Он обязан квалифицировать
+закрытой матрицей всю production-поверхность и одновременно пройти полный
+набор §6.1–§6.6; агрегатный зелёный прогон не заменяет построчных executable
+доказательств. `meridian-rust-release` заблокирован до независимой приёмки и
+интеграции пакета 9; Metis и Concord остаются вне области.

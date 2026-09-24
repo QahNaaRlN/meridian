@@ -22,7 +22,7 @@ use meridian_core::mechanical_integrity::instruction_topics::TopicPool;
 use meridian_core::types::{Diagnostic, WorkspaceRelativePath};
 
 use super::{regex_capture1, regex_is_match, OperationError};
-use crate::source_format::carries_own_front_matter;
+use crate::source_format::{carries_own_front_matter, front_matter_block};
 use crate::workspace::{ReadError, WorkspaceReader};
 
 /// One document's raw, not-yet-validated Front Matter facts — this crate's
@@ -122,11 +122,7 @@ pub fn run(
         if !text.starts_with("---") {
             continue;
         }
-        let end = text[3..].find("\n---").map(|i| i + 3);
-        let fm = match end {
-            Some(end) => &text[4..end],
-            None => "",
-        };
+        let fm = front_matter_block(&text);
 
         let mut present_fields = Vec::new();
         for (field, re) in &field_re {

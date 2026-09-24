@@ -9,7 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use fancy_regex::Regex;
-use meridian_app::source_format::carries_own_front_matter;
+use meridian_app::source_format::{carries_own_front_matter, front_matter_block};
 
 /// `"skill"` is deliberately absent: delivery is a field of its own now
 /// (`agent-instruction-identity.md`), not a type.
@@ -148,11 +148,7 @@ pub fn run(kernel_root: &Path, files: &[PathBuf]) -> Outcome {
             ));
             continue;
         }
-        let end = text[3..].find("\n---").map(|i| i + 3);
-        let fm = match end {
-            Some(end) => &text[4..end],
-            None => "",
-        };
+        let fm = front_matter_block(&text);
         for field in ["title", "status", "scope", "owner", "created", "updated"] {
             let pattern = format!(r"(?m)^{field}:[^\S\r\n]*\S");
             let re = Regex::new(&pattern).unwrap();

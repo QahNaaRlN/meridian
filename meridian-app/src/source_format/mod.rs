@@ -6,5 +6,5 @@ pub mod markdown_identity;
 pub mod regions;
 pub mod yaml;
 
-pub use markdown_identity::carries_own_front_matter;
+pub use markdown_identity::{carries_own_front_matter, front_matter_block};
 pub use yaml::parse as parse_yaml;

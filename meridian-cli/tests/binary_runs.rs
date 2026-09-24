@@ -293,15 +293,50 @@ fn validate_reports_ok_on_this_kernel_with_zero_real_failures() {
         value["result"]["stats"]["agent_instruction_identity_undeclared_prescriptive"],
         22
     );
-    // 32 -> 34: the drift appeared on the clean `HEAD` after the Metis
-    // federated-knowledge documents were integrated and existed before
-    // package `meridian-cli-migration` was implemented — `git archive HEAD`
-    // of the integration commit, validated by the same binary, already
-    // reports 34, and reverting this package's Markdown edits does not
-    // change it.
+    // `undeclared_other` is the remainder of the classified population, and
+    // that population — every Git-tracked Markdown document that carries
+    // its own Front Matter (`carries_own_front_matter`) and opens with
+    // `---` — is derived HERE, independently, like
+    // `document_identity_checked` above. A frozen literal (34 at
+    // `f00b60d`) was false in either the candidate working tree or the
+    // integrated commit: an executor's new, not yet indexed document is not
+    // tracked, and indexing it adds one ordinary document
+    // (`rust-business-contract-qualification`). The two prescriptive counts
+    // stay literal, so a document silently re-classified into or out of
+    // them is still caught.
+    let classified_population = {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(kernel)
+            .args(["ls-files", "-z"])
+            .output()
+            .expect("git ls-files runs");
+        assert!(output.status.success(), "git ls-files failed: {output:?}");
+        String::from_utf8(output.stdout)
+            .expect("git ls-files output is UTF-8")
+            .split('\0')
+            .filter(|rel| {
+                let name = rel.rsplit('/').next().unwrap_or(rel);
+                Path::new(rel)
+                    .extension()
+                    .is_some_and(|e| e.eq_ignore_ascii_case("md"))
+                    && !rel.ends_with("-template.md")
+                    && !rel.ends_with("-body.md")
+                    && !rel.starts_with("instance-template/")
+                    && !rel.starts_with("test/")
+                    && name != "SKILL.md"
+            })
+            .filter(|rel| {
+                std::fs::read_to_string(Path::new(kernel).join(rel))
+                    .expect("a tracked Markdown document is readable")
+                    .starts_with("---")
+            })
+            .count()
+    };
     assert_eq!(
         value["result"]["stats"]["agent_instruction_identity_undeclared_other"],
-        34
+        classified_population - 29 - 22,
+        "every classified document that is neither a declared norm nor undeclared-prescriptive is undeclared-other"
     );
     // 20 before subpackage 7a; 7a, 7b and 7c removed theirs, and
     // `rust-architecture-conformance-7` the last four (7d) together with
@@ -376,6 +411,143 @@ fn validate_detects_a_non_kebab_case_file_name() {
             .iter()
             .any(|f| f.contains("document-identity") && f.contains("not lower kebab-case")),
         "failures: {failures:?}"
+    );
+}
+
+/// Regression (`rust-business-contract-qualification`, production panic
+/// audit): an empty Front Matter block used to make `document-identity`
+/// slice a reversed byte range and abort the whole binary with exit code
+/// 101 and no stdout. It is an ordinary domain-negative result: exit 1, one
+/// JSON document, the missing-field FAILs the Node reference reports.
+#[test]
+fn validate_reports_an_empty_front_matter_block_instead_of_panicking() {
+    let temp = TempDir::new("validate-empty-front-matter");
+    std::fs::write(
+        temp.path().join("empty-front-matter.md"),
+        "---\n---\n# probe\n",
+    )
+    .unwrap();
+
+    let output = run(&[
+        "validate",
+        "--kernel",
+        temp.path().to_str().unwrap(),
+        "--format",
+        "json",
+    ]);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "stderr: {}",
+        stderr_of(&output)
+    );
+    assert!(!stderr_of(&output).contains("panicked"));
+    let value = json_result(&output);
+    let failures: Vec<String> = value["result"]["failures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect();
+    for field in ["title", "status", "scope", "owner", "created", "updated"] {
+        let expected = format!(
+            "document-identity: empty-front-matter.md is missing required Front Matter field \"{field}\""
+        );
+        assert!(failures.contains(&expected), "failures: {failures:?}");
+    }
+    assert!(
+        failures.contains(
+            &"document-identity: empty-front-matter.md declares no document_type".to_string()
+        ),
+        "failures: {failures:?}"
+    );
+}
+
+fn schema_failures(output: &Output) -> Vec<String> {
+    json_result(output)["result"]["failures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .filter(|f| f.starts_with("schema:"))
+        .collect()
+}
+
+/// Regression (`rust-business-contract-qualification`, GAP-02): the schema
+/// path is the reference's `path.resolve(path.dirname(file), schemaRef)`,
+/// so a relative `--kernel` — `k` and `../k` alike — reports it under its
+/// absolute path while the YAML file keeps the Kernel path as given. The
+/// former lexical-only normalization kept `../k/…` relative. Both expected
+/// lines are the real Node reference's output for the same tree and cwd.
+#[test]
+fn validate_reports_a_relative_kernel_schema_under_its_absolute_path() {
+    let temp = TempDir::new("validate-relative-kernel");
+    let base = std::fs::canonicalize(temp.path()).unwrap();
+    let kernel = base.join("k");
+    std::fs::create_dir_all(kernel.join("sub")).unwrap();
+    std::fs::create_dir_all(kernel.join("schemas")).unwrap();
+    std::fs::create_dir_all(base.join("work")).unwrap();
+    std::fs::write(
+        kernel.join("schemas").join("bad.schema.json"),
+        r#"{"type":"object","properties":{"m":{"type":"string","format":"email"}}}"#,
+    )
+    .unwrap();
+    std::fs::write(
+        kernel.join("sub").join("probe.yaml"),
+        "$schema: ../schemas/bad.schema.json\nm: a\n",
+    )
+    .unwrap();
+    let schema = kernel.join("schemas").join("bad.schema.json");
+
+    for (cwd, kernel_arg) in [(base.clone(), "k"), (base.join("work"), "../k")] {
+        let output = Command::new(exe())
+            .args(["validate", "--kernel", kernel_arg, "--format", "json"])
+            .current_dir(&cwd)
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(1), "{}", stderr_of(&output));
+        assert_eq!(
+            schema_failures(&output),
+            [format!(
+                "schema: {kernel_arg}/sub/probe.yaml could not be validated: format \"email\" at {}/properties/m is not implemented by this validator",
+                schema.display()
+            )],
+            "--kernel {kernel_arg} from {}",
+            cwd.display()
+        );
+    }
+}
+
+/// GAP-11 (`ACCEPTED_RUST_NATIVE`): a `$schema` that resolves to no file is
+/// reported against the Kernel only — the production `meridian validate`
+/// reads no Instance, so the reference's "in the Instance or the Kernel"
+/// would name a place this route never looked.
+#[test]
+fn validate_reports_a_missing_schema_as_absent_from_the_kernel_only() {
+    let temp = TempDir::new("validate-missing-schema");
+    std::fs::write(
+        temp.path().join("missing.yaml"),
+        "$schema: ./nope.schema.json\n",
+    )
+    .unwrap();
+    let output = Command::new(exe())
+        .args([
+            "validate",
+            "--kernel",
+            temp.path().to_str().unwrap(),
+            "--format",
+            "json",
+        ])
+        .env_remove("MERIDIAN_INSTANCE")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1), "{}", stderr_of(&output));
+    assert_eq!(
+        schema_failures(&output),
+        [format!(
+            "schema: {} references ./nope.schema.json, which resolves to no file in the Kernel",
+            temp.path().join("missing.yaml").display()
+        )]
     );
 }
 
@@ -1119,6 +1291,94 @@ fn doctor_rejects_swapped_database_roles_instead_of_guessing_from_the_path() {
     assert_eq!(value["result"]["workspace_db"]["ok"], false);
 }
 
+fn doctor_args<'a>(kernel: &'a str, paths: &'a InitPaths, format: &'a str) -> Vec<&'a str> {
+    vec![
+        "doctor",
+        "--kernel",
+        kernel,
+        "--workspace",
+        paths.workspace.to_str().unwrap(),
+        "--tool-db",
+        paths.tool_db.to_str().unwrap(),
+        "--workspace-db",
+        paths.workspace_db.to_str().unwrap(),
+        "--format",
+        format,
+    ]
+}
+
+/// GAP-14 (`rust-business-contract-qualification`): `doctor` is the
+/// equivalent of `preflight` (`meridian-cli-rfc.md`), which is red when the
+/// Kernel is not under Git. This checkout is — a primary checkout's `.git`
+/// directory or a linked worktree's `gitdir:` file alike.
+#[test]
+fn doctor_confirms_the_kernel_is_under_git() {
+    let paths = InitPaths::new("doctor-kernel-git");
+    assert_eq!(run_init(&paths, "json").status.code(), Some(0));
+    let kernel = kernel_root();
+    let k = kernel.to_str().unwrap();
+
+    let output = run(&doctor_args(k, &paths, "json"));
+    assert_eq!(output.status.code(), Some(0), "{}", stderr_of(&output));
+    assert!(stderr_of(&output).is_empty());
+    let value = json_result(&output);
+    assert_eq!(
+        value["result"]["kernel_git"],
+        serde_json::json!({"path": k, "ok": true})
+    );
+    assert_eq!(value["result"]["healthy"], true);
+
+    let human = run(&doctor_args(k, &paths, "human"));
+    assert_eq!(human.status.code(), Some(0));
+    assert!(stdout_of(&human).contains("\nKernel Git: OK\n"));
+    assert!(stderr_of(&human).is_empty());
+}
+
+/// GAP-14 negative: the same Kernel content (same `VERSION`, so the kernel
+/// edition and both databases stay healthy) without a `.git` entry makes
+/// `doctor` unhealthy, as `preflight` is red: exit 1, one JSON document on
+/// stdout, nothing on stderr, nothing written. Adding the entry — a
+/// linked worktree's `gitdir:` file — makes the same copy healthy again.
+#[test]
+fn doctor_reports_a_kernel_that_is_not_under_git() {
+    let paths = InitPaths::new("doctor-kernel-no-git");
+    assert_eq!(run_init(&paths, "json").status.code(), Some(0));
+    let copy = TempDir::new("doctor-kernel-copy");
+    std::fs::copy(kernel_root().join("VERSION"), copy.path().join("VERSION")).unwrap();
+    let k = copy.path().to_str().unwrap();
+    let dot_git = copy.path().join(".git");
+    let expected = format!("Kernel is not under Git: no {} entry", dot_git.display());
+
+    let output = run(&doctor_args(k, &paths, "json"));
+    assert_eq!(output.status.code(), Some(1), "{}", stderr_of(&output));
+    assert!(stderr_of(&output).is_empty());
+    let value = json_result(&output);
+    assert_eq!(
+        value["result"]["kernel_git"],
+        serde_json::json!({"path": k, "ok": false, "error": expected})
+    );
+    assert_eq!(value["result"]["kernel"]["ok"], true);
+    assert_eq!(value["result"]["tool_db"]["ok"], true);
+    assert_eq!(value["result"]["workspace_db"]["ok"], true);
+    assert_eq!(value["result"]["healthy"], false);
+
+    let human = run(&doctor_args(k, &paths, "human"));
+    assert_eq!(human.status.code(), Some(1));
+    assert!(stderr_of(&human).is_empty());
+    let stdout = stdout_of(&human);
+    assert!(
+        stdout.contains(&format!("\nKernel Git: FAIL ({expected})\n")),
+        "{stdout}"
+    );
+    assert!(stdout.ends_with("Overall: UNHEALTHY\n"), "{stdout}");
+    assert!(!dot_git.exists(), "doctor must not create anything");
+
+    std::fs::write(&dot_git, "gitdir: ../elsewhere/.git/worktrees/k\n").unwrap();
+    let output = run(&doctor_args(k, &paths, "json"));
+    assert_eq!(output.status.code(), Some(0), "{}", stderr_of(&output));
+    assert_eq!(json_result(&output)["result"]["kernel_git"]["ok"], true);
+}
+
 #[test]
 fn doctor_reports_a_corrupt_database_file_explicitly() {
     let paths = InitPaths::new("doctor-corrupt");
@@ -1289,6 +1549,83 @@ fn export_reports_a_missing_database_as_an_environment_error() {
     assert_eq!(output.status.code(), Some(3));
     assert!(stdout_of(&output).is_empty());
     assert!(!stderr_of(&output).is_empty());
+}
+
+/// §6.5 of the migration program plan for the five foundation commands
+/// (`rust-business-contract-qualification`; the five migration commands have
+/// `migration::migration_all_five_commands_run_without_network`): each one
+/// succeeds with the network cut off — in a fresh network namespace where
+/// the host allows one, otherwise with every proxy pointed at a closed port
+/// and Git's transports disabled — and without `MERIDIAN_INSTANCE`.
+#[test]
+fn init_doctor_validate_resolve_and_export_run_without_network() {
+    let isolated = Command::new("unshare")
+        .args(["-rn", "true"])
+        .output()
+        .is_ok_and(|o| o.status.success());
+    if !isolated {
+        eprintln!("note: no network namespace is available here; network access is blocked through proxy/protocol environment only");
+    }
+    let offline = |args: &[&str]| -> Output {
+        let mut command = if isolated {
+            let mut c = Command::new("unshare");
+            c.arg("-rn").arg(exe());
+            c
+        } else {
+            Command::new(exe())
+        };
+        command
+            .args(args)
+            .env("http_proxy", "http://127.0.0.1:9")
+            .env("https_proxy", "http://127.0.0.1:9")
+            .env("all_proxy", "http://127.0.0.1:9")
+            .env("GIT_ALLOW_PROTOCOL", "none")
+            .env_remove("MERIDIAN_INSTANCE")
+            .output()
+            .unwrap()
+    };
+    let assert_ok = |output: &Output, command: &str| {
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{command} offline: stderr: {}",
+            stderr_of(output)
+        );
+    };
+
+    let paths = InitPaths::new("offline-foundation");
+    let kernel = kernel_root();
+    let k = kernel.to_str().unwrap();
+    let ws = paths.workspace.to_str().unwrap();
+    let tool = paths.tool_db.to_str().unwrap();
+    let wsdb = paths.workspace_db.to_str().unwrap();
+    let dbs = ["--tool-db", tool, "--workspace-db", wsdb];
+
+    let mut init = vec!["init", "--kernel", k, "--workspace", ws];
+    init.extend(dbs);
+    assert_ok(&offline(&init), "init");
+
+    let mut doctor = vec!["doctor", "--kernel", k, "--workspace", ws];
+    doctor.extend(dbs);
+    assert_ok(&offline(&doctor), "doctor");
+
+    assert_ok(&offline(&["validate", "--kernel", k]), "validate");
+
+    let request = write_resolve_request(paths._guard.path());
+    assert_ok(
+        &offline(&[
+            "resolve",
+            "--kernel",
+            k,
+            "--request",
+            request.to_str().unwrap(),
+        ]),
+        "resolve",
+    );
+
+    let mut export = vec!["export", "--kernel", k];
+    export.extend(dbs);
+    assert_ok(&offline(&export), "export");
 }
 
 // ---------------------------------------------------------------------

@@ -31,7 +31,8 @@
 // Selective run: `node --test --test-name-pattern '<pattern>' <this file>`
 // hands the pattern to this process (process.execArgv). When a pattern is
 // given, ONLY the selectable sections run (today: `meridian-cli-migration`,
-// package 8), their checks are filtered by the pattern, and the process
+// package 8, and `accepted-rust-native`, package 9), their checks are
+// filtered by the pattern, and the process
 // exits right after them — the full suite is never run half-filtered.
 
 import crypto from 'node:crypto';
@@ -330,6 +331,7 @@ function runMigrationChecks({ mcheck, meridian, json, canon, source, registry, e
 
 if (NAME_PATTERN) {
   runMeridianCliMigrationConformance();
+  runAcceptedRustNativeDivergences();
   console.log(`\n${passed} passed, ${failures.length} failed (selective run: ${NAME_PATTERN})`);
   process.exit(failures.length ? 1 : 0);
 }
@@ -611,6 +613,21 @@ const VALIDATE_MUTATION_FAMILIES = [
     expectedFailPrefix: 'document-identity:',
   },
   {
+    // rust-business-contract-qualification, production panic audit: an
+    // empty Front Matter block (`---\n---`) made Rust's former
+    // `&text[4..end]` a reversed byte range, so `meridian validate`
+    // panicked (exit 101, no stdout) where the reference's `slice(4, 3)` is
+    // `''` and it reports the missing fields. Both `document-identity` and
+    // `agent-instruction-identity` read this block
+    // (meridian_app::source_format::front_matter_block).
+    id: 'document-identity-empty-front-matter',
+    write: (dir) => {
+      fs.writeFileSync(path.join(dir, 'empty-front-matter-probe.md'), '---\n---\n# probe\n');
+      return [path.join(dir, 'empty-front-matter-probe.md')];
+    },
+    expectedFailPrefix: 'document-identity:',
+  },
+  {
     id: 'duplicate-fm',
     write: (dir) => {
       fs.writeFileSync(
@@ -643,6 +660,57 @@ const VALIDATE_MUTATION_FAMILIES = [
       return [path.join(dir, 'mutation-schema.json'), path.join(dir, 'mutation-data.yaml')];
     },
     expectedFailPrefix: 'schema:',
+  },
+  {
+    // rust-business-contract-qualification: the strictness layer (RFC
+    // decision D-A) on the real gate path. The reference walks the whole
+    // schema tree under the schema file's own resolved path
+    // (`assertSupportedDeep(schema, schemaPath)`); Rust had located the
+    // unsupported construct under `/` (`at //properties/m`) and kept `./`
+    // in the schema path.
+    id: 'registry-schema-unsupported-keyword-and-format',
+    write: (dir) => {
+      fs.writeFileSync(
+        path.join(dir, 'mutation-pp-schema.json'),
+        '{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","patternProperties":{"^x":{"type":"string"}}}',
+      );
+      fs.writeFileSync(path.join(dir, 'mutation-pp-data.yaml'), '$schema: ./mutation-pp-schema.json\nxa: 1\n');
+      fs.writeFileSync(
+        path.join(dir, 'mutation-fmt-schema.json'),
+        '{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"m":{"type":"string","format":"email"}}}',
+      );
+      fs.writeFileSync(path.join(dir, 'mutation-fmt-data.yaml'), '$schema: ./mutation-fmt-schema.json\nm: a\n');
+      return ['mutation-pp-schema.json', 'mutation-pp-data.yaml', 'mutation-fmt-schema.json', 'mutation-fmt-data.yaml']
+        .map((name) => path.join(dir, name));
+    },
+    expectedFailPrefix: 'schema:',
+  },
+  {
+    // rust-business-contract-qualification: every rejecting YAML source of
+    // the shared source-format corpus, through the real gate path, where the
+    // rejection TEXT is observable (the corpus itself compares only
+    // accepted/rejected). Rust had handed the input to the library before
+    // its own strict line lint (RFC decision D-A), so tab indentation and a
+    // second document carried the library's wording.
+    id: 'registry-yaml-strict-lint-rejections',
+    write: (dir) => {
+      const corpus = JSON.parse(fs.readFileSync(path.join(ROOT, 'verification', 'conformance-harness', 'fixtures', 'source-format-corpus.json'), 'utf8'));
+      const rejecting = corpus.yaml.filter((testCase) => testCase.name.startsWith('reject-'));
+      assert(rejecting.length === 5, `ожидалось 5 отклоняющих YAML-случаев корпуса, получено ${rejecting.length}`);
+      // Plus the subset reader's own flow-collection rejections, which the
+      // library used to pre-empt with its "unclosed bracket" wording.
+      const cases = [
+        ...rejecting,
+        { name: 'reject-unclosed-flow-sequence', source: 'a: [1, 2\n' },
+        { name: 'reject-unclosed-flow-mapping', source: 'a: {b: 1\n' },
+      ];
+      return cases.map((testCase) => {
+        const file = path.join(dir, `mutation-${testCase.name}.yaml`);
+        fs.writeFileSync(file, testCase.source);
+        return file;
+      });
+    },
+    expectedFailPrefix: 'schema: cannot parse',
   },
 ];
 
@@ -739,6 +807,28 @@ const VALIDATE_MUTATION_FAMILIES_7A = [
       );
     },
     expectedFailPrefix: 'agent-instruction-identity:',
+  },
+  {
+    // rust-business-contract-qualification: the `rule-resolution` family of
+    // `validate` (PHASE B schemas exercised against their bundled fixtures)
+    // had no negative Node/Rust case — the resolver corpora exercise the
+    // resolver, not this fixture check. One must-be-valid fixture of each
+    // group is declared invalid and one must-be-invalid fixture valid, so
+    // both the "validated clean" and the first-schema-error texts compare.
+    id: 'rule-resolution-fixtures',
+    write: (dir) => {
+      const p = path.join(dir, 'registries', 'rule-resolution', 'fixtures', 'rule-resolution.fixtures.json');
+      const bundle = JSON.parse(fs.readFileSync(p, 'utf8'));
+      assert(Array.isArray(bundle) && bundle.length === 2, 'rule-resolution.fixtures.json must carry the two PHASE B groups');
+      for (const group of bundle) {
+        const wasValid = group.valid[0];
+        const wasInvalid = group.invalid[0];
+        group.valid[0] = wasInvalid;
+        group.invalid[0] = wasValid;
+      }
+      fs.writeFileSync(p, JSON.stringify(bundle));
+    },
+    expectedFailPrefix: 'rule-resolution:',
   },
 ];
 
@@ -2028,27 +2118,6 @@ const VALIDATE_MUTATION_FAMILIES_7A_ADVERSARIAL = [
     expectedFailPrefix: 'instruction-topics:',
   },
   {
-    id: 'instruction-topics-wrong-yaml-type',
-    write: (dir) => {
-      const yamlFile = path.join(dir, 'standards', 'workspace', 'instruction-topics.yaml');
-      fs.writeFileSync(yamlFile, 'schema_version: 1\ntopics: true\n');
-    },
-    expectedFailPrefix: 'instruction-topics:',
-    // The Node reference's own diagnostic here is an *incidental* engine
-    // TypeError message ("(val || []).map is not a function"), not an
-    // authored one — `scripts/kernel-validate.mjs` never states that exact
-    // text as a deliberate contract the way every other `fail(...)` call
-    // does. This port deliberately reports a legible, authored failure
-    // instead of reproducing an uncaught-exception string
-    // (`meridian-cli/src/commands/validate/instruction_topics.rs`,
-    // `AGENTS.md` §9 — Rust may make an ill-defined reference state more
-    // robust when the boundary is named and tested, as it is here). Exact
-    // text equality is therefore not required for this one case; both
-    // sides independently producing a new FAIL under the same prefix is
-    // the contract actually being proven.
-    exactTextNotRequired: true,
-  },
-  {
     id: 'stack-profiles-duplicated-pool-region',
     write: (dir) => {
       const mdFile = path.join(dir, 'stack-profiles', 'stack-profiles.md');
@@ -2111,24 +2180,6 @@ for (const family of VALIDATE_MUTATION_FAMILIES_7A_ADVERSARIAL) {
     family.write(mutationDir);
     check(`реальный Node/Rust validate: состязательная мутация "${family.id}" совпадает на обеих сторонах (7a, второй раунд CHANGES_REQUESTED)`, () => {
       const result = runCase(mutatedKernelValidateCase(`cli-validate-mutation-7a-adversarial-${family.id}`, mutationDir));
-      if (family.exactTextNotRequired) {
-        // Same exit code, and each side independently produced its own new
-        // FAIL under the expected prefix — not byte-identical diagnostic
-        // text (see the family's own comment for why).
-        assert(
-          result.comparison.exit_code.match,
-          `ожидался одинаковый код завершения для "${family.id}", получено ${JSON.stringify(result.comparison.exit_code)}`,
-        );
-        assert(
-          result.comparison.fail.left.some((m) => m.startsWith(family.expectedFailPrefix)),
-          `мутация "${family.id}" должна была произвести новый FAIL с префиксом "${family.expectedFailPrefix}" на стороне Node, получено: ${JSON.stringify(result.comparison.fail.left)}`,
-        );
-        assert(
-          result.comparison.fail.right.some((m) => m.startsWith(family.expectedFailPrefix)),
-          `мутация "${family.id}" должна была произвести новый FAIL с префиксом "${family.expectedFailPrefix}" на стороне Rust, получено: ${JSON.stringify(result.comparison.fail.right)}`,
-        );
-        return;
-      }
       assert(
         result.status === 'conformant',
         `ожидался conformant для "${family.id}", получено ${result.status}: ${JSON.stringify(result)}`,
@@ -2144,6 +2195,214 @@ for (const family of VALIDATE_MUTATION_FAMILIES_7A_ADVERSARIAL) {
     createdTempDirs.splice(createdTempDirs.indexOf(mutationDir), 1);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Package rust-business-contract-qualification (plan §5.23), corrective
+// round: the four observable Node/Rust `validate` deltas the architect
+// classified ACCEPTED_RUST_NATIVE (COMPATIBILITY.md, GAP-10…GAP-13). Each
+// case runs the real Node reference and the real compiled `meridian` on one
+// mutated full copy of this repository and pins the EXACT shape of the
+// accepted divergence: same exit code, equal WARN multisets, and a FAIL
+// multiset difference that is exactly the declared Node-only and Rust-only
+// messages — nothing else may differ. Selectable:
+// `--test-name-pattern accepted-rust-native`.
+// ---------------------------------------------------------------------------
+
+// Removes one match per expected entry (an exact string or a RegExp) from
+// `actual`; every expected entry must be matched and nothing may be left.
+function assertExactlyMatched(actual, expected, side) {
+  const rest = [...actual];
+  for (const want of expected) {
+    const i = rest.findIndex((m) => (want instanceof RegExp ? want.test(m) : m === want));
+    assert(i !== -1, `${side}: нет ожидаемого FAIL ${want} среди ${JSON.stringify(rest)}`);
+    rest.splice(i, 1);
+  }
+  assert(rest.length === 0, `${side}: необъявленные FAIL ${JSON.stringify(rest)}`);
+}
+
+function assertDeclaredDivergence(result, { nodeOnly, rustOnly }) {
+  assert(result.status === 'divergent', `ожидалось объявленное расхождение, получено ${result.status}: ${JSON.stringify(result).slice(0, 4000)}`);
+  const c = result.comparison;
+  assert(c.exit_code.match && c.exit_code.left === 1, `коды завершения должны совпасть (1): ${JSON.stringify(c.exit_code)}`);
+  assert(c.warn.missing.length === 0 && c.warn.added.length === 0, `WARN-множества должны совпадать полностью: ${JSON.stringify(c.warn)}`);
+  const extra = (diff) => diff.flatMap((d) => Array(Math.abs(d.left_count - d.right_count)).fill(d.message));
+  assertExactlyMatched(extra(c.fail.missing), nodeOnly, 'Node');
+  assertExactlyMatched(extra(c.fail.added), rustOnly, 'Rust');
+}
+
+function runAcceptedRustNativeDivergences() {
+  const selected = (name) => !NAME_PATTERN || NAME_PATTERN.test(name);
+  const acheck = (name, fn) => { if (selected(name)) check(name, fn); };
+  const build = spawnSync('cargo', ['build', '-p', 'meridian-cli', '--bin', 'meridian', '--example', 'validate_cli_producer'], { cwd: ROOT, encoding: 'utf8' });
+  const producer = path.join(ROOT, 'target', 'debug', 'examples', process.platform === 'win32' ? 'validate_cli_producer.exe' : 'validate_cli_producer');
+  const onMutatedCopy = (id, mutate, verify) => {
+    const name = `accepted-rust-native: ${id}`;
+    if (!selected(name)) return;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), `conformance-harness-accepted-rust-native-${id}-`));
+    createdTempDirs.push(dir);
+    try {
+      copyRepoWithoutGitOrTarget(dir);
+      const context = mutate(dir);
+      check(name, () => {
+        assert(build.status === 0, `cargo build: ${build.stderr}`);
+        const result = runCase({
+          name: `accepted-rust-native-${id}`,
+          left: { command: process.execPath, args: [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], cwd: ROOT, env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }) },
+          right: { command: producer, args: [dir], cwd: ROOT, env: kernelOnlyEnv() },
+        });
+        verify(result, dir, context);
+      });
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+    }
+  };
+
+  // GAP-10: the authored "<family>: <file> is not valid JSON: " prefix and
+  // the verdict are the contract; the parser's own tail (V8 against
+  // serde_json) is not. Every independent production parser owner gets
+  // matched Node/Rust evidence: same exit code, equal WARN multisets, the
+  // same authored prefixes (pinned by name), a differing parser tail only,
+  // and no undeclared FAIL.
+  const JSON_MARKER = ' is not valid JSON: ';
+  const BROKEN_JSON = '{"type": "object",}';
+  const assertParserTailOnly = (result, expectedPrefixes, declaredRustOnly = []) => {
+    assert(result.status === 'divergent', `ожидалось расхождение только в хвосте, получено ${result.status}`);
+    const c = result.comparison;
+    assert(c.exit_code.match && c.exit_code.left === 1, `коды завершения: ${JSON.stringify(c.exit_code)}`);
+    assert(c.warn.missing.length === 0 && c.warn.added.length === 0, `WARN: ${JSON.stringify(c.warn)}`);
+    const extra = (diff) => diff.flatMap((d) => Array(Math.abs(d.left_count - d.right_count)).fill(d.message));
+    const rustExtra = extra(c.fail.added);
+    for (const declared of declaredRustOnly) {
+      const i = rustExtra.indexOf(declared);
+      assert(i !== -1, `Rust: нет объявленного FAIL ${JSON.stringify(declared)} среди ${JSON.stringify(rustExtra)}`);
+      rustExtra.splice(i, 1);
+    }
+    const tails = { Node: new Set(), Rust: new Set() };
+    const split = (messages, side) => messages.map((m) => {
+      const at = m.indexOf(JSON_MARKER);
+      assert(at !== -1 && m.length > at + JSON_MARKER.length, `${side}: необъявленный FAIL (расходится не хвост невалидного JSON): ${m}`);
+      tails[side].add(m.slice(at + JSON_MARKER.length));
+      return m.slice(0, at + JSON_MARKER.length);
+    }).sort();
+    const nodePrefixes = split(extra(c.fail.missing), 'Node');
+    const rustPrefixes = split(rustExtra, 'Rust');
+    const expected = [...expectedPrefixes].sort();
+    assert(JSON.stringify(nodePrefixes) === JSON.stringify(expected), `Node: авторские префиксы ${JSON.stringify(nodePrefixes)}, ожидались ровно ${JSON.stringify(expected)}`);
+    assert(JSON.stringify(rustPrefixes) === JSON.stringify(expected), `Rust: авторские префиксы ${JSON.stringify(rustPrefixes)}, ожидались ровно ${JSON.stringify(expected)}`);
+    for (const tail of tails.Rust) assert(!tails.Node.has(tail), `хвост ${JSON.stringify(tail)} совпал — это не parser-specific расхождение`);
+  };
+
+  // Combined routes on one copy: the generic `$schema` pass (cli
+  // registry_schema), a CLI-owned fixture reader (cli
+  // rule_resolution_fixtures), the shared run-contract/migration schema
+  // reader (app run_contract_boundary::parse_json — upgrade-integration-
+  // qualification composes execution-state.schema.json through the same
+  // reader) and an app-owned fixture reader (app functional_parity).
+  onMutatedCopy('GAP-10 invalid-JSON tail: combined routes', (dir) => {
+    fs.writeFileSync(path.join(dir, 'registries', 'operating-model', 'execution-state.schema.json'), BROKEN_JSON);
+    fs.writeFileSync(path.join(dir, 'registries', 'rule-resolution', 'fixtures', 'rule-resolution.fixtures.json'), BROKEN_JSON);
+    fs.writeFileSync(path.join(dir, 'verification', 'functional-parity', 'fixtures', 'functional-parity-evidence.fixtures.json'), BROKEN_JSON);
+    fs.writeFileSync(path.join(dir, 'mutation-broken.schema.json'), BROKEN_JSON);
+    fs.writeFileSync(path.join(dir, 'mutation-broken-schema-data.yaml'), '$schema: ./mutation-broken.schema.json\n');
+  }, (result, dir) => assertParserTailOnly(result, [
+    `schema: ${path.join(dir, 'mutation-broken.schema.json')}${JSON_MARKER}`,
+    `rule-resolution: the fixtures file${JSON_MARKER}`,
+    `functional-parity: the fixtures file${JSON_MARKER}`,
+    `execution-state-model: execution-state.schema.json${JSON_MARKER}`,
+    `upgrade-integration-qualification: execution-state.schema.json${JSON_MARKER}`,
+  ]));
+
+  // One isolated copy per remaining independent parser owner, so that one
+  // family's cascade cannot mask another's.
+  const ISOLATED_JSON_ROUTES = [
+    // cli commands::validate::instruction_source_registry
+    ['instruction-source-registry', []],
+    // cli commands::validate::controlled_rule_intake
+    ['controlled-rule-intake', []],
+    // cli commands::validate::existing_project_compatibility_mode
+    ['existing-project-compatibility-mode', []],
+    // app operating_model::task_pattern_registry. Any failure of the
+    // registry leaves no catalog; the two dependent Rust-only lines are the
+    // separately accepted "catalog published whole" boundaries
+    // (COMPATIBILITY.md, `task-pattern-registry`/`task-specification-contract`
+    // and `upgrade-integration-qualification` without a catalog), declared
+    // here by exact text rather than tolerated.
+    ['task-pattern-registry', [
+      'task-specification-contract: no task-pattern catalog is available; task-pattern-registry must be checked first',
+      'upgrade-integration-qualification: no task-pattern catalog is available; task-pattern-registry must be checked first',
+    ]],
+    // app operating_model::task_specification
+    ['task-specification', []],
+  ];
+  const FAMILY_OF = { 'task-specification': 'task-specification-contract' };
+  for (const [fixture, declaredRustOnly] of ISOLATED_JSON_ROUTES) {
+    onMutatedCopy(`GAP-10 invalid-JSON tail: ${fixture} fixtures`, (dir) => {
+      fs.writeFileSync(path.join(dir, 'registries', 'operating-model', 'fixtures', `${fixture}.fixtures.json`), BROKEN_JSON);
+    }, (result) => assertParserTailOnly(
+      result,
+      [`${FAMILY_OF[fixture] ?? fixture}: the fixtures file${JSON_MARKER}`],
+      declaredRustOnly,
+    ));
+  }
+
+  // GAP-11: the production Rust route reads no Instance, so a `$schema`
+  // that resolves nowhere is reported against the Kernel only.
+  onMutatedCopy('GAP-11 missing schema names the Kernel only', (dir) => {
+    fs.writeFileSync(path.join(dir, 'mutation-missing-schema.yaml'), '$schema: ./nope.schema.json\n');
+  }, (result, dir) => {
+    const file = path.join(dir, 'mutation-missing-schema.yaml');
+    assertDeclaredDivergence(result, {
+      nodeOnly: [`schema: ${file} references ./nope.schema.json, which resolves to no file in the Instance or the Kernel`],
+      rustOnly: [`schema: ${file} references ./nope.schema.json, which resolves to no file in the Kernel`],
+    });
+  });
+
+  // GAP-12: three texts the Node YAML subset accepts while silently
+  // dropping data (`"unterminated` keeps its quote; a mis-indented key and a
+  // mapping key after a top-level sequence vanish). Rust rejects all three
+  // fail-closed; a well-formed control document under the same schema is
+  // accepted by both sides.
+  onMutatedCopy('GAP-12 lossy YAML is rejected fail-closed', (dir) => {
+    fs.writeFileSync(path.join(dir, 'mutation-lossy.schema.json'), '{"type":"object"}');
+    const files = {
+      unterminated: '$schema: ./mutation-lossy.schema.json\na: "unterminated\n',
+      misindented: '$schema: ./mutation-lossy.schema.json\na:\n  - b\n c: d\n',
+      'sequence-then-mapping': '- a\nb: 1\n',
+      control: '$schema: ./mutation-lossy.schema.json\na: "terminated"\n',
+    };
+    for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(dir, `mutation-lossy-${name}.yaml`), text);
+    return Object.keys(files).filter((name) => name !== 'control');
+  }, (result, dir, lossy) => {
+    const nodeView = lossy.map((name) => yamlParse(fs.readFileSync(path.join(dir, `mutation-lossy-${name}.yaml`), 'utf8')));
+    assert(
+      JSON.stringify(nodeView) === JSON.stringify([
+        { $schema: './mutation-lossy.schema.json', a: '"unterminated' },
+        { $schema: './mutation-lossy.schema.json', a: ['b'] },
+        ['a'],
+      ]),
+      `Node-подмножество должно принимать все три входа с потерей данных, получено ${JSON.stringify(nodeView)}`,
+    );
+    assertDeclaredDivergence(result, {
+      nodeOnly: [],
+      rustOnly: lossy.map((name) => new RegExp(`^schema: cannot parse ${path.join(dir, `mutation-lossy-${name}.yaml`).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}: malformed YAML: \\S`)),
+    });
+  });
+
+  // GAP-13: `topics` of the wrong YAML type. Node fails through an
+  // uncaught engine TypeError text inside its try/catch; Rust reports one
+  // authored FAIL. Nothing else may differ.
+  onMutatedCopy('GAP-13 instruction-topics of the wrong type', (dir) => {
+    fs.writeFileSync(path.join(dir, 'standards', 'workspace', 'instruction-topics.yaml'), 'schema_version: 1\ntopics: true\n');
+  }, (result) => {
+    assertDeclaredDivergence(result, {
+      nodeOnly: [/^instruction-topics: \S.* is not a function$/],
+      rustOnly: ['instruction-topics: "topics" must be a list, found a boolean'],
+    });
+  });
+}
+
+if (!NAME_PATTERN) runAcceptedRustNativeDivergences();
 
 // ---------------------------------------------------------------------------
 // Package meridian-cli-foundation, subpackage validate-mechanical-integrity,

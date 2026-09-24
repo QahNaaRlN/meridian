@@ -160,7 +160,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Типизированные доказательства и полевая оценка (`rust-architecture-conformance-6`) | Перевести оставшиеся семейства 7c `evidence-and-handoff-contract` и `meridian-field-evaluation` на общий typed core/app pipeline, удалить временные resolver/portability фасады и оставить CLI слоем composition/presentation | `rust-architecture-conformance-5`, §5.13 | accepted — принято и локально интегрировано (§5.20.9) |
 | — | Типизированная миграционная и upgrade-квалификация (`rust-architecture-conformance-7`) | Перевести весь связный 7d: `instance-data-migration`, `instance-canonical-export`, `workspace-compatibility-qualification`, `upgrade-integration-qualification`; расширить существующий migration owner и композиционно переиспользовать принятые операции 7b/7c | `rust-architecture-conformance-6`, §5.13 | accepted — принято и локально интегрировано (§5.21.9) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | accepted — принят и локально интегрирован (§5.22.11) |
-| 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | in progress — корректирующие передачи: `NOT_QUALIFIED`, GAP-09 открыт (§5.23.10) |
+| 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | not qualified — GAP-09; corrective package specified (§5.23.10–§5.23.11) |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
 
 ### После выпуска (вне этой программы, но зависимые от неё)
@@ -6478,6 +6478,244 @@ COMPAT-29 добавлено matched Node/Rust negative evidence каждого 
 только целиком»; прежнее «шесть» было ошибкой (фактически пять в
 combined-case). Матрица не изменилась: 134 строки, 3 `GAP`.
 
+### 5.23.11. Корректирующий пакет GAP-09 `rust-workspace-state-validation` (задание, 2026-09-25)
+
+#### Статус и условие старта
+
+Статус: **`SPECIFIED_NOT_STARTED`**. Это отдельное исполнение внутри пакета 9,
+а не пакет 10 и не продолжение второго корректирующего раунда. Документальная
+спецификация не начинает реализацию. Первая передача исполнителя имеет статус
+не выше `READY_FOR_ARCHITECT_REVIEW`; исполнитель не выполняет Git
+write-операций.
+
+База исполнения — чистый `dev` с package commit
+`964ade898e1c3ebb4826229ad2488287d0a9c75f` и отдельным merge-коммитом
+`815ab80d94d4fcff156f6c149686d60c0272f560`. Пакет закрывает только GAP-09
+квалификационного отчёта. Пакет 10 `meridian-rust-release` остаётся закрытым
+до реализации этого пакета, повторной квалификации всей матрицы пакета 9,
+вердикта `QUALIFIED`, независимой приёмки и локальной интеграции.
+
+#### Результат и граница
+
+Результат — штатный production-маршрут проверки продуктового состояния из
+рабочей SQLite-базы без эксплуатационного чтения `MERIDIAN_INSTANCE`:
+
+```text
+explicit --workspace-db + Kernel/workspace/Git inputs
+  -> meridian-cli adapters and composition
+  -> meridian-app workspace-state validation operation
+  -> RecordRepository + WorkspaceReader + GitInspector ports
+  -> closed transport DTOs and schema gates
+  -> strict meridian-core domain types and pure checks
+  -> typed diagnostics and optional metrics record
+  -> one meridian-cli presentation boundary
+```
+
+Пакет обязан закрыть все строки категории 3 mapping §9.3 отчёта:
+
+1. M-02/M-03 — обязательная типизированная продуктовая запись и проверка
+   product-specific литералов/паттернов `kernel-purity` по фактическому
+   Kernel; некомпилируемый паттерн даёт явный `FAIL`, а не пропуск.
+2. M-05b — закрытый registry `record_type -> payload contract`; полный
+   transport/schema/domain проход применяется и к обоим import kind до
+   записи, и к уже сохранённым current records при `validate`. Неизвестный
+   product record type, для которого объявлен обязательный контракт, и
+   schema-invalid payload fail-closed; `serde_json::Value` не проходит за
+   transport boundary.
+3. M-06 — требования `requires_instance_context` скиллов Kernel сверяются с
+   типизированным контекстом рабочей базы.
+4. M-07 — внешние зависимости разбираются в закрытый предметный тип;
+   malformed запись даёт `FAIL`, непинованная допустимая зависимость сохраняет
+   канонический уровень `WARN`.
+5. M-08 — записи inventory сверяются с фактическими локальными репозиториями,
+   revision/ref/dirty и TTL `last_verified`; недоступность остаётся явным
+   `UNVERIFIED`, а не успехом. Один адаптер Git получает входы явно от CLI.
+6. M-09 — профиль каждой repository identity принадлежит принятому пулу и
+   подтверждается объявленным manifest через `WorkspaceReader`; `universal`
+   не становится профилем.
+7. M-12 — каждая instruction-intake record ссылается на существующую
+   repository identity; ссылочная целостность проверяется чистой предметной
+   операцией над принятыми типами.
+8. M-15 — полнота приёма сверяется с фактическим деревом репозитория,
+   tracked/untracked/ignored состоянием и размеченными regions через
+   существующий `source_format::regions`; отсутствующее покрытие fail-closed,
+   недоступный репозиторий остаётся `UNVERIFIED`.
+9. M-18 — `--log-metrics` после сформированного результата добавляет одну
+   `gate-run-observation` в рабочую базу. Запись является opt-in эффектом,
+   никогда не меняет предметный verdict/stdout/stderr/exit code исходной
+   проверки; ошибка записи сообщается отдельно и не маскируется как успешная
+   запись.
+
+M-01, M-04, M-05a, M-10/M-11, M-13/M-14 и M-16/M-17 не переносятся повторно:
+их категория 1/2 и доказательство остаются границей §9.3. Исполнитель не
+возвращает файловую идентичность старого Instance и не создаёт второй
+универсальный validator.
+
+#### Точный контракт CLI
+
+Пакет расширяет существующую команду, не добавляя новую:
+
+```text
+meridian validate --kernel <path> [--workspace-db <path>] [--log-metrics] [--format human|json]
+```
+
+1. Без `--workspace-db` сохраняется принятый Kernel-only контракт, включая
+   явные `WARN ... no Instance root ... not checked`; команда не ищет базу по
+   cwd, окружению или соседнему файлу.
+2. С `--workspace-db` база открывается как `DatabaseRole::Workspace` с
+   редакцией из `<kernel>/VERSION`; missing/corrupt/wrong-role/wrong-edition
+   даёт код 3, пустой stdout и стабильную ошибку stderr.
+3. При успешно открытой базе Kernel-only заглушки для M-02…M-18 заменяются
+   фактическими diagnostics production-операции; одни и те же проверки не
+   исполняются и не выводятся дважды.
+4. `--log-metrics` без `--workspace-db` — usage error, код 2. Без флага
+   `validate` остаётся read-only, включая отрицательный предметный результат.
+5. `--log-metrics` пишет observation после вычисления полного результата и
+   фиксирует как минимум время через порт `Clock`, редакцию Kernel, проверяемую
+   локальную revision при её наличии, exit code, счётчики FAIL/WARN/INFO и
+   ограниченные стабильные списки сообщений. Idempotency key исключает вторую
+   запись при повторе того же логического запуска.
+6. Human/JSON envelope, разделение stdout/stderr и коды 0/1/2/3 сохраняются.
+   Расширение JSON выполняется только добавлением явно названного объекта
+   `workspace_state` и, при opt-in, `metrics`; существующие поля и их смысл не
+   меняются.
+
+#### Обязательная архитектура
+
+- `meridian-core` владеет чистыми строгими типами продуктовой конфигурации,
+  внешних зависимостей, repository inventory, profile declaration,
+  instruction-intake links/completeness и наблюдения gate; core не знает
+  JSON/YAML, SQLite, путей баз, Git, файлов, env, времени или CLI.
+- `meridian-app` владеет закрытыми DTO, transport/schema/domain границей,
+  оркестрацией одной операции над `RecordRepository`, `WorkspaceReader`,
+  `GitInspector` и `Clock`, а также построением `PutRecordRequest` для
+  observation. Concrete adapters и форматирование в app запрещены.
+- Существующий `RecordRepository` переиспользуется. Новый query-порт допустим
+  только если `export_all` объективно не выражает требуемый контракт; он не
+  должен раскрывать SQL, таблицы или роль физической базы в core.
+- `meridian-storage-sqlite` меняется только для adapter-neutral расширения
+  принятого порта либо необходимого атомарного инварианта. SQL и транзакции не
+  переходят в app/CLI.
+- `meridian-cli` открывает рабочую базу, реализует реальные filesystem/Git/
+  Clock adapters, передаёт их одной app-операции и форматирует typed result.
+  Предметные проверки в CLI запрещены.
+- Проверка import payload выполняется тем же production validator/registry,
+  что чтение рабочей базы; параллельный упрощённый алгоритм для теста или
+  импорта запрещён.
+- Диагностики детерминированно сортируются по семантическому ключу, а не по
+  hash iteration или порядку строк SQLite.
+
+#### Критерии приёмки
+
+1. Все десять category-3 пунктов §9.3 имеют positive и negative executable
+   evidence того же production route; строки VAL-30/NODE-02/NODE-03 матрицы
+   больше не `GAP`.
+2. Реальный импортированный bundle проверяется через `--workspace-db` без
+   `MERIDIAN_INSTANCE`; каждый category-3 verdict совпадает с замороженным
+   эталоном. Общие счётчики вправе отличаться только на поимённо исключённые
+   category-1/2 строки §9.3 либо отдельно классифицированное архитектором
+   Rust-native отличие. Сравнение не переписывает алгоритм проекцией.
+3. Каждый поддержанный payload принимается после transport/schema/domain
+   прохода; мутация одного обязательного поля каждого семейства отвергается
+   до записи обоими import kind и обнаруживается в уже сохранённой базе.
+4. Missing/corrupt/wrong-role/wrong-edition workspace DB и port I/O failures
+   fail-closed; отсутствие необязательного локального репозитория даёт ровно
+   объявленный `UNVERIFIED`, не зелёный факт.
+5. Kernel-only `validate` байт-в-байт сохраняет прежний stdout/stderr и код;
+   обычный DB-backed `validate` не изменяет export digest, revisions,
+   migration journal или observation count.
+6. Один `--log-metrics` добавляет ровно одну observation после положительного
+   и после отрицательного валидного результата; повтор с тем же idempotency
+   key не дублирует запись. Ошибка записи не меняет validation verdict и явно
+   отражается в `metrics` outcome.
+7. `NoOpEventSink` и `RecordingEventSink` дают одинаковые stdout/stderr/exit
+   code и одинаковое состояние базы для одинакового режима логирования.
+8. Offline-тест блокирует сеть; все новые DB-backed маршруты успешно работают
+   на локальных входах.
+9. В core нет I/O/serde/SQLite/Git/process/env/clock; в app нет concrete
+   adapters; production panic audit не находит нового достижимого panic.
+10. Квалификационный отчёт и `COMPATIBILITY.md` обновляются только после
+    реализации и executable evidence; сам пакет не объявляет `QUALIFIED` и не
+    открывает release.
+
+#### Явно вне объёма
+
+- пакет 10, версия, `CHANGELOG`, release/promotion ветви, теги и публикация;
+- удаление Node.js, изменение/архивирование замороженного Instance;
+- Metis, Concord, network API, PostgreSQL, daemon, GUI;
+- восстановление переходных category-1 проверок Git/раскладки Instance;
+- чтение `MERIDIAN_INSTANCE` штатным Rust CLI;
+- произвольный CRUD, универсальный schema registry для неизвестных будущих
+  record type или новая команда;
+- принятие новой наблюдаемой дельты исполнителем;
+- Git branch/switch/add/commit/merge/rebase/reset/stash/tag/push исполнителем.
+
+#### Ворота исполнения
+
+Первый раунд и каждый `CHANGES_REQUESTED` выполняют только целевой набор:
+
+```bash
+node scripts/preflight.mjs
+MERIDIAN_KERNEL=/home/krmiftakhov/PersonalProjects/meridian MERIDIAN_INSTANCE=<local-frozen-source> node scripts/preflight.mjs --require-instance
+cargo fmt --all -- --check
+cargo check --workspace
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test -p meridian-core workspace_state
+cargo test -p meridian-app workspace_state
+cargo test -p meridian-cli workspace_state
+cargo test -p meridian-cli --test binary_runs workspace_state
+node --check test/conformance-harness.test.mjs
+git diff --check
+git diff --cached --check
+git diff --cached --name-only
+```
+
+Если фактические имена тестовых фильтров отличаются, исполнитель перечисляет
+точные команды и доказывает, что они выбирают все новые positive/negative
+cases, а не ноль тестов. Полные `cargo test --workspace`, conformance и
+`kernel-validate.test.mjs` не повторяются в промежуточном раунде. После
+архитектурного одобрения финального кандидата один раз выполняется весь набор
+§5.23.7, включая real-bundle tests; дополнительно real Node/Rust DB-backed
+validate case обязан доказать критерий 2 выше.
+
+Sandbox `EPERM` повторяется той же командой через разрешённый путь и не
+становится кодовым вердиктом.
+
+#### Готовое задание исполнителю
+
+> Реализуй корректирующий пакет `rust-workspace-state-validation` строго по
+> §5.23.11 активного плана. Это отдельное исполнение внутри пакета 9, которое
+> закрывает только GAP-09; release, Node removal и новые функции вне mapping
+> §9.3 запрещены.
+>
+> До изменений выполни оба preflight, подтверди чистый `dev`, достижимость
+> `964ade898e1c3ebb4826229ad2488287d0a9c75f` через merge
+> `815ab80d94d4fcff156f6c149686d60c0272f560` и пустой индекс. Локальный frozen
+> source используй только как проводку команд и real-bundle evidence; не
+> записывай его путь и не добавляй эксплуатационное чтение
+> `MERIDIAN_INSTANCE`.
+>
+> Построй один typed production route
+> `CLI adapters -> app operation -> RecordRepository/WorkspaceReader/
+> GitInspector/Clock -> closed DTO/schema/domain -> core checks -> typed
+> diagnostics`. Закрой M-02/M-03, M-05b, M-06…M-09, M-12, M-15 и M-18; не
+> возвращай category-1 механику старого Instance. Переиспользуй существующие
+> порты и `source_format::regions`; не оставляй предметные алгоритмы в CLI и
+> `Value` после границы.
+>
+> Сохрани Kernel-only поведение. Добавь явный `--workspace-db`; DB-backed
+> validate по умолчанию read-only. `--log-metrics` требует базу и является
+> единственным opt-in эффектом, не меняющим validation verdict. Import обоих
+> kind и validate обязаны использовать один payload validator.
+>
+> Выполни целевые ворота этого раздела. Любую новую наблюдаемую дельту не
+> принимай самостоятельно: передай минимальное воспроизведение как
+> `BLOCKED_FOR_ARCHITECT_DECISION`. Не выполняй Git write-операций. Передай
+> статус не выше `READY_FOR_ARCHITECT_REVIEW`, exact HEAD/fingerprint,
+> изменённые файлы, owner map, mapping каждого M-пункта на production route и
+> positive/negative test, коды/счётчики ворот, невыполненные проверки и
+> подтверждение пустого индекса.
+
 ## 6. Ворота Rust
 
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
@@ -6751,7 +6989,7 @@ activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
 last_completed_package: meridian-cli-migration
 current_package: rust-business-contract-qualification
-current_package_status: not_qualified_gap_09_open
+current_package_status: corrective_package_specified_not_started
 next_package: meridian-rust-release
 next_package_status: blocked_pending_package_9_acceptance
 concord_status: paused_pending_meridian_rust_release
@@ -7017,3 +7255,11 @@ GAP-10…GAP-15 и GAP-02 закрыты по решениям архитект�
 нашёл утраченные бизнес-проверки продуктового состояния без
 production-владельца в Rust. Заявленный результат — `NOT_QUALIFIED`; статус
 НЕ `ACCEPTED`; `meridian-rust-release`, Metis и Concord не открываются.
+
+**Обновление (2026-09-25, §5.23.11, следующий корректирующий пакет).**
+GAP-09 выделен в отдельный пакет `rust-workspace-state-validation` со статусом
+`specified_not_started`. Пакет вводит DB-backed `validate` над рабочей базой,
+закрывает все category-3 пункты mapping и добавляет только opt-in
+`--log-metrics`; штатный Rust CLI не читает `MERIDIAN_INSTANCE`. Пакет 9
+остаётся `NOT_QUALIFIED`, а пакет 10, Metis и Concord остаются закрытыми до
+реализации, повторной квалификации и независимой приёмки.

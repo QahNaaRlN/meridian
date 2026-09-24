@@ -5,7 +5,7 @@ status: draft
 scope: workspace
 owner: workspace-owner
 created: 2026-09-14
-updated: 2026-09-24
+updated: 2026-09-25
 related_documents:
   - $MERIDIAN_KERNEL/governance/meridian-owner-intent-contract.md
   - $MERIDIAN_KERNEL/governance/decisions/meridian-rust-sqlite-architecture.md
@@ -387,7 +387,7 @@ format адаптера и не становятся образцом для ope
 ```text
 meridian init     --kernel <path> --workspace <path> --tool-db <path> --workspace-db <path> [--format human|json]
 meridian doctor   --kernel <path> --workspace <path> --tool-db <path> --workspace-db <path> [--format human|json]
-meridian validate --kernel <path> [--format human|json]
+meridian validate --kernel <path> [--workspace-db <path>] [--log-metrics] [--format human|json]
 meridian resolve  --kernel <path> [--request <path>] [--format human|json]
 meridian export   --kernel <path> --tool-db <path> --workspace-db <path> [--format human|json]
 ```
@@ -395,6 +395,16 @@ meridian export   --kernel <path> --tool-db <path> --workspace-db <path> [--form
 `--format` по умолчанию `human` для каждой команды. `resolve` без
 `--request` читает запрос из stdin. `--help`/`-h`, отдельно или как первый
 токен, и голая команда `help` печатают usage в stdout и завершаются кодом 0.
+
+Расширение `validate` принято корректирующим пакетом
+`rust-workspace-state-validation` (`meridian-rust-migration-program-plan.md`
+§5.23.11). Без `--workspace-db` сохраняется Kernel-only контракт пакета 7 и
+команда не угадывает путь базы. С `--workspace-db` она только чтением
+проверяет импортированное продуктовое состояние через `RecordRepository`;
+база обязана иметь роль `workspace` и совместимую редакцию Kernel.
+`--log-metrics` допустим только вместе с `--workspace-db` и является
+единственным opt-in эффектом: добавляет `gate-run-observation`, не меняя
+предметный вердикт проверки. Штатный маршрут не читает `MERIDIAN_INSTANCE`.
 
 **Коды завершения** (`meridian-cli/src/exit_code.rs`):
 
@@ -429,8 +439,10 @@ meridian export   --kernel <path> --tool-db <path> --workspace-db <path> [--form
 JSON-представления отличаются только формой, никогда вердиктом или кодом
 завершения.
 
-**Роль баз при `init`/`doctor`/`export`.** `--tool-db` и `--workspace-db`
-называют физический путь, а не роль: открытие каждой базы утверждает
+**Роль баз при `init`/`doctor`/`validate`/`export`.** `--tool-db` и
+`--workspace-db` называют физический путь, а не роль; `validate` принимает
+только `--workspace-db`, потому что продуктовое состояние не хранится в базе
+инструмента. Открытие каждой переданной базы утверждает
 ожидаемые `DatabaseRole`/редакцию Kernel через
 `meridian_app::storage::DatabaseMetadata` и типизированно отклоняет
 несовпадение (переставленные роли, несовместимую редакцию), а не
@@ -452,7 +464,9 @@ JSON-представления отличаются только формой, 
   и `migration plan|apply|verify|rollback` — это остаётся за пакетом 8
   (`meridian-cli-migration`, `meridian-rust-migration-program-plan.md`).
   Точный контракт `init`/`doctor`/`validate`/`resolve`/`export` пакета 7
-  (`meridian-cli-foundation`) зафиксирован здесь, в §7.1, а не отложен;
+  (`meridian-cli-foundation`) и DB-backed расширение `validate`
+  корректирующего пакета `rust-workspace-state-validation` зафиксированы
+  здесь, в §7.1, а не отложены;
 - не начинает фактическую реализацию ни одного из четырёх крейтов;
 - не изменяет контракт `instance-data-migration.md` — она реализует его
   девять свойств на SQLite, не переопределяет их;

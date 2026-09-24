@@ -27,6 +27,12 @@
 // the whole process) exiting cleanly.
 //
 // Usage: node test/conformance-harness.test.mjs
+//
+// Selective run: `node --test --test-name-pattern '<pattern>' <this file>`
+// hands the pattern to this process (process.execArgv). When a pattern is
+// given, ONLY the selectable sections run (today: `meridian-cli-migration`,
+// package 8), their checks are filtered by the pattern, and the process
+// exits right after them — the full suite is never run half-filtered.
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -48,6 +54,7 @@ import {
   makeSourceSnapshotResolver, makeEvidenceResolver, makeRollbackSnapshotResolver,
   makeDeterministicPlanResolver, makeRestorationEvidenceResolver, makeSupersededPlanResolver,
   makeMigrationPlanResolver, makeSourceContentResolver, makeRefResolver,
+  computePlanFingerprint, computeIdempotencyKey, computeExportDigest,
 } from '../scripts/lib/instance-data-migration.mjs';
 import { evaluateWorkspaceCompatibilityQualification, computeConnectionDigest } from '../scripts/lib/workspace-compatibility-qualification.mjs';
 import { evaluateUpgradeIntegrationQualification, computeContentDigest } from '../scripts/lib/upgrade-integration-qualification.mjs';
@@ -115,6 +122,216 @@ function check(name, fn) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+// The one environment of every Kernel-only child process: a copy of this
+// process's environment with `overrides` (such as `MERIDIAN_KERNEL`)
+// applied and `MERIDIAN_INSTANCE` removed. A Kernel-validation comparison
+// must never let an ambient frozen Instance inject product diagnostics into
+// one side only — the Rust binary never reads that variable, so neither
+// side of a Kernel-only comparison may see it.
+function kernelOnlyEnv(overrides = {}) {
+  const env = { ...process.env, ...overrides };
+  delete env.MERIDIAN_INSTANCE;
+  return env;
+}
+
+// --- selective runs: the pattern `node --test --test-name-pattern` passes ---
+
+function testNamePattern(execArgv) {
+  for (let i = 0; i < execArgv.length; i += 1) {
+    const arg = execArgv[i];
+    if (arg.startsWith('--test-name-pattern=')) return new RegExp(arg.slice('--test-name-pattern='.length));
+    if (arg === '--test-name-pattern' && i + 1 < execArgv.length) return new RegExp(execArgv[i + 1]);
+  }
+  return null;
+}
+const NAME_PATTERN = testNamePattern(process.execArgv);
+
+// --- package meridian-cli-migration (§5.22): Node reference vs the Rust
+// `import`/`migration` binary over the REAL frozen bundle. The source is
+// named by MERIDIAN_INSTANCE for this harness only; the Rust binary is
+// handed it exclusively through `--source`, and its environment has
+// MERIDIAN_INSTANCE removed. ---
+
+function runMeridianCliMigrationConformance() {
+  const selected = (name) => !NAME_PATTERN || NAME_PATTERN.test(name);
+  const mcheck = (name, fn) => { if (selected(name)) check(name, fn); };
+  const source = process.env.MERIDIAN_INSTANCE;
+  if (!source) {
+    mcheck('meridian-cli-migration: харнессу нужен MERIDIAN_INSTANCE с замороженным источником (UNVERIFIED без него)', () => {
+      assert(false, 'MERIDIAN_INSTANCE не задан — доказательства пакета 8 не выполнены');
+    });
+    return;
+  }
+  const build = spawnSync('cargo', ['build', '-p', 'meridian-cli', '--bin', 'meridian'], { cwd: ROOT, encoding: 'utf8' });
+  const bin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+  // The frozen source reaches the binary ONLY through `--source`: its
+  // environment is the Kernel-only one, without MERIDIAN_INSTANCE.
+  const env = kernelOnlyEnv();
+  const meridian = (args) => spawnSync(bin, args, { cwd: ROOT, encoding: 'utf8', env, maxBuffer: 1 << 28 });
+  const json = (r) => JSON.parse(r.stdout);
+  const canonicalize = (v) => {
+    if (Array.isArray(v)) return v.map(canonicalize);
+    if (v !== null && typeof v === 'object') {
+      const out = {};
+      for (const k of Object.keys(v).sort()) out[k] = canonicalize(v[k]);
+      return out;
+    }
+    return v;
+  };
+  const canon = (v) => JSON.stringify(canonicalize(v));
+  const bundleDir = path.join(source, 'migration', 'instance-data');
+  const readBundle = (rel) => JSON.parse(fs.readFileSync(path.join(bundleDir, rel), 'utf8'));
+  const registry = readBundle('registry.json');
+  const exportDoc = readBundle('canonical-export.json');
+  const plan = registry.migration_plans[0];
+  const payload = plan.payload;
+  const revision = payload.source.revision;
+  const nodeFingerprint = computePlanFingerprint(payload);
+  const nodeKey = computeIdempotencyKey(plan.scope, payload.source);
+  const lsTree = spawnSync('git', ['-C', source, 'ls-tree', '-r', '--format=%(objectmode) %(objecttype) %(objectname) %(path)', revision], { encoding: 'utf8' });
+  const nodeTreeDigest = crypto.createHash('sha256').update(`${lsTree.stdout.trim().split('\n').filter(Boolean).sort().join('\n')}\n`).digest('hex');
+  const count = (d) => payload.mappings.filter((m) => m.disposition === d).length;
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meridian-cli-migration-conformance-'));
+  try {
+    runMigrationChecks({ mcheck, meridian, json, canon, source, registry, exportDoc, payload, revision, nodeFingerprint, nodeKey, nodeTreeDigest, count, dir, build, readBundle });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+function runMigrationChecks({ mcheck, meridian, json, canon, source, registry, exportDoc, payload, revision, nodeFingerprint, nodeKey, nodeTreeDigest, count, dir, build, readBundle }) {
+  const init = (name) => {
+    const r = meridian(['init', '--kernel', ROOT, '--workspace', path.join(dir, name), '--tool-db', path.join(dir, `${name}-tool.db`), '--workspace-db', path.join(dir, `${name}-ws.db`), '--format', 'json']);
+    return { r, tool: path.join(dir, `${name}-tool.db`), ws: path.join(dir, `${name}-ws.db`) };
+  };
+
+  mcheck('meridian-cli-migration: Rust-бинарник собран', () => {
+    assert(build.status === 0, `cargo build завершился кодом ${build.status}: ${build.stderr}`);
+  });
+
+  let planResult = null;
+  mcheck('meridian-cli-migration: Node-эталон принимает реальный bundle (evaluateInstanceDataMigration без проблем), Rust `migration plan` принимает тот же bundle и пересчитывает тот же plan fingerprint, idempotency key, tree digest и числа 346/336/10/0', () => {
+    const problems = evaluateInstanceDataMigration(registry, {
+      registrySchema: JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/instance-data-migration.schema.json'), 'utf8')),
+      envelopeSchema: JSON.parse(fs.readFileSync(path.join(ROOT, 'registries/operating-model/scoped-record.schema.json'), 'utf8')),
+      resolveSourceSnapshot: makeSourceSnapshotResolver(readBundle('source-snapshot.json').resolution),
+      resolveEvidence: makeEvidenceResolver({ ...readBundle('evidence/coverage.json').resolution, ...readBundle('evidence/applicability-preservation.json').resolution }),
+      resolveRollbackSnapshot: makeRollbackSnapshotResolver(readBundle('rollback-snapshot.json').resolution),
+      resolveDeterministicPlan: makeDeterministicPlanResolver(readBundle('deterministic-reconstruction-plan.json').resolution),
+      resolveRestorationEvidence: makeRestorationEvidenceResolver({}),
+      resolveSupersededPlan: makeSupersededPlanResolver({}),
+    });
+    assert(problems.length === 0, `Node отклонил bundle: ${problems.slice(0, 3).join(' | ')}`);
+    const r = meridian(['migration', 'plan', '--kernel', ROOT, '--source', source, '--format', 'json']);
+    assert(r.status === 0, `migration plan завершился кодом ${r.status}: ${r.stderr}`);
+    planResult = json(r).result;
+    const head = spawnSync('git', ['-C', source, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
+    assert(planResult.bundle_revision === head, `bundle commit ${planResult.bundle_revision} ≠ HEAD ${head}`);
+    assert(planResult.plan.plan_fingerprint.value === nodeFingerprint, `fingerprint Rust ${planResult.plan.plan_fingerprint.value} ≠ Node ${nodeFingerprint}`);
+    assert(planResult.plan.idempotency_key.value === nodeKey, 'idempotency key расходится');
+    assert(planResult.source.digest.value === nodeTreeDigest, 'tree digest расходится');
+    assert(planResult.source.digest.value === payload.source.digest.value, 'tree digest ≠ заявленного source digest');
+    const c = planResult.plan.counts;
+    assert(c.record_units === payload.record_units.length && c.record_units === 346, `record_units ${c.record_units}`);
+    assert(c.migrated === count('migrated') && c.migrated === 336, `migrated ${c.migrated}`);
+    assert(c.retained === count('retained-transitional') && c.retained === 10, `retained ${c.retained}`);
+    assert(c.merged === count('merged') && c.merged === 0, `merged ${c.merged}`);
+    assert(planResult.canonical_export.digest.value === computeExportDigest(exportDoc.exports[0].payload), 'export digest расходится с Node computeExportDigest');
+  });
+
+  const first = init('first');
+  let e1 = null;
+  let verifyResult = null;
+  mcheck('meridian-cli-migration: Rust `import frozen-instance` импортирует 336 записей, удерживает 10, verify = verified (missing/extra/changed/duplicate = 0)', () => {
+    assert(first.r.status === 0, `init: ${first.r.stderr}`);
+    const r = meridian(['import', '--kernel', ROOT, '--kind', 'frozen-instance', '--source', source, '--tool-db', first.tool, '--workspace-db', first.ws, '--confirm', nodeFingerprint, '--format', 'json']);
+    assert(r.status === 0, `import завершился кодом ${r.status}: ${r.stderr} ${r.stdout.slice(0, 400)}`);
+    const i = json(r).result;
+    verifyResult = i.verify;
+    assert(i.apply.effects.created === 336 && i.apply.retained === 10, JSON.stringify(i.apply.effects));
+    for (const [k, v] of Object.entries({ expected: 336, imported: 336, missing: 0, extra: 0, changed: 0, duplicate: 0, retained: 10 })) {
+      assert(i.verify[k] === v, `verify.${k} = ${i.verify[k]}, ожидалось ${v}`);
+    }
+    const x = meridian(['export', '--kernel', ROOT, '--tool-db', first.tool, '--workspace-db', first.ws, '--format', 'json']);
+    assert(x.status === 0, `export: ${x.stderr}`);
+    e1 = x.stdout;
+  });
+
+  mcheck('meridian-cli-migration: каждая запись, прочитанная из SQLite через Rust `export`, равна записи принятого Node-экспорта bundle по $schema/id/title/record_type/scope/origin/authority/payload/schema_version', () => {
+    assert(e1 !== null, 'нет экспорта');
+    const key = (r) => `${r.scope.type}\u001f${r.scope.id}\u001f${r.scope.workspace_id ?? ''}\u001f${r.id}`;
+    const rust = new Map(JSON.parse(e1).result.map((r) => [key(r), canon(r)]));
+    const node = exportDoc.exports[0].payload.records;
+    assert(rust.size === 336 && node.length === 336, `Rust ${rust.size}, Node ${node.length}`);
+    const differing = node.filter((r) => rust.get(key(r)) !== canon(r)).map((r) => r.id);
+    assert(differing.length === 0, `расходятся: ${differing.slice(0, 5).join(', ')}`);
+  });
+
+  mcheck('meridian-cli-migration: эквивалентность применимости — Node-эталон по закреплённому источнику и по payload реально прочитанных SQLite-записей даёт 61 норму, lost/added/changed/duplicate = 0, как и Rust verify', () => {
+    assert(e1 !== null && verifyResult !== null, 'нет импорта');
+    const register = 'rule-resolution/applicability.yaml';
+    const before = yamlParse(spawnSync('git', ['-C', source, 'show', `${revision}:${register}`], { encoding: 'utf8' }).stdout).records;
+    const units = new Map(payload.record_units.map((u) => [u.id, u.unit_ref]));
+    const after = JSON.parse(e1).result
+      .filter((r) => r.origin.kind === 'migrated' && (units.get(r.origin.source_ref.replace(/^record-unit:/, '')) || '').startsWith(`${register}#records/`))
+      .map((r) => JSON.parse(r.payload.content));
+    const identity = (rec) => JSON.stringify([rec.norm.repository, rec.norm.path, rec.norm.region ?? '', rec.intake_record?.register ?? '', rec.intake_record?.recorded_at ?? '', rec.intake_record?.verdict ?? '', rec.recorded_at ?? '']);
+    const outcome = (rec) => canon({ scope: rec.scope, activation: rec.activation, status: rec.status, repository: rec.repository ?? null, technology_profile: rec.technology_profile ?? null, globs: rec.globs ? [...rec.globs].sort() : null });
+    const index = (records) => { const m = new Map(); let dup = 0; for (const r of records) { if (m.has(identity(r))) dup += 1; else m.set(identity(r), outcome(r)); } return { m, dup }; };
+    const b = index(before);
+    const a = index(after);
+    const lost = [...b.m.keys()].filter((k) => !a.m.has(k)).length;
+    const added = [...a.m.keys()].filter((k) => !b.m.has(k)).length;
+    const changed = [...b.m.keys()].filter((k) => a.m.has(k) && a.m.get(k) !== b.m.get(k)).length;
+    assert(b.m.size === 61 && after.length === 61, `источник ${b.m.size}, импортировано ${after.length}`);
+    assert(lost === 0 && added === 0 && changed === 0 && b.dup === 0 && a.dup === 0, `lost=${lost} added=${added} changed=${changed} dup=${b.dup + a.dup}`);
+    const ra = verifyResult.applicability;
+    assert(ra.verdict === 'equivalent' && ra.controlled === 61 && ra.imported === 61 && ra.lost === 0 && ra.added === 0 && ra.changed === 0 && ra.duplicate === 0, `Rust: ${JSON.stringify(ra)}`);
+  });
+
+  mcheck('meridian-cli-migration: повторные `import frozen-instance` и `migration apply` дают already-applied и не меняют экспорт', () => {
+    assert(e1 !== null, 'нет импорта');
+    const r = meridian(['import', '--kernel', ROOT, '--kind', 'frozen-instance', '--source', source, '--tool-db', first.tool, '--workspace-db', first.ws, '--confirm', nodeFingerprint, '--format', 'json']);
+    assert(r.status === 0 && json(r).result.apply.status === 'already-applied', r.stdout.slice(0, 300));
+    const a = meridian(['migration', 'apply', '--kernel', ROOT, '--source', source, '--workspace-db', first.ws, '--dry-run', 'false', '--confirm', nodeFingerprint, '--format', 'json']);
+    assert(a.status === 0 && json(a).result.status === 'already-applied', a.stdout.slice(0, 300));
+    const x = meridian(['export', '--kernel', ROOT, '--tool-db', first.tool, '--workspace-db', first.ws, '--format', 'json']);
+    assert(x.stdout === e1, 'экспорт изменился после повтора');
+  });
+
+  mcheck('meridian-cli-migration: round trip import → export → import → export байт-в-байт', () => {
+    assert(e1 !== null, 'нет импорта');
+    const input = path.join(dir, 'export.json');
+    fs.writeFileSync(input, e1);
+    const second = init('second');
+    const digest = crypto.createHash('sha256').update(e1).digest('hex');
+    const r = meridian(['import', '--kernel', ROOT, '--kind', 'canonical-records', '--input', input, '--tool-db', second.tool, '--workspace-db', second.ws, '--confirm', digest, '--format', 'json']);
+    assert(r.status === 0, `canonical import: ${r.stderr}`);
+    const x = meridian(['export', '--kernel', ROOT, '--tool-db', second.tool, '--workspace-db', second.ws, '--format', 'json']);
+    assert(x.stdout === e1, 'второй экспорт не равен первому байт-в-байт');
+  });
+
+  mcheck('meridian-cli-migration: реальный apply → rollback возвращает канонический экспорт к pre-state; повторный rollback отклоняется', () => {
+    const third = init('third');
+    const pre = meridian(['export', '--kernel', ROOT, '--tool-db', third.tool, '--workspace-db', third.ws, '--format', 'json']).stdout;
+    const a = meridian(['migration', 'apply', '--kernel', ROOT, '--source', source, '--workspace-db', third.ws, '--dry-run', 'false', '--confirm', nodeFingerprint, '--format', 'json']);
+    assert(a.status === 0, `apply: ${a.stderr}`);
+    const run = json(a).result.run_id;
+    const rb = meridian(['migration', 'rollback', '--kernel', ROOT, '--source', source, '--workspace-db', third.ws, '--run', run, '--confirm', run, '--format', 'json']);
+    assert(rb.status === 0, `rollback: ${rb.stderr} ${rb.stdout}`);
+    const post = meridian(['export', '--kernel', ROOT, '--tool-db', third.tool, '--workspace-db', third.ws, '--format', 'json']).stdout;
+    assert(post === pre, 'экспорт после rollback ≠ pre-state');
+    const again = meridian(['migration', 'rollback', '--kernel', ROOT, '--source', source, '--workspace-db', third.ws, '--run', run, '--confirm', run, '--format', 'json']);
+    assert(again.status === 1 && json(again).result.refusal === 'already-rolled-back', again.stdout);
+  });
+}
+
+if (NAME_PATTERN) {
+  runMeridianCliMigrationConformance();
+  console.log(`\n${passed} passed, ${failures.length} failed (selective run: ${NAME_PATTERN})`);
+  process.exit(failures.length ? 1 : 0);
 }
 
 // --- white-box: normalization ---
@@ -595,7 +812,7 @@ for (const family of VALIDATE_MUTATION_FAMILIES_7A) {
 function computeFailLines(dir) {
   const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
     cwd: ROOT,
-    env: { ...process.env, MERIDIAN_KERNEL: dir },
+    env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
     encoding: 'utf8',
   });
   const nodeFails = nodeRun.stdout
@@ -603,7 +820,10 @@ function computeFailLines(dir) {
     .filter((l) => l.startsWith('FAIL'))
     .map((l) => l.replace(/^FAIL\s+/, ''));
   const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
-  const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+  const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], {
+    encoding: 'utf8',
+    env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
+  });
   let rustFails;
   try {
     rustFails = JSON.parse(rustRun.stdout.trim()).result.failures;
@@ -1743,11 +1963,14 @@ function VALIDATE_MUTATION_FAMILIES_7C_EXTRA_WRITE_fieldEvaluationSubSecondInter
     check('намеренная граница: обе стороны fail-closed (ненулевой код завершения, result.ok: false у Rust)', () => {
       const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
         cwd: ROOT,
-        env: { ...process.env, MERIDIAN_KERNEL: dir },
+        env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
         encoding: 'utf8',
       });
       const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
-      const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+      const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], {
+        encoding: 'utf8',
+        env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
+      });
       let rustResult;
       try {
         rustResult = JSON.parse(rustRun.stdout.trim());
@@ -1958,7 +2181,7 @@ for (const family of VALIDATE_MUTATION_FAMILIES_7A_ADVERSARIAL) {
 
     const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
       cwd: ROOT,
-      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
       encoding: 'utf8',
     });
     check('намеренная граница: Node-эталон падает с необработанным TypeError на profiles неверного типа, теряя все диагностики (не fail-open)', () => {
@@ -1979,7 +2202,10 @@ for (const family of VALIDATE_MUTATION_FAMILIES_7A_ADVERSARIAL) {
     });
 
     const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
-    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], {
+      encoding: 'utf8',
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
+    });
     check('намеренная граница: реальный `meridian validate` на profiles неверного типа даёт явный authored FAIL и полный JSON-результат, не аварию (не fail-open)', () => {
       assert(
         rustRun.status === 1,
@@ -2036,7 +2262,7 @@ function shaProvenancePathConfinementCase(fieldLabel, mutate) {
 
     const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
       cwd: ROOT,
-      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
       encoding: 'utf8',
     });
     check(`намеренная граница: Node-эталон следует за экранирующим ${fieldLabel} и верифицирует файл ВНЕ каталога скилла (path.join не ограничивает)`, () => {
@@ -2053,7 +2279,10 @@ function shaProvenancePathConfinementCase(fieldLabel, mutate) {
     });
 
     const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
-    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], {
+      encoding: 'utf8',
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
+    });
     check(`намеренная граница: реальный \`meridian validate\` отклоняет экранирующий ${fieldLabel} как несуществующий (WorkspaceRelativePath не пересекает границу скилла)`, () => {
       assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
       let value;
@@ -2123,7 +2352,7 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
 
     const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
       cwd: ROOT,
-      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
       encoding: 'utf8',
     });
     check('позитивный контроль: обычный вложенный относительный путь артефакта верифицируется на Node-эталоне', () => {
@@ -2131,7 +2360,10 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
     });
 
     const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
-    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], {
+      encoding: 'utf8',
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
+    });
     check('позитивный контроль: обычный вложенный относительный путь артефакта верифицируется через WorkspaceRelativePath (Rust)', () => {
       let value;
       try {
@@ -2177,7 +2409,7 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
 
     const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
       cwd: ROOT,
-      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
       encoding: 'utf8',
     });
     check('намеренная граница: Node-эталон молча пропускает неполный source_archive (ни OK, ни FAIL)', () => {
@@ -2193,7 +2425,10 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
     });
 
     const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
-    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], {
+      encoding: 'utf8',
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
+    });
     check('намеренная граница: реальный `meridian validate` сообщает FAIL про неполный source_archive (Incomplete — ошибка конструктора, а не домен-вариант)', () => {
       assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
       let value;
@@ -2238,7 +2473,7 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
 
     const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
       cwd: ROOT,
-      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
       encoding: 'utf8',
     });
     check('намеренная граница: Node-эталон молча пропускает entry без id в operating-foundation (ни один FAIL про него)', () => {
@@ -2254,7 +2489,10 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
     });
 
     const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
-    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], {
+      encoding: 'utf8',
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
+    });
     check('намеренная граница: реальный `meridian validate` сообщает FAIL про entry без id (транспортный уровень считает и сообщает, домен строит только валидные)', () => {
       assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
       let value;
@@ -2319,7 +2557,7 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
 
     const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
       cwd: ROOT,
-      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
       encoding: 'utf8',
     });
     check('намеренная граница: Node-эталон молча пропускает functional-parity, когда путь схемы — каталог (readIfExists глотает EISDIR так же, как ENOENT)', () => {
@@ -2335,7 +2573,10 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
     });
 
     const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
-    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], {
+      encoding: 'utf8',
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
+    });
     check('намеренная граница: реальный `meridian validate` сообщает FAIL, когда путь схемы functional-parity — каталог, а не ENOENT (fail-closed, не молчаливый skip)', () => {
       assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
       let value;
@@ -2393,7 +2634,7 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
 
     const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
       cwd: ROOT,
-      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
       encoding: 'utf8',
     });
     check('намеренная граница: Node-эталон сообщает generic "carries no fixtures", когда путь fixtures functional-parity — каталог (readIfExists глотает EISDIR)', () => {
@@ -2413,7 +2654,10 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
     });
 
     const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
-    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], {
+      encoding: 'utf8',
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
+    });
     check('намеренная граница: реальный `meridian validate` сообщает отдельный "could not be read", когда путь fixtures functional-parity — каталог (вердикт failing, как и у Node)', () => {
       assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
       assert(rustRun.status !== 0, `Rust должен остаться failing, получен код ${rustRun.status}`);
@@ -2492,7 +2736,7 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
 
     const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
       cwd: ROOT,
-      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
       encoding: 'utf8',
     });
     check('намеренная граница: Node-эталон сообщает прежний "is missing"/"carries no fixtures", когда обязательный файл execution-state-model / role-and-human-control / bounded-context-manifest — каталог (readIfExists глотает EISDIR)', () => {
@@ -2510,7 +2754,10 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
     });
 
     const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
-    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], {
+      encoding: 'utf8',
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
+    });
     check('намеренная граница: реальный `meridian validate` сообщает отдельный "<путь> could not be read", когда обязательный файл трёх run-contract семейств — каталог (вердикт failing, как и у Node)', () => {
       assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
       assert(rustRun.status !== 0, `Rust должен остаться failing, получен код ${rustRun.status}`);
@@ -2577,7 +2824,7 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
 
     const nodeRun = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
       cwd: ROOT,
-      env: { ...process.env, MERIDIAN_KERNEL: dir },
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
       encoding: 'utf8',
     });
     check('намеренная граница: Node-эталон сообщает прежний "carries no fixtures"/"is missing", когда обязательный файл evidence-and-handoff-contract / meridian-field-evaluation — каталог (readIfExists глотает EISDIR)', () => {
@@ -2595,7 +2842,10 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
     });
 
     const meridianBin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
-    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], { encoding: 'utf8' });
+    const rustRun = spawnSync(meridianBin, ['validate', '--kernel', dir, '--format', 'json'], {
+      encoding: 'utf8',
+      env: kernelOnlyEnv({ MERIDIAN_KERNEL: dir }),
+    });
     check('намеренная граница: реальный `meridian validate` сообщает отдельный "<путь> could not be read", когда обязательный файл evidence-and-handoff-contract / meridian-field-evaluation — каталог (вердикт failing, как и у Node)', () => {
       assert(rustRun.stderr.trim() === '', `ожидался пустой stderr, получено: ${rustRun.stderr}`);
       assert(rustRun.status !== 0, `Rust должен остаться failing, получен код ${rustRun.status}`);
@@ -2941,6 +3191,8 @@ shaProvenancePathConfinementCase('source_archive_path', (dir, skillName) => {
     assert(checkOpaqueRef('ффф:x', 'ref') === null, 'ожидался null (ref допустим)');
   });
 }
+
+runMeridianCliMigrationConformance();
 
 // --- temp-directory hygiene: every singleCaseFixture() directory must have
 // already been removed by check()'s own finally block, per check, not by

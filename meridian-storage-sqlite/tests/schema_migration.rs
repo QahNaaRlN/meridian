@@ -322,7 +322,7 @@ fn migrates_a_populated_v1_database_to_v2_without_losing_records() {
 
     let storage = SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
 
-    assert_eq!(storage.schema_version().unwrap(), 2);
+    assert_eq!(storage.schema_version().unwrap(), 3);
     let key = RecordKey::new(
         Scope::project_workspace(sid("sample-project"), None),
         sid("pre-existing"),
@@ -412,7 +412,7 @@ fn reopening_an_already_migrated_database_is_idempotent() {
     // First open performs the v1 -> v2 migration.
     {
         let storage = SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
-        assert_eq!(storage.schema_version().unwrap(), 2);
+        assert_eq!(storage.schema_version().unwrap(), 3);
     }
 
     // A second open of the now-v2 database must be a complete no-op: no
@@ -420,7 +420,7 @@ fn reopening_an_already_migrated_database_is_idempotent() {
     // database_metadata` of an already-existing table), and the same data
     // and metadata read back unchanged.
     let reopened = SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
-    assert_eq!(reopened.schema_version().unwrap(), 2);
+    assert_eq!(reopened.schema_version().unwrap(), 3);
     assert_eq!(reopened.database_metadata().role(), DatabaseRole::Workspace);
     let key = RecordKey::new(
         Scope::project_workspace(sid("sample-project"), None),
@@ -495,13 +495,13 @@ fn rejects_a_schema_version_beyond_supported_with_a_typed_error() {
     {
         let raw = rusqlite::Connection::open(&path).unwrap();
         raw.execute(
-            "UPDATE schema_migrations SET version = 3 WHERE version = 2",
+            "UPDATE schema_migrations SET version = 4 WHERE version = 3",
             [],
         )
         .unwrap();
     }
     let err = SqliteStorage::open_path(&path, workspace_metadata()).unwrap_err();
-    assert_eq!(err, OpenError::UnsupportedSchemaVersion { found: 3 });
+    assert_eq!(err, OpenError::UnsupportedSchemaVersion { found: 4 });
 }
 
 #[test]
@@ -656,4 +656,92 @@ fn accessor_returns_metadata_actually_read_from_the_database_not_a_copy_of_the_a
         storage.database_metadata().kernel_edition().as_str(),
         raw_edition_value
     );
+}
+
+// ---------------------------------------------------------------------------
+// Version 3: the migration-run journal (package meridian-cli-migration)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn migration_journal_step_refuses_legacy_rows_and_keeps_version_two() {
+    let dir = TempDir::new("legacy-migration-runs");
+    let path = dir.join("db.sqlite3");
+    seed_v1_database_with_one_record(&path);
+    {
+        let conn = rusqlite::Connection::open(&path).unwrap();
+        conn.execute(
+            "INSERT INTO migration_runs (migration_run_id, plan_ref, plan_fingerprint, idempotency_key, status)
+             VALUES ('legacy', 'plan', 'fp', 'key', 'applied')",
+            [],
+        )
+        .unwrap();
+    }
+    let err = SqliteStorage::open_path(&path, workspace_metadata()).unwrap_err();
+    assert_eq!(err, OpenError::LegacyMigrationRunsPresent { count: 1 });
+    // The v1 -> v2 step committed on its own; the refused v2 -> v3 step
+    // left nothing of itself behind.
+    assert_eq!(raw_schema_version(&path), 2);
+}
+
+#[test]
+fn migration_read_only_open_never_upgrades_an_older_schema() {
+    let dir = TempDir::new("read-only-older");
+    let path = dir.join("db.sqlite3");
+    seed_v1_database_with_one_record(&path);
+    let before = std::fs::read(&path).unwrap();
+    let err = SqliteStorage::open_read_only(&path, workspace_metadata()).unwrap_err();
+    assert_eq!(err, OpenError::SchemaUpgradeRequired { found: 1 });
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+    assert_eq!(raw_schema_version(&path), 1);
+}
+
+#[test]
+fn migration_journal_rows_are_append_only_at_the_sqlite_level() {
+    let dir = TempDir::new("journal-append-only");
+    let path = dir.join("db.sqlite3");
+    SqliteStorage::open_path(&path, workspace_metadata()).unwrap();
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    conn.execute_batch("PRAGMA foreign_keys = ON").unwrap();
+    conn.execute(
+        "INSERT INTO migration_runs (
+            migration_run_id, run_sequence, plan_ref, plan_fingerprint, idempotency_key,
+            source_repository_ref, source_revision, pre_state_digest, pre_revision_count,
+            post_state_digest, post_revision_count, checkpoint_digest, written_record_count
+        ) VALUES ('mr-1-0123456789ab', 1, 'p', 'f', 'k', 'r', 'v', 'a', 0, 'b', 0, 'c', 0)",
+        [],
+    )
+    .unwrap();
+    assert!(conn
+        .execute("UPDATE migration_runs SET plan_ref = 'other'", [])
+        .is_err());
+    assert!(conn.execute("DELETE FROM migration_runs", []).is_err());
+    // A rollback is a separate fact, never a status edit of the applied row.
+    conn.execute(
+        "INSERT INTO migration_rollbacks (migration_run_id, restored_state_digest, restored_revision_count)
+         VALUES ('mr-1-0123456789ab', 'a', 0)",
+        [],
+    )
+    .unwrap();
+    assert!(conn
+        .execute(
+            "UPDATE migration_rollbacks SET restored_state_digest = 'x'",
+            []
+        )
+        .is_err());
+    assert!(conn.execute("DELETE FROM migration_rollbacks", []).is_err());
+    // One rollback fact per run, and only for a recorded run.
+    assert!(conn
+        .execute(
+            "INSERT INTO migration_rollbacks (migration_run_id, restored_state_digest, restored_revision_count)
+             VALUES ('mr-1-0123456789ab', 'a', 0)",
+            [],
+        )
+        .is_err());
+    assert!(conn
+        .execute(
+            "INSERT INTO migration_rollbacks (migration_run_id, restored_state_digest, restored_revision_count)
+             VALUES ('mr-2-0123456789ab', 'a', 0)",
+            [],
+        )
+        .is_err());
 }

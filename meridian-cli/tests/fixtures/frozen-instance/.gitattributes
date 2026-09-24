@@ -1,0 +1,4 @@
+# The pinned fixture source reaches Git byte for byte on every machine:
+# its commit id is fixed in expected.json, and notes/readme.txt keeps its
+# CRLF line ends on purpose (exact-bytes preservation is under test).
+source/** -text -whitespace

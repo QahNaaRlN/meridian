@@ -1,4 +1,6 @@
-//! The five commands package `meridian-cli-foundation` implements. Every
+//! The five commands of package `meridian-cli-foundation` and the `import`
+//! and nested `migration plan|apply|verify|rollback` commands of package
+//! `meridian-cli-migration`. Every
 //! command function has the same shape: it takes already-parsed flags, a
 //! writer for stdout, a writer for stderr and an `EventSink`, and returns
 //! a stable [`crate::exit_code`]. Nothing here calls `std::process::exit` or
@@ -7,7 +9,9 @@
 
 pub mod doctor;
 pub mod export;
+pub mod import;
 pub mod init;
+pub mod migration;
 pub mod resolve;
 pub mod validate;
 

@@ -20,6 +20,7 @@ mod dto;
 use meridian_core::migration::export::{
     check_canonical_exports, CanonicalExport, ExportInput, PlanBoundary,
 };
+use meridian_core::migration::plan::PinnedPlan;
 use meridian_core::migration::resolved::{
     MigrationPlanResponse, ResponseCatalogue, SourceContentResponse,
 };
@@ -78,6 +79,28 @@ pub(crate) fn check_container(
         Typed::Stopped(outcome) => stopped(outcome),
         Typed::Input(inputs) => {
             let outcome = check_canonical_exports(&inputs, PlanBoundary::Resolver(plans), content);
+            checked(
+                outcome.diagnostics,
+                outcome.accepted.into_iter().flatten().collect(),
+            )
+        }
+    }
+}
+
+/// The composition point of a frozen-Instance import
+/// (`crate::migration`): the same gate, DTO and core check over an export
+/// container, checked ONLY against the plan the caller already accepted and
+/// pinned by its recomputed fingerprint — never against a plan resolver.
+pub(crate) fn check_pinned_container(
+    doc: &Value,
+    schemas: &ContainerSchemas<'_>,
+    plan: &PinnedPlan,
+    content: &ResponseCatalogue<SourceContentResponse>,
+) -> CaseOutcome<Vec<CanonicalExport>> {
+    match typed_container(doc, schemas, dto::ContainerDto::into_inputs) {
+        Typed::Stopped(outcome) => stopped(outcome),
+        Typed::Input(inputs) => {
+            let outcome = check_canonical_exports(&inputs, PlanBoundary::Pinned(plan), content);
             checked(
                 outcome.diagnostics,
                 outcome.accepted.into_iter().flatten().collect(),

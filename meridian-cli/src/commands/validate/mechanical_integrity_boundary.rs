@@ -16,14 +16,70 @@ mod structural_tests {
             .unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()))
     }
 
+    /// The production part of one Rust source text, by one exact rule
+    /// (the same the `meridian-app` crate-level scanner applies):
+    ///
+    /// - blank lines and inner-doc `//!` lines at the head are skipped;
+    /// - when the first remaining line is exactly `#![cfg(test)]`, the whole
+    ///   file is a test-only module and its production part is empty;
+    /// - otherwise production ends before the first OUTER `#[cfg(test)]`
+    ///   attribute line.
+    ///
+    /// A file is never exempted by its name (`tests.rs`), by an
+    /// `#![cfg(test)]` anywhere but its head, or by a comment or string
+    /// literal that merely mentions either attribute: only a line that IS
+    /// the attribute counts.
+    fn production_part(text: &str) -> String {
+        let first_content = text
+            .lines()
+            .map(str::trim)
+            .find(|line| !line.is_empty() && !line.starts_with("//!"));
+        if first_content == Some("#![cfg(test)]") {
+            return String::new();
+        }
+        text.lines()
+            .take_while(|line| line.trim() != "#[cfg(test)]")
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
     fn production_text(path: &Path) -> String {
-        let text = read(path);
-        let production_end = text.find("#[cfg(test)]").unwrap_or(text.len());
-        text[..production_end]
+        production_part(&read(path))
             .lines()
             .filter(|line| !line.trim_start().starts_with("//"))
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    #[test]
+    fn only_an_explicit_test_only_module_file_is_exempt_from_the_production_scan() {
+        // An explicit head `#![cfg(test)]`, after blank and `//!` lines.
+        let test_only = "//! Tests.\n\n#![cfg(test)]\n\nimpl WorkspaceReader for Fake {}\n";
+        assert_eq!(production_part(test_only), "");
+
+        // An ordinary production file is entirely production.
+        let production = "use std::fs;\n\nimpl WorkspaceReader for Real {}\n";
+        assert!(production_part(production).contains("impl WorkspaceReader for Real"));
+
+        // A late or quoted mention of `#![cfg(test)]` exempts nothing.
+        let late = "impl WorkspaceReader for Late {}\n#![cfg(test)]\n";
+        assert!(production_part(late).contains("impl WorkspaceReader for Late"));
+        let quoted = "const MARK: &str = \"#![cfg(test)]\";\nimpl WorkspaceReader for Quoted {}\n";
+        assert!(production_part(quoted).contains("impl WorkspaceReader for Quoted"));
+        let ordinary_comment_first =
+            "// #![cfg(test)]\n#![cfg(test)]\nimpl WorkspaceReader for Commented {}\n";
+        assert!(
+            production_part(ordinary_comment_first).contains("impl WorkspaceReader for Commented")
+        );
+
+        // Production code before an outer `#[cfg(test)]` stays production;
+        // what follows the attribute line does not. A comment or literal
+        // mentioning the outer attribute does not end production early.
+        let mixed = "/// Mentions #[cfg(test)] in a doc comment.\nimpl WorkspaceReader for Before {}\nconst S: &str = \"#[cfg(test)]\";\n#[cfg(test)]\nmod tests { impl WorkspaceReader for After {} }\n";
+        let part = production_part(mixed);
+        assert!(part.contains("impl WorkspaceReader for Before"), "{part}");
+        assert!(part.contains("const S"), "{part}");
+        assert!(!part.contains("impl WorkspaceReader for After"), "{part}");
     }
 
     fn collect_rs_files(dir: &Path, out: &mut Vec<PathBuf>) {

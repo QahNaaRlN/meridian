@@ -3,10 +3,10 @@
 //! (`meridian-rust-target-architecture.md` §4).
 
 use std::fmt;
-use std::path::Path;
-use std::sync::Mutex;
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, MutexGuard};
 
-use rusqlite::{Connection, OptionalExtension, Row, Transaction};
+use rusqlite::{Connection, OpenFlags, OptionalExtension, Row, Transaction};
 
 use meridian_app::storage::{
     DatabaseMetadata, EvidenceRepository, ManagedRecord, PortError, PutEvidenceRequest,
@@ -32,8 +32,20 @@ use crate::schema;
 /// file path — every write is checked against it
 /// (`meridian-rust-migration-program-plan.md` §5.4, item 1).
 pub struct SqliteStorage {
-    conn: Mutex<Connection>,
-    metadata: DatabaseMetadata,
+    pub(crate) conn: Mutex<Connection>,
+    pub(crate) metadata: DatabaseMetadata,
+    /// Where this database lives and where its checkpoints go — `None` for
+    /// an in-memory database, which can take no checkpoint.
+    pub(crate) location: Option<StorageLocation>,
+}
+
+/// The file of an opened database and, when the caller named one, the
+/// directory its migration checkpoints are written to.
+#[derive(Debug, Clone)]
+pub(crate) struct StorageLocation {
+    pub(crate) db_path: PathBuf,
+    pub(crate) checkpoint_dir: Option<PathBuf>,
+    pub(crate) read_only: bool,
 }
 
 /// A hand-written `Debug` that never reveals the underlying `Connection` (no
@@ -72,12 +84,62 @@ impl SqliteStorage {
         path: impl AsRef<Path>,
         metadata: DatabaseMetadata,
     ) -> Result<Self, OpenError> {
-        let mut conn = Connection::open(path).map_err(|e| OpenError::Sqlite(e.to_string()))?;
+        let db_path = path.as_ref().to_path_buf();
+        let mut conn = Connection::open(&db_path).map_err(|e| OpenError::Sqlite(e.to_string()))?;
         let recorded = schema::prepare(&mut conn, &metadata)?;
         Ok(Self {
             conn: Mutex::new(conn),
             metadata: recorded,
+            location: Some(StorageLocation {
+                db_path,
+                checkpoint_dir: None,
+                read_only: false,
+            }),
         })
+    }
+
+    /// Opens an EXISTING database file strictly read-only: nothing is
+    /// created, migrated or written. The schema must already be at the
+    /// current version and the recorded role and Kernel edition must equal
+    /// `metadata` (`crate::schema::verify_read_only`).
+    pub fn open_read_only(
+        path: impl AsRef<Path>,
+        metadata: DatabaseMetadata,
+    ) -> Result<Self, OpenError> {
+        let db_path = path.as_ref().to_path_buf();
+        let conn = Connection::open_with_flags(
+            &db_path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )
+        .map_err(schema::map_err)?;
+        let recorded = schema::verify_read_only(&conn, &metadata)?;
+        Ok(Self {
+            conn: Mutex::new(conn),
+            metadata: recorded,
+            location: Some(StorageLocation {
+                db_path,
+                checkpoint_dir: None,
+                read_only: true,
+            }),
+        })
+    }
+
+    /// Names the directory this database's migration checkpoints are
+    /// written to and restored from. Without it, every checkpoint-taking
+    /// operation is refused (`MigrationPortError::CheckpointsUnavailable`).
+    pub fn with_checkpoint_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+        if let Some(location) = &mut self.location {
+            location.checkpoint_dir = Some(dir.into());
+        }
+        self
+    }
+
+    /// The connection, or a storage error when a previous holder panicked
+    /// while holding it.
+    pub(crate) fn lock(&self) -> Result<MutexGuard<'_, Connection>, PortError> {
+        self.conn
+            .lock()
+            .map_err(|_| PortError::Storage("storage connection lock poisoned".to_string()))
     }
 
     /// Opens a private in-memory database — used by this crate's own tests
@@ -91,6 +153,7 @@ impl SqliteStorage {
         Ok(Self {
             conn: Mutex::new(conn),
             metadata: recorded,
+            location: None,
         })
     }
 
@@ -110,7 +173,7 @@ impl SqliteStorage {
         let dest = destination.as_ref().to_str().ok_or_else(|| {
             PortError::Storage("backup destination path is not valid UTF-8".to_string())
         })?;
-        let conn = self.conn.lock().expect("storage mutex poisoned");
+        let conn = self.lock()?;
         conn.execute("VACUUM INTO ?1", [dest])
             .map_err(map_sql_err)?;
         Ok(())
@@ -120,7 +183,7 @@ impl SqliteStorage {
     /// this connection (`meridian-rust-target-architecture.md` §4.2) —
     /// checked directly, not only inferred from its effects.
     pub fn foreign_keys_enabled(&self) -> Result<bool, PortError> {
-        let conn = self.conn.lock().expect("storage mutex poisoned");
+        let conn = self.lock()?;
         let value: i64 = conn
             .query_row("PRAGMA foreign_keys", [], |row| row.get(0))
             .map_err(map_sql_err)?;
@@ -129,7 +192,7 @@ impl SqliteStorage {
 
     /// The schema version this database currently records.
     pub fn schema_version(&self) -> Result<i64, PortError> {
-        let conn = self.conn.lock().expect("storage mutex poisoned");
+        let conn = self.lock()?;
         conn.query_row("SELECT MAX(version) FROM schema_migrations", [], |row| {
             row.get(0)
         })
@@ -137,7 +200,7 @@ impl SqliteStorage {
     }
 
     /// Diagnostic-only row count of one of this adapter's own tables (see
-    /// [`crate::TABLE_NAMES`]) — used to confirm the nine tables exist and
+    /// [`crate::TABLE_NAMES`]) — used to confirm the ten tables exist and
     /// are queryable, and as a cheap "nothing partial was written" check
     /// after a rejected operation. `table` is validated against the closed
     /// table list before use, so this never interpolates arbitrary input
@@ -148,7 +211,7 @@ impl SqliteStorage {
                 "\"{table}\" is not one of this adapter's tables"
             )));
         }
-        let conn = self.conn.lock().expect("storage mutex poisoned");
+        let conn = self.lock()?;
         let sql = format!("SELECT COUNT(*) FROM {table}");
         conn.query_row(&sql, [], |row| row.get(0))
             .map_err(map_sql_err)
@@ -164,103 +227,128 @@ impl SqliteStorage {
     /// at every level (`crate::codec`), so two calls against unchanged
     /// state produce byte-identical text.
     pub fn canonical_export_json(&self) -> Result<String, PortError> {
-        let records = RecordRepository::export_all(self)?;
-        let mut array = Vec::with_capacity(records.len());
-        for record in &records {
-            // The exact `$schema` this specific record declared — never a
-            // fixed or generic fallback (`meridian-app::storage::SchemaRef`).
-            let value = canonical_content_json(
-                record.key(),
-                record.schema(),
-                record.schema_version().as_u32(),
-                record.title(),
-                record.record_type().as_str(),
-                record.origin(),
-                record.authority(),
-                record.payload(),
-            );
-            array.push(value);
-        }
-        serde_json::to_string(&serde_json::Value::Array(array))
-            .map_err(|e| PortError::Storage(e.to_string()))
+        let conn = self.lock()?;
+        canonical_export_on(&conn)
     }
 
     fn managed_record_from_row(row: &Row<'_>) -> rusqlite::Result<ManagedRecord> {
-        let scope_type: String = row.get("scope_type")?;
-        let scope_id: String = row.get("scope_id")?;
-        let scope_workspace_id: Option<String> = row.get("scope_workspace_id")?;
-        let scope_organization_profile_id: Option<String> =
-            row.get("scope_organization_profile_id")?;
-        let record_id: String = row.get("record_id")?;
-        let schema_ref: String = row.get("schema_ref")?;
-        let schema_version: i64 = row.get("schema_version")?;
-        let title: String = row.get("title")?;
-        let record_type: String = row.get("record_type")?;
-        let origin_kind: String = row.get("origin_kind")?;
-        let origin_source_ref: Option<String> = row.get("origin_source_ref")?;
-        let authority_kind: String = row.get("authority_kind")?;
-        let authority_ref: String = row.get("authority_ref")?;
-        let authority_decision_ref: Option<String> = row.get("authority_decision_ref")?;
-        let payload: String = row.get("payload")?;
-        let content_digest: String = row.get("content_digest")?;
-        let current_revision: i64 = row.get("current_revision")?;
-
-        let to_port_err = |e: PortError| {
-            rusqlite::Error::FromSqlConversionFailure(
-                0,
-                rusqlite::types::Type::Text,
-                Box::new(std::io::Error::other(e.to_string())),
-            )
-        };
-
-        let scope = decode_scope(
-            &scope_type,
-            &scope_id,
-            scope_workspace_id.as_deref(),
-            scope_organization_profile_id.as_deref(),
-        )
-        .map_err(to_port_err)?;
-        let id = meridian_core::types::SemanticId::new(record_id)
-            .map_err(|e| to_port_err(PortError::Storage(format!("corrupt record_id: {e}"))))?;
-        let key = RecordKey::new(scope, id);
-        let origin =
-            decode_origin(&origin_kind, origin_source_ref.as_deref()).map_err(to_port_err)?;
-        let authority = decode_authority(
-            &authority_kind,
-            &authority_ref,
-            authority_decision_ref.as_deref(),
-        )
-        .map_err(to_port_err)?;
-        let payload = decode_payload(&payload).map_err(to_port_err)?;
-        let schema_version =
-            RecordSchemaVersion::from_u32(schema_version as u32).ok_or_else(|| {
-                to_port_err(PortError::Storage(format!(
-                    "corrupt schema_version: {schema_version}"
-                )))
-            })?;
-        let title = meridian_core::types::NonEmptyString::new(title)
-            .map_err(|e| to_port_err(PortError::Storage(format!("corrupt title: {e}"))))?;
-        let record_type = meridian_core::types::SemanticId::new(record_type)
-            .map_err(|e| to_port_err(PortError::Storage(format!("corrupt record_type: {e}"))))?;
-        let digest = meridian_core::types::ContentDigest::from_hex(content_digest)
-            .map_err(|e| to_port_err(PortError::Storage(format!("corrupt content_digest: {e}"))))?;
-        let schema = SchemaRef::new(schema_ref)
-            .map_err(|e| to_port_err(PortError::Storage(format!("corrupt schema_ref: {e}"))))?;
-
-        Ok(ManagedRecord::from_parts(
-            key,
-            schema,
-            schema_version,
-            title,
-            record_type,
-            origin,
-            authority,
-            payload,
-            RevisionNumber::from_u64(current_revision as u64),
-            digest,
-        ))
+        managed_record_from_row(row)
     }
+}
 
+/// Every current record of `conn`, in `record_key` order.
+pub(crate) fn export_all_on(conn: &Connection) -> Result<Vec<ManagedRecord>, PortError> {
+    let mut stmt = conn
+        .prepare("SELECT * FROM records ORDER BY record_key ASC")
+        .map_err(map_sql_err)?;
+    let rows = stmt
+        .query_map([], managed_record_from_row)
+        .map_err(map_sql_err)?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row.map_err(map_sql_err)?);
+    }
+    Ok(out)
+}
+
+/// The canonical JSON export text of every current record of `conn` — the
+/// same bytes [`SqliteStorage::canonical_export_json`] returns.
+pub(crate) fn canonical_export_on(conn: &Connection) -> Result<String, PortError> {
+    let records = export_all_on(conn)?;
+    let mut array = Vec::with_capacity(records.len());
+    for record in &records {
+        // The exact `$schema` this specific record declared — never a
+        // fixed or generic fallback (`meridian-app::storage::SchemaRef`).
+        let value = canonical_content_json(
+            record.key(),
+            record.schema(),
+            record.schema_version().as_u32(),
+            record.title(),
+            record.record_type().as_str(),
+            record.origin(),
+            record.authority(),
+            record.payload(),
+        );
+        array.push(value);
+    }
+    serde_json::to_string(&serde_json::Value::Array(array))
+        .map_err(|e| PortError::Storage(e.to_string()))
+}
+
+fn managed_record_from_row(row: &Row<'_>) -> rusqlite::Result<ManagedRecord> {
+    let scope_type: String = row.get("scope_type")?;
+    let scope_id: String = row.get("scope_id")?;
+    let scope_workspace_id: Option<String> = row.get("scope_workspace_id")?;
+    let scope_organization_profile_id: Option<String> = row.get("scope_organization_profile_id")?;
+    let record_id: String = row.get("record_id")?;
+    let schema_ref: String = row.get("schema_ref")?;
+    let schema_version: i64 = row.get("schema_version")?;
+    let title: String = row.get("title")?;
+    let record_type: String = row.get("record_type")?;
+    let origin_kind: String = row.get("origin_kind")?;
+    let origin_source_ref: Option<String> = row.get("origin_source_ref")?;
+    let authority_kind: String = row.get("authority_kind")?;
+    let authority_ref: String = row.get("authority_ref")?;
+    let authority_decision_ref: Option<String> = row.get("authority_decision_ref")?;
+    let payload: String = row.get("payload")?;
+    let content_digest: String = row.get("content_digest")?;
+    let current_revision: i64 = row.get("current_revision")?;
+
+    let to_port_err = |e: PortError| {
+        rusqlite::Error::FromSqlConversionFailure(
+            0,
+            rusqlite::types::Type::Text,
+            Box::new(std::io::Error::other(e.to_string())),
+        )
+    };
+
+    let scope = decode_scope(
+        &scope_type,
+        &scope_id,
+        scope_workspace_id.as_deref(),
+        scope_organization_profile_id.as_deref(),
+    )
+    .map_err(to_port_err)?;
+    let id = meridian_core::types::SemanticId::new(record_id)
+        .map_err(|e| to_port_err(PortError::Storage(format!("corrupt record_id: {e}"))))?;
+    let key = RecordKey::new(scope, id);
+    let origin = decode_origin(&origin_kind, origin_source_ref.as_deref()).map_err(to_port_err)?;
+    let authority = decode_authority(
+        &authority_kind,
+        &authority_ref,
+        authority_decision_ref.as_deref(),
+    )
+    .map_err(to_port_err)?;
+    let payload = decode_payload(&payload).map_err(to_port_err)?;
+    let schema_version = RecordSchemaVersion::from_u32(schema_version as u32).ok_or_else(|| {
+        to_port_err(PortError::Storage(format!(
+            "corrupt schema_version: {schema_version}"
+        )))
+    })?;
+    let title = meridian_core::types::NonEmptyString::new(title)
+        .map_err(|e| to_port_err(PortError::Storage(format!("corrupt title: {e}"))))?;
+    let record_type = meridian_core::types::SemanticId::new(record_type)
+        .map_err(|e| to_port_err(PortError::Storage(format!("corrupt record_type: {e}"))))?;
+    let digest = meridian_core::types::ContentDigest::from_hex(content_digest)
+        .map_err(|e| to_port_err(PortError::Storage(format!("corrupt content_digest: {e}"))))?;
+    let schema = SchemaRef::new(schema_ref)
+        .map_err(|e| to_port_err(PortError::Storage(format!("corrupt schema_ref: {e}"))))?;
+
+    Ok(ManagedRecord::from_parts(
+        key,
+        schema,
+        schema_version,
+        title,
+        record_type,
+        origin,
+        authority,
+        payload,
+        RevisionNumber::from_u64(current_revision as u64),
+        digest,
+    ))
+}
+
+impl SqliteStorage {
     fn revision_from_row(row: &Row<'_>, key: RecordKey) -> rusqlite::Result<RecordRevision> {
         let revision_number: i64 = row.get("revision_number")?;
         let schema_ref: String = row.get("schema_ref")?;
@@ -328,7 +416,7 @@ impl SqliteStorage {
     /// is the actual persistence boundary, so it is where the role guard
     /// lives, not only in whatever composition chose to call this adapter
     /// (`meridian-rust-migration-program-plan.md` §5.4, item 1).
-    fn apply_one(
+    pub(crate) fn apply_one(
         tx: &Transaction<'_>,
         request: &PutRecordRequest,
         role: meridian_app::storage::DatabaseRole,
@@ -474,8 +562,11 @@ impl SqliteStorage {
         )
         .map_err(map_sql_err)?;
 
-        let record = Self::load_record(tx, &storage_key)?
-            .expect("the record just written must be readable in the same transaction");
+        let record = Self::load_record(tx, &storage_key)?.ok_or_else(|| {
+            PortError::Storage(format!(
+                "the record \"{storage_key}\" just written is not readable in the same transaction"
+            ))
+        })?;
         Ok(if created {
             PutRecordOutcome::Created(record)
         } else {
@@ -499,7 +590,7 @@ impl SqliteStorage {
 
 impl RecordRepository for SqliteStorage {
     fn put(&self, request: PutRecordRequest) -> Result<PutRecordOutcome, PortError> {
-        let mut conn = self.conn.lock().expect("storage mutex poisoned");
+        let mut conn = self.lock()?;
         let tx = conn.transaction().map_err(map_sql_err)?;
         let outcome = Self::apply_one(&tx, &request, self.metadata.role())?;
         tx.commit().map_err(map_sql_err)?;
@@ -510,7 +601,7 @@ impl RecordRepository for SqliteStorage {
         &self,
         requests: Vec<PutRecordRequest>,
     ) -> Result<Vec<PutRecordOutcome>, PortError> {
-        let mut conn = self.conn.lock().expect("storage mutex poisoned");
+        let mut conn = self.lock()?;
         let tx = conn.transaction().map_err(map_sql_err)?;
         let mut outcomes = Vec::with_capacity(requests.len());
         for request in &requests {
@@ -524,7 +615,7 @@ impl RecordRepository for SqliteStorage {
     }
 
     fn get(&self, key: &RecordKey) -> Result<Option<ManagedRecord>, PortError> {
-        let conn = self.conn.lock().expect("storage mutex poisoned");
+        let conn = self.lock()?;
         conn.query_row(
             "SELECT * FROM records WHERE record_key = ?1",
             [key.storage_key()],
@@ -539,7 +630,7 @@ impl RecordRepository for SqliteStorage {
         key: &RecordKey,
         revision_number: RevisionNumber,
     ) -> Result<Option<RecordRevision>, PortError> {
-        let conn = self.conn.lock().expect("storage mutex poisoned");
+        let conn = self.lock()?;
         let storage_key = key.storage_key();
         conn.query_row(
             "SELECT * FROM record_revisions WHERE record_key = ?1 AND revision_number = ?2",
@@ -551,7 +642,7 @@ impl RecordRepository for SqliteStorage {
     }
 
     fn list_revisions(&self, key: &RecordKey) -> Result<Vec<RecordRevision>, PortError> {
-        let conn = self.conn.lock().expect("storage mutex poisoned");
+        let conn = self.lock()?;
         let storage_key = key.storage_key();
         let mut stmt = conn
             .prepare(
@@ -571,7 +662,7 @@ impl RecordRepository for SqliteStorage {
     }
 
     fn export_all(&self) -> Result<Vec<ManagedRecord>, PortError> {
-        let conn = self.conn.lock().expect("storage mutex poisoned");
+        let conn = self.lock()?;
         let mut stmt = conn
             .prepare("SELECT * FROM records ORDER BY record_key ASC")
             .map_err(map_sql_err)?;
@@ -602,7 +693,7 @@ impl EvidenceRepository for SqliteStorage {
             });
         }
 
-        let mut conn = self.conn.lock().expect("storage mutex poisoned");
+        let mut conn = self.lock()?;
         let tx = conn.transaction().map_err(map_sql_err)?;
 
         let subject_key = request.subject().storage_key();
@@ -660,7 +751,7 @@ impl EvidenceRepository for SqliteStorage {
     }
 
     fn resolve(&self, evidence_ref: &EvidenceRef) -> Result<Option<StoredEvidence>, PortError> {
-        let conn = self.conn.lock().expect("storage mutex poisoned");
+        let conn = self.lock()?;
         let row: Option<(String, String, String)> = conn
             .query_row(
                 "SELECT summary, payload, subject_record_key FROM evidence WHERE evidence_ref = ?1",

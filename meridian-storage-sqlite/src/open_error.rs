@@ -66,6 +66,15 @@ pub enum OpenError {
     /// the assigned role. The migration stops rather than guessing whether
     /// an unfamiliar area would have been allowed.
     UnrecognizedScopeTypeInExistingRecords { found: String },
+    /// A v2→v3 migration found rows in the version-1 `migration_runs`
+    /// table, which no production operation ever wrote and which carry none
+    /// of the facts a version-3 run must record. The step stops rather than
+    /// inventing them.
+    LegacyMigrationRunsPresent { count: i64 },
+    /// A read-only open found an older, still-supported schema version: a
+    /// read-only command never migrates, so the database must first be
+    /// opened by a state-changing command.
+    SchemaUpgradeRequired { found: i64 },
     /// An unexpected failure from the SQLite driver, not covered by the more
     /// specific variants above. Carries a message only, never a driver type.
     Sqlite(String),
@@ -111,6 +120,14 @@ impl fmt::Display for OpenError {
             OpenError::UnrecognizedScopeTypeInExistingRecords { found } => write!(
                 f,
                 "an existing record carries scope_type \"{found}\", which this build does not recognise as one of the six known areas"
+            ),
+            OpenError::LegacyMigrationRunsPresent { count } => write!(
+                f,
+                "the version-1 migration_runs table holds {count} row(s) no version-3 run can vouch for; the schema upgrade is refused"
+            ),
+            OpenError::SchemaUpgradeRequired { found } => write!(
+                f,
+                "the database is at schema version {found}; a read-only command does not upgrade it (open it once with a state-changing command such as init)"
             ),
             OpenError::Sqlite(message) => write!(f, "sqlite error: {message}"),
         }

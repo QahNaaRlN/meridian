@@ -1,7 +1,9 @@
 //! Argument grammar shared by every command (`meridian-cli-rfc.md`, "Точный
 //! контракт CLI").
 //!
-//! Grammar: `meridian <command> [--flag value]...`. Every flag takes exactly
+//! Grammar: `meridian <command> [--flag value]...`, and for the nested
+//! `migration` command `meridian migration <plan|apply|verify|rollback>
+//! [--flag value]...`. Every flag takes exactly
 //! one value — there are no boolean switches in this package's surface.
 //! `--help`/`-h`, alone or as the first token, and the bare command `help`
 //! print usage and exit [`crate::exit_code::OK`] without touching stdin,
@@ -54,6 +56,26 @@ pub enum CliError {
         flag: &'static str,
     },
     InvalidFormat(String),
+    /// A flag whose value belongs to a closed set (`--kind`, `--dry-run`,
+    /// `--run`) got a value outside it — never a truthy string or fallback.
+    InvalidFlagValue {
+        command: &'static str,
+        flag: &'static str,
+        value: String,
+        expected: &'static str,
+    },
+    /// A flag the chosen form of a command does not accept (for example
+    /// `--input` with `--kind frozen-instance`).
+    FlagNotAllowed {
+        command: &'static str,
+        flag: &'static str,
+        reason: &'static str,
+    },
+    /// `migration` without a subcommand, or with an unknown one.
+    UnknownSubcommand {
+        command: &'static str,
+        subcommand: Option<String>,
+    },
 }
 
 impl fmt::Display for CliError {
@@ -80,6 +102,34 @@ impl fmt::Display for CliError {
                 f,
                 "invalid --format value \"{value}\" (expected \"human\" or \"json\")"
             ),
+            CliError::InvalidFlagValue {
+                command,
+                flag,
+                value,
+                expected,
+            } => write!(
+                f,
+                "invalid --{flag} value \"{value}\" for \"{command}\" (expected {expected})"
+            ),
+            CliError::FlagNotAllowed {
+                command,
+                flag,
+                reason,
+            } => write!(f, "\"{command}\" does not accept --{flag} {reason}"),
+            CliError::UnknownSubcommand {
+                command,
+                subcommand: None,
+            } => write!(
+                f,
+                "\"{command}\" requires a subcommand (plan, apply, verify or rollback)"
+            ),
+            CliError::UnknownSubcommand {
+                command,
+                subcommand: Some(name),
+            } => write!(
+                f,
+                "unknown subcommand \"{command} {name}\" (expected plan, apply, verify or rollback)"
+            ),
         }
     }
 }
@@ -105,6 +155,49 @@ impl ParsedArgs {
             command,
             flag: name,
         })
+    }
+}
+
+/// The closed kind of an `import` input.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImportKind {
+    FrozenInstance,
+    CanonicalRecords,
+}
+
+impl ImportKind {
+    pub fn parse(command: &'static str, value: &str) -> Result<ImportKind, CliError> {
+        match value {
+            "frozen-instance" => Ok(ImportKind::FrozenInstance),
+            "canonical-records" => Ok(ImportKind::CanonicalRecords),
+            other => Err(CliError::InvalidFlagValue {
+                command,
+                flag: "kind",
+                value: other.to_string(),
+                expected: "\"frozen-instance\" or \"canonical-records\"",
+            }),
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ImportKind::FrozenInstance => "frozen-instance",
+            ImportKind::CanonicalRecords => "canonical-records",
+        }
+    }
+}
+
+/// `--dry-run`: exactly `true` or `false`; absent means `true`.
+pub fn parse_dry_run(command: &'static str, value: Option<&str>) -> Result<bool, CliError> {
+    match value {
+        None | Some("true") => Ok(true),
+        Some("false") => Ok(false),
+        Some(other) => Err(CliError::InvalidFlagValue {
+            command,
+            flag: "dry-run",
+            value: other.to_string(),
+            expected: "\"true\" or \"false\"",
+        }),
     }
 }
 
@@ -150,7 +243,7 @@ pub fn parse_flags(
 }
 
 pub const USAGE: &str = "\
-meridian — Meridian Rust CLI (package meridian-cli-foundation)
+meridian — Meridian Rust CLI (packages meridian-cli-foundation, meridian-cli-migration)
 
 USAGE:
     meridian <command> [--flag value]...
@@ -161,20 +254,35 @@ COMMANDS:
     validate  --kernel <path> [--format human|json]
     resolve   --kernel <path> [--request <path>] [--format human|json]
     export    --kernel <path> --tool-db <path> --workspace-db <path> [--format human|json]
+    import    --kernel <path> --kind frozen-instance --source <instance-repository-path> --tool-db <path> --workspace-db <path> --confirm <plan-fingerprint> [--format human|json]
+    import    --kernel <path> --kind canonical-records --input <json-path> --tool-db <path> --workspace-db <path> --confirm <sha256-of-input> [--format human|json]
+    migration plan     --kernel <path> --source <instance-repository-path> [--format human|json]
+    migration apply    --kernel <path> --source <instance-repository-path> --workspace-db <path> [--dry-run true|false] [--confirm <plan-fingerprint>] [--format human|json]
+    migration verify   --kernel <path> --source <instance-repository-path> --workspace-db <path> [--format human|json]
+    migration rollback --kernel <path> --source <instance-repository-path> --workspace-db <path> --run <migration-run-id> --confirm <migration-run-id> [--format human|json]
 
     --format defaults to \"human\" for every command.
     --request for \"resolve\" defaults to reading the request document from stdin.
+    --dry-run defaults to \"true\"; only \"--dry-run false --confirm <recomputed plan
+    fingerprint>\" changes state. A present confirmation must match even for a dry run.
+    import changes state only when --confirm matches: the recomputed plan fingerprint
+    (frozen-instance) or the SHA-256 of the exact input bytes (canonical-records).
+    rollback requires --confirm to repeat --run exactly.
+    The migration source is named only by --source; no command reads MERIDIAN_INSTANCE.
 
     -h, --help    print this message and exit 0
 
 EXIT CODES:
     0   success — the command's result is entirely positive
     1   the command ran and produced a result, but that result is negative
-        (validate found a FAIL, doctor found an unhealthy component)
+        (validate found a FAIL, doctor found an unhealthy component, a
+        migration bundle was rejected, a confirmation did not match, a
+        rollback was refused, verification did not pass)
     2   usage error — the command line itself could not be understood
     3   the named input or environment made it impossible to produce a
         result (missing/incompatible Kernel, workspace or database; a
-        malformed resolve request)
+        malformed resolve request; an unreadable migration source; a
+        malformed canonical-records input; a missing or damaged checkpoint)
 
 Result is always written to stdout only; diagnostics, warnings and errors are
 always written to stderr only, regardless of --format.

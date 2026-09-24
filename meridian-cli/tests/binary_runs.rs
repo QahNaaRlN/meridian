@@ -265,8 +265,13 @@ fn validate_reports_ok_on_this_kernel_with_zero_real_failures() {
         git_tracked_count,
         "validate's own tracked-file count must match a fresh, independent `git ls-files` on this exact checkout"
     );
-    assert_eq!(value["result"]["stats"]["schema_validated"], 12);
-    assert_eq!(value["result"]["stats"]["schema_attempted"], 12);
+    // 13 since `meridian-cli-migration`: the synthetic frozen-Instance
+    // fixture's applicability register
+    // (`meridian-cli/tests/fixtures/frozen-instance/source/rule-resolution/applicability.yaml`)
+    // declares the Kernel applicability schema and is validated like every
+    // other registry document.
+    assert_eq!(value["result"]["stats"]["schema_validated"], 13);
+    assert_eq!(value["result"]["stats"]["schema_attempted"], 13);
     assert_eq!(value["result"]["stats"]["rule_resolution_satisfied"], 20);
     assert_eq!(value["result"]["stats"]["rule_resolution_rejected"], 27);
     // The three `agent_instruction_identity_*` counts below are, like
@@ -288,9 +293,15 @@ fn validate_reports_ok_on_this_kernel_with_zero_real_failures() {
         value["result"]["stats"]["agent_instruction_identity_undeclared_prescriptive"],
         22
     );
+    // 32 -> 34: the drift appeared on the clean `HEAD` after the Metis
+    // federated-knowledge documents were integrated and existed before
+    // package `meridian-cli-migration` was implemented — `git archive HEAD`
+    // of the integration commit, validated by the same binary, already
+    // reports 34, and reverting this package's Markdown edits does not
+    // change it.
     assert_eq!(
         value["result"]["stats"]["agent_instruction_identity_undeclared_other"],
-        32
+        34
     );
     // 20 before subpackage 7a; 7a, 7b and 7c removed theirs, and
     // `rust-architecture-conformance-7` the last four (7d) together with
@@ -1279,3 +1290,10 @@ fn export_reports_a_missing_database_as_an_environment_error() {
     assert!(stdout_of(&output).is_empty());
     assert!(!stderr_of(&output).is_empty());
 }
+
+// ---------------------------------------------------------------------
+// Package meridian-cli-migration: import and migration plan|apply|verify|rollback.
+// ---------------------------------------------------------------------
+
+#[path = "binary_runs/migration.rs"]
+mod migration;

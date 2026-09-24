@@ -1,0 +1,11 @@
+{
+  "revision": "8b82b86238dc6b47dd578067c564e332e9c06fa8",
+  "tree_digest": "fb6627013317038e5d96d8a5cf39c7518ec4fb048a414c203e1be1c3d617821d",
+  "plan_fingerprint": "9a495da8cfd5a3d4fa0684605225d30309fbd98b9b3931290411bb8402171c0d",
+  "idempotency_key": "de85ae24ad41260cbd19fabb5a71fdfc861bae73dee9dc79f79a690ae0bc2955",
+  "export_digest": "661e33c789151ddc2b3b263f433a5c05be9c2e68dc303f282a6cb25d2da622d9",
+  "record_units": 6,
+  "migrated": 5,
+  "retained": 1,
+  "applicability_records": 2
+}

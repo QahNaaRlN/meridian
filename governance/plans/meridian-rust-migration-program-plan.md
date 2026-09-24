@@ -159,7 +159,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Типизированные контракты исполнения и управления запуском (`rust-architecture-conformance-5`) | Перевести связные `execution-state-model`, `role-and-human-control` и `bounded-context-manifest` на общие typed core contracts; app оставить transport/schema/resolution orchestration, CLI — composition/presentation; сохранить временный тонкий фасад только для двух ещё не перенесённых семейств 7c | `rust-architecture-conformance-4`, §5.13 | accepted — принято и локально интегрировано (§5.19.8) |
 | — | Типизированные доказательства и полевая оценка (`rust-architecture-conformance-6`) | Перевести оставшиеся семейства 7c `evidence-and-handoff-contract` и `meridian-field-evaluation` на общий typed core/app pipeline, удалить временные resolver/portability фасады и оставить CLI слоем composition/presentation | `rust-architecture-conformance-5`, §5.13 | accepted — принято и локально интегрировано (§5.20.9) |
 | — | Типизированная миграционная и upgrade-квалификация (`rust-architecture-conformance-7`) | Перевести весь связный 7d: `instance-data-migration`, `instance-canonical-export`, `workspace-compatibility-qualification`, `upgrade-integration-qualification`; расширить существующий migration owner и композиционно переиспользовать принятые операции 7b/7c | `rust-architecture-conformance-6`, §5.13 | accepted — принято и локально интегрировано (§5.21.9) |
-| 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | specified — открыт к исполнению (§5.22) |
+| 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | accepted — принят и локально интегрирован (§5.22.11) |
 | 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | planned |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
 
@@ -5679,7 +5679,10 @@ conformance harness — 129 passed, 0 failed; `kernel-validate.test.mjs` —
 
 ### 5.22.1. Статус и условие старта
 
-Статус: **`SPECIFIED_NOT_STARTED`**.
+Исходный статус при спецификации (исторический, 2026-09-24):
+**`SPECIFIED_NOT_STARTED`**. Он фиксирует момент открытия пакета и не
+является текущим: текущий статус пакета ведётся в §5.22.10 и в состоянии
+программы §10.
 
 Пакет открыт только после независимой приёмки и локальной интеграции
 `rust-architecture-conformance-7`. Условие выполнено: package commit
@@ -6015,6 +6018,167 @@ git diff --cached --check
 > audit, результаты каждой команды и явно названные невыполненные полные
 > gates.
 
+### 5.22.10. Реализация и статус передачи (исполнитель, 2026-09-24)
+
+Статус пакета: **`CHANGES_REQUESTED`** — вердикт архитектора по первой
+передаче; выполнен корректирующий раунд 1, его передача —
+**`READY_FOR_ARCHITECT_REVIEW`** (не `ACCEPTED`). Git write-операций
+исполнитель не выполнял ни в одной передаче; полный отчёт с owner map,
+списком файлов, результатами ворот и невыполненными полными воротами передан
+архитектору.
+
+- **Ядро** (`meridian-core/src/migration/{write_set,run,applicability}.rs`):
+  `FrozenWriteSet` (только из принятого `MigrationPlan`, built-in цель —
+  отказ до записи), `verify_read_back` (missing/extra/changed/duplicate),
+  идентичность и решения запуска (`MigrationRunId`, `decide_apply`,
+  `check_rollback_preconditions`), типизированная эквивалентность
+  применимости над `ApplicabilityRecord`.
+- **App** (`meridian-app/src/migration/`, `storage/migration_repository.rs`):
+  порт `FrozenSource` (один source view), принятие bundle композицией
+  production-операций 7d (`instance_data_migration::check_container`,
+  `instance_canonical_export::check_pinned_container` против `PinnedPlan`),
+  восстановление содержимого единиц из закреплённой ревизии без продуктовых
+  констант, порт `MigrationRepository`, операции `plan`/`apply`/`verify`/
+  `rollback`/`import_frozen`/`import_canonical`; база открывается только
+  после совпадения подтверждения.
+- **Storage** (`meridian-storage-sqlite`): схема версии 3 — новая атомарная
+  ступень `2 → 3` заменяет пустой журнал версии 1 двумя отдельными
+  append-only фактами: `migration_runs` (факт applied, без изменяемого
+  столбца статуса) и `migration_rollbacks` (факт rolled-back, ссылка на
+  run); статус запуска выводится из наличия факта отката. Checkpoint через
+  SQLite online backup API, одна `IMMEDIATE`-транзакция на apply,
+  проверенный restore с повторным открытием; read-only открытие для
+  dry-run/verify.
+- **CLI**: `import --kind frozen-instance|canonical-records`, вложенные
+  `migration plan|apply|verify|rollback`, Git-адаптер `GitFrozenSource`,
+  каталог checkpoint `<db>.checkpoints/` рядом с базой.
+- **Доказательства на реальном bundle**: 346 = 336 + 10 + 0; 336 записей,
+  равных принятому экспорту по девяти полям; 61 норма применимости,
+  lost/added/changed/duplicate = 0; повтор — `already-applied`; round trip
+  побайтно; `apply → rollback` возвращает канонический экспорт к pre-state,
+  повторный rollback отклоняется.
+- Два наблюдаемых решения внесены в `COMPATIBILITY.md` (типизированная
+  проверка применимости; обобщённая адресация фрагментов вместо продуктовой
+  таблицы контейнеров) и **приняты архитектором** в вердикте первой
+  передачи; их наблюдаемые границы не менялись.
+
+**Корректирующий раунд 1 (исполнитель, 2026-09-24).** Закрыты пункты
+`CHANGES_REQUESTED`:
+
+1. *Журнал rollback.* Restore checkpoint больше не заменяет историю:
+   checkpoint предшествует запуску, поэтому rollback сначала копирует его
+   (backup API) в staging-базу, доказывает, что её журнал равен живому
+   журналу без собственного факта applied этого run (иначе
+   `checkpoint-state-mismatch` до изменения живой базы), дописывает в неё
+   дословно (включая `recorded_at`) исходную строку applied и отдельный
+   факт `migration_rollbacks` одной транзакцией и только затем
+   восстанавливает staging в живую базу. После повторного открытия БД
+   проверяются количество и идентичность обеих записей; ошибка
+   `RestoredButUnrecorded` стала непредставимой и удалена.
+2. *Доказательство применимости fail-closed.* Frozen bundle без ровно одного
+   принятого applicability register (ни одного либо несколько), с пустым
+   register, без `$schema` либо без записи, минтящей target, отклоняется
+   на `plan`, до `apply`/`verify`; пустые стороны сравнения никогда не
+   эквивалентны (`ApplicabilityEquivalence::is_equivalent` требует
+   `controlled > 0`), поэтому не дают `verified`.
+3. *Порядок `import frozen-instance`.* Tool DB открывается и проверяется
+   только после совпадения `--confirm`, так же как workspace DB: неверное
+   подтверждение при отсутствующей или повреждённой tool DB — это
+   `confirmation-mismatch`, код 1, без создания базы или checkpoint.
+
+**Корректирующий раунд 2 (исполнитель, 2026-09-24).** Вердикт архитектора
+по раунду 1 — `CHANGES_REQUESTED`; статус пакета остаётся
+**`CHANGES_REQUESTED`**, передача раунда 2 — **`READY_FOR_ARCHITECT_REVIEW`**
+(не `ACCEPTED`). Закрыты пункты:
+
+1. *Самый новый run.* `rollback_migration` сверяет запрошенный run с самым
+   новым записанным migration run независимо от наличия у него факта
+   отката; helper «самого нового не откатанного run» удалён.
+   `AlreadyRolledBack` самого запрошенного run по-прежнему решается первым.
+   Сценарий `apply A → apply B → rollback B → rollback A` отклоняется как
+   `NewerRun` (newer = B) без изменения record-state, канонического
+   экспорта, обеих таблиц журнала и списка checkpoint.
+2. *Внешние ключи staging.* Записывающее staging-соединение rollback явно
+   включает и проверяет `PRAGMA foreign_keys = ON` до транзакции; после
+   записи весь staging-файл проходит `PRAGMA foreign_key_check`, и любое
+   нарушение отклоняет rollback (`checkpoint-state-mismatch`) до restore
+   живой базы.
+
+**Полный финальный рубеж и корректирующий раунд 3 (2026-09-24).**
+Архитектурная проверка раунда 2 пройдена, кандидат был допущен к полному
+финальному рубежу, но **рубеж не прошёл**. Архитектурный код rollback
+принят; найдены три дефекта вне него:
+
+1. *Test-boundary.* Файл тестового модуля
+   `meridian-app/src/migration/operations/tests.rs`, подключённый через
+   `#[cfg(test)] mod tests;`, не нёс собственного `#![cfg(test)]`, и оба
+   структурных сканера границы `WorkspaceReader` (в `meridian-app` и
+   `meridian-cli`) считали его fake production-реализацией.
+2. *Baseline-snapshot.* `validate_reports_ok_on_this_kernel_with_zero_real_failures`
+   ожидал `agent_instruction_identity_undeclared_other = 32`; чистый `HEAD`
+   после интеграции документов Metis даёт 34 — дрейф существовал до
+   реализации пакета 8.
+3. *Harness-environment.* Legacy-сравнения Kernel validation передавали
+   Node-стороне унаследованный `MERIDIAN_INSTANCE`, и продуктовые
+   диагностики Экземпляра попадали только в одну сторону сравнения.
+
+Начат корректирующий раунд 3: файл тестового модуля получил
+`#![cfg(test)]` (сканеры не ослаблены); snapshot обновлён до 34 с
+фиксацией происхождения дрейфа; харнесс получил единый helper
+`kernelOnlyEnv` для Kernel-only дочерних процессов (копия окружения,
+overrides, удалённый `MERIDIAN_INSTANCE`) для обеих сторон каждого
+legacy-сравнения, а блок `meridian-cli-migration` по-прежнему читает frozen
+source из `MERIDIAN_INSTANCE`, передаёт его бинарнику только через
+`--source` и без него остаётся UNVERIFIED. Статус пакета остаётся
+**`CHANGES_REQUESTED`**. Передача раунда 3 —
+**`BLOCKED_FOR_ARCHITECT_DECISION`**: сканер
+`meridian-cli` (`mechanical_integrity_boundary::production_text`)
+распознаёт только внешний `#[cfg(test)]`, но не заголовочный
+`#![cfg(test)]` (который уже распознаёт принятый сканер `meridian-app`),
+поэтому назначенное исправление без изменения сканера не проходит его
+структурный тест.
+
+**Решение архитектора по блокировке раунда 3 (2026-09-24).**
+`BLOCKED_FOR_ARCHITECT_DECISION` снят; разрешён вариант A — выравнивание
+сканера `meridian-cli` с принятым правилом `meridian-app`. Раунд 3
+продолжен: `production_text` в
+`meridian-cli/src/commands/validate/mechanical_integrity_boundary.rs`
+теперь опирается на один helper `production_part` — после пустых строк и
+`//!` заголовочный `#![cfg(test)]` делает весь файл test-only, иначе
+production заканчивается перед первой строкой-атрибутом внешнего
+`#[cfg(test)]`; имя `tests.rs`, позднее либо строковое упоминание
+атрибута и комментарий файл не освобождают (регрессионный тест
+`only_an_explicit_test_only_module_file_is_exempt_from_the_production_scan`).
+Статус пакета остаётся **`CHANGES_REQUESTED`**; передача продолженного
+раунда 3 — **`READY_FOR_ARCHITECT_REVIEW`** (не `ACCEPTED`).
+
+### 5.22.11. Итоговый вердикт архитектора и интеграция
+
+Итоговый вердикт: **`ACCEPTED`**.
+
+Независимое ревью первой передачи и трёх корректирующих раундов подтвердило
+закрытые import kinds, чистые границы core/app/SQLite/CLI, mutation только
+после явного подтверждения, append-only журнал applied/rollback, проверяемый
+checkpoint restore, fail-closed applicability proof и отсутствие
+эксплуатационного чтения через `MERIDIAN_INSTANCE`. Два наблюдаемых
+Rust-native решения `COMPATIBILITY.md` приняты; иных необъяснённых
+расхождений не осталось.
+
+Полный финальный gate выполнен на неизменённом кандидате с fingerprint
+`dc6f4e2b7281c34f5200a23f25575dc5158f109a3033e3a1c28975b5a2615934`:
+workspace Rust tests — 1070 passed, 0 failed, 2 ignored; оба ignored-теста
+реального frozen bundle запущены отдельно — 2 passed, 0 failed; conformance
+harness — 137 passed, 0 failed; `kernel-validate.test.mjs` — 293 passed,
+0 failed, 0 skipped. Format, workspace build, workspace clippy с
+`-D warnings`, rustdoc с `-D warnings`, оба diff-check и строгий preflight
+также прошли. Начальный и конечный HEAD совпали:
+`1757ec29777f5454fe5f90c2a0e7618a62d45c79`; индекс до интеграции был чист.
+
+Пакет локально интегрируется отдельным package commit и отдельным `--no-ff`
+merge-коммитом без публикации. Пакет 9 этим решением не начинается: для
+`rust-business-contract-qualification` ещё нет отдельной спецификации и
+назначения исполнения.
+
 ## 6. Ворота Rust
 
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
@@ -6286,11 +6450,11 @@ program_id: meridian-rust-migration
 program_status: active
 activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
-last_completed_package: rust-architecture-conformance-7
+last_completed_package: meridian-cli-migration
 current_package: meridian-cli-migration
-current_package_status: specified_not_started
+current_package_status: accepted_and_locally_integrated
 next_package: rust-business-contract-qualification
-next_package_status: blocked_pending_package_8_acceptance
+next_package_status: not_specified
 concord_status: paused_pending_meridian_rust_release
 release_version: unassigned
 release_gate: closed
@@ -6476,3 +6640,58 @@ checkpoint rollback. Обязательные доказательства ох�
 mid-transaction failure и возврат pre-state. Пакет 9 остаётся закрытым до
 независимой приёмки и локальной интеграции пакета 8; Metis и Concord не
 открываются.
+
+**Обновление (2026-09-24, §5.22.10, вердикт `CHANGES_REQUESTED` и
+корректирующий раунд 1).** `current_package_status` синхронизирован как
+`changes_requested`: архитектор не принял первую передачу
+`meridian-cli-migration` (журнал rollback заменял факт applied при
+restore; доказательство применимости проходило при пустых сторонах;
+`import frozen-instance` проверял tool DB до `--confirm`), одновременно
+приняв два наблюдаемых решения `COMPATIBILITY.md`. Исполнитель выполнил
+корректирующий раунд 1 в рабочем дереве без Git-записей и передал его как
+`READY_FOR_ARCHITECT_REVIEW`; целевые ворота §5.22.8 зелёные, полные
+`cargo test --workspace` и полные Node-наборы не запускались (финальный
+рубеж, `AGENTS.md` §9). Статус НЕ `ACCEPTED`; пакет 9, Metis и Concord не
+открываются.
+
+**Обновление (2026-09-24, §5.22.10, корректирующий раунд 2).**
+`current_package_status` остаётся `changes_requested`: архитектор вернул
+раунд 1 (rollback сверялся только с не откатанными runs; staging-запись
+не доказывала FK-инвариант). Исполнитель выполнил корректирующий раунд 2
+в рабочем дереве без Git-записей и передал его как
+`READY_FOR_ARCHITECT_REVIEW`; назначенные целевые ворота раунда зелёные,
+полные workspace/Node-наборы остаются финальным рубежом. §5.22.1 теперь
+явно называет `SPECIFIED_NOT_STARTED` историческим исходным статусом.
+Статус НЕ `ACCEPTED`; пакет 9, Metis и Concord не открываются.
+
+**Обновление (2026-09-24, §5.22.10, полный финальный рубеж и
+корректирующий раунд 3).** `current_package_status` остаётся
+`changes_requested`: после архитектурного одобрения раунда 2 полный
+финальный рубеж не прошёл. Архитектурный код rollback принят; найдены
+дефекты test-boundary (тестовый модуль без `#![cfg(test)]` для
+структурных сканеров), baseline-snapshot (дрейф `undeclared_other` 32 → 34,
+существовавший на чистом `HEAD` после интеграции документов Metis) и
+harness-environment (унаследованный `MERIDIAN_INSTANCE` в Kernel-only
+сравнениях). Начат корректирующий раунд 3 без Git-записей; повторный полный
+финальный рубеж назначается после новой архитектурной проверки. Статус НЕ
+`ACCEPTED`; пакет 9, Metis и Concord не открываются.
+
+**Обновление (2026-09-24, §5.22.10, решение архитектора по раунду 3).**
+`current_package_status` остаётся `changes_requested`. Состоявшаяся
+блокировка раунда 3 (`BLOCKED_FOR_ARCHITECT_DECISION`: CLI-сканер не
+распознавал заголовочный `#![cfg(test)]`) сохранена в §5.22.10 как история;
+архитектор снял её, разрешив вариант A — выравнивание CLI-сканера с
+принятым правилом `meridian-app`. Раунд 3 продолжен без Git-записей и
+передаётся как `READY_FOR_ARCHITECT_REVIEW`; повторный финальный рубеж
+определяет архитектор. Статус НЕ `ACCEPTED`; пакет 9, Metis и Concord не
+открываются.
+
+**Обновление (2026-09-24, §5.22.11, итоговый вердикт архитектора).** Пакет
+`meridian-cli-migration` принят после независимого ревью, трёх корректирующих
+раундов и полного финального gate: 1070/1070 workspace Rust tests, 137/137
+conformance harness, 293/293 `kernel-validate.test.mjs` и 2/2 отдельных
+real-bundle tests; остальные финальные ворота также зелёные на неизменённом
+кандидате. Он локально интегрируется отдельным package commit и отдельным
+`--no-ff` merge-коммитом без публикации. Следующий пакет
+`rust-business-contract-qualification` ещё не специфицирован и этим решением
+не начинается; Metis и Concord остаются закрыты до собственных рубежей.

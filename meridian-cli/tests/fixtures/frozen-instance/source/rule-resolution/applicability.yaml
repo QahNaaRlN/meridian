@@ -1,0 +1,36 @@
+$schema: ./applicability.schema.json
+schema_version: 1
+records:
+  - norm:
+      repository: sample-repo
+      path: AGENTS.md
+      region: operational-roles
+    digest: 013e7155d519b0a183ad8bd70395ff7fd910939f2b7f5cb797a332c855e9d57b
+    intake_record:
+      register: instruction-intake/sample-repo.yaml
+      recorded_at: '2026-01-01'
+      verdict: keep-local
+    scope: repository
+    repository: sample-repo
+    activation: always
+    source: repository
+    status: resolved
+    recorded_at: '2026-01-02'
+  - norm:
+      repository: sample-repo
+      path: AGENTS.md
+      region: repository-context
+    digest: cc5463dc3a765c3cedc18af3544063dd119ce25ae1b849537bfb360b4a0aebb1
+    intake_record:
+      register: instruction-intake/sample-repo.yaml
+      recorded_at: '2026-01-01'
+      verdict: keep-local
+    scope: repository
+    repository: sample-repo
+    activation: path-glob
+    globs:
+      - src/**
+      - docs/**
+    source: repository
+    status: resolved
+    recorded_at: '2026-01-02'

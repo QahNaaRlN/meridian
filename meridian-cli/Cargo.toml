@@ -3,7 +3,7 @@ name = "meridian-cli"
 version = "0.1.0"
 edition.workspace = true
 publish.workspace = true
-description = "Meridian Rust CLI — composition root binary. `init`/`doctor`/`validate`/`resolve`/`export` (package meridian-cli-foundation)."
+description = "Meridian Rust CLI — composition root binary. `init`/`doctor`/`validate`/`resolve`/`export` (package meridian-cli-foundation), `import`/`migration plan|apply|verify|rollback` (package meridian-cli-migration)."
 
 [lints]
 workspace = true

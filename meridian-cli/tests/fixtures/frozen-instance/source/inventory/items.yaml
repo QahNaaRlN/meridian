@@ -1,0 +1,7 @@
+items:
+  - id: alpha
+    size: 1
+    tags:
+      - first
+  - id: beta gamma
+    size: 2

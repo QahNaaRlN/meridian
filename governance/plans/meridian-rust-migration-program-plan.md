@@ -160,7 +160,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Типизированные доказательства и полевая оценка (`rust-architecture-conformance-6`) | Перевести оставшиеся семейства 7c `evidence-and-handoff-contract` и `meridian-field-evaluation` на общий typed core/app pipeline, удалить временные resolver/portability фасады и оставить CLI слоем composition/presentation | `rust-architecture-conformance-5`, §5.13 | accepted — принято и локально интегрировано (§5.20.9) |
 | — | Типизированная миграционная и upgrade-квалификация (`rust-architecture-conformance-7`) | Перевести весь связный 7d: `instance-data-migration`, `instance-canonical-export`, `workspace-compatibility-qualification`, `upgrade-integration-qualification`; расширить существующий migration owner и композиционно переиспользовать принятые операции 7b/7c | `rust-architecture-conformance-6`, §5.13 | accepted — принято и локально интегрировано (§5.21.9) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | accepted — принят и локально интегрирован (§5.22.11) |
-| 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | accepted — `QUALIFIED`, GAP-09 закрыт, принят и локально интегрирован (§5.23.11) |
+| 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | accepted — post-merge failure исправлен, tracked-рубеж пройден, `QUALIFIED`, принят и локально интегрирован (§5.23.11) |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
 
 ### После выпуска (вне этой программы, но зависимые от неё)
@@ -6818,6 +6818,31 @@ GAP-09 и вынес вердикт `QUALIFIED` / `ACCEPTED`. Пакет лок�
 интегрируется отдельным package commit и отдельным `--no-ff` merge-коммитом
 без публикации. Пакет 10 этим вердиктом не начинается.
 
+#### Post-merge failure (2026-09-25)
+
+После локальной интеграции (package commit `b5076d5`, merge `074fca1`) новые
+файлы стали tracked, и Kernel-only `kernel-validate.mjs` дал 13 `FAIL
+document-identity`: Markdown payload-fixtures источника `payload-matrix`
+не несли Front Matter; `validate_reports_ok_on_this_kernel_with_zero_real_failures`
+давал код 1 вместо 0. Кандидат прошёл рубеж только потому, что эти файлы
+были неотслеживаемыми и не сканировались. Вердикт `QUALIFIED` / `ACCEPTED`
+больше не действует: текущий статус — **`CHANGES_REQUESTED`**, квалификация —
+**`NOT_QUALIFIED`**. Корректирующий раунд (отчёт квалификации §9.5): Front
+Matter в таблице `families.json`, штатная перегенерация `payload-matrix`,
+закреплённый счётчик `undeclared_prescriptive` 22 → 25 по независимо
+проверенному tracked-состоянию; затем полный рубеж §5.23.7 на
+tracked-кандидате. Пакет 10 не начинается.
+
+Корректирующий tracked-кандидат с fingerprint
+`26bb4f6a213a3fd52a2bed56ce2907a166d6f64bbe0d20ae1ffe61bc8458f151`
+прошёл все 15 команд полного рубежа §5.23.7 с кодом 0: 1162 workspace Rust
+tests, ранее падавший binary test, 2/2 real-bundle tests, 152/152 conformance
+harness и 293/293 `kernel-validate.test.mjs`; Kernel-only validation —
+0 failures, 9 warnings, `schema: 14/14`. Архитектор принял исправление,
+подтвердил `QUALIFIED` / `ACCEPTED` и локально интегрирует его отдельным
+bugfix package commit и отдельным `--no-ff` merge-коммитом без публикации.
+Пакет 10 остаётся `planned_not_started`.
+
 ## 6. Ворота Rust
 
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
@@ -7398,3 +7423,22 @@ harness и 293/293 `kernel-validate.test.mjs`; остальные ворота �
 Строки VAL-30/NODE-02/NODE-03 переведены в `ACCEPTED_RUST_NATIVE`, GAP-09
 закрыт, квалификация — `QUALIFIED`, пакет 9 — `ACCEPTED` и локально
 интегрируется без публикации. Пакет 10 остаётся `planned_not_started`.
+
+**Обновление (2026-09-25, §5.23.11, post-merge failure).**
+`current_package_status` синхронизирован как
+`post_merge_failure_changes_requested`: на интегрированном tracked-состоянии
+Kernel-only validation дала 13 `FAIL document-identity` (payload-fixtures без
+Front Matter). Вердикт `QUALIFIED` / `ACCEPTED` не действует; статус —
+`CHANGES_REQUESTED`, квалификация — `NOT_QUALIFIED`;
+`last_completed_package` возвращён к `meridian-cli-migration`, пакет 10 —
+`blocked_pending_package_9_acceptance`.
+
+**Обновление (2026-09-25, §5.23.11, приёмка корректирующего
+tracked-раунда).** Front Matter 13 payload-fixtures исправлен в единственном
+источнике `families.json`, производные bundle штатно перегенерированы,
+закреплённые счётчики синхронизированы с tracked-состоянием. Все 15 команд
+полного рубежа прошли на неизменённом fingerprint: 1162/1162 workspace Rust
+tests, отдельный ранее падавший binary test, 2/2 real-bundle tests, 152/152
+conformance harness и 293/293 `kernel-validate.test.mjs`; остальные ворота
+также зелёные. Итог — `QUALIFIED`, пакет 9 — `ACCEPTED` и локально
+интегрируется без публикации; пакет 10 остаётся `planned_not_started`.

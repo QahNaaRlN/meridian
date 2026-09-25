@@ -291,9 +291,16 @@ fn validate_reports_ok_on_this_kernel_with_zero_real_failures() {
         value["result"]["stats"]["agent_instruction_identity_declared_norms"],
         29
     );
+    // 25 since `rust-workspace-state-validation`: the payload-matrix source
+    // (`meridian-cli/tests/fixtures/frozen-instance/payload-matrix/source/matrix/`)
+    // carries one Markdown payload per document record type, each with its
+    // own Front Matter; three of them — `standard.md`, `contract.md`,
+    // `protocol.md` — are of a prescriptive type and declare no delivery.
+    // Re-derived independently from `git ls-files` content (29 declared,
+    // 25 prescriptive, 45 other), equal to `kernel-validate.mjs`.
     assert_eq!(
         value["result"]["stats"]["agent_instruction_identity_undeclared_prescriptive"],
-        22
+        25
     );
     // `undeclared_other` is the remainder of the classified population, and
     // that population — every Git-tracked Markdown document that carries
@@ -337,7 +344,7 @@ fn validate_reports_ok_on_this_kernel_with_zero_real_failures() {
     };
     assert_eq!(
         value["result"]["stats"]["agent_instruction_identity_undeclared_other"],
-        classified_population - 29 - 22,
+        classified_population - 29 - 25,
         "every classified document that is neither a declared norm nor undeclared-prescriptive is undeclared-other"
     );
     // 20 before subpackage 7a; 7a, 7b and 7c removed theirs, and

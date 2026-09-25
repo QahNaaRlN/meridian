@@ -4,9 +4,9 @@
     "deterministic-plan:sample-frozen-instance-plan": {
       "record_type": "instance-deterministic-reconstruction-plan",
       "deterministic_plan_ref": "deterministic-plan:sample-frozen-instance-plan",
-      "source_snapshot_ref": "snapshot:sample-frozen-instance@9d8780b50bda490927146cdb7dc7a3cd7ce9b4db",
+      "source_snapshot_ref": "snapshot:sample-frozen-instance@313806743f8370cfa3d00db70a0a13e4810a1df1",
       "plan_ref": "sample-frozen-instance-plan",
-      "plan_fingerprint": "8495ee6b9453b3330336d0ebdf40961962a1c784a7567139fa5c7b57e9f0553d",
+      "plan_fingerprint": "c2bc3858094a28d77da2a4175e045d745e326ed34e37ec1f8a6e29d511015951",
       "applicable": true
     }
   }

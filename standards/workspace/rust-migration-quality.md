@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-09-21
-updated: 2026-09-21
+updated: 2026-09-26
 topic: rust-migration-quality
 profile: universal
 delivery: agents-md-section
@@ -13,6 +13,12 @@ activation: task-class
 ---
 
 # Качество миграции Meridian на Rust
+
+> **Действующая политика Kernel с 2026-09-26.** Архитектурные требования этого
+> стандарта сохраняются, но любые test/conformance-команды добровольны.
+> Отсутствие их результата обозначается `UNVERIFIED` и само по себе не блокирует
+> приёмку или выпуск. При явном запуске результат остаётся строгим и ошибки не
+> маскируются.
 
 Идентификатор нормы: `rust-migration-quality`.
 

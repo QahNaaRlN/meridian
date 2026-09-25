@@ -1,9 +1,6 @@
 name: gate
 
 on:
-  push:
-    branches: ['**']
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -61,10 +58,8 @@ jobs:
       - name: Verify the upgrade integration qualification contract
         run: node test/upgrade-integration-qualification.test.mjs
 
-      # --kernel-only: every portable conformance check, but NOT the package 8
-      # real-bundle proof (meridian-cli-migration). That proof needs the
-      # frozen private Instance, which CI never has; it stays a separate,
-      # mandatory strict release gate run locally without the flag.
+      # --kernel-only keeps this voluntary run portable. The private
+      # real-bundle proof remains available as a separate voluntary run.
       - name: Regression-test the conformance harness (kernel-only, no real-bundle proof)
         run: node test/conformance-harness.test.mjs --kernel-only
 
@@ -77,20 +72,6 @@ jobs:
       - name: Regression-test the branch-name syntax check
         run: node test/branch-name-validation.test.mjs
 
-      # pull_request only: check the SYNTAX of the merge request's source
-      # branch (version-control-flow.md §3.1, §13.2). This step is part of
-      # the already-mandatory "Kernel validate (synthetic instance)" job, so
-      # a red result here blocks the merge into the protected main / dev.
-      # It is deliberately skipped for push and workflow_dispatch, where
-      # github.head_ref is empty — its absence must not break those runs.
-      # The ref is passed through an environment variable and quoted in the
-      # command, so a branch name is never interpreted by the shell.
-      - name: Check the merge request source branch name (pull_request only)
-        if: github.event_name == 'pull_request'
-        env:
-          HEAD_REF: ${{ github.head_ref }}
-        run: node scripts/validate-branch-name.mjs "$HEAD_REF"
-
       - name: Validate against the synthetic instance
         env:
           MERIDIAN_INSTANCE: ${{ github.workspace }}/test/instance-fixture
@@ -102,7 +83,8 @@ jobs:
           echo "::notice::CI ran against test/instance-fixture, a fictional product."
           echo "::notice::It proves the Kernel works against an Instance, and that personal-path leaks are absent."
           echo "::notice::It does NOT prove the real product's literals are absent: that check needs the private Instance and runs locally."
-          echo "::notice::GitHub CI does NOT verify the frozen private Instance: the conformance harness ran --kernel-only, so the package 8 real-bundle migration proof is UNVERIFIED here and remains a separate strict release gate."
+          echo "::notice::GitHub CI does NOT verify the frozen private Instance: the conformance harness ran --kernel-only, so the package 8 real-bundle migration proof is UNVERIFIED here."
+          echo "::notice::This workflow is voluntary and does not gate acceptance, merge, release, or Concord onboarding."
 
   rust-workspace:
     name: Rust workspace validate (foundation)

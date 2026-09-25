@@ -24,10 +24,10 @@
       },
       "payload": {
         "source": {
-          "revision": "9d8780b50bda490927146cdb7dc7a3cd7ce9b4db",
+          "revision": "313806743f8370cfa3d00db70a0a13e4810a1df1",
           "digest": {
             "algorithm": "sha-256",
-            "value": "2d1ee74cbfc1d549ad1074562de61f1136faf404a9d6394050f998433abb47d7"
+            "value": "fad86f66700f3b1b609a9d1fc438fd5fec650a7ac8acc6b2325c00d924f62204"
           },
           "repository_ref": "sample-frozen-instance",
           "working_tree_clean": true,
@@ -1290,7 +1290,7 @@
           }
         ],
         "rollback": {
-          "source_snapshot_ref": "snapshot:sample-frozen-instance@9d8780b50bda490927146cdb7dc7a3cd7ce9b4db",
+          "source_snapshot_ref": "snapshot:sample-frozen-instance@313806743f8370cfa3d00db70a0a13e4810a1df1",
           "plan": "deterministic-reconstruction",
           "deterministic_plan_ref": "deterministic-plan:sample-frozen-instance-plan",
           "rewrites_published_history": false
@@ -1306,8 +1306,8 @@
           },
           "overall_status": "VERIFIED"
         },
-        "plan_fingerprint": "2e6975df01a0cf08d32ff9725fdfc64b25ea566b544d9f2f5334ba5c61b54e53",
-        "idempotency_key": "b2d64121166cc802b59f144eb0a109830f3377f7d27ec55d9402ee483812bf64"
+        "plan_fingerprint": "967c1fe1e8a36b603cb51b2b08c69dd86c3d6f741ae208ce3309c662ddc72719",
+        "idempotency_key": "51579475fea5aae581b82eb44e016e726d426c6d57fe6ad290d9b67353e1d58f"
       }
     }
   ]

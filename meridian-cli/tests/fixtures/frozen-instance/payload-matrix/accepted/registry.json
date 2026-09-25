@@ -24,10 +24,10 @@
       },
       "payload": {
         "source": {
-          "revision": "9d8780b50bda490927146cdb7dc7a3cd7ce9b4db",
+          "revision": "313806743f8370cfa3d00db70a0a13e4810a1df1",
           "digest": {
             "algorithm": "sha-256",
-            "value": "2d1ee74cbfc1d549ad1074562de61f1136faf404a9d6394050f998433abb47d7"
+            "value": "fad86f66700f3b1b609a9d1fc438fd5fec650a7ac8acc6b2325c00d924f62204"
           },
           "repository_ref": "sample-frozen-instance",
           "working_tree_clean": true,
@@ -1256,10 +1256,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix adr\n",
+                "content": "---\ntitle: Matrix adr\ndocument_type: adr\nstatus: proposed\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix adr\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "0b80b1f2515e1d73368253d47165fe6c91c92d21130e190f4f3a898196fae3af"
+                  "value": "e11b0ccd1da8f6302b136e32a51e7f8fb044a2158ffb707e10ece8b277a76b42"
                 }
               }
             },
@@ -1305,10 +1305,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix analysis\n",
+                "content": "---\ntitle: Matrix analysis\ndocument_type: analysis\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix analysis\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "ce1c001129af4c21ec9c442d0fda6a88fc6b9355e14b42f405fac0239080a519"
+                  "value": "3cc141328e7987367e2a04bac8d8ea067ecb177d3ec936adb3d503ad4d08247d"
                 }
               }
             },
@@ -1354,10 +1354,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix concept\n",
+                "content": "---\ntitle: Matrix concept\ndocument_type: concept\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix concept\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "31629f57550a5f6f6a073084bee8ea51e79eeb58abb24893ca1f90ebc21219c1"
+                  "value": "77289f2a6c61e76db56a50a5a7f30deeebb5a588082462f97c57f2734dd95860"
                 }
               }
             },
@@ -1403,10 +1403,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix contract\n",
+                "content": "---\ntitle: Matrix contract\ndocument_type: contract\nstatus: maintained\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix contract\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "a063a0ee8a24991134a763f48e29c8e23a168c2fed5339624bbc8fc6dd3dd7dd"
+                  "value": "46aa663d6326e25322c24ae790e92248b12f060cdadf6740299845bd7a3435c1"
                 }
               }
             },
@@ -1452,10 +1452,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix how-to\n",
+                "content": "---\ntitle: Matrix how-to\ndocument_type: how-to\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix how-to\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "b936e8a852543574333897195168ef7a53ee76ee7f98b7d6838a1444e9e140e7"
+                  "value": "dc879c8f0ae5b9e842d82ea4c8fb7e2beffb031deb5e3c8f72915fd0ff709e06"
                 }
               }
             },
@@ -1501,10 +1501,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix plan\n",
+                "content": "---\ntitle: Matrix plan\ndocument_type: plan\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix plan\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "86fafb3018549b517c7b6cf13b239ea41eb075c86836b6b725e42c9680638b09"
+                  "value": "d630abe81b2056fd5d951882ff58508d0bc1b2eff53dbb2618be71fa8260bf70"
                 }
               }
             },
@@ -1550,10 +1550,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix problem\n",
+                "content": "---\ntitle: Matrix problem\ndocument_type: problem\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix problem\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "38d6845f1f7abea0fa22bd21bc5ba0bd815d35e0f070400961b46c8d4dd44318"
+                  "value": "4a4bf22d4da896716715e3c15b1e837eaad62936f4dc1f5793fc5b20af4083f3"
                 }
               }
             },
@@ -1599,10 +1599,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix protocol\n",
+                "content": "---\ntitle: Matrix protocol\ndocument_type: protocol\nstatus: maintained\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix protocol\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "1d15984ec9719dec2e9ff1626a646f51fc02b99b9a3f213ce1e7981c3309cfd7"
+                  "value": "354b8e0471e1294008acc5fa534b67ebcbad5e14ea12398bef3659cdc9b1e828"
                 }
               }
             },
@@ -1648,10 +1648,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix reference\n",
+                "content": "---\ntitle: Matrix reference\ndocument_type: reference\nstatus: maintained\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix reference\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "27cb12480289945a2479df88618a8fb2e9c8c162b7c532dfb96c8775f7095267"
+                  "value": "3341f28dc707d1a066843b27da26c89f1d90ca0d75c840f27eec7cc6b9568d23"
                 }
               }
             },
@@ -1697,10 +1697,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix report\n",
+                "content": "---\ntitle: Matrix report\ndocument_type: report\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix report\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "90fbb05c33c1d195000542a64a22df2926ec6ed5fd53579c16d1a5867cfae269"
+                  "value": "bd8c3bd60cae16ebfa743fdcea775cca0efd302712c81517b9da3e757bc43352"
                 }
               }
             },
@@ -1746,10 +1746,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix rfc\n",
+                "content": "---\ntitle: Matrix rfc\ndocument_type: rfc\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix rfc\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "45d76b203debf33f74ded2773fe767178abf8ae37f5f765f52ef043c3c15725f"
+                  "value": "23b9775f291c77fc26529f5738729842b4894b8f4c35eab288370c9cebb38bb2"
                 }
               }
             },
@@ -1795,10 +1795,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix standard\n",
+                "content": "---\ntitle: Matrix standard\ndocument_type: standard\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix standard\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "15648e9d3a19360467b4179b867152fe527edea8f1111ef630ea33e6a9bef8e1"
+                  "value": "c6ffc84bd2fa0777ed45be81002f75fbba48ac15f91bd406f9f8614e721b7e30"
                 }
               }
             },
@@ -1844,10 +1844,10 @@
               "payload": {
                 "media_type": "text/markdown",
                 "encoding": "utf-8",
-                "content": "# Matrix technical-specification\n",
+                "content": "---\ntitle: Matrix technical-specification\ndocument_type: technical-specification\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix technical-specification\n",
                 "digest": {
                   "algorithm": "sha-256",
-                  "value": "d2efb286994ccc863f72aa419f16e2157f4f82fcabdb8048b3692b31a5e8143c"
+                  "value": "ac1171e9d04c7e093dd6604e8ec259ebaa9f672084642bad439040eb719b2e19"
                 }
               }
             },
@@ -2081,7 +2081,7 @@
           }
         ],
         "rollback": {
-          "source_snapshot_ref": "snapshot:sample-frozen-instance@9d8780b50bda490927146cdb7dc7a3cd7ce9b4db",
+          "source_snapshot_ref": "snapshot:sample-frozen-instance@313806743f8370cfa3d00db70a0a13e4810a1df1",
           "plan": "deterministic-reconstruction",
           "deterministic_plan_ref": "deterministic-plan:sample-frozen-instance-plan",
           "rewrites_published_history": false
@@ -2097,8 +2097,8 @@
           },
           "overall_status": "VERIFIED"
         },
-        "plan_fingerprint": "8495ee6b9453b3330336d0ebdf40961962a1c784a7567139fa5c7b57e9f0553d",
-        "idempotency_key": "b2d64121166cc802b59f144eb0a109830f3377f7d27ec55d9402ee483812bf64"
+        "plan_fingerprint": "c2bc3858094a28d77da2a4175e045d745e326ed34e37ec1f8a6e29d511015951",
+        "idempotency_key": "51579475fea5aae581b82eb44e016e726d426c6d57fe6ad290d9b67353e1d58f"
       }
     }
   ]

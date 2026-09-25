@@ -24,13 +24,13 @@
       },
       "payload": {
         "plan_ref": "sample-frozen-instance-plan",
-        "plan_fingerprint": "2e6975df01a0cf08d32ff9725fdfc64b25ea566b544d9f2f5334ba5c61b54e53",
+        "plan_fingerprint": "967c1fe1e8a36b603cb51b2b08c69dd86c3d6f741ae208ce3309c662ddc72719",
         "source": {
           "repository_ref": "sample-frozen-instance",
-          "revision": "9d8780b50bda490927146cdb7dc7a3cd7ce9b4db",
+          "revision": "313806743f8370cfa3d00db70a0a13e4810a1df1",
           "digest": {
             "algorithm": "sha-256",
-            "value": "2d1ee74cbfc1d549ad1074562de61f1136faf404a9d6394050f998433abb47d7"
+            "value": "fad86f66700f3b1b609a9d1fc438fd5fec650a7ac8acc6b2325c00d924f62204"
           }
         },
         "records": [
@@ -666,8 +666,8 @@
             "reason": "the valid twin of a payload-matrix family stays out of this bundle"
           }
         ],
-        "idempotency_key": "0df425f8980e7e467ee9fa705afaed05479a9fa8ac83c047a64497c80a9a2598",
-        "digest": "06ca4ddaacdbc901bb63ed42bb798712233191d526795a6ffc27a5c93d1f18ce"
+        "idempotency_key": "22e4bce5dbc1a46e158e720870463fe7c3572f51e7c1d77f7abfd9d877cd9537",
+        "digest": "8d2eb9d8a7c2a89105adac208e5fff5c5e1b8d390c42b6a047269254cd2d5d9a"
       }
     }
   ]

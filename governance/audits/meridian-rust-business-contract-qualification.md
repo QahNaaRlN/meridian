@@ -25,7 +25,9 @@ related_documents:
 
 ## 1. Итог
 
-**Итоговый вердикт архитектора: `QUALIFIED`; пакет `ACCEPTED`.**
+**Итоговый вердикт архитектора после корректирующего tracked-раунда:
+`QUALIFIED`; пакет `ACCEPTED`.** Post-merge failure (§9.5) исправлен и
+повторный полный рубеж пройден на tracked-кандидате.
 
 Первая передача нашла пятнадцать пробелов. Восемь закрыты в ней (§9.1).
 Корректирующий раунд по вердикту архитектора `CHANGES_REQUESTED` закрыл
@@ -54,7 +56,12 @@ SQLite: продуктовые литералы `kernel-purity`, форма payl
 `0a54175ff8b02a094afcd2bf5e9c24c79eedb896a84862aa193f67e452646671`:
 1162 workspace Rust tests, 2/2 ignored real-bundle tests, 152/152 cases
 conformance harness и 293/293 `kernel-validate.test.mjs`; остальные ворота
-также зелёные. GAP-09 закрыт независимой приёмкой.
+также зелёные. Этот исторический рубеж шёл на кандидате, чьи новые файлы были
+неотслеживаемыми; на интегрированном tracked-состоянии Kernel-only
+validation не прошла (post-merge failure, §9.5). По §5.23.3 непрошедшее
+обязательное ворото дало `NOT_QUALIFIED`. Корректирующий tracked-раунд
+исправил дефект и прошёл повторный полный рубеж; новый итоговый вердикт
+архитектора приведён выше.
 
 Итог закрытой матрицы (§4–§8 и построчный аудит `COMPATIBILITY.md` §10),
 136 строк:
@@ -515,6 +522,41 @@ fixture пакета 8 переведён с неконтрактного тип
 `versioning-conformance-case` (контракт «JSON-объект») и перегенерирован
 штатным `generate.mjs`; ревизия источника fixture не изменилась.
 
+Post-merge failure (2026-09-25). После интеграции (package commit
+`b5076d5ff20dc4268a24e9f2233ef92fee057561`, merge
+`074fca15fdb1f882aef23b746b03d11662ccd698`) новые файлы стали tracked, и
+Kernel-only `kernel-validate.mjs` увидел то, чего не видел на кандидате
+(80 неотслеживаемых файлов там не сканировались): 13 `FAIL
+document-identity` — Markdown payload-fixtures
+`meridian-cli/tests/fixtures/frozen-instance/payload-matrix/source/matrix/*.md`
+без Front Matter; `[BR] validate_reports_ok_on_this_kernel_with_zero_real_failures`
+давал код результата 1 вместо 0. Корректирующий раунд:
+
+- каждой из 13 Markdown-строк таблицы `payload-matrix/families.json` задан
+  Front Matter по нормам document identity и статусной модели: `title`,
+  `document_type` = `record_type`, `status` (`proposed` у `adr`,
+  `maintained` у `contract`/`protocol`/`reference`, иначе `draft`), `scope`,
+  `owner`, `created`, `updated`; валидатор и его исключения не менялись;
+- производные bundle и снимки источника `payload-matrix` штатно
+  перегенерированы `generate.mjs` (новая ревизия источника в
+  `payload-matrix/expected.json`); базовый frozen fixture байт-в-байт не
+  изменился; полнота матрицы (32 `record_type`, 15 мутаций, оба
+  import-маршрута, сохранённая база) сохранена;
+- закреплённый счётчик `agent_instruction_identity_undeclared_prescriptive`
+  22 → 25 (`standard.md`, `contract.md`, `protocol.md` — предписывающие типы
+  без `delivery`); значения 29/25/45 перепроверены независимым пересчётом по
+  содержимому `git ls-files` и совпадают с `kernel-validate.mjs`.
+
+Корректирующий tracked-кандидат с fingerprint
+`26bb4f6a213a3fd52a2bed56ce2907a166d6f64bbe0d20ae1ffe61bc8458f151`
+прошёл все 15 команд полного рубежа §5.23.7 с кодом 0: 1162 workspace Rust
+tests, сфокусированный ранее падавший binary test, 2/2 real-bundle tests,
+152/152 conformance harness и 293/293 `kernel-validate.test.mjs`;
+Kernel-only validation — 0 failures, 9 warnings, `schema: 14/14`.
+Появившиеся во время прогона три untracked-файла локальной установки
+TypeSafe не входят в кандидат; tracked fingerprint до и после рубежа
+не изменился. По независимому review исправление принято, GAP-09 закрыт.
+
 ## 10. Аудит `COMPATIBILITY.md` — построчно
 
 Каждая строка реестра «Намеренные Rust-native усиления» проверена: указанные
@@ -673,3 +715,16 @@ ignored real-bundle запуск — 2 passed; conformance harness — 152 passe
 9 warnings, `schema: 14/14`. Форматирование, сборка, clippy без предупреждений,
 rustdoc, оба preflight и проверки diff/индекса также зелёные. Индекс при
 передаче был пуст.
+
+После post-merge failure полный рубеж повторён на tracked-кандидате с
+fingerprint
+`26bb4f6a213a3fd52a2bed56ce2907a166d6f64bbe0d20ae1ffe61bc8458f151`,
+одинаковом до и после прогона. Все 15 команд завершились кодом 0:
+`cargo test --workspace` — 1162 passed, 0 failed, 2 ignored; ранее падавший
+binary test — 1 passed; отдельный ignored real-bundle запуск — 2 passed;
+conformance harness — 152 passed; `kernel-validate.test.mjs` — 293 passed;
+Kernel-only validation — 0 failures, 9 warnings, `schema: 14/14`.
+Форматирование, сборка, clippy без предупреждений, rustdoc, оба preflight и
+проверки diff/индекса также зелёные. Три untracked-файла локальной установки
+TypeSafe возникли во время прогона, не вошли в tracked-кандидат и дали только
+дополнительный `WARN`; индекс при передаче был пуст.

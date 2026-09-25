@@ -365,7 +365,7 @@
       "scope": "workspace",
       "title": "Matrix adr",
       "media_type": "text/markdown",
-      "valid": "# Matrix adr\n",
+      "valid": "---\ntitle: Matrix adr\ndocument_type: adr\nstatus: proposed\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix adr\n",
       "mutation": null
     },
     {
@@ -374,7 +374,7 @@
       "scope": "workspace",
       "title": "Matrix analysis",
       "media_type": "text/markdown",
-      "valid": "# Matrix analysis\n",
+      "valid": "---\ntitle: Matrix analysis\ndocument_type: analysis\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix analysis\n",
       "mutation": null
     },
     {
@@ -383,7 +383,7 @@
       "scope": "workspace",
       "title": "Matrix concept",
       "media_type": "text/markdown",
-      "valid": "# Matrix concept\n",
+      "valid": "---\ntitle: Matrix concept\ndocument_type: concept\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix concept\n",
       "mutation": null
     },
     {
@@ -392,7 +392,7 @@
       "scope": "workspace",
       "title": "Matrix contract",
       "media_type": "text/markdown",
-      "valid": "# Matrix contract\n",
+      "valid": "---\ntitle: Matrix contract\ndocument_type: contract\nstatus: maintained\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix contract\n",
       "mutation": null
     },
     {
@@ -401,7 +401,7 @@
       "scope": "workspace",
       "title": "Matrix how-to",
       "media_type": "text/markdown",
-      "valid": "# Matrix how-to\n",
+      "valid": "---\ntitle: Matrix how-to\ndocument_type: how-to\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix how-to\n",
       "mutation": null
     },
     {
@@ -410,7 +410,7 @@
       "scope": "workspace",
       "title": "Matrix plan",
       "media_type": "text/markdown",
-      "valid": "# Matrix plan\n",
+      "valid": "---\ntitle: Matrix plan\ndocument_type: plan\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix plan\n",
       "mutation": null
     },
     {
@@ -419,7 +419,7 @@
       "scope": "workspace",
       "title": "Matrix problem",
       "media_type": "text/markdown",
-      "valid": "# Matrix problem\n",
+      "valid": "---\ntitle: Matrix problem\ndocument_type: problem\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix problem\n",
       "mutation": null
     },
     {
@@ -428,7 +428,7 @@
       "scope": "workspace",
       "title": "Matrix protocol",
       "media_type": "text/markdown",
-      "valid": "# Matrix protocol\n",
+      "valid": "---\ntitle: Matrix protocol\ndocument_type: protocol\nstatus: maintained\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix protocol\n",
       "mutation": null
     },
     {
@@ -437,7 +437,7 @@
       "scope": "workspace",
       "title": "Matrix reference",
       "media_type": "text/markdown",
-      "valid": "# Matrix reference\n",
+      "valid": "---\ntitle: Matrix reference\ndocument_type: reference\nstatus: maintained\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix reference\n",
       "mutation": null
     },
     {
@@ -446,7 +446,7 @@
       "scope": "workspace",
       "title": "Matrix report",
       "media_type": "text/markdown",
-      "valid": "# Matrix report\n",
+      "valid": "---\ntitle: Matrix report\ndocument_type: report\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix report\n",
       "mutation": null
     },
     {
@@ -455,7 +455,7 @@
       "scope": "workspace",
       "title": "Matrix rfc",
       "media_type": "text/markdown",
-      "valid": "# Matrix rfc\n",
+      "valid": "---\ntitle: Matrix rfc\ndocument_type: rfc\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix rfc\n",
       "mutation": null
     },
     {
@@ -464,7 +464,7 @@
       "scope": "workspace",
       "title": "Matrix standard",
       "media_type": "text/markdown",
-      "valid": "# Matrix standard\n",
+      "valid": "---\ntitle: Matrix standard\ndocument_type: standard\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix standard\n",
       "mutation": null
     },
     {
@@ -473,7 +473,7 @@
       "scope": "workspace",
       "title": "Matrix technical-specification",
       "media_type": "text/markdown",
-      "valid": "# Matrix technical-specification\n",
+      "valid": "---\ntitle: Matrix technical-specification\ndocument_type: technical-specification\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix technical-specification\n",
       "mutation": null
     },
     {

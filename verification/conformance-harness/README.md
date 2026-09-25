@@ -230,6 +230,27 @@ in-memory `.match`/`.status` field). `hooks/pre-push` and
 second, independently written comparison or aggregation algorithm living in
 any of the three.
 
+## Two run modes: strict and `--kernel-only`
+
+`test/conformance-harness.test.mjs` has exactly two modes:
+
+| Mode | Command | Real-bundle proof (package 8, `meridian-cli-migration`) | Without `MERIDIAN_INSTANCE` |
+|---|---|---|---|
+| strict (default) | `node test/conformance-harness.test.mjs` | runs over the frozen source named by `MERIDIAN_INSTANCE` | FAILs, non-zero exit |
+| Kernel-only | `node test/conformance-harness.test.mjs --kernel-only` | not run: printed as `SKIP … UNVERIFIED`, an ambient `MERIDIAN_INSTANCE` is ignored | exit 0 when every portable check is green |
+
+`.github/workflows/gate.yml` and `hooks/pre-push` run `--kernel-only`: GitHub
+CI never has the frozen private Instance, and ordinary Kernel development must
+not depend on one. A green Kernel-only run is **not** package 8 evidence. The
+strict run with `MERIDIAN_INSTANCE` naming the frozen source that holds the
+accepted `migration/instance-data` bundle stays a separate, mandatory release
+gate. `test/instance-fixture` is a synthetic Instance without that bundle and
+is never a substitute for it.
+
+Any other argument, a repeated `--kernel-only`, or `--kernel-only` together
+with `--test-name-pattern` (the selective route for the package 8/9 proofs,
+which is always strict) is refused with exit code 2.
+
 ## Real-producer reuse
 
 Package 4 wires real Node.js and Rust commands into a producer specification

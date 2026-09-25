@@ -61,8 +61,12 @@ jobs:
       - name: Verify the upgrade integration qualification contract
         run: node test/upgrade-integration-qualification.test.mjs
 
-      - name: Regression-test the conformance harness
-        run: node test/conformance-harness.test.mjs
+      # --kernel-only: every portable conformance check, but NOT the package 8
+      # real-bundle proof (meridian-cli-migration). That proof needs the
+      # frozen private Instance, which CI never has; it stays a separate,
+      # mandatory strict release gate run locally without the flag.
+      - name: Regression-test the conformance harness (kernel-only, no real-bundle proof)
+        run: node test/conformance-harness.test.mjs --kernel-only
 
       - name: Regression-test the pre-push Git-environment isolation
         run: node test/pre-push-git-isolation.test.mjs
@@ -98,6 +102,7 @@ jobs:
           echo "::notice::CI ran against test/instance-fixture, a fictional product."
           echo "::notice::It proves the Kernel works against an Instance, and that personal-path leaks are absent."
           echo "::notice::It does NOT prove the real product's literals are absent: that check needs the private Instance and runs locally."
+          echo "::notice::GitHub CI does NOT verify the frozen private Instance: the conformance harness ran --kernel-only, so the package 8 real-bundle migration proof is UNVERIFIED here and remains a separate strict release gate."
 
   rust-workspace:
     name: Rust workspace validate (foundation)

@@ -26,7 +26,15 @@
 // so no temp directory is ever left depending on the rest of the suite (or
 // the whole process) exiting cleanly.
 //
-// Usage: node test/conformance-harness.test.mjs
+// Usage: node test/conformance-harness.test.mjs [--kernel-only]
+//
+// Without a flag the run is STRICT: the package 8 `meridian-cli-migration`
+// section needs MERIDIAN_INSTANCE naming the frozen source and fails the run
+// without it. `--kernel-only` (GitHub CI, hooks/pre-push) runs every portable
+// check, skips that section with an explicit UNVERIFIED/SKIP line and exits 0
+// when the rest is green; it does not replace the strict real-bundle release
+// gate. Any other argument, a repeated flag, or `--kernel-only` together with
+// `--test-name-pattern` is refused with exit code 2.
 //
 // Selective run: `node --test --test-name-pattern '<pattern>' <this file>`
 // hands the pattern to this process (process.execArgv). When a pattern is
@@ -103,6 +111,8 @@ function runCli(fixturePath) {
 
 let passed = 0;
 const failures = [];
+// Sections a --kernel-only run deliberately did not execute (UNVERIFIED).
+const skipped = [];
 
 function check(name, fn) {
   const tempDirsBefore = createdTempDirs.length;
@@ -149,6 +159,32 @@ function testNamePattern(execArgv) {
 }
 const NAME_PATTERN = testNamePattern(process.execArgv);
 
+// --- run mode: strict (default) or --kernel-only ---
+//
+// The default run is STRICT: it needs MERIDIAN_INSTANCE naming the frozen
+// source with the accepted migration bundle, and without it the package 8
+// section fails and the process exits non-zero. `--kernel-only` runs every
+// portable check but never runs the meridian-cli-migration section over the
+// real bundle; it says so in an explicit UNVERIFIED/SKIP line and ignores an
+// ambient MERIDIAN_INSTANCE. It is what GitHub CI and hooks/pre-push run; it
+// never replaces the strict real-bundle release gate.
+function runMode(argv, namePattern) {
+  const unknown = argv.filter((a) => a !== '--kernel-only');
+  if (unknown.length) throw new Error(`неизвестный аргумент: ${unknown.join(' ')} (допустим только --kernel-only)`);
+  if (argv.length > 1) throw new Error('--kernel-only указан более одного раза');
+  const kernelOnly = argv.length === 1;
+  if (kernelOnly && namePattern) throw new Error('--kernel-only несовместим с --test-name-pattern: выборочный прогон существует для доказательств пакетов 8/9 и должен быть строгим');
+  return { kernelOnly };
+}
+let MODE;
+try {
+  MODE = runMode(process.argv.slice(2), NAME_PATTERN);
+} catch (error) {
+  console.error(`conformance-harness.test: ${error.message}`);
+  console.error('usage: node test/conformance-harness.test.mjs [--kernel-only]');
+  process.exit(2);
+}
+
 // --- package meridian-cli-migration (§5.22): Node reference vs the Rust
 // `import`/`migration` binary over the REAL frozen bundle. The source is
 // named by MERIDIAN_INSTANCE for this harness only; the Rust binary is
@@ -158,6 +194,12 @@ const NAME_PATTERN = testNamePattern(process.execArgv);
 function runMeridianCliMigrationConformance() {
   const selected = (name) => !NAME_PATTERN || NAME_PATTERN.test(name);
   const mcheck = (name, fn) => { if (selected(name)) check(name, fn); };
+  if (MODE.kernelOnly) {
+    skipped.push('meridian-cli-migration');
+    console.log('SKIP meridian-cli-migration: UNVERIFIED — режим --kernel-only; доказательства пакета 8 над реальным замороженным bundle этим запуском не выполнялись');
+    if (process.env.MERIDIAN_INSTANCE) console.log('SKIP meridian-cli-migration: MERIDIAN_INSTANCE задан, но в режиме --kernel-only игнорируется');
+    return;
+  }
   const source = process.env.MERIDIAN_INSTANCE;
   if (!source) {
     mcheck('meridian-cli-migration: харнессу нужен MERIDIAN_INSTANCE с замороженным источником (UNVERIFIED без него)', () => {
@@ -3684,5 +3726,6 @@ check('ни один временный каталог singleCaseFixture не о
   assert(createdTempDirs.length === 0, `${createdTempDirs.length} временный каталог(ов) не были удалены: ${createdTempDirs.join(', ')}`);
 });
 
-console.log(`\n${passed} passed, ${failures.length} failed`);
+console.log(`\n${passed} passed, ${failures.length} failed${MODE.kernelOnly ? ` (--kernel-only; UNVERIFIED/SKIP: ${skipped.join(', ')})` : ''}`);
+if (MODE.kernelOnly) console.log('UNVERIFIED: --kernel-only не заменяет строгий real-bundle рубеж; запусти без флага с MERIDIAN_INSTANCE замороженного источника');
 if (failures.length) process.exit(1);

@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "id": "web-calls-api",
+      "from": "web",
+      "to": "api",
+      "type": "http",
+      "evidence": [
+        "web/src/api.ts"
+      ],
+      "last_verified": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "web-calls-api",
+      "from": "web",
+      "to": "api",
+      "type": "http",
+      "last_verified": "2026-01-01T00:00:00Z"
+    }
+  ]
+}

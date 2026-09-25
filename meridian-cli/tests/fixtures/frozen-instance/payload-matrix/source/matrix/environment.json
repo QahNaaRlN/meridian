@@ -1,0 +1,41 @@
+{
+  "items": [
+    {
+      "id": "local",
+      "classification": "local",
+      "applications": [],
+      "provenance_resolver": {
+        "state": "defined",
+        "method": "local-runtime",
+        "requirement": "the local checkout",
+        "authoritative_source_refs": [
+          "README.md"
+        ],
+        "result_target": "execution-context"
+      },
+      "sources": [
+        "environments/environments.yaml"
+      ],
+      "blockers": [],
+      "last_verified": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "local",
+      "applications": [],
+      "provenance_resolver": {
+        "state": "defined",
+        "method": "local-runtime",
+        "requirement": "the local checkout",
+        "authoritative_source_refs": [
+          "README.md"
+        ],
+        "result_target": "execution-context"
+      },
+      "sources": [
+        "environments/environments.yaml"
+      ],
+      "blockers": [],
+      "last_verified": "2026-01-01T00:00:00Z"
+    }
+  ]
+}

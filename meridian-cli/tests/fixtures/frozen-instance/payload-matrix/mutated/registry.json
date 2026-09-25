@@ -1,0 +1,1314 @@
+{
+  "$schema": "../../registries/operating-model/instance-data-migration.schema.json",
+  "schema_version": 1,
+  "registry_id": "instance-data-migration",
+  "title": "Sample frozen-Instance migration",
+  "migration_plans": [
+    {
+      "$schema": "registries/operating-model/scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-frozen-instance-plan",
+      "title": "Sample frozen-Instance migration plan",
+      "record_type": "instance-migration-plan",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample"
+      },
+      "origin": {
+        "kind": "declared",
+        "source_ref": "owner-directive:sample-frozen-instance"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "instance-data-migration-run:sample-frozen-instance-plan"
+      },
+      "payload": {
+        "source": {
+          "revision": "313806743f8370cfa3d00db70a0a13e4810a1df1",
+          "digest": {
+            "algorithm": "sha-256",
+            "value": "fad86f66700f3b1b609a9d1fc438fd5fec650a7ac8acc6b2325c00d924f62204"
+          },
+          "repository_ref": "sample-frozen-instance",
+          "working_tree_clean": true,
+          "qualification": "reproducible"
+        },
+        "record_units": [
+          {
+            "id": "rule-applicability-0",
+            "unit_ref": "rule-resolution/applicability.yaml#records/0",
+            "classification_basis": "fixture unit rule-applicability-0, classified by its own carrier and position"
+          },
+          {
+            "id": "rule-applicability-1",
+            "unit_ref": "rule-resolution/applicability.yaml#records/1",
+            "classification_basis": "fixture unit rule-applicability-1, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-repository-identity-mutated",
+            "unit_ref": "matrix/repository-identity.json#items/1",
+            "classification_basis": "fixture unit matrix-repository-identity-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-repository-reference-mutated",
+            "unit_ref": "matrix/repository-reference.json#items/1",
+            "classification_basis": "fixture unit matrix-repository-reference-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-repository-relationship-mutated",
+            "unit_ref": "matrix/repository-relationship.json#items/1",
+            "classification_basis": "fixture unit matrix-repository-relationship-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-instruction-intake-record-mutated",
+            "unit_ref": "matrix/instruction-intake-record.json#items/1",
+            "classification_basis": "fixture unit matrix-instruction-intake-record-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-command-mutated",
+            "unit_ref": "matrix/command.json#items/1",
+            "classification_basis": "fixture unit matrix-command-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-access-application-mutated",
+            "unit_ref": "matrix/access-application.json#items/1",
+            "classification_basis": "fixture unit matrix-access-application-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-access-reference-mutated",
+            "unit_ref": "matrix/access-reference.json#items/1",
+            "classification_basis": "fixture unit matrix-access-reference-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-action-profile-mutated",
+            "unit_ref": "matrix/action-profile.json#items/1",
+            "classification_basis": "fixture unit matrix-action-profile-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-environment-mutated",
+            "unit_ref": "matrix/environment.json#items/1",
+            "classification_basis": "fixture unit matrix-environment-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-environment-application-mutated",
+            "unit_ref": "matrix/environment-application.json#items/1",
+            "classification_basis": "fixture unit matrix-environment-application-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-test-data-reference-mutated",
+            "unit_ref": "matrix/test-data-reference.json#items/1",
+            "classification_basis": "fixture unit matrix-test-data-reference-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-rule-applicability-record-mutated",
+            "unit_ref": "matrix/rule-applicability-record.json#items/0",
+            "classification_basis": "fixture unit matrix-rule-applicability-record-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-gate-run-observation-mutated",
+            "unit_ref": "matrix/gate-run-observation.json#items/1",
+            "classification_basis": "fixture unit matrix-gate-run-observation-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-product-mutated",
+            "unit_ref": "matrix/product-mutated.yaml",
+            "classification_basis": "fixture unit matrix-product-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-external-dependencies-mutated",
+            "unit_ref": "matrix/external-dependencies-mutated.yaml",
+            "classification_basis": "fixture unit matrix-external-dependencies-mutated, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-repository-identity",
+            "unit_ref": "matrix/repository-identity.json#items/0",
+            "classification_basis": "fixture unit matrix-repository-identity, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-repository-reference",
+            "unit_ref": "matrix/repository-reference.json#items/0",
+            "classification_basis": "fixture unit matrix-repository-reference, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-repository-relationship",
+            "unit_ref": "matrix/repository-relationship.json#items/0",
+            "classification_basis": "fixture unit matrix-repository-relationship, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-instruction-intake-record",
+            "unit_ref": "matrix/instruction-intake-record.json#items/0",
+            "classification_basis": "fixture unit matrix-instruction-intake-record, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-command",
+            "unit_ref": "matrix/command.json#items/0",
+            "classification_basis": "fixture unit matrix-command, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-access-application",
+            "unit_ref": "matrix/access-application.json#items/0",
+            "classification_basis": "fixture unit matrix-access-application, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-access-reference",
+            "unit_ref": "matrix/access-reference.json#items/0",
+            "classification_basis": "fixture unit matrix-access-reference, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-action-profile",
+            "unit_ref": "matrix/action-profile.json#items/0",
+            "classification_basis": "fixture unit matrix-action-profile, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-environment",
+            "unit_ref": "matrix/environment.json#items/0",
+            "classification_basis": "fixture unit matrix-environment, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-environment-application",
+            "unit_ref": "matrix/environment-application.json#items/0",
+            "classification_basis": "fixture unit matrix-environment-application, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-test-data-reference",
+            "unit_ref": "matrix/test-data-reference.json#items/0",
+            "classification_basis": "fixture unit matrix-test-data-reference, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-gate-run-observation",
+            "unit_ref": "matrix/gate-run-observation.json#items/0",
+            "classification_basis": "fixture unit matrix-gate-run-observation, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-versioning-conformance-case",
+            "unit_ref": "matrix/versioning-conformance-case.json#items/0",
+            "classification_basis": "fixture unit matrix-versioning-conformance-case, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-smoke-access",
+            "unit_ref": "matrix/smoke-access.json#items/0",
+            "classification_basis": "fixture unit matrix-smoke-access, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-smoke-capability",
+            "unit_ref": "matrix/smoke-capability.json#items/0",
+            "classification_basis": "fixture unit matrix-smoke-capability, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-smoke-environment",
+            "unit_ref": "matrix/smoke-environment.json#items/0",
+            "classification_basis": "fixture unit matrix-smoke-environment, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-smoke-test-data",
+            "unit_ref": "matrix/smoke-test-data.json#items/0",
+            "classification_basis": "fixture unit matrix-smoke-test-data, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-adr",
+            "unit_ref": "matrix/adr.md",
+            "classification_basis": "fixture unit matrix-adr, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-analysis",
+            "unit_ref": "matrix/analysis.md",
+            "classification_basis": "fixture unit matrix-analysis, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-concept",
+            "unit_ref": "matrix/concept.md",
+            "classification_basis": "fixture unit matrix-concept, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-contract",
+            "unit_ref": "matrix/contract.md",
+            "classification_basis": "fixture unit matrix-contract, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-how-to",
+            "unit_ref": "matrix/how-to.md",
+            "classification_basis": "fixture unit matrix-how-to, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-plan",
+            "unit_ref": "matrix/plan.md",
+            "classification_basis": "fixture unit matrix-plan, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-problem",
+            "unit_ref": "matrix/problem.md",
+            "classification_basis": "fixture unit matrix-problem, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-protocol",
+            "unit_ref": "matrix/protocol.md",
+            "classification_basis": "fixture unit matrix-protocol, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-reference",
+            "unit_ref": "matrix/reference.md",
+            "classification_basis": "fixture unit matrix-reference, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-report",
+            "unit_ref": "matrix/report.md",
+            "classification_basis": "fixture unit matrix-report, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-rfc",
+            "unit_ref": "matrix/rfc.md",
+            "classification_basis": "fixture unit matrix-rfc, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-standard",
+            "unit_ref": "matrix/standard.md",
+            "classification_basis": "fixture unit matrix-standard, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-technical-specification",
+            "unit_ref": "matrix/technical-specification.md",
+            "classification_basis": "fixture unit matrix-technical-specification, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-product",
+            "unit_ref": "matrix/product.yaml",
+            "classification_basis": "fixture unit matrix-product, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-external-dependencies",
+            "unit_ref": "matrix/external-dependencies.yaml",
+            "classification_basis": "fixture unit matrix-external-dependencies, classified by its own carrier and position"
+          },
+          {
+            "id": "matrix-notes-readme",
+            "unit_ref": "matrix/notes-readme.txt",
+            "classification_basis": "fixture unit matrix-notes-readme, classified by its own carrier and position"
+          }
+        ],
+        "mappings": [
+          {
+            "unit_id": "rule-applicability-0",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "rule-applicability-0",
+              "title": "Applicability of AGENTS.md#operational-roles",
+              "record_type": "rule-applicability-record",
+              "scope": {
+                "type": "repository-scope",
+                "id": "sample-repo",
+                "workspace_id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:rule-applicability-0"
+              },
+              "authority": {
+                "kind": "repository-maintainer",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"activation\":\"always\",\"digest\":\"013e7155d519b0a183ad8bd70395ff7fd910939f2b7f5cb797a332c855e9d57b\",\"intake_record\":{\"recorded_at\":\"2026-01-01\",\"register\":\"instruction-intake/sample-repo.yaml\",\"verdict\":\"keep-local\"},\"norm\":{\"path\":\"AGENTS.md\",\"region\":\"operational-roles\",\"repository\":\"sample-repo\"},\"recorded_at\":\"2026-01-02\",\"repository\":\"sample-repo\",\"scope\":\"repository\",\"source\":\"repository\",\"status\":\"resolved\"}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "7c5ea2ec49e157ed752bddb8b7996da15c06a2cd10836197a57cfd56c4c9eb5d"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "rule-applicability-1",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "rule-applicability-1",
+              "title": "Applicability of AGENTS.md#repository-context",
+              "record_type": "rule-applicability-record",
+              "scope": {
+                "type": "repository-scope",
+                "id": "sample-repo",
+                "workspace_id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:rule-applicability-1"
+              },
+              "authority": {
+                "kind": "repository-maintainer",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"activation\":\"path-glob\",\"digest\":\"cc5463dc3a765c3cedc18af3544063dd119ce25ae1b849537bfb360b4a0aebb1\",\"globs\":[\"src/**\",\"docs/**\"],\"intake_record\":{\"recorded_at\":\"2026-01-01\",\"register\":\"instruction-intake/sample-repo.yaml\",\"verdict\":\"keep-local\"},\"norm\":{\"path\":\"AGENTS.md\",\"region\":\"repository-context\",\"repository\":\"sample-repo\"},\"recorded_at\":\"2026-01-02\",\"repository\":\"sample-repo\",\"scope\":\"repository\",\"source\":\"repository\",\"status\":\"resolved\"}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "866e56c180db396a7e1fe5b361142ca62d6d7f945d1bb12b09d39336bba035a4"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-repository-identity-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-repository-identity-mutated",
+              "title": "Matrix repository-identity",
+              "record_type": "repository-identity",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-repository-identity-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"id\":\"web\",\"last_verified\":\"2026-01-01T00:00:00Z\",\"ownership\":\"own\",\"path\":\"/work/web\",\"profile\":\"vue-spa\",\"sources\":{\"manifests\":[\"/work/web/package.json\"],\"rules\":[\"/work/web/AGENTS.md\"]},\"vcs\":{\"evidence_basis\":\"revision\",\"ref\":\"dev\",\"revision\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"git\",\"working_tree\":\"clean\"}}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "8bea82715d55b38a42548a2e8aa73b6e3d71c12259d354fd2093960ecb6900de"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-repository-reference-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-repository-reference-mutated",
+              "title": "Matrix repository-reference",
+              "record_type": "repository-reference",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-repository-reference-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"alias\":\"Web\",\"kind\":\"cursor-workspace-folder\",\"sources\":[{\"artifact\":\"adapters/web.code-workspace\",\"pointer\":\"folders[name=Web].name\"}]}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "b324fddd91f4318bce041d67a3b4892a057d726b3e0efaf73ad79bc6a6be4e7a"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-repository-relationship-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-repository-relationship-mutated",
+              "title": "Matrix repository-relationship",
+              "record_type": "repository-relationship",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-repository-relationship-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"from\":\"web\",\"id\":\"web-calls-api\",\"last_verified\":\"2026-01-01T00:00:00Z\",\"to\":\"api\",\"type\":\"http\"}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "a388cfe9e209a7f3e70c5d9955450e3263ecc29ba97406528a6643c15afc4bca"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-instruction-intake-record-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-instruction-intake-record-mutated",
+              "title": "Matrix instruction-intake-record",
+              "record_type": "instruction-intake-record",
+              "scope": {
+                "type": "repository-scope",
+                "id": "sample-repo",
+                "workspace_id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-instruction-intake-record-mutated"
+              },
+              "authority": {
+                "kind": "repository-maintainer",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"artifact\":\".cursor/rules/a.mdc\",\"delivery\":\"cursor-rule\",\"digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"genre\":\"standard\",\"observed_activation\":\"always\",\"recorded_at\":\"2026-08-21\",\"scope\":\"repository\",\"topic\":\"naming\",\"verdict_basis\":\"recorded as observed\"}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "22e345ffc355d8fb44b767416e2be640df5f95cee2da885e1556a3df4e174315"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-command-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-command-mutated",
+              "title": "Matrix command",
+              "record_type": "command",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-command-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"applicability\":[\"web\"],\"category\":\"unit\",\"command_kind\":\"exact\",\"execution_approval\":\"not-required\",\"id\":\"unit\",\"purpose\":\"run the unit tests\",\"side_effects\":\"none\",\"source\":{\"last_verified\":\"2026-01-01T00:00:00Z\",\"path\":\"package.json\",\"pointer\":\"scripts.test\"}}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "e90da4e6767b114ec3f626190ba39d3511c1a9bf0885374f005855c4e7829c58"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-access-application-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-access-application-mutated",
+              "title": "Matrix access-application",
+              "record_type": "access-application",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-access-application-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"application_id\":\"web\",\"blockers\":[],\"credentials_by_role\":{},\"default_role\":null,\"sources\":[\"environments/access.yaml\"]}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "57ece4d95e2b431a7fad17453a89da6f4650f8331b6328a35df9da97508e44ab"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-access-reference-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-access-reference-mutated",
+              "title": "Matrix access-reference",
+              "record_type": "access-reference",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-access-reference-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"application_id\":\"web\",\"credential_role\":\"operator\",\"id\":\"web-operator\",\"required_config_keys\":[\"WEB_TOKEN\"],\"retrieval\":{\"state\":\"unresolved\"},\"sources\":[\"environments/access.yaml\"]}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "9b1e5ec3ccd103ccc5026f293ed285c77c08e4ed14bafca07671928fcc842776"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-action-profile-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-action-profile-mutated",
+              "title": "Matrix action-profile",
+              "record_type": "action-profile",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-action-profile-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"allowed_actions\":[\"read-only-observation\"],\"id\":\"local-read\",\"source\":\"environments/access.yaml\",\"state\":\"approved\",\"unresolved_actions\":[]}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "253be136b008c0cd5366fdb49678c342125b4f503a76519daf30a9651fb61734"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-environment-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-environment-mutated",
+              "title": "Matrix environment",
+              "record_type": "environment",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-environment-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"applications\":[],\"blockers\":[],\"id\":\"local\",\"last_verified\":\"2026-01-01T00:00:00Z\",\"provenance_resolver\":{\"authoritative_source_refs\":[\"README.md\"],\"method\":\"local-runtime\",\"requirement\":\"the local checkout\",\"result_target\":\"execution-context\",\"state\":\"defined\"},\"sources\":[\"environments/environments.yaml\"]}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "274f7b7fe34c1e1e2db6f96fdec33b3c22658aee7c4a5c0b9af5ce81c55bfb9a"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-environment-application-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-environment-application-mutated",
+              "title": "Matrix environment-application",
+              "record_type": "environment-application",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-environment-application-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"id\":\"web\",\"sources\":[\"environments/environments.yaml\"]}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "9d3bc96ab40f45eceabdbcdc779f9c7bed9efe25061eeb5f814ed011f03b6f9b"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-test-data-reference-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-test-data-reference-mutated",
+              "title": "Matrix test-data-reference",
+              "record_type": "test-data-reference",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-test-data-reference-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"application_id\":\"web\",\"blocker\":\"no test account yet\",\"environment_id\":null,\"id\":\"sample-user\",\"sensitive_data_allowed\":false,\"source\":\"environments/test-data.yaml\",\"state\":\"unresolved\"}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "8e91316d2d4632304cbcada2965adf36fd161512176039848cc34a5da6f2aaf5"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-rule-applicability-record-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-rule-applicability-record-mutated",
+              "title": "Matrix rule-applicability-record",
+              "record_type": "rule-applicability-record",
+              "scope": {
+                "type": "repository-scope",
+                "id": "sample-repo",
+                "workspace_id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-rule-applicability-record-mutated"
+              },
+              "authority": {
+                "kind": "repository-maintainer",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"activation\":\"always\",\"digest\":\"013e7155d519b0a183ad8bd70395ff7fd910939f2b7f5cb797a332c855e9d57b\",\"intake_record\":{\"recorded_at\":\"2026-01-01\",\"register\":\"instruction-intake/sample-repo.yaml\",\"verdict\":\"keep-local\"},\"norm\":{\"path\":\"AGENTS.md\",\"region\":\"operational-roles\",\"repository\":\"sample-repo\"},\"recorded_at\":\"2026-01-02\",\"repository\":\"sample-repo\",\"scope\":\"repository\",\"source\":\"repository\"}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "ed317f37f266bd68d73ccc23d48b3ddf5359496f774a58bec03a4509821f11e1"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-gate-run-observation-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-gate-run-observation-mutated",
+              "title": "Matrix gate-run-observation",
+              "record_type": "gate-run-observation",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-gate-run-observation-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "application/json",
+                "encoding": "utf-8",
+                "content": "{\"fail_messages\":[],\"failing\":0,\"info_ok\":1,\"kernel_version\":\"0.6.0\",\"ts\":\"2026-01-01T00:00:00Z\",\"warn_messages\":[],\"warnings\":0}",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "d3bed2f8e69c5375a07ae671b09ad7e5327a42e586808a45f9809e765d1c47a6"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-product-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-product-mutated",
+              "title": "product.yaml",
+              "record_type": "workspace-file",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-product-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "text/yaml",
+                "encoding": "utf-8",
+                "content": "schema_version: 1\nforbidden_literals: 5\nforbidden_patterns: []\n",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "d422b7254422c5b2f37dd9baf206dfe63fa63baa9cad3914d38a46b82b3df354"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-external-dependencies-mutated",
+            "disposition": "migrated",
+            "target": {
+              "$schema": "registries/operating-model/scoped-record.schema.json",
+              "id": "matrix-external-dependencies-mutated",
+              "title": "external-dependencies.yaml",
+              "record_type": "workspace-file",
+              "scope": {
+                "type": "project-workspace",
+                "id": "sample"
+              },
+              "schema_version": 1,
+              "field_basis": {
+                "$schema": "assigned",
+                "id": "assigned",
+                "title": "assigned",
+                "record_type": "assigned",
+                "scope": "assigned",
+                "schema_version": "assigned",
+                "origin": "assigned",
+                "authority": "assigned",
+                "payload": "preserved"
+              },
+              "origin": {
+                "kind": "migrated",
+                "source_ref": "record-unit:matrix-external-dependencies-mutated"
+              },
+              "authority": {
+                "kind": "project-owner",
+                "authority_ref": "sample-owner",
+                "decision_ref": "owner-decision:sample-frozen-instance-migration"
+              },
+              "payload": {
+                "media_type": "text/yaml",
+                "encoding": "utf-8",
+                "content": "schema_version: 1\ndependencies:\n  - id: vendored-skill\n",
+                "digest": {
+                  "algorithm": "sha-256",
+                  "value": "d54d26366e7122ac70a2ac8fc422782cebff4d8c18e05566f09b4e06800f6621"
+                }
+              }
+            },
+            "owner_decision": {
+              "decision_ref": "owner-decision:sample-frozen-instance-migration",
+              "decided_at": "2026-01-01",
+              "reason": "the fixture owner accepted the migration of every own unit"
+            }
+          },
+          {
+            "unit_id": "matrix-repository-identity",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-repository-reference",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-repository-relationship",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-instruction-intake-record",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-command",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-access-application",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-access-reference",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-action-profile",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-environment",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-environment-application",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-test-data-reference",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-gate-run-observation",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-versioning-conformance-case",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-smoke-access",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-smoke-capability",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-smoke-environment",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-smoke-test-data",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-adr",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-analysis",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-concept",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-contract",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-how-to",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-plan",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-problem",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-protocol",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-reference",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-report",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-rfc",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-standard",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-technical-specification",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-product",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-external-dependencies",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-notes-readme",
+            "disposition": "retained-transitional",
+            "retained_reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          }
+        ],
+        "rollback": {
+          "source_snapshot_ref": "snapshot:sample-frozen-instance@313806743f8370cfa3d00db70a0a13e4810a1df1",
+          "plan": "deterministic-reconstruction",
+          "deterministic_plan_ref": "deterministic-plan:sample-frozen-instance-plan",
+          "rewrites_published_history": false
+        },
+        "verification": {
+          "coverage": {
+            "status": "verified",
+            "evidence_ref": "evidence:coverage-sample-frozen-instance-plan"
+          },
+          "applicability_preservation": {
+            "status": "verified",
+            "evidence_ref": "evidence:applicability-sample-frozen-instance-plan"
+          },
+          "overall_status": "VERIFIED"
+        },
+        "plan_fingerprint": "967c1fe1e8a36b603cb51b2b08c69dd86c3d6f741ae208ce3309c662ddc72719",
+        "idempotency_key": "51579475fea5aae581b82eb44e016e726d426c6d57fe6ad290d9b67353e1d58f"
+      }
+    }
+  ]
+}

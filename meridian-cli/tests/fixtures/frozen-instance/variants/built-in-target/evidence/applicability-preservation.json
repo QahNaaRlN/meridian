@@ -1,0 +1,13 @@
+{
+  "note": "Resolution map for resolveEvidence (applicability).",
+  "resolution": {
+    "evidence:applicability-sample-frozen-instance-plan": {
+      "record_type": "instance-migration-evidence",
+      "evidence_ref": "evidence:applicability-sample-frozen-instance-plan",
+      "kind": "applicability_preservation",
+      "plan_ref": "sample-frozen-instance-plan",
+      "plan_fingerprint": "c54e3a4d5c487ee53bba2035dcded981ad2d74db35710c412e6b323977c51e33",
+      "confirms": true
+    }
+  }
+}

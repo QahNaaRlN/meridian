@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "kind": "cursor-workspace-folder",
+      "alias": "Web",
+      "repository_id": "web",
+      "sources": [
+        {
+          "artifact": "adapters/web.code-workspace",
+          "pointer": "folders[name=Web].name"
+        }
+      ]
+    },
+    {
+      "kind": "cursor-workspace-folder",
+      "alias": "Web",
+      "sources": [
+        {
+          "artifact": "adapters/web.code-workspace",
+          "pointer": "folders[name=Web].name"
+        }
+      ]
+    }
+  ]
+}

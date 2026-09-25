@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = [
+    "meridian-core",
+    "meridian-app",
+    "meridian-storage-sqlite",
+    "meridian-cli",
+]
+
+[workspace.package]
+edition = "2021"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"

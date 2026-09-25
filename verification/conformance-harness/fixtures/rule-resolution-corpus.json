@@ -1,0 +1,68 @@
+{
+  "cases": [
+    {
+      "name": "empty-operation",
+      "request": {
+        "work_item": {"repository_id":"sample-repo","work_kind":"operation","candidate_paths":[],"changed_paths":[]},
+        "repository_inventory": [{"id":"sample-repo"}],
+        "applicability": {"$schema":"../../registries/rule-resolution/applicability.schema.json","schema_version":1,"records":[]}
+      }
+    },
+    {
+      "name": "feature-kernel-norm-route-and-reresolution",
+      "request": {
+        "work_item": {"repository_id":"sample-repo","work_kind":"change","change_class":"FEATURE","candidate_paths":["src/lib.rs"],"changed_paths":["src/lib.rs","src/new.rs"]},
+        "repository_inventory": [{"id":"sample-repo","profile":"rust-workspace","semantic_areas":["platform"]}],
+        "applicability": {"$schema":"../../registries/rule-resolution/applicability.schema.json","schema_version":1,"records":[
+          {"norm":{"repository":"kernel","path":"standards/sample.md"},"digest":"5bc002a979dae3ab0e92b76ee3b891bfdd9a58325ef7772f56840a8d88aa27e9","scope":"universal","activation":"always","source":"kernel","status":"resolved","recorded_at":"2026-09-19"}
+        ]},
+        "protocol_routes": [{"protocol":"feature-protocol","routed_from":"FEATURE","source":"kernel","scope":"universal","revision":"abcdef0","mandatory":true}],
+        "verification_routes": [{"applies_to":"*","path":"verification/regression-testing/README.md"}],
+        "norm_texts": {"kernel::standards/sample.md":"always apply"},
+        "prior_state": {"previous_resolution":{"candidate_paths":["src/lib.rs"]}}
+      }
+    },
+    {
+      "name": "initiative-needs-decomposition",
+      "request": {
+        "work_item": {"repository_id":"sample-repo","work_kind":"initiative","candidate_paths":[],"changed_paths":[]},
+        "repository_inventory": [{"id":"sample-repo"}],
+        "applicability": {"$schema":"../../registries/rule-resolution/applicability.schema.json","schema_version":1,"records":[]},
+        "prior_state": {"initiative_protocol":"decompose-initiative","pre_decomposition_norms":["product-wide"]}
+      }
+    },
+    {
+      "name": "protocol-route-without-mandatory-defaults-to-false",
+      "request": {
+        "work_item": {"repository_id":"sample-repo","work_kind":"change","change_class":"FEATURE","candidate_paths":[],"changed_paths":[]},
+        "repository_inventory": [{"id":"sample-repo"}],
+        "applicability": {"$schema":"../../registries/rule-resolution/applicability.schema.json","schema_version":1,"records":[]},
+        "protocol_routes": [{"protocol":"feature-protocol","routed_from":"FEATURE","source":"kernel","scope":"universal","revision":"abcdef0"}]
+      }
+    },
+    {
+      "name": "protocol-routes-tied-on-source-rank-pick-deterministic-winner-by-provenance",
+      "request": {
+        "work_item": {"repository_id":"sample-repo","work_kind":"change","change_class":"FEATURE","candidate_paths":[],"changed_paths":[]},
+        "repository_inventory": [{"id":"sample-repo"}],
+        "applicability": {"$schema":"../../registries/rule-resolution/applicability.schema.json","schema_version":1,"records":[]},
+        "protocol_routes": [
+          {"protocol":"feature-protocol","routed_from":"FEATURE","source":"kernel","scope":"universal","digest":"5bc002a979dae3ab0e92b76ee3b891bfdd9a58325ef7772f56840a8d88aa27e9","mandatory":false},
+          {"protocol":"feature-protocol","routed_from":"FEATURE","source":"kernel","scope":"universal","revision":"rev-b","mandatory":false}
+        ]
+      }
+    },
+    {
+      "name": "repository-norm-with-intake-provenance",
+      "request": {
+        "work_item": {"repository_id":"sample-repo","work_kind":"assessment","candidate_paths":["src/review.rs"],"changed_paths":[]},
+        "repository_inventory": [{"id":"sample-repo"}],
+        "applicability": {"$schema":"../../registries/rule-resolution/applicability.schema.json","schema_version":1,"records":[
+          {"norm":{"repository":"sample-repo","path":"AGENTS.md","region":"review-rule"},"digest":"51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee","scope":"repository","repository":"sample-repo","activation":"task-class","task_class":{"work_kind":["assessment"]},"source":"repository","intake_record":{"register":"instruction-intake/sample.yaml","recorded_at":"2026-09-18","verdict":"keep-local"},"status":"resolved","recorded_at":"2026-09-19"}
+        ]},
+        "intake_registers": [{"register":"instruction-intake/sample.yaml","records":[{"artifact":"AGENTS.md","region":"review-rule","recorded_at":"2026-09-18","verdict":"keep-local","delivery":"agents-md-section"}]}],
+        "norm_texts": {"sample-repo::AGENTS.md::review-rule":"repository norm"}
+      }
+    }
+  ]
+}

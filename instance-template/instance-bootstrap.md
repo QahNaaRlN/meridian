@@ -21,7 +21,7 @@ to make.
 4. Set `MERIDIAN_INSTANCE` to the new Instance root and confirm the wiring:
 
    ```bash
-   node scripts/preflight.mjs
+   node scripts/preflight.mjs --require-instance
    node scripts/kernel-validate.mjs
    ```
 

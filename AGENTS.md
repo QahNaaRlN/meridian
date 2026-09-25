@@ -1,184 +1,394 @@
 ---
-title: Meridian Kernel — agent bootstrap
+title: Ядро Meridian — начальная инструкция агента
 document_type: protocol
 status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-27
-updated: 2026-09-08
+updated: 2026-09-22
 topic: agent-conduct
 profile: universal
 delivery: agents-md-section
 activation: always
 ---
 
-# Meridian Kernel — agent bootstrap
+# Ядро Meridian — начальная инструкция агента
 
-This file is a thin, portable entry point for any agent about to work on
-Meridian itself (Kernel, Instance, or delivery adapters). It carries no
-product facts, no permanent role assignment, and no plan content — those
-live in Instance documents this file only points to. Follow the steps below
-in order before making any change.
+Этот файл — компактная переносимая точка входа для любого агента, который
+работает над самим Meridian: Ядром, Экземпляром или адаптерами поставки. Здесь
+нет продуктовых фактов и постоянного назначения участников: они находятся в
+документах Экземпляра конкретного продукта, на которые этот файл только
+указывает. Видение владельца и программа разработки самого Meridian, напротив,
+канонически живут в `governance/` этого репозитория (§3, §5, §10), а не в
+Instance. До любого изменения выполняй следующие шаги по порядку.
 
 <!-- meridian:begin instruction-section id=preflight owner=workspace-owner generated=no -->
-## 1. Preflight before touching Meridian
+## 1. Предварительная проверка перед работой над Meridian
 
-Before editing anything in this repository, run the Kernel preflight check:
+Перед любым изменением в этом репозитории запусти предварительную проверку
+Ядра:
 
 ```bash
 node scripts/preflight.mjs
 ```
 
-Do not proceed on a session wired to stale roots or missing environment
-variables — preflight exists precisely to fail loudly instead of letting the
-agent read the wrong Kernel/Instance pair silently.
+Обычный запуск проверяет только самодостаточность Kernel и не требует
+`MERIDIAN_INSTANCE` (§10): разработка самого Meridian не зависит от того,
+подключён ли какой-либо Instance. Не продолжай сеанс с устаревшим Kernel: эта
+проверка должна явно остановить работу, а не позволить агенту незаметно
+прочитать неверное Ядро.
 
-If preflight reports that `MERIDIAN_INSTANCE` is missing, apply this recovery
-rule before asking the owner to change their shell:
+Отдельные переходные задачи по-прежнему читают замороженный источник
+миграции (`$MERIDIAN_INSTANCE`, §10) — например пакет 8 программы переноса на
+Rust (`governance/plans/meridian-rust-migration-program-plan.md`). Для них
+запускай явный строгий режим:
 
-1. If the current task or trusted machine-local configuration identifies one
-   unambiguous Instance path, rerun preflight yourself with
-   `MERIDIAN_KERNEL` and `MERIDIAN_INSTANCE` set inline for that command. Use
-   the same inline environment for later Meridian commands in the session.
-2. Do not require the owner to export the variable and return with a manual
-   confirmation when the path is already known.
-3. If no path is known, or several candidates are plausible, remain
-   fail-closed and ask the owner which Instance is authoritative.
+```bash
+node scripts/preflight.mjs --require-instance
+```
 
-An absolute product path is machine-local adapter configuration. Never add it
-to this portable Kernel document.
+Если этот строгий режим сообщает об отсутствии `MERIDIAN_INSTANCE`, примени
+следующий порядок до просьбы владельцу изменить оболочку:
+
+1. Если текущая работа или доверенная локальная конфигурация однозначно называет
+   путь замороженного источника, самостоятельно повтори проверку, задав
+   `MERIDIAN_KERNEL` и `MERIDIAN_INSTANCE` только для этой команды. Используй то
+   же окружение для последующих команд Meridian в этом сеансе.
+2. Не требуй от владельца экспортировать переменную и вручную подтверждать уже
+   известный путь.
+3. Если путь неизвестен или правдоподобны несколько вариантов, остановись в
+   безопасном состоянии и спроси владельца, какой источник авторитетен.
+
+Абсолютный продуктовый путь относится к локальной конфигурации адаптера. Никогда
+не записывай его в этот переносимый документ Ядра.
 <!-- meridian:end instruction-section id=preflight -->
 
 <!-- meridian:begin instruction-section id=instance-resolution owner=workspace-owner generated=no -->
-## 2. Resolve `MERIDIAN_INSTANCE`
+## 2. Разрешение `MERIDIAN_INSTANCE` (когда работа его требует)
 
-Resolve the `MERIDIAN_INSTANCE` environment variable to the root of the
-current product's Instance repository. Kernel does not store this path
-itself; it only knows the variable name (`standards/workspace/kernel-boundary.md`).
-Without it, product-specific facts and governance documents referenced below
-are not reachable, and the checks in `scripts/kernel-validate.mjs` report
-UNVERIFIED rather than a false pass.
+Когда работа выполняется на продукте, использующем Meridian, разреши
+переменную среды `MERIDIAN_INSTANCE` в корень репозитория Экземпляра этого
+продукта. Ядро не хранит этот путь и знает только имя переменной
+(`standards/workspace/kernel-boundary.md`). Без неё недоступны продуктовые
+факты этого продукта, а `scripts/kernel-validate.mjs` с явно переданным
+`MERIDIAN_INSTANCE` сообщает `UNVERIFIED` там, где продуктовый факт нужен и
+недоступен, не выдавая отсутствие проверки за успех.
+
+Для работы над самим Meridian (Ядром, Экземпляром и адаптерами поставки)
+`MERIDIAN_INSTANCE` не обязателен: канонические документы владения и
+программы этой разработки — в `governance/` этого репозитория (§3, §5).
+Прежний отдельный репозиторий Instance более не активный источник этой
+разработки — он замороженный для чтения источник миграции (§10).
 <!-- meridian:end instruction-section id=instance-resolution -->
 
 <!-- meridian:begin instruction-section id=owner-intent owner=workspace-owner generated=no -->
-## 3. Owner intent contract, if it exists
+## 3. Контракт намерений владельца
 
-If `$MERIDIAN_INSTANCE/governance/meridian-owner-intent-contract.md` exists,
-read it in full before doing anything else. It is the canonical record of
-the owner's vision for Meridian — what it is, its base operating model, and
-what would break that vision. It is not a restatement of the current
-program plan, and it does not go stale when a plan finishes.
+Прочитай `governance/meridian-owner-intent-contract.md` полностью до любых
+других действий. Это каноническая запись видения владельца: что такое
+Meridian, какова его базовая модель работы и что нарушило бы это видение.
+Контракт не пересказывает текущий план программы и не устаревает после
+завершения плана.
 <!-- meridian:end instruction-section id=owner-intent -->
 
 <!-- meridian:begin instruction-section id=collaboration-protocol owner=workspace-owner generated=no -->
-## 4. Collaboration protocol and task-local role, if it exists
+## 4. Протокол совместной работы и локальная роль
 
-If `$MERIDIAN_INSTANCE/governance/meridian-self-development-collaboration-protocol.md`
-exists, read it in full and determine your current task-local role from it.
-This protocol governs only work on Meridian Kernel/Instance/adapters (and
-product instructions when they are changed as part of that work) — it does
-not apply automatically to ordinary product development.
+`AGENTS.md` (этот документ, §6) — канонический протокол ролей и полномочий
+разработки самого Meridian: определи из него свою роль в текущей работе.
+Прежний протокол совместной работы Instance
+(`$MERIDIAN_INSTANCE/governance/meridian-self-development-collaboration-protocol.md`)
+сохраняется только как замороженная историческая запись и не требуется для
+начала работы (§10).
 <!-- meridian:end instruction-section id=collaboration-protocol -->
 
 <!-- meridian:begin instruction-section id=active-plan owner=workspace-owner generated=no -->
-## 5. Active plan
+## 5. Активный план
 
-Read the active program plan referenced by the collaboration protocol (or,
-absent a collaboration protocol, whichever plan document in
-`$MERIDIAN_INSTANCE/.agent/plans/active/` the current task names) before
-proposing or starting work.
+До предложения или начала работы прочитай активный план программы, названный
+текущей работой, — из `governance/plans/` этого репозитория. Пример:
+`governance/plans/meridian-rust-migration-program-plan.md` для работы,
+относящейся к переносу на Rust.
+
+Если план программы разработки самого Meridian ещё не перенесён в
+`governance/plans/` Kernel, продолжение этой программы заблокировано до
+переноса её канонического плана: не продолжай её по плану, назначению
+участников или Git-процессу из замороженного Instance (§10). Документы
+замороженного Instance разрешено читать только как исторические или
+миграционные источники — никогда как действующие назначения, планы или
+Git-процесс.
 <!-- meridian:end instruction-section id=active-plan -->
 
 <!-- meridian:begin instruction-section id=role-behavior owner=workspace-owner generated=no -->
-## 6. Behavior by role
+## 6. Роли при разработке самого Meridian
 
-**If your current role is reviewer/Git integrator with a separately assigned
-external executor:**
+`standards/workspace/role-registry.yaml` описывает универсальные операционные
+роли проектов и агентов, которые работают, **используя Meridian**. Этот каталог
+не задаёт роли мета-разработки, когда работа выполняется **над самим Meridian**.
 
-- do not implement the package yourself;
-- automatically produce a paste-ready instruction for the executor;
-- automatically produce a correction instruction after review findings, without
-  waiting for the owner to ask again;
-- independently perform review, gates, and Git integration. With an external
-  executor assigned, the Git integrator owns branch creation and switching,
-  staging, commit, tag, and post-merge verification; the executor performs none
-  of these Git operations. Advancing the integration line by merging the
-  accepted feature branch is the Git integrator's step **unless** an accepted
-  tracked protocol assigns that merge to the owner (owner-managed Merge Request,
-  below). To run gates that must see files not yet tracked, the Git
-  integrator may temporarily stage a name-limited candidate package, reviewing
-  the staged name list and staged diff first; temporary staging is not
-  acceptance — a `CHANGES_REQUESTED` verdict unstages it with a path-limited
-  `git restore --staged -- <candidate-path>...` (never a whole-index reset,
-  which would drop unrelated staged state) without touching the working tree,
-  and only the finally approved package is staged after `ACCEPTED`. The branch
-  and versioning rules themselves are
-  `standards/workspace/version-control-flow.md` and
-  `standards/workspace/release-versioning.md`.
-- the lifecycle of a temporary Git worktree the integrator creates for a task —
-  allowed reasons for creating one, reuse across a `CHANGES_REQUESTED` cycle,
-  the clean-`git status --porcelain` and `remove` → `prune` → `list` teardown,
-  and the `not_created` / `removed` / `retained` closing states — is
-  `standards/workspace/version-control-flow.md` §5.4; this file does not restate
-  it.
-- **owner-managed Merge Request (MR).** When an accepted tracked protocol
-  declares it, the final merge of an accepted feature branch into the declared
-  integration line is performed by the **owner** through the platform's web
-  interface, not by the Git integrator locally. In that mode the Git integrator
-  still creates the branch, makes the single package commit, and prepares the
-  branch for publication, and after the owner's merge it verifies the actual
-  history and re-runs the gates; it does not run a local merge into the
-  integration line. Publishing the branch and opening the MR are external
-  actions, done on the owner's explicit instruction or by the tracked protocol
-  that assigns this order; if the Git integrator cannot publish the branch or
-  open the MR, it hands the owner the exact command and the source/target, it
-  does not work around the limit. The external executor receives no Git rights
-  at any point. "MR" is the platform-neutral term (equivalent to a pull
-  request); the platform may be GitLab, GitHub, or another. This is an
-  owner-chosen reinforcement for work on Meridian itself — it is not a universal
-  Meridian requirement, and it changes neither the promotion mode, the stable
-  line, the release flow, nor the non-fast-forward advancement-commit rules
-  (`standards/workspace/version-control-flow.md` §5.3).
-  - **The MR is merged as an ordinary merge commit that keeps the accepted
-    package commit in history.** Squash is forbidden, rebase is forbidden, and a
-    fast-forward with no merge commit is forbidden: the review verified that
-    exact commit, so the integration line must attach it, not replace it with a
-    squashed or rewritten commit. After the merge the accepted package commit
-    must stay reachable from the integration line and a distinct merge commit
-    must appear in its history. If the platform offers no such merge method, the
-    owner does not press merge and reports the blocker. The Git integrator's
-    post-merge verification then confirms: (1) the package commit is reachable
-    from the integration line; (2) a distinct merge commit was created;
-    (3) the accepted package diff was not rewritten; (4) the post-merge gates
-    pass.
+Для разработки Ядра, Экземпляра и адаптеров Meridian действуют ровно четыре
+локальные роли:
 
-**If no separate reviewer is assigned:**
+| Роль | Назначение |
+|---|---|
+| Владелец | Задаёт цель, границы, критерии приёмки и принимает решения владельца. |
+| Архитектор | Определяет архитектурные границы, исполняет роль проверяющего, независимо проверяет результат и выносит вердикт. |
+| Исполнитель | Реализует назначенный пакет в заданной области без операций записи Git. |
+| Интегратор Git | Ведёт ветви, индекс, коммиты, разрешённую публикацию и послесливную сверку. |
 
-- do not invent one;
-- work under the base model — owner plus one executor — as described in the
-  owner intent contract.
+Архитектор и проверяющий здесь — одна роль, а не два участника по умолчанию.
+Один участник может совмещать роли архитектора и интегратора Git,
+но при назначенной независимой проверке не может одновременно быть исполнителем
+того же результата.
+
+### 6.1. Владелец
+
+- определяет цель, область, критерии приёмки, допустимую автономию и риск;
+- принимает продуктовые и архитектурные решения, которые нельзя вывести из
+  отслеживаемых норм;
+- может вмешаться в любой момент;
+- выполняет окончательное слияние через веб-интерфейс, когда действующий
+  отслеживаемый протокол объявляет управляемый владельцем запрос на слияние
+  (owner-managed Merge Request, MR).
+
+### 6.2. Исполнитель
+
+- реализует только назначенный пакет и не расширяет область самостоятельно;
+- читает обязательные входные документы и сохраняет принятые архитектурные
+  границы;
+- изменяет рабочие файлы и выполняет только явно назначенные ему проверки;
+- не создаёт и не переключает ветви, не индексирует файлы, не создаёт коммиты
+  или теги, не отправляет ветви, не создаёт и не сливает запросы на слияние;
+- не исправляет посторонние дефекты без нового назначения;
+- передаёт точные изменённые файлы, содержание изменений, выполненные и
+  невыполненные проверки, отклонения и препятствия;
+- после замечаний выполняет следующий полный корректирующий раунд по инструкции
+  проверяющего, сохраняя ту же границу полномочий.
+
+### 6.3. Архитектор
+
+- определяет и защищает архитектурные границы назначенного пакета;
+- читает фактические файлы и полную разницу (`diff`), а не доверяет одному
+  отчёту исполнителя;
+- проверяет применимые нормы, контракты и критерии приёмки;
+- не реализует проверяемый пакет сам, когда назначен отдельный исполнитель;
+- выносит один полный вердикт: `CHANGES_REQUESTED` либо `ACCEPTED`;
+- при `CHANGES_REQUESTED` сразу формирует готовую для передачи исполнителю
+  корректирующую инструкцию, не ожидая отдельной просьбы владельца;
+- не выполняет Git-интеграцию только на основании отчёта исполнителя.
+
+Переданный владельцем полный вывод проверок считается входом проверки результата
+и не требует автоматического повторного локального прогона архитектором или
+интегратором Git. Отсутствующий обязательный результат отмечается как
+непроверенный.
+
+### 6.4. Интегратор Git
+
+Интегратор Git действует только после независимой проверки и в пределах
+`standards/workspace/version-control-flow.md`,
+`standards/workspace/release-versioning.md` и применимого отслеживаемого
+протокола. Он владеет созданием и переключением ветвей, поимённой индексацией,
+пакетным коммитом, разрешённой публикацией, а также сверкой истории и уборкой
+после интеграции. Исполнитель не получает эти полномочия.
+
+После `ACCEPTED` интегратор Git обязан без повторного запроса владельцу:
+
+1. подтвердить обязательные рубежи, точную принятую исходную ветку, границы
+   пакета, целевую линию и соответствие `origin` отслеживаемому маршруту;
+2. создать ограниченный пакетный коммит только из принятых файлов;
+3. применить последнюю датированную запись режима интеграции из §6.7;
+4. подтвердить достижимость пакетного коммита из целевой линии, наличие
+   отдельного коммита слияния, неизменность принятой разницы (`diff`) и
+   предоставленный результат послесливных проверок;
+5. зафиксировать SHA пакетного коммита и коммита слияния, исходную и целевую
+   ветви, а при разрешённой публикации — URL запроса и состояние удалённых
+   проверок.
+
+Локальное слияние, прямо разрешённое последней записью §6.7, является заранее
+данным постоянным полномочием и не требует повторного вопроса владельцу.
+Публикация ветви, создание запроса на слияние и отправка целевой линии не
+следуют из разрешения на локальное слияние и выполняются только тогда, когда
+последняя запись §6.7 или отдельное решение владельца прямо их разрешает.
+
+Без отдельного применимого порядка интегратор Git не вправе:
+
+- отправлять исходную, интеграционную или стабильную линию без прямо
+  разрешающего это режима либо отдельного решения владельца;
+- выполнять принудительную отправку (`force-push` или `force-with-lease`);
+- создавать или отправлять выпускные (`release`), продвигающие (`promotion`)
+  и срочно исправляющие (`hotfix`) ветви либо теги;
+- менять настройки репозитория, защиты веток и права доступа;
+- публиковать другие ветви или выполнять несвязанные внешние действия.
+
+Для временной индексации и рабочего дерева применяются правила
+`standards/workspace/version-control-flow.md` §5.4: `CHANGES_REQUESTED`
+снимает с индекса только поимённые пути кандидата, не меняя рабочие файлы;
+после завершения фиксируется состояние `not_created`, `removed` или `retained`.
+
+### 6.5. Назначение и совмещение
+
+- если архитектор не назначен, не выдумывай его: действует
+  базовая модель «владелец + исполнитель» из контракта намерений владельца;
+- если независимость назначена, исполнитель и архитектор не могут
+  быть одним участником для этого результата;
+- совмещение ролей архитектора и интегратора Git допустимо, но не
+  превращает интегратора в исполнителя;
+- полномочия всегда берутся из текущего назначения и отслеживаемого протокола,
+  а не из истории чата или возможностей инструмента.
+
+### 6.6. Текущее назначение
+
+Записи назначения ведутся в хронологическом порядке и содержат дату в формате
+`YYYY-MM-DD`. Действующей считается последняя расположенная в этом подразделе
+запись; более ранние записи сохраняются только как история назначения.
+
+#### 2026-09-19
+
+- архитектор: Codex;
+- интегратор Git: Codex;
+- исполнитель: Claude.
+
+### 6.7. Текущий режим интеграции Kernel
+
+Записи режима ведутся в хронологическом порядке и содержат дату в формате
+`YYYY-MM-DD`. Действующей считается последняя расположенная в этом подразделе
+запись. Это локальное решение владельца для репозитория Kernel; при расхождении
+с более ранним требованием обязательного запроса на слияние в протоколе
+Экземпляра эта последняя запись определяет маршрут интеграции Kernel.
+
+#### 2026-09-19
+
+- после `ACCEPTED` и прохождения обязательных рубежей интегратор Git вправе без
+  повторного вопроса локально слить принятую обычную ветвь пакета в `dev`;
+- слияние выполняется отдельным коммитом слияния (`git merge --no-ff`), а
+  принятый пакетный коммит сохраняется достижимым из `dev`;
+- исходная ветвь, `dev`, запрос на слияние и другие удалённые действия по
+  умолчанию не публикуются;
+- отправка `dev` или любой другой ветви требует отдельного прямого решения
+  владельца;
+- выпускные, продвигающие и срочно исправляющие ветви сохраняют собственный
+  специальный жизненный цикл и этим разрешением не открываются.
 <!-- meridian:end instruction-section id=role-behavior -->
 
 <!-- meridian:begin instruction-section id=source-of-truth owner=workspace-owner generated=no -->
-## 7. Source of truth
+## 7. Источник истины
 
-Do not treat chat history as the canonical record of an agreement when a
-corresponding tracked document exists. A tracked document in Instance
-(owner intent contract, collaboration protocol, active plan) always
-supersedes what a prior conversation implied.
+Не считай историю чата канонической записью соглашения, если существует
+соответствующий отслеживаемый документ. Документ Ядра или Экземпляра —
+контракт намерений владельца, протокол совместной работы, активный план или
+архитектурное решение — всегда имеет приоритет над тем, что подразумевалось в
+предыдущем разговоре.
 <!-- meridian:end instruction-section id=source-of-truth -->
 
 <!-- meridian:begin instruction-section id=operating-foundation owner=workspace-owner generated=no -->
-## 8. Operating foundation
+## 8. Основание операционной модели
 
-Before naming a governed entity or using an operating-model term, read
-`standards/workspace/operating-glossary.md` and
+До именования управляемой сущности или использования термина операционной
+модели прочитай `standards/workspace/operating-glossary.md` и
 `standards/workspace/operating-principles.md`.
 
-A governed entity is presented to a person as `title [id]`: a meaningful
-human title together with a stable semantic identifier. Do not use a roadmap
-number, status, date, actor, tool or model name as the entity's identity. Use
-the glossary's exact entity rather than the conversational word "task" in a
-machine contract. If a needed term or principle is absent, do not invent it in
-the consuming artifact; change the paired operating-foundation registry first.
+Управляемая сущность показывается человеку как `title [id]`: осмысленный
+заголовок вместе со стабильным семантическим идентификатором. Не используй как
+идентичность номер дорожной карты, статус, дату, участника, инструмент или
+название модели. В машинном контракте используй точную сущность глоссария, а не
+разговорное слово «задача». Если нужного термина или принципа нет, не изобретай
+его в потребляющем артефакте: сначала измени связанный реестр основания
+операционной модели.
 <!-- meridian:end instruction-section id=operating-foundation -->
+
+<!-- meridian:begin instruction-section id=rust-migration-contract owner=workspace-owner generated=no -->
+## 9. Контракт миграции на Rust и граница локальных проверок
+
+Перед любой работой, ревью или интеграцией по миграции на Rust полностью прочитай
+`standards/workspace/rust-migration-quality.md`. Его два требования имеют
+**наивысший приоритет** внутри программы:
+
+1. соблюдать принятую архитектуру Rust Meridian;
+2. если Rust позволяет реализовать функциональность лучше или надёжнее,
+   использовать лучший вариант Rust.
+
+Node.js задаёт сохраняемую бизнес-семантику, fixtures и внешние контракты, но
+не целевую структуру реализации. Буквальный, построчный или `verbatim`-паритет
+не является целью сам по себе и не оправдывает перенос слабой типизации,
+монолитной функции, аварии, недетерминированности либо смешения transport,
+syntax, domain и valid-type уровней. Conformance доказывает только выбранный
+наблюдаемый контракт и выполняется после архитектурной приёмки, а не вместо
+неё.
+
+Если Rust позволяет выразить инвариант типами, закрытыми перечислениями,
+обязательной валидацией или сделать ошибочное состояние непредставимым,
+выбирай более надёжный вариант Rust. Намеренное изменение внешнего поведения
+допустимо, когда оно сохраняет бизнес-ценность, явно зафиксировано как решение,
+его граница названа, совместимость оценена, а новое поведение проверено.
+Конфликт буквального паритета с архитектурой или надёжностью останавливает
+приёмку: `CHANGES_REQUESTED` либо `BLOCKED_FOR_OWNER_DECISION`, но не молчаливый
+выбор Node-поведения.
+
+При работе архитектора или интегратора Git над миграцией на Rust не
+запускай локально наборы тестов Node.js и не дублируй проверки, которые
+выполняются при отправке изменений или слиянии в GitHub, если владелец прямо не
+поручил такой запуск. Владелец запускает эти проверки сам и передаёт результат;
+архитектор проверяет изменения, архитектурные границы и соответствие
+наблюдаемому контракту, а интегратор Git — состояние интеграции. Отсутствующий
+результат отмечай как непроверенный, а не восполняй самостоятельным длительным
+прогоном.
+
+Для исполнителя различаются **целевой корректирующий рубеж** и **полный
+финальный рубеж**:
+
+1. В первой передаче и после `CHANGES_REQUESTED` исполнитель запускает только
+   явно назначенные целевые Rust-проверки, синтаксическую проверку изменённого
+   Node-файла (`node --check`) и `git diff --check`. Нельзя автоматически
+   переносить полный список финальных ворот в каждый корректирующий раунд.
+2. Полный `node --test test/conformance-harness.test.mjs` запускается только
+   один раз после архитектурного одобрения кандидата, перед окончательной
+   приёмкой/интеграцией, либо раньше — по прямому назначению владельца или
+   архитектора, когда раунд сам меняет наблюдаемый Node/Rust-контракт и без
+   исполняемой проверки нельзя оценить это изменение.
+3. Если изменённое наблюдаемое поведение можно проверить отдельным
+   сфокусированным Node/Rust-case, в корректирующем раунде запускается только
+   этот case. Если харнесс не поддерживает безопасный выбор одного case,
+   добавляется и синтаксически проверяется тест, а полный прогон откладывается
+   до финального рубежа; отсутствие полного результата явно указывается в
+   передаче.
+4. Полный `node test/kernel-validate.test.mjs` не повторяется в
+   корректирующих раундах. Он выполняется на финальном кандидате перед
+   приёмкой/интеграцией либо по отдельному прямому назначению.
+5. Изменение Rust-кода после пройденного полного рубежа делает его результат
+   устаревшим только для финального кандидата: повторный полный прогон нужен
+   один раз после завершения всех исправлений, а не после каждой промежуточной
+   редакции.
+
+Пакетный план может сузить целевые Rust-команды или добавить обязательный
+сфокусированный case, но не превращает два полных Node-набора в обязательный
+ритуал каждого корректирующего раунда без явного обоснования.
+<!-- meridian:end instruction-section id=rust-migration-contract -->
+
+<!-- meridian:begin instruction-section id=instance-repository-retirement owner=workspace-owner generated=no -->
+## 10. Решение владельца: вывод репозитория Instance из эксплуатации
+
+Записи ведутся в хронологическом порядке и содержат дату в формате
+`YYYY-MM-DD`. Действующей считается последняя расположенная в этом разделе
+запись.
+
+#### 2026-09-19
+
+- отдельный репозиторий Instance, ранее служивший активным центром
+  управления разработкой самого Meridian, выведен из этой роли;
+- он заморожен для чтения как источник миграции: доступен только через
+  явно разрешённый `MERIDIAN_INSTANCE` (§2, `scripts/preflight.mjs
+  --require-instance`) и не участвует в новых изменениях, планах или
+  назначениях ролей разработки Meridian;
+- пять канонических документов — контракт намерений владельца, план
+  программы переноса на Rust, архитектурное решение Rust/SQLite, целевая
+  архитектура и CLI RFC — перенесены в `governance/` этого репозитория и
+  являются каноническими (§3, §5);
+- `AGENTS.md` (этот документ) — канонический протокол ролей и полномочий
+  разработки Meridian; прежний протокол совместной работы Instance
+  сохраняется только как замороженная историческая запись (§4);
+- окончательное отключение `MERIDIAN_INSTANCE` как условия работы над
+  Kernel и архивирование старого репозитория Instance — обязательный рубеж
+  после проверенного импорта в SQLite
+  (`governance/plans/meridian-rust-migration-program-plan.md`, пакет 8 и
+  выпускной рубеж §7), а не факультативное будущее решение.
+<!-- meridian:end instruction-section id=instance-repository-retirement -->

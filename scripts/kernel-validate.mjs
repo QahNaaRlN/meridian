@@ -263,9 +263,17 @@ if (productRaw) {
     fail(`product record: ${e.message}`);
   }
 } else if (!INSTANCE_ROOT) {
-  fail('MERIDIAN_INSTANCE is not set; product literals were NOT checked. '
+  // Kernel-only runs are a legitimate mode (Instance is frozen for migration,
+  // see AGENTS.md §2/§10), not a defect: the absence of an Instance must not
+  // by itself turn the Kernel gate red. The product-dependent half of
+  // kernel-purity genuinely cannot run without a product record, so it is
+  // reported UNVERIFIED (warn), never silently upgraded to OK.
+  warn('kernel-purity: MERIDIAN_INSTANCE is not set; product literals were NOT checked (UNVERIFIED). '
      + 'This run verifies personal-path leaks only and must not be reported as a clean kernel-purity result.');
 } else {
+  // An explicitly supplied Instance is held to the strict contract: a root
+  // that does not resolve to a real product record is a wiring error, not an
+  // absent-Instance mode, and stays a FAIL.
   fail(`product record not found at ${productYamlPath}; kernel-purity cannot be verified`);
 }
 
@@ -397,7 +405,12 @@ const DOCUMENT_TYPES = new Set([
   'changelog', 'unclassified',
 ]);
 // Names fixed by conventions this Kernel does not own and must not "correct".
-const EXTERNAL_NAMES = new Set(['README.md', 'SKILL.md', 'AGENTS.md', 'PIN.yaml', 'LICENSE', 'VERSION']);
+// Cargo.toml/Cargo.lock are the manifest and lockfile names fixed by the
+// Cargo ecosystem itself — in every crate directory of a Rust workspace, not
+// only at the workspace root — so they join the same exact-string exception
+// as README.md, not a case-insensitive or pattern-based one: "Cargo.TOML" or
+// "cargo.toml" are not this name and are checked on general grounds.
+const EXTERNAL_NAMES = new Set(['README.md', 'SKILL.md', 'AGENTS.md', 'PIN.yaml', 'LICENSE', 'VERSION', 'Cargo.toml', 'Cargo.lock']);
 // Upper case is legal only for the release unit's root set: the files someone
 // who has just opened the repository is expected to find without looking.
 const ROOT_UPPERCASE = new Set(['README.md', 'LICENSE', 'VERSION', 'CHANGELOG.md', 'COMPATIBILITY.md', 'MANUAL.md']);

@@ -1,0 +1,776 @@
+{
+  "cases": [
+    {
+      "name": "unknown-repository-id-fails-closed",
+      "request": {
+        "work_item": {
+          "repository_id": "ghost-repo",
+          "work_kind": "assessment",
+          "candidate_paths": [
+            "src/review.rs"
+          ],
+          "changed_paths": []
+        },
+        "repository_inventory": [
+          {
+            "id": "sample-repo"
+          }
+        ],
+        "applicability": {
+          "$schema": "../../registries/rule-resolution/applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19"
+            }
+          ]
+        },
+        "intake_registers": [
+          {
+            "register": "instruction-intake/sample.yaml",
+            "records": [
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              }
+            ]
+          }
+        ],
+        "norm_texts": {
+          "sample-repo::AGENTS.md::review-rule": "repository norm"
+        }
+      }
+    },
+    {
+      "name": "stale-norm-digest-fails-closed",
+      "request": {
+        "work_item": {
+          "repository_id": "sample-repo",
+          "work_kind": "assessment",
+          "candidate_paths": [
+            "src/review.rs"
+          ],
+          "changed_paths": []
+        },
+        "repository_inventory": [
+          {
+            "id": "sample-repo"
+          }
+        ],
+        "applicability": {
+          "$schema": "../../registries/rule-resolution/applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "a8eb94ce92d05756cc5dcaa2b67e102050cf4c1aa9919adabd9ae7f9ff55f79f",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19"
+            }
+          ]
+        },
+        "intake_registers": [
+          {
+            "register": "instruction-intake/sample.yaml",
+            "records": [
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              }
+            ]
+          }
+        ],
+        "norm_texts": {
+          "sample-repo::AGENTS.md::review-rule": "repository norm"
+        }
+      }
+    },
+    {
+      "name": "missing-norm-text-fails-closed",
+      "request": {
+        "work_item": {
+          "repository_id": "sample-repo",
+          "work_kind": "assessment",
+          "candidate_paths": [
+            "src/review.rs"
+          ],
+          "changed_paths": []
+        },
+        "repository_inventory": [
+          {
+            "id": "sample-repo"
+          }
+        ],
+        "applicability": {
+          "$schema": "../../registries/rule-resolution/applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19"
+            }
+          ]
+        },
+        "intake_registers": [
+          {
+            "register": "instruction-intake/sample.yaml",
+            "records": [
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              }
+            ]
+          }
+        ],
+        "norm_texts": {}
+      }
+    },
+    {
+      "name": "same-date-records-without-supersedes-fail-closed",
+      "request": {
+        "work_item": {
+          "repository_id": "sample-repo",
+          "work_kind": "assessment",
+          "candidate_paths": [
+            "src/review.rs"
+          ],
+          "changed_paths": []
+        },
+        "repository_inventory": [
+          {
+            "id": "sample-repo"
+          }
+        ],
+        "applicability": {
+          "$schema": "../../registries/rule-resolution/applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19"
+            },
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-17",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19"
+            }
+          ]
+        },
+        "intake_registers": [
+          {
+            "register": "instruction-intake/sample.yaml",
+            "records": [
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              },
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-17",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              }
+            ]
+          }
+        ],
+        "norm_texts": {
+          "sample-repo::AGENTS.md::review-rule": "repository norm"
+        }
+      }
+    },
+    {
+      "name": "supersedes-cycle-fails-closed",
+      "request": {
+        "work_item": {
+          "repository_id": "sample-repo",
+          "work_kind": "assessment",
+          "candidate_paths": [
+            "src/review.rs"
+          ],
+          "changed_paths": []
+        },
+        "repository_inventory": [
+          {
+            "id": "sample-repo"
+          }
+        ],
+        "applicability": {
+          "$schema": "../../registries/rule-resolution/applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19",
+              "supersedes": {
+                "register": "instruction-intake/sample.yaml",
+                "path": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-17",
+                "verdict": "keep-local"
+              }
+            },
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-17",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19",
+              "supersedes": {
+                "register": "instruction-intake/sample.yaml",
+                "path": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              }
+            }
+          ]
+        },
+        "intake_registers": [
+          {
+            "register": "instruction-intake/sample.yaml",
+            "records": [
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              },
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-17",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              }
+            ]
+          }
+        ],
+        "norm_texts": {
+          "sample-repo::AGENTS.md::review-rule": "repository norm"
+        }
+      }
+    },
+    {
+      "name": "supersedes-itself-fails-closed",
+      "request": {
+        "work_item": {
+          "repository_id": "sample-repo",
+          "work_kind": "assessment",
+          "candidate_paths": [
+            "src/review.rs"
+          ],
+          "changed_paths": []
+        },
+        "repository_inventory": [
+          {
+            "id": "sample-repo"
+          }
+        ],
+        "applicability": {
+          "$schema": "../../registries/rule-resolution/applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19",
+              "supersedes": {
+                "register": "instruction-intake/sample.yaml",
+                "path": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              }
+            }
+          ]
+        },
+        "intake_registers": [
+          {
+            "register": "instruction-intake/sample.yaml",
+            "records": [
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              }
+            ]
+          }
+        ],
+        "norm_texts": {
+          "sample-repo::AGENTS.md::review-rule": "repository norm"
+        }
+      }
+    },
+    {
+      "name": "supersedes-pointer-to-no-record-fails-closed",
+      "request": {
+        "work_item": {
+          "repository_id": "sample-repo",
+          "work_kind": "assessment",
+          "candidate_paths": [
+            "src/review.rs"
+          ],
+          "changed_paths": []
+        },
+        "repository_inventory": [
+          {
+            "id": "sample-repo"
+          }
+        ],
+        "applicability": {
+          "$schema": "../../registries/rule-resolution/applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19",
+              "supersedes": {
+                "register": "instruction-intake/sample.yaml",
+                "path": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2020-01-01",
+                "verdict": "keep-local"
+              }
+            }
+          ]
+        },
+        "intake_registers": [
+          {
+            "register": "instruction-intake/sample.yaml",
+            "records": [
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              }
+            ]
+          }
+        ],
+        "norm_texts": {
+          "sample-repo::AGENTS.md::review-rule": "repository norm"
+        }
+      }
+    },
+    {
+      "name": "valid-supersedes-picks-the-declared-head",
+      "request": {
+        "work_item": {
+          "repository_id": "sample-repo",
+          "work_kind": "assessment",
+          "candidate_paths": [
+            "src/review.rs"
+          ],
+          "changed_paths": []
+        },
+        "repository_inventory": [
+          {
+            "id": "sample-repo"
+          }
+        ],
+        "applicability": {
+          "$schema": "../../registries/rule-resolution/applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19",
+              "supersedes": {
+                "register": "instruction-intake/sample.yaml",
+                "path": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-17",
+                "verdict": "keep-local"
+              }
+            },
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-17",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19"
+            }
+          ]
+        },
+        "intake_registers": [
+          {
+            "register": "instruction-intake/sample.yaml",
+            "records": [
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              },
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-17",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              }
+            ]
+          }
+        ],
+        "norm_texts": {
+          "sample-repo::AGENTS.md::review-rule": "repository norm"
+        }
+      }
+    },
+    {
+      "name": "undetermined-activation-is-reported-unresolved",
+      "request": {
+        "work_item": {
+          "repository_id": "sample-repo",
+          "work_kind": "assessment",
+          "candidate_paths": [
+            "src/review.rs"
+          ],
+          "changed_paths": []
+        },
+        "repository_inventory": [
+          {
+            "id": "sample-repo"
+          }
+        ],
+        "applicability": {
+          "$schema": "../../registries/rule-resolution/applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "undetermined",
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              },
+              "status": "resolved",
+              "recorded_at": "2026-09-19"
+            }
+          ]
+        },
+        "intake_registers": [
+          {
+            "register": "instruction-intake/sample.yaml",
+            "records": [
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              }
+            ]
+          }
+        ],
+        "norm_texts": {
+          "sample-repo::AGENTS.md::review-rule": "repository norm"
+        }
+      }
+    },
+    {
+      "name": "unresolved-status-carries-its-resume-condition",
+      "request": {
+        "work_item": {
+          "repository_id": "sample-repo",
+          "work_kind": "assessment",
+          "candidate_paths": [
+            "src/review.rs"
+          ],
+          "changed_paths": []
+        },
+        "repository_inventory": [
+          {
+            "id": "sample-repo"
+          }
+        ],
+        "applicability": {
+          "$schema": "../../registries/rule-resolution/applicability.schema.json",
+          "schema_version": 1,
+          "records": [
+            {
+              "norm": {
+                "repository": "sample-repo",
+                "path": "AGENTS.md",
+                "region": "review-rule"
+              },
+              "digest": "51ec69f2b20914d9094796ed5f8479387082b3f226d8922504d94a8b616597ee",
+              "scope": "repository",
+              "repository": "sample-repo",
+              "activation": "task-class",
+              "task_class": {
+                "work_kind": [
+                  "assessment"
+                ]
+              },
+              "source": "repository",
+              "intake_record": {
+                "register": "instruction-intake/sample.yaml",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local"
+              },
+              "status": "unresolved",
+              "recorded_at": "2026-09-19",
+              "resume_condition": "owner decides the review rule scope"
+            }
+          ]
+        },
+        "intake_registers": [
+          {
+            "register": "instruction-intake/sample.yaml",
+            "records": [
+              {
+                "artifact": "AGENTS.md",
+                "region": "review-rule",
+                "recorded_at": "2026-09-18",
+                "verdict": "keep-local",
+                "delivery": "agents-md-section"
+              }
+            ]
+          }
+        ],
+        "norm_texts": {
+          "sample-repo::AGENTS.md::review-rule": "repository norm"
+        }
+      }
+    }
+  ]
+}

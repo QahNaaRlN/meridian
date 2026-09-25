@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "application_id": "web",
+      "default_role": null,
+      "credentials_by_role": {},
+      "mechanism_state": "unresolved",
+      "sources": [
+        "environments/access.yaml"
+      ],
+      "blockers": []
+    },
+    {
+      "application_id": "web",
+      "default_role": null,
+      "credentials_by_role": {},
+      "sources": [
+        "environments/access.yaml"
+      ],
+      "blockers": []
+    }
+  ]
+}

@@ -17,6 +17,13 @@
 //      push. After the scrub the hook pins MERIDIAN_KERNEL to the worktree Git
 //      is pushing from ($ROOT), so every gate sees the pushed Kernel.
 //
+//   3. KERNEL-ONLY CONFORMANCE — the hook runs test/conformance-harness.test
+//      .mjs with `--kernel-only`, so an ordinary push never depends on an
+//      external Instance. Without the flag the harness is strict and fails
+//      when MERIDIAN_INSTANCE is unset; its shim below reproduces exactly that,
+//      so dropping the flag from the hook blocks a push made without an
+//      Instance. The strict real-bundle proof stays a separate release gate.
+//
 // The push checks run the VERBATIM production hook + helper of this package,
 // copied into a synthetic Kernel repo, with every gate replaced by a shim that
 // records what it received and fails on a leaked Git var or a wrong
@@ -95,7 +102,10 @@ function makeRepo(name) {
 // to a probe log what repository-local Git variables and what MERIDIAN_KERNEL
 // it was handed, and EXITS NON-ZERO if it saw any leaked Git var or a
 // MERIDIAN_KERNEL that is not the Kernel being pushed — so a hook that fails to
-// isolate the environment or to pin MERIDIAN_KERNEL blocks its own push.
+// isolate the environment or to pin MERIDIAN_KERNEL blocks its own push. It
+// also records its arguments; standing in for the conformance harness, it
+// fails like the real strict run when neither `--kernel-only` nor
+// MERIDIAN_INSTANCE is given.
 function gateShimSource(probeLog, wantKernelRoot) {
   return [
     "import fs from 'node:fs';",
@@ -106,18 +116,22 @@ function gateShimSource(probeLog, wantKernelRoot) {
     "const rawMK = process.env.MERIDIAN_KERNEL;",
     "const shownMK = rawMK === undefined ? '<unset>' : rawMK;",
     "let normMK = null; try { normMK = rawMK ? fs.realpathSync(rawMK) : null; } catch { normMK = rawMK || null; }",
-    `fs.appendFileSync(${JSON.stringify(probeLog)}, 'gate ' + path.basename(process.argv[1] || '?') + ' leaked=[' + leaked.join(',') + '] MERIDIAN_KERNEL=' + shownMK + '\\n');`,
+    "const gate = path.basename(process.argv[1] || '?');",
+    "const args = process.argv.slice(2);",
+    `fs.appendFileSync(${JSON.stringify(probeLog)}, 'gate ' + gate + ' leaked=[' + leaked.join(',') + '] MERIDIAN_KERNEL=' + shownMK + ' args=[' + args.join(',') + ']\\n');`,
     "if (leaked.length) { process.stderr.write('gate shim: repo-local Git vars leaked into a gate: ' + leaked.join(',') + '\\n'); process.exit(1); }",
     "if (normMK !== WANT) { process.stderr.write('gate shim: MERIDIAN_KERNEL is ' + shownMK + ', expected the pushed Kernel ' + WANT + '\\n'); process.exit(1); }",
+    "if (gate === 'conformance-harness.test.mjs' && !args.includes('--kernel-only') && !process.env.MERIDIAN_INSTANCE) { process.stderr.write('gate shim: strict conformance run without MERIDIAN_INSTANCE\\n'); process.exit(1); }",
     "process.stdout.write('gate shim ok\\n');",
     '',
   ].join('\n');
 }
 
 // Build a synthetic Kernel repository carrying the VERBATIM production hook and
-// helper of this package, with every gate replaced by the shim above. The two
-// optional mutations delete exactly one load-bearing line from the copied hook.
-function buildSyntheticKernel(name, { dropSourcingLine = false, dropKernelPin = false } = {}) {
+// helper of this package, with every gate replaced by the shim above. The
+// optional mutations each remove exactly one load-bearing element from the
+// copied hook.
+function buildSyntheticKernel(name, { dropSourcingLine = false, dropKernelPin = false, dropKernelOnly = false } = {}) {
   const dir = path.join(work, name);
   fs.mkdirSync(path.join(dir, 'hooks', 'lib'), { recursive: true });
   fs.mkdirSync(path.join(dir, 'test', 'instance-fixture'), { recursive: true });
@@ -133,6 +147,11 @@ function buildSyntheticKernel(name, { dropSourcingLine = false, dropKernelPin = 
   assert(PIN_RE.test(hook),
     'hooks/pre-push no longer pins MERIDIAN_KERNEL to "$ROOT" on its own line — the kernel-binding line was removed or moved');
 
+  const KERNEL_ONLY_RE = /^if ! node "\$ROOT\/test\/conformance-harness\.test\.mjs" --kernel-only; then$/m;
+  assert(KERNEL_ONLY_RE.test(hook),
+    'hooks/pre-push no longer runs the conformance harness with --kernel-only — the Kernel-only conformance line was removed or changed');
+
+  if (dropKernelOnly) hook = hook.replace(KERNEL_ONLY_RE, 'if ! node "$ROOT/test/conformance-harness.test.mjs"; then');
   if (dropSourcingLine) hook = hook.replace(new RegExp(SOURCING_RE.source + '\\n', 'm'), '');
   if (dropKernelPin) hook = hook.replace(new RegExp(PIN_RE.source + '\\n', 'm'), '');
   fs.writeFileSync(path.join(dir, 'hooks', 'pre-push'), hook);
@@ -143,6 +162,7 @@ function buildSyntheticKernel(name, { dropSourcingLine = false, dropKernelPin = 
   const shim = gateShimSource(probe, realDir);
   for (const rel of [
     'test/kernel-validate.test.mjs',
+    'test/preflight.test.mjs',
     'test/rule-resolver.test.mjs',
     'test/workspace-scope-model.test.mjs',
     'test/task-pattern-registry.test.mjs',
@@ -155,6 +175,7 @@ function buildSyntheticKernel(name, { dropSourcingLine = false, dropKernelPin = 
     'test/field-evaluation.test.mjs',
     'test/workspace-compatibility-qualification.test.mjs',
     'test/upgrade-integration-qualification.test.mjs',
+    'test/conformance-harness.test.mjs',
     'test/pre-push-git-isolation.test.mjs',
     'scripts/kernel-validate.mjs',
     'scripts/validate-and-log.mjs',
@@ -302,6 +323,32 @@ check('push — deleting the MERIDIAN_KERNEL pin lets a stale ambient value reac
   assert(lines[0].includes(`MERIDIAN_KERNEL=${stale}`),
     `without the pin the first gate must see the stale ambient value: ${lines[0]}`);
   assert(!lines[0].includes(`MERIDIAN_KERNEL=${syn.realDir}`), 'the pushed root leaked in despite the missing pin');
+  assert(spawnSync('git', ['-C', remote, 'rev-parse', branch], { encoding: 'utf8' }).status !== 0,
+    'the blocked push still reached the bare remote');
+  assert(head(caller) === callerBefore && git(KERNEL_ROOT, ['rev-parse', 'HEAD']) === kernelBefore, 'a HEAD moved');
+});
+
+// ---------------------------------------------------------------------------
+check('push — the REAL production hook runs the conformance harness --kernel-only and succeeds without MERIDIAN_INSTANCE', () => {
+  const syn = buildSyntheticKernel('kernel-only');
+  const { r, branch, remote, callerBefore } = pushThrough(syn);
+  assert(r.status === 0, `push without MERIDIAN_INSTANCE failed (exit ${r.status}); stderr:\n${r.stderr}`);
+  const lines = probeLines(syn.probe);
+  const harness = lines.filter((l) => l.startsWith('gate conformance-harness.test.mjs '));
+  assert(harness.length === 1, `the conformance harness gate must run exactly once: ${JSON.stringify(lines)}`);
+  assert(harness[0].endsWith(' args=[--kernel-only]'), `the conformance harness must get exactly --kernel-only: ${harness[0]}`);
+  const others = lines.filter((l) => !l.startsWith('gate conformance-harness.test.mjs '));
+  assert(others.every((l) => l.endsWith(' args=[]')), `no other gate may receive --kernel-only: ${JSON.stringify(others)}`);
+  assert(git(remote, ['rev-parse', branch]) === callerBefore, 'the bare remote did not receive the pushed commit');
+});
+
+// ---------------------------------------------------------------------------
+check('push — dropping --kernel-only from the hook makes a push without MERIDIAN_INSTANCE fail closed on the strict harness', () => {
+  const syn = buildSyntheticKernel('no-kernel-only', { dropKernelOnly: true });
+  const { r, branch, remote, caller, callerBefore, kernelBefore } = pushThrough(syn);
+  assert(r.status !== 0, `push should have been BLOCKED by the strict harness without MERIDIAN_INSTANCE (exit ${r.status})`);
+  const harness = probeLines(syn.probe).filter((l) => l.startsWith('gate conformance-harness.test.mjs '));
+  assert(harness.length === 1 && harness[0].endsWith(' args=[]'), `the strict harness gate should have run without arguments: ${JSON.stringify(harness)}`);
   assert(spawnSync('git', ['-C', remote, 'rev-parse', branch], { encoding: 'utf8' }).status !== 0,
     'the blocked push still reached the bare remote');
   assert(head(caller) === callerBefore && git(KERNEL_ROOT, ['rev-parse', 'HEAD']) === kernelBefore, 'a HEAD moved');

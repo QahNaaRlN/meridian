@@ -161,7 +161,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Типизированная миграционная и upgrade-квалификация (`rust-architecture-conformance-7`) | Перевести весь связный 7d: `instance-data-migration`, `instance-canonical-export`, `workspace-compatibility-qualification`, `upgrade-integration-qualification`; расширить существующий migration owner и композиционно переиспользовать принятые операции 7b/7c | `rust-architecture-conformance-6`, §5.13 | accepted — принято и локально интегрировано (§5.21.9) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | accepted — принят и локально интегрирован (§5.22.11) |
 | 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | accepted — post-merge failure исправлен, tracked-рубеж пройден, `QUALIFIED`, принят и локально интегрирован (§5.23.11) |
-| 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
+| 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | specified — not started (§5.24) |
 
 ### После выпуска (вне этой программы, но зависимые от неё)
 
@@ -6843,6 +6843,187 @@ harness и 293/293 `kernel-validate.test.mjs`; Kernel-only validation —
 bugfix package commit и отдельным `--no-ff` merge-коммитом без публикации.
 Пакет 10 остаётся `planned_not_started`.
 
+### 5.24. Пакет 10 `meridian-rust-release` (задание, 2026-09-25)
+
+#### 5.24.1. Исходное состояние и статус
+
+Пакет 9 `rust-business-contract-qualification` принят и локально интегрирован
+в `dev`: корректирующий package commit
+`ff55fa82298a09b291c6c57a06d390f14db8e5b6` достижим через отдельный
+merge-коммит `8406797be25878ccd1989f6170a134521bcc0bd2`. Квалификация —
+`QUALIFIED`, GAP-09 закрыт. Пакет 10 этим документом **специфицирован, но не
+начат**: статус `SPECIFIED_NOT_STARTED`. Реализация, release-ветка, изменение
+версии, тег, публикация и архивирование замороженного Instance не выполняются
+документальной спецификацией.
+
+Локальные untracked-файлы установки TypeSafe (`.agents/skills/typesafe-ai/`,
+`skills-lock.json`) не входят в Kernel и не являются частью пакета. Перед
+финальным release-gate Git-интегратор обязан получить чистое release-дерево:
+перенести локальный tooling за границу репозитория либо исключить его только
+локальной Git-конфигурацией, не добавляя в release commit и не ослабляя
+Kernel-валидатор.
+
+#### 5.24.2. Версия и выпускная единица
+
+Repository-level версия выпуска — **`0.7.0`**. Основание —
+`release-versioning.md` §7.1: действующая версия `0.6.0`, а выпуск добавляет
+новый Rust CLI, SQLite-поверхность, схемы и gate-контракты, поэтому требует
+MINOR; переход `0.x → 1.0.0` без отдельного решения владельца запрещён.
+
+Единственная release unit пакета — Kernel целиком. Версии вложенных единиц,
+включая `stack-profiles/`, не меняются. Cargo package version `0.1.0` не
+становится вторым источником repository-level версии: установочные артефакты
+получают версию из корневого `VERSION`, а изменение Cargo metadata допустимо
+только если оно технически необходимо для воспроизводимой упаковки и тогда
+обязано быть выведено из того же значения, а не назначено независимо.
+
+#### 5.24.3. Результат и архитектурная граница
+
+Пакет обязан доставить один CLI `meridian` как самодостаточный исполняемый
+файл без Node.js и без PostgreSQL. Предметная архитектура пакетов 1–9 не
+пересматривается: `meridian-core` остаётся чистым, `meridian-app` владеет
+операциями и портами, `meridian-cli` — composition/presentation и системными
+адаптерами, `meridian-storage-sqlite` — единственным хранилищем первого цикла.
+
+Разрешены только release-подготовка и минимальные исправления доказанного
+release blocker'а. Новые команды, бизнес-функции, Metis, Concord, daemon,
+GUI, network API, PostgreSQL и удаление Node-источников вне области. Node
+остаётся замороженным эталоном; его удаление требует отдельного решения
+владельца после выпуска (`meridian-cli-rfc.md`, шаг 11).
+
+#### 5.24.4. Обязательные артефакты выпуска
+
+1. `VERSION` содержит `0.7.0`.
+2. В `CHANGELOG.md` над датированным `## [0.7.0] — 2026-09-25` создана новая
+   пустая секция `## [Unreleased]`; содержание накопленного `Unreleased`
+   сохранено и приведено к фактическому состоянию выпуска без переписывания
+   прошлых версий.
+3. `COMPATIBILITY.md` явно объявляет совместимость Kernel `0.7.0`, включая
+   Rust-native различия COMPAT-01…34 и требование точного pin со стороны
+   Instance; отсутствие новой дельты фиксируется явно.
+4. Tracked release workflow строит и упаковывает бинарник из `Cargo.lock` для
+   закрытого минимального набора RFC: `x86_64-pc-windows-msvc`,
+   `x86_64-unknown-linux-musl`, `x86_64-apple-darwin` и
+   `aarch64-apple-darwin`. Артефакты именуются
+   `meridian-0.7.0-<target>` (`.zip` для Windows, `.tar.gz` для остальных) и
+   сопровождаются единым `SHA256SUMS`.
+5. «Самодостаточный бинарник» означает отсутствие Node.js и другого runtime:
+   Linux-артефакт статически связан через musl; Windows/macOS используют
+   системный ABI платформы, но не требуют установленного Rust/Cargo/Node.
+   Code signing, notarization и публикация installer-пакетов не
+   подразумеваются и требуют отдельного решения владельца.
+6. Упаковка проверяет фактический бинарник из release artifact, а не
+   `cargo run`: `meridian --help`, `init`, `doctor`, `validate`, `resolve`,
+   `export`, оба import kind и пять migration operations доступны из одного
+   executable; stdout/stderr и коды сохраняют принятый контракт.
+7. Для каждого архива после распаковки сверяются имя исполняемого файла,
+   отсутствие лишних runtime-файлов и SHA-256. Повторная сборка на том же
+   source/toolchain либо явно доказывает идентичный digest, либо отчёт честно
+   фиксирует недетерминированную платформенную часть и проверяет идентичный
+   состав/поведение; молчаливое утверждение reproducible build запрещено.
+
+#### 5.24.5. Выпускные сценарии
+
+На release candidate обязательны все пункты §7, в том числе:
+
+- `init` в пустом каталоге создаёт обе SQLite-базы с явными ролями и
+  совместимой ревизией Kernel без ручной подготовки;
+- полный импорт применимого замороженного источника идёт только через явный
+  `--source`; после импорта `MERIDIAN_INSTANCE` удалён из окружения штатных
+  команд;
+- `validate` и `resolve` на импортированном состоянии совпадают с
+  квалифицированным Node-эталоном с учётом принятых COMPAT-различий;
+- `apply → rollback`, повторный import/apply и полное чтение 336 записей / 61
+  нормы проходят на реальном bundle;
+- бинарник работает при недоступных Node.js, npm, PostgreSQL и сети;
+- два последовательных запуска на одном состоянии дают те же коды и тот же
+  JSON-вывод;
+- archive/retirement старого Instance выполняется только после успешного
+  импорта и отдельного подтверждения владельца; исполнитель не изменяет и не
+  удаляет внешний репозиторий.
+
+#### 5.24.6. Git- и release-flow
+
+После локальной интеграции этой спецификации Git-интегратор создаёт
+`release/0.7.0` от точного принятого `dev`. Исполнитель работает в уже
+подготовленном checkout без branch/switch/add/commit/merge/tag/push.
+
+После независимого `ACCEPTED`:
+
+1. Git-интегратор создаёт ограниченный release package commit на
+   `release/0.7.0`.
+2. Публикация ветки и MR не следуют из разрешения начать пакет и требуют
+   отдельного прямого решения владельца.
+3. В защищённую `main` выпуск попадает только owner-managed MR отдельным
+   non-fast-forward release advancement commit; squash/rebase запрещены.
+4. Аннотированный тег `v0.7.0` ставится только на подтверждённый advancement
+   commit в `main` и только после слияния.
+5. То же состояние отдельным owner-managed MR возвращается в `dev`; его
+   merge-коммит — не advancement commit и тега не получает.
+6. Программа не получает статус `completed`, пока не проверены оба merge,
+   тег, release artifacts, post-merge gates и пункт archive/retirement §7.8.
+
+Локальное слияние release-ветки в `main`, push любой линии, создание тега на
+неподтверждённом состоянии и изменение настроек защиты не разрешены текущим
+поручением «приступить к пакету».
+
+#### 5.24.7. Ворота исполнения
+
+До передачи исполнитель запускает полный набор §5.23.7 на чистом tracked
+release candidate и дополнительно:
+
+```bash
+cargo build --locked --release -p meridian-cli --bin meridian
+cargo install --locked --path meridian-cli --root <temporary-install-root>
+<temporary-install-root>/bin/meridian --help
+```
+
+Release workflow обязан отдельно доказать build/package/smoke для каждого
+target §5.24.4. Полный локальный frozen-source набор использует одну и ту же
+замороженную ревизию, но абсолютный путь остаётся локальной проводкой и не
+попадает в tracked-файлы. Финальный `git status --porcelain` не содержит ни
+одной строки; untracked tooling не считается принятым исключением release
+candidate.
+
+Если platform runner или target toolchain недоступен, статус —
+`BLOCKED_FOR_OWNER_DECISION`/`NOT_RELEASED`, а не условный успех. Green Linux
+build не доказывает Windows/macOS artifacts.
+
+#### 5.24.8. Критерии передачи и приёмки
+
+Передача исполнителя содержит:
+
+- статус не выше `READY_FOR_ARCHITECT_REVIEW`;
+- exact base HEAD, fingerprint кандидата и пустой индекс;
+- список release-файлов и таблицу `target -> artifact -> digest -> smoke`;
+- результаты каждого общего и release-specific gate с кодами/счётчиками;
+- evidence §7.1–§7.10, отдельно real-bundle и runtime-without-Node;
+- все невыполненные platform/external проверки и blockers;
+- подтверждение отсутствия Git write-операций и изменений внешнего Instance.
+
+Архитектор выносит `CHANGES_REQUESTED`, `BLOCKED_FOR_OWNER_DECISION` либо
+`ACCEPTED`. `ACCEPTED` означает готовность конкретного release commit к
+owner-managed продвижению, но не подменяет фактические merge/tag/artifact/
+archive доказательства, необходимые для `RELEASED` и завершения программы.
+
+#### 5.24.9. Готовое задание исполнителю
+
+> Реализуй пакет `meridian-rust-release` строго по §5.24 и выпускному рубежу
+> §7 активного плана. База — принятый `dev` после спецификации; версия —
+> `0.7.0`. Не расширяй бизнес-функциональность и не удаляй Node-эталон.
+>
+> Подготовь согласованные `VERSION`, `CHANGELOG.md`, `COMPATIBILITY.md`,
+> tracked release workflow, архивы/`SHA256SUMS` и smoke именно упакованного
+> бинарника для закрытой target matrix §5.24.4. Докажи один CLI без Node,
+> автоматическое создание SQLite, полный real-bundle import, validate/resolve,
+> rollback/idempotency и детерминированный машинный вывод.
+>
+> Не выполняй Git write-операций, не публикуй артефакты и не изменяй внешний
+> замороженный Instance. Любую недоступную platform-проверку или необходимое
+> внешнее действие передай как blocker, не заменяй его Linux-only успехом.
+> Выполни §5.24.7 и передай `READY_FOR_ARCHITECT_REVIEW` с exact fingerprint,
+> target/artifact/digest/smoke таблицей, всеми кодами и пустым индексом.
+
 ## 6. Ворота Rust
 
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
@@ -7115,14 +7296,14 @@ program_status: active
 activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
 last_completed_package: rust-business-contract-qualification
-current_package: rust-business-contract-qualification
-current_package_status: accepted_and_locally_integrated
-next_package: meridian-rust-release
-next_package_status: planned_not_started
+current_package: meridian-rust-release
+current_package_status: specified_not_started
+next_package: null
+next_package_status: none_program_final
 concord_status: paused_pending_meridian_rust_release
-release_version: unassigned
-release_gate: closed
-owner_decision_date: 2026-09-24
+release_version: 0.7.0
+release_gate: open_pending_execution
+owner_decision_date: 2026-09-25
 ```
 
 Настоящая ревизия фиксирует решение владельца §5.13 и результат полного
@@ -7442,3 +7623,12 @@ tests, отдельный ранее падавший binary test, 2/2 real-bund
 conformance harness и 293/293 `kernel-validate.test.mjs`; остальные ворота
 также зелёные. Итог — `QUALIFIED`, пакет 9 — `ACCEPTED` и локально
 интегрируется без публикации; пакет 10 остаётся `planned_not_started`.
+
+**Обновление (2026-09-25, §5.24, финишный пакет).** По прямому поручению
+владельца пакет `meridian-rust-release` специфицирован со статусом
+`specified_not_started`. Версия `0.7.0` выведена из действующего `0.6.0` и
+MINOR-правила для новых схем/команд/gates; закреплены четыре target triples,
+release artifacts и `SHA256SUMS`, проверка упакованного бинарника без Node,
+полный real-bundle рубеж и owner-managed release-flow. Реализация, release
+branch, публикация, merge, tag и archive старого Instance этим документальным
+шагом не начаты.

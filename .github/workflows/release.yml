@@ -1,0 +1,135 @@
+name: release
+
+# Builds, packages and smoke-tests the `meridian` executable for the closed
+# release target matrix (`governance/plans/meridian-rust-migration-program-plan.md`
+# §5.24.4) from `Cargo.lock`, and writes one SHA256SUMS over the artifacts.
+#
+# It publishes nothing: the artifacts stay with the workflow run. A GitHub
+# release, a tag, code signing, notarization or an installer is a separate
+# owner decision (§5.24.4 item 5, §5.24.6). A tag run is refused unless the
+# tag is exactly `v<VERSION>`.
+
+on:
+  workflow_dispatch:
+  push:
+    # The release branch itself: its first permitted push runs this workflow
+    # before the file exists on the default branch.
+    branches: ['release/0.7.0']
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+env:
+  RUST_TOOLCHAIN: '1.98.1'
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
+          - target: x86_64-unknown-linux-musl
+            runner: ubuntu-latest
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+          - target: aarch64-apple-darwin
+            runner: macos-15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # The synthetic frozen-Instance fixture is a pinned Git commit: its
+      # bytes must reach the runner exactly as tracked.
+      - name: Keep line endings as tracked
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v4
+
+      - name: Refuse a tag that is not v<VERSION>
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version=$(tr -d '[:space:]' < VERSION)
+          [ "${GITHUB_REF_NAME}" = "v${version}" ] || {
+            echo "::error::tag ${GITHUB_REF_NAME} is not v${version}"; exit 1; }
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.target }}
+
+      - name: Install the musl toolchain
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Build from Cargo.lock
+        run: cargo build --locked --release -p meridian-cli --bin meridian --target ${{ matrix.target }}
+
+      - name: Package
+        id: package
+        run: |
+          exe=target/${{ matrix.target }}/release/meridian
+          case "${{ matrix.target }}" in *-windows-*) exe="$exe.exe" ;; esac
+          artifact=$(scripts/release/package.sh "${{ matrix.target }}" "$exe" dist)
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
+
+      - name: Self-test the smoke checks
+        run: scripts/release/smoke.sh --self-test
+
+      - name: Smoke the packaged executable
+        run: scripts/release/smoke.sh "${{ steps.package.outputs.artifact }}" "${{ matrix.target }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meridian-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
+
+  checksums:
+    name: SHA256SUMS
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Exactly one artifact per target
+        run: |
+          version=$(tr -d '[:space:]' < VERSION)
+          cd dist
+          for expected in \
+            "meridian-${version}-x86_64-pc-windows-msvc.zip" \
+            "meridian-${version}-x86_64-unknown-linux-musl.tar.gz" \
+            "meridian-${version}-x86_64-apple-darwin.tar.gz" \
+            "meridian-${version}-aarch64-apple-darwin.tar.gz"; do
+            [ -f "$expected" ] || { echo "::error::missing $expected"; exit 1; }
+          done
+          [ "$(ls | wc -l)" -eq 4 ] || { echo "::error::unexpected files: $(ls)"; exit 1; }
+
+      - name: Write and verify SHA256SUMS
+        run: |
+          cd dist
+          sha256sum meridian-* > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Re-check the Linux artifact against SHA256SUMS
+        run: |
+          version=$(tr -d '[:space:]' < VERSION)
+          sudo apt-get update && sudo apt-get install -y file
+          scripts/release/smoke.sh "dist/meridian-${version}-x86_64-unknown-linux-musl.tar.gz" \
+            x86_64-unknown-linux-musl dist/SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meridian-release
+          path: dist/
+          if-no-files-found: error

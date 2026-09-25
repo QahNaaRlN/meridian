@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-20
+updated: 2026-09-25
 ---
 
 # Changelog
@@ -16,7 +16,89 @@ updated: 2026-09-20
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-09-25
+
+Выпуск Rust Meridian: один самодостаточный исполняемый файл `meridian`
+(Rust, SQLite) заменяет Node.js как штатную поверхность Kernel. Node.js-
+реализация остаётся замороженным эталоном и в этом выпуске не удаляется
+(`governance/rfcs/meridian-cli-rfc.md`, шаг удаления — отдельное решение
+владельца). Совместимость с Instance — `COMPATIBILITY.md`, строка `0.7.x`.
+
 ### Added
+
+- **Выпуск `meridian` 0.7.0 (`meridian-rust-release`, пакет 10 программы
+  `meridian-rust-migration`).** Tracked workflow
+  `.github/workflows/release.yml` собирает из `Cargo.lock` (`--locked`,
+  Rust 1.98.1) и упаковывает бинарник для закрытого набора целей
+  `x86_64-pc-windows-msvc`, `x86_64-unknown-linux-musl` (статическая сборка),
+  `x86_64-apple-darwin` и `aarch64-apple-darwin` в архивы
+  `meridian-0.7.0-<target>` (`.zip` для Windows, `.tar.gz` для остальных) с
+  одним `SHA256SUMS`; имя архива выводится из `VERSION`
+  (`scripts/release/package.sh`). `scripts/release/smoke.sh` проверяет
+  именно распакованный артефакт: точный состав архива (исполняемый файл и
+  `LICENSE`), статическую компоновку Linux и системный ABI macOS, все
+  команды одного исполняемого файла, каждую — по контракту её класса
+  завершения (для `--format json` — ровно один JSON-документ с ожидаемыми
+  `command`, `status` и обязательными полями результата и пустой stderr, в
+  том числе у отрицательного результата с кодом 1; для кодов 2/3 — пустой
+  stdout и сообщение в stderr); одинаковые код и байты stdout двух запусков
+  на одном состоянии для каждого вызова только для чтения (`doctor`,
+  `validate` без базы и с базой, `resolve`, `export`, `migration plan`,
+  `migration verify`, пробный `apply`) и для повторов, не меняющих состояние
+  (`apply` уже применённого плана, отклонённый второй `rollback`); вызовы,
+  меняющие состояние (`init`, первые `apply` и `rollback`, импорты),
+  выполняются один раз, а их эффект закреплён побайтовым сравнением
+  экспорта до и после; исполняемый файл получает `PATH`, в котором
+  перебором доказано отсутствие `node`, `npm`, `npx`, `psql` в любой
+  исполняемой форме, включая Windows-расширения, и доступен только Git.
+  Режим `--self-test` подаёт проверкам заведомо неверный вывод и `PATH` с
+  runtime и требует их отклонения. Workflow ничего не публикует: релиз,
+  тег, подпись и нотаризация — отдельные решения владельца
+  (`meridian-rust-migration-program-plan.md` §5.24).
+
+- **SQLite-хранилище (`sqlite-storage-adapter`, пакет 6).** Порты
+  `RecordRepository` и `EvidenceRepository` в `meridian-app`; версионируемое
+  SQLite-хранилище `meridian-storage-sqlite` с append-only ревизиями,
+  неизменяемостью доказательств, идемпотентностью, резервным копированием,
+  каноническим экспортом и явными ошибками открытия повреждённой или
+  несовместимой базы.
+
+- **CLI `meridian` и перенос `validate` (`meridian-cli-foundation`,
+  пакет 7, с архитектурными пакетами `rust-architecture-conformance-1…7`).**
+  Команды `init` (обе базы `tool`/`workspace` с явной ролью и редакцией
+  Kernel), `doctor`, `validate`, `resolve` и `export` с устойчивыми кодами
+  завершения 0/1/2/3 и разделением stdout/stderr. Все семейства проверок
+  `kernel-validate.mjs` перенесены в типизированный конвейер
+  `meridian-cli` (адаптеры) → `meridian-app` (операции над портами) →
+  `meridian-core` (строгие типы и чистые проверки); принятые Rust-native
+  различия зарегистрированы в `COMPATIBILITY.md` (COMPAT-01…28).
+
+- **Федеративная архитектура знаний Metis зафиксирована решением**
+  (`governance/decisions/metis-federated-knowledge-architecture.md`) как
+  граница будущей исследовательской программы; в этом выпуске не
+  реализуется.
+
+- **Проверяемая миграция замороженного Instance (`meridian-cli-migration`,
+  пакет 8).** `meridian import --kind frozen-instance|canonical-records` и
+  `meridian migration plan|apply|verify|rollback`: источник называется только
+  явным `--source`, изменение состояния — только при совпадающем
+  `--confirm`, журнал миграций с checkpoint-rollback в SQLite, типизированная
+  эквивалентность применимости. На реальном bundle импортируются 336
+  записей, проверяется 61 норма; `apply → rollback` возвращает канонический
+  экспорт к исходному состоянию.
+
+- **Квалификация бизнес-контракта (`rust-business-contract-qualification`,
+  пакет 9) и проверка состояния рабочей базы
+  (`rust-workspace-state-validation`).** Закрытая матрица бизнес-контрактов
+  (`governance/audits/meridian-rust-business-contract-qualification.md`)
+  квалифицирована. `meridian validate --workspace-db <path> [--log-metrics]`
+  проверяет импортированное продуктовое состояние без `MERIDIAN_INSTANCE`:
+  продуктовые литералы `kernel-purity`, закрытый реестр payload-контрактов
+  (общий для обоих import kind и сохранённой базы), контекст Instance для
+  скиллов, внешние зависимости, инвентарь против репозиториев, объявления
+  stack-profile, ссылочную целостность, полноту, темы, упаковку и
+  происхождение изданий приёма инструкций; `--log-metrics` добавляет одну
+  запись `gate-run-observation`. Отличия от эталона — COMPAT-29…34.
 
 - **Учреждён Исследовательский отдел Meridian (`Meridian Research`).**
   `governance/research/` теперь хранит правила жизненного цикла гипотез,
@@ -46,7 +128,7 @@ updated: 2026-09-20
   остаётся замороженным для чтения источником миграции до пакета
   `meridian-cli-migration` (пакет 8).
 
-- **Корректирующий пакет `knowledge-agent-foundation` начат: роли баз, эволюция
+- **Корректирующий пакет `knowledge-agent-foundation`: роли баз, эволюция
   схемы, маршрутизация хранилищ и событийная граница.** `meridian-app::storage`
   получил закрытый тип роли базы (`tool`/`workspace`) и пару роль+редакция
   Kernel (`meridian-core` не содержит понятий базы данных, SQLite или роли
@@ -63,9 +145,8 @@ updated: 2026-09-20
   произвольного детального payload, отключаемый приёмник событий
   (`NoOpEventSink`, чья бездейственность доказана на реальной доменной
   операции, а не портом как таковым), а также зарезервированный, но не
-  реализованный модуль границы будущего Knowledge Resolver. Реализация
-  подготовлена в рабочем дереве, ожидает независимой проверки и
-  Git-интеграции — это не запись о приёмке пакета
+  реализованный модуль границы будущего Knowledge Resolver. Пакет
+  независимо принят и локально интегрирован
   (`meridian-rust-migration-program-plan.md` §5.4).
 
 ### Changed

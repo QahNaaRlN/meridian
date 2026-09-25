@@ -161,7 +161,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Типизированная миграционная и upgrade-квалификация (`rust-architecture-conformance-7`) | Перевести весь связный 7d: `instance-data-migration`, `instance-canonical-export`, `workspace-compatibility-qualification`, `upgrade-integration-qualification`; расширить существующий migration owner и композиционно переиспользовать принятые операции 7b/7c | `rust-architecture-conformance-6`, §5.13 | accepted — принято и локально интегрировано (§5.21.9) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | accepted — принят и локально интегрирован (§5.22.11) |
 | 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | accepted — post-merge failure исправлен, tracked-рубеж пройден, `QUALIFIED`, принят и локально интегрирован (§5.23.11) |
-| 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | specified — not started (§5.24) |
+| 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | ready for architect review — not released; Windows/macOS artifacts blocked (§5.24.10) |
 
 ### После выпуска (вне этой программы, но зависимые от неё)
 
@@ -7024,6 +7024,72 @@ archive доказательства, необходимые для `RELEASED` �
 > Выполни §5.24.7 и передай `READY_FOR_ARCHITECT_REVIEW` с exact fingerprint,
 > target/artifact/digest/smoke таблицей, всеми кодами и пустым индексом.
 
+#### 5.24.10. Передача исполнителя (2026-09-25)
+
+Статус передачи — **`READY_FOR_ARCHITECT_REVIEW`** для tracked-содержимого
+выпуска; статус выпуска — **`NOT_RELEASED`**. Git write-операций исполнитель
+не выполнял, индекс пуст, внешний замороженный Instance не изменялся. База —
+`release/0.7.0` на `fec6a2684c07f05bb2339693793d964380c9ab05`.
+
+Подготовлено: `VERSION` `0.7.0`; `CHANGELOG.md` — накопленный `Unreleased`
+стал `## [0.7.0] — 2026-09-25` с записями пакетов 6–10 и приведённым к факту
+статусом `knowledge-agent-foundation`, над ним новый пустой `Unreleased`;
+`COMPATIBILITY.md` — строка `0.7.x` с явным отсутствием новой дельты сверх
+COMPAT-01…34; tracked workflow `.github/workflows/release.yml` (закрытая
+target matrix §5.24.4, `--locked`, Rust 1.98.1, упаковка, самопроверка и
+smoke упакованного бинарника на своём runner, один `SHA256SUMS`, без
+публикации); скрипты `scripts/release/package.sh` (имя из `VERSION`, состав —
+исполняемый файл и `LICENSE`, фиксированные времена и владелец) и
+`scripts/release/smoke.sh`. Smoke держит каждый вызов на контракте его класса
+завершения: для `--format json` — ровно один JSON-документ
+`{command, status, result}` с ожидаемыми `command`, `status` (`ok` при 0,
+`fail` при 1) и обязательными полями результата, пустой stderr, в том числе
+у отрицательного результата с кодом 1; для кодов 2/3 — пустой stdout и
+сообщение в stderr. Дважды на одном состоянии, с одинаковыми кодом и
+байтами stdout, выполняются все вызовы только для чтения (`doctor`,
+`validate` без базы и с базой, `resolve`, `export` пустого и
+импортированного состояния, `migration plan`, `migration verify`, пробный
+`apply`) и повторы, не меняющие состояние (`apply` уже применённого плана,
+отклонённый второй `rollback`); вызовы, меняющие состояние (`init`, первые
+`apply` и `rollback`, импорты), выполняются один раз, а их эффект закреплён
+побайтовым сравнением экспорта до и после.
+Исполняемый файл получает `PATH`, содержащий только Git-адаптер; отсутствие
+`node`, `npm`, `npx`, `psql` в любой исполняемой форме (включая `.exe`,
+`.cmd`, `.bat`, `.ps1`, `.com`) доказывается перебором этого `PATH`, а на
+Windows — каталога самого Git. Режим `--self-test` подаёт проверкам заведомо
+неверный JSON/stderr и `PATH` с runtime и проходит, только если все они
+отвергнуты.
+
+Локально доказано для `x86_64-unknown-linux-musl`: сборка из `Cargo.lock` в
+`rust:1.98.1-alpine`, статическая (`static-pie`) компоновка, smoke и
+самопроверка упакованного артефакта, повторная сборка с тем же digest
+бинарника и архива; на реальном bundle в контейнере `--network none` без
+Node.js, npm и PostgreSQL — `init`, `import` (336 записей, 0 отвергнутых
+payload), повторный DB-backed `validate` с идентичным JSON,
+`apply → apply (already-applied) → verify → rollback` с возвратом экспорта к
+исходному состоянию. Коды и счётчики ворот — в передаче исполнителя.
+
+**Непройденные ворота (не условный успех; §7 п. 1 и п. 10 не зелёные):**
+
+1. Артефакты `x86_64-pc-windows-msvc`, `x86_64-apple-darwin`,
+   `aarch64-apple-darwin` отсутствуют: на этом Linux-хосте они не
+   собираются.
+2. `.github/workflows/release.yml` ни разу не запущен, поэтому его
+   Windows/macOS-сборка, smoke, самопроверка и `SHA256SUMS` по четырём целям
+   не доказаны; не проверены и метки runners (`macos-15-intel`,
+   `macos-15`). Workflow запускается push'ем ветки `release/0.7.0`
+   (триггер `push.branches`, срабатывающий до появления файла в default
+   branch), тегом `v*` или вручную; сам push требует отдельного решения
+   владельца (§5.24.6 п. 2).
+3. Финальный `git status --porcelain` не пуст: изменения пакета не
+   закоммичены (Git-интегратор), а в дереве лежит локальный untracked
+   tooling TypeSafe (`.agents/`, `skills-lock.json`), который нужно
+   перенести или исключить локальной Git-конфигурацией (§5.24.1, §5.24.7).
+
+Вне ворот исполнителя остаются архивирование прежнего Instance (§7 п. 8),
+merge в `main`, тег `v0.7.0` и возврат в `dev` — после приёмки и решений
+владельца.
+
 ## 6. Ворота Rust
 
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
@@ -7297,7 +7363,7 @@ activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
 last_completed_package: rust-business-contract-qualification
 current_package: meridian-rust-release
-current_package_status: specified_not_started
+current_package_status: ready_for_architect_review_not_released
 next_package: null
 next_package_status: none_program_final
 concord_status: paused_pending_meridian_rust_release
@@ -7632,3 +7698,27 @@ release artifacts и `SHA256SUMS`, проверка упакованного б�
 полный real-bundle рубеж и owner-managed release-flow. Реализация, release
 branch, публикация, merge, tag и archive старого Instance этим документальным
 шагом не начаты.
+
+**Обновление (2026-09-25, §5.24.10, передача исполнителя).**
+`current_package_status` синхронизирован как
+`ready_for_architect_review_not_released`: подготовлены `VERSION` `0.7.0`,
+`CHANGELOG.md`, `COMPATIBILITY.md`, tracked release workflow и скрипты
+упаковки/smoke; Linux musl-артефакт и real-bundle сценарии без Node и сети
+доказаны локально. Windows/macOS-артефакты, публикация, merge, тег и
+архивирование прежнего Instance не выполнены и названы blockers. Статус НЕ
+`ACCEPTED` и НЕ `RELEASED`.
+
+**Обновление (2026-09-25, §5.24.10, корректирующий раунд передачи).**
+Smoke держит каждый вызов на контракте его класса завершения и доказывает
+отсутствие runtime перебором `PATH` исполняемого файла, включая
+Windows-расширения; добавлена самопроверка. §5.24.10 перечисляет
+незапущенный workflow, три отсутствующих платформенных артефакта и
+непустой `git status --porcelain` как непройденные ворота: §7 п. 1 и п. 10
+не зелёные. Статус — `ready_for_architect_review_not_released`, НЕ
+`ACCEPTED` и НЕ `RELEASED`.
+
+**Обновление (2026-09-25, §5.24.10, узкий корректирующий раунд).**
+`release.yml` получил триггер `push.branches: ['release/0.7.0']` рядом с
+`v*` и `workflow_dispatch`; описание повторяемых вызовов smoke уточнено до
+точного перечня. Статус — `ready_for_architect_review_not_released`; GitHub
+matrix и чистое release-дерево остаются непройденными воротами.

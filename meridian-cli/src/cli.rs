@@ -4,7 +4,8 @@
 //! Grammar: `meridian <command> [--flag value]...`, and for the nested
 //! `migration` command `meridian migration <plan|apply|verify|rollback>
 //! [--flag value]...`. Every flag takes exactly
-//! one value — there are no boolean switches in this package's surface.
+//! one value, except a command's declared switches (`validate
+//! --log-metrics`), which take none.
 //! `--help`/`-h`, alone or as the first token, and the bare command `help`
 //! print usage and exit [`crate::exit_code::OK`] without touching stdin,
 //! a Kernel path or a database. Anything else that cannot be parsed against
@@ -14,7 +15,7 @@
 //! silently preferred — a repeat is rejected outright, so two conflicting
 //! values can never be resolved by silent precedence).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -139,9 +140,15 @@ impl fmt::Display for CliError {
 pub struct ParsedArgs {
     pub format: OutputFormat,
     flags: BTreeMap<String, String>,
+    switches: BTreeSet<String>,
 }
 
 impl ParsedArgs {
+    /// Whether the value-less switch `--<name>` was given.
+    pub fn switch(&self, name: &str) -> bool {
+        self.switches.contains(name)
+    }
+
     pub fn get(&self, name: &str) -> Option<&str> {
         self.flags.get(name).map(String::as_str)
     }
@@ -209,7 +216,19 @@ pub fn parse_flags(
     rest: &[String],
     allowed_flags: &[&str],
 ) -> Result<ParsedArgs, CliError> {
+    parse_flags_with_switches(command, rest, allowed_flags, &[])
+}
+
+/// [`parse_flags`] for a command that also declares value-less switches;
+/// a repeated switch is rejected like a repeated flag.
+pub fn parse_flags_with_switches(
+    command: &'static str,
+    rest: &[String],
+    allowed_flags: &[&str],
+    allowed_switches: &[&str],
+) -> Result<ParsedArgs, CliError> {
     let mut flags = BTreeMap::new();
+    let mut switches = BTreeSet::new();
     let mut iter = rest.iter();
     while let Some(token) = iter.next() {
         let Some(name) = token.strip_prefix("--") else {
@@ -218,6 +237,15 @@ pub fn parse_flags(
                 flag: token.clone(),
             });
         };
+        if allowed_switches.contains(&name) {
+            if !switches.insert(name.to_string()) {
+                return Err(CliError::FlagRepeated {
+                    command,
+                    flag: name.to_string(),
+                });
+            }
+            continue;
+        }
         if !allowed_flags.contains(&name) {
             return Err(CliError::UnknownFlag {
                 command,
@@ -239,7 +267,11 @@ pub fn parse_flags(
         Some(value) => OutputFormat::parse(&value)?,
         None => OutputFormat::DEFAULT,
     };
-    Ok(ParsedArgs { format, flags })
+    Ok(ParsedArgs {
+        format,
+        flags,
+        switches,
+    })
 }
 
 pub const USAGE: &str = "\
@@ -251,7 +283,7 @@ USAGE:
 COMMANDS:
     init      --kernel <path> --workspace <path> --tool-db <path> --workspace-db <path> [--format human|json]
     doctor    --kernel <path> --workspace <path> --tool-db <path> --workspace-db <path> [--format human|json]
-    validate  --kernel <path> [--format human|json]
+    validate  --kernel <path> [--workspace-db <path>] [--log-metrics] [--format human|json]
     resolve   --kernel <path> [--request <path>] [--format human|json]
     export    --kernel <path> --tool-db <path> --workspace-db <path> [--format human|json]
     import    --kernel <path> --kind frozen-instance --source <instance-repository-path> --tool-db <path> --workspace-db <path> --confirm <plan-fingerprint> [--format human|json]

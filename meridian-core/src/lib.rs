@@ -43,6 +43,7 @@ pub mod resolver;
 pub mod run_contracts;
 pub mod task_contracts;
 pub mod types;
+pub mod workspace_state;
 
 /// Identifies this crate in composition-root diagnostics.
 pub const CRATE_NAME: &str = "meridian-core";

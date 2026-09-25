@@ -160,7 +160,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Типизированные доказательства и полевая оценка (`rust-architecture-conformance-6`) | Перевести оставшиеся семейства 7c `evidence-and-handoff-contract` и `meridian-field-evaluation` на общий typed core/app pipeline, удалить временные resolver/portability фасады и оставить CLI слоем composition/presentation | `rust-architecture-conformance-5`, §5.13 | accepted — принято и локально интегрировано (§5.20.9) |
 | — | Типизированная миграционная и upgrade-квалификация (`rust-architecture-conformance-7`) | Перевести весь связный 7d: `instance-data-migration`, `instance-canonical-export`, `workspace-compatibility-qualification`, `upgrade-integration-qualification`; расширить существующий migration owner и композиционно переиспользовать принятые операции 7b/7c | `rust-architecture-conformance-6`, §5.13 | accepted — принято и локально интегрировано (§5.21.9) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | accepted — принят и локально интегрирован (§5.22.11) |
-| 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | not qualified — GAP-09; corrective package specified (§5.23.10–§5.23.11) |
+| 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | accepted — `QUALIFIED`, GAP-09 закрыт, принят и локально интегрирован (§5.23.11) |
 | 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | planned |
 
 ### После выпуска (вне этой программы, но зависимые от неё)
@@ -6716,6 +6716,108 @@ Sandbox `EPERM` повторяется той же командой через �
 > positive/negative test, коды/счётчики ворот, невыполненные проверки и
 > подтверждение пустого индекса.
 
+#### Первая передача исполнителя (2026-09-25)
+
+Статус передачи — **`BLOCKED_FOR_ARCHITECT_DECISION`** (не `ACCEPTED`):
+реализация и executable evidence готовы, но три наблюдаемых отличия от
+эталона исполнитель не вправе принять сам. Git write-операций исполнитель
+не выполнял; индекс пуст. База — `dev` `d00d7a52f035093934a92457f936706065bf5c0f`.
+
+Реализовано по «Точному контракту CLI» и «Обязательной архитектуре»:
+`meridian validate --kernel <path> [--workspace-db <path>] [--log-metrics]`;
+`meridian-core::workspace_state` (строгие типы и чистые проверки M-02/M-03,
+M-05b, M-07, M-08, M-09, M-12, M-15, M-18), `meridian-app::workspace_state`
+(закрытые DTO, единый `PayloadRegistry`, одна операция `validate` над
+`RecordRepository`/`WorkspaceReader`/`RepositoryAccess`/`Clock`,
+`observation_request`), адаптеры `meridian-cli` `RealRepositoryAccess` и
+`SystemClock`. Тот же `PayloadRegistry` проверяет оба import kind до записи.
+Mapping каждого M-пункта на production route и positive/negative тесты —
+отчёт квалификации §9.5.
+
+На реальном bundle без `MERIDIAN_INSTANCE` все 336 записей проходят реестр
+контрактов, и category-3 вердикты DB-backed `validate` совпадают с
+Node-эталоном на Instance в закреплённой ревизии источника (харнесс,
+«workspace-state: …»), кроме объявленного исключения D1.
+
+Решения архитектора (отчёт §9.5): **D1** — строки удержанного
+(`retained-transitional`) репозитория инвентаря есть только у эталона;
+**D2** — тексты, где эталон называет Instance или файл реестра, и новое
+семейство `payload-contract:`; **D3** — mapping §9.3 не назвал три
+проверки `instruction-intake` эталона (пул тем, упаковка `skill-package`,
+parentage `adopt-edition`). Строки VAL-30/NODE-02/NODE-03 остаются `GAP`
+до этих решений и финального рубежа §5.23.7.
+
+Синтетический fixture пакета 8 переведён с неконтрактного типа
+`inventory-item` на `versioning-conformance-case` и перегенерирован штатным
+`generate.mjs` (добавлен вариант `unknown-record-type`); ревизия источника
+fixture не изменилась.
+
+#### Корректирующий раунд исполнителя (2026-09-25)
+
+Статус передачи — **`READY_FOR_ARCHITECT_REVIEW`** (не `ACCEPTED`, не
+`QUALIFIED`). Исполнено по корректирующей инструкции архитектора без Git
+write-операций; индекс пуст. База — тот же `dev`
+`d00d7a52f035093934a92457f936706065bf5c0f`.
+
+1. Fail-open `repository_tree` удалён: сбой `untracked_files` или
+   `ignored_among` передаётся типизированным
+   `meridian_core::workspace_state::intake::TreeFact::Unavailable` до
+   `check_completeness`, даёт явный `WARN … UNVERIFIED` и никогда не
+   увеличивает `intake_repositories_complete` (нечитаемый контейнер тоже).
+2. Три проверки D3 (пул тем, упаковка `skill-package`, parentage
+   `adopt-edition`) реализованы тем же production-маршрутом: чистые типы и
+   решения — `meridian-core` (`workspace_state::{intake, packaging,
+   parentage}`), оркестрация — `meridian-app` (`workspace_state::intake`)
+   над расширенным портом `RepositoryAccess` (`has_revision`,
+   `file_at(RevisionSelector)`), Git — только адаптер `meridian-cli`.
+   D3 больше не открытое решение.
+3. Критерий приёмки 3 закрыт таблицей
+   `meridian-cli/tests/fixtures/payload-matrix/families.json` и отдельным
+   синтетическим замороженным источником `frozen-instance/payload-matrix`
+   (тот же `generate.mjs`): все 32 `record_type` приняты; мутация каждого из
+   15 schema-backed семейств отвергнута до записи `import --kind
+   frozen-instance` и `import --kind canonical-records` и обнаружена в уже
+   сохранённой базе.
+4. **D1** зафиксирован как `ACCEPTED_MIGRATION_BOUNDARY`: десять
+   `retained-transitional` единиц пакета 8 не изменены; из сравнения
+   исключаются ровно строки `inventory-git`/`stack-profile` удержанного
+   репозитория инвентаря, и харнесс требует, чтобы Rust такой репозиторий не
+   называл. **D2** зафиксирован в `COMPATIBILITY.md` с бизнес-эффектом и
+   matched evidence; отличие п. 1 — отдельной строкой.
+
+Mapping и payload matrix — отчёт квалификации §9.5. Строки
+VAL-30/NODE-02/NODE-03 остаются `GAP` до исполнения новых cases на
+финальном рубеже §5.23.7; итог квалификации — `NOT_QUALIFIED`.
+
+#### Финальный рубеж §5.23.7 (2026-09-25)
+
+Архитектурный кандидат одобрен (fingerprint рабочего дерева
+`bd1857e2af32275902e9e22ebf566e9557c50c86afee6dd3b7204a8dfbe7aea4` над
+`dev` `d00d7a52f035093934a92457f936706065bf5c0f`). Первый прогон полного
+рубежа **не пройден**: `cargo test --workspace` — код 101, один отказ
+`meridian-cli/tests/binary_runs.rs::validate_reports_ok_on_this_kernel_with_zero_real_failures`
+(`schema_validated` = 14 при закреплённом 13). Причина — устаревший
+закреплённый счётчик: второй синтетический реестр применимости
+(источник `payload-matrix`) объявляет `$schema`; эталон Node даёт тот же
+`schema: 14/14`. Остальные ворота прошли (оба ignored real-bundle теста —
+2 passed; харнесс — 152 passed; `kernel-validate.test.mjs` — 293 passed).
+Исправлен только счётчик 13/13 → 14/14 в тесте, `COMPATIBILITY.md` и
+отчёте квалификации; полный рубеж повторяется на новом fingerprint. Статус
+пакета — не принят; итог квалификации — `NOT_QUALIFIED` до прохождения
+рубежа и независимой приёмки.
+
+Повторный полный рубеж пройден на fingerprint
+`0a54175ff8b02a094afcd2bf5e9c24c79eedb896a84862aa193f67e452646671`,
+неизменном до и после прогона. Все 14 команд завершились кодом 0:
+`cargo test --workspace` — 1162 passed, 0 failed, 2 ignored; отдельный
+real-bundle запуск — 2/2; conformance harness — 152/152;
+`kernel-validate.test.mjs` — 293/293; Kernel-only validation — 0 failures,
+9 warnings, `schema: 14/14`; остальные ворота §5.23.7 также зелёные.
+Архитектор перевёл VAL-30/NODE-02/NODE-03 в `ACCEPTED_RUST_NATIVE`, закрыл
+GAP-09 и вынес вердикт `QUALIFIED` / `ACCEPTED`. Пакет локально
+интегрируется отдельным package commit и отдельным `--no-ff` merge-коммитом
+без публикации. Пакет 10 этим вердиктом не начинается.
+
 ## 6. Ворота Rust
 
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
@@ -6987,11 +7089,11 @@ program_id: meridian-rust-migration
 program_status: active
 activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
-last_completed_package: meridian-cli-migration
+last_completed_package: rust-business-contract-qualification
 current_package: rust-business-contract-qualification
-current_package_status: corrective_package_specified_not_started
+current_package_status: accepted_and_locally_integrated
 next_package: meridian-rust-release
-next_package_status: blocked_pending_package_9_acceptance
+next_package_status: planned_not_started
 concord_status: paused_pending_meridian_rust_release
 release_version: unassigned
 release_gate: closed
@@ -7263,3 +7365,36 @@ GAP-09 выделен в отдельный пакет `rust-workspace-state-val
 `--log-metrics`; штатный Rust CLI не читает `MERIDIAN_INSTANCE`. Пакет 9
 остаётся `NOT_QUALIFIED`, а пакет 10, Metis и Concord остаются закрытыми до
 реализации, повторной квалификации и независимой приёмки.
+
+**Обновление (2026-09-25, §5.23.11, первая передача корректирующего пакета).**
+`current_package_status` синхронизирован как
+`corrective_package_blocked_for_architect_decision`: исполнитель реализовал
+`rust-workspace-state-validation` с executable evidence каждого
+category-3 пункта и передал три решения D1–D3 (отчёт квалификации §9.5).
+Статус НЕ `ACCEPTED`; итог квалификации остаётся `NOT_QUALIFIED`;
+`meridian-rust-release`, Metis и Concord не открываются.
+
+**Обновление (2026-09-25, §5.23.11, корректирующий раунд корректирующего
+пакета).** `current_package_status` синхронизирован как
+`corrective_package_ready_for_architect_review_not_accepted`: fail-open
+дерева репозитория удалён, три проверки D3 реализованы, payload matrix
+закрывает критерий 3, D1 зафиксирован как `ACCEPTED_MIGRATION_BOUNDARY`,
+D2 — в `COMPATIBILITY.md`. Статус НЕ `ACCEPTED`; итог квалификации остаётся
+`NOT_QUALIFIED` до финального рубежа §5.23.7 и независимой приёмки;
+`meridian-rust-release`, Metis и Concord не открываются.
+
+**Обновление (2026-09-25, §5.23.11, финальный рубеж).**
+`current_package_status` синхронизирован как
+`corrective_package_final_gate_failed_not_accepted`: первый прогон полного
+рубежа §5.23.7 одобренного кандидата не пройден из-за устаревшего
+закреплённого счётчика `schema_validated` (13 вместо 14); счётчик исправлен,
+рубеж повторяется. Статус НЕ `ACCEPTED`; итог квалификации —
+`NOT_QUALIFIED`; пакет 10 не открывается.
+
+**Обновление (2026-09-25, §5.23.11, итоговый вердикт архитектора).**
+Повторный полный рубеж пройден на неизменённом fingerprint: 1162/1162
+workspace Rust tests, 2/2 ignored real-bundle tests, 152/152 conformance
+harness и 293/293 `kernel-validate.test.mjs`; остальные ворота также зелёные.
+Строки VAL-30/NODE-02/NODE-03 переведены в `ACCEPTED_RUST_NATIVE`, GAP-09
+закрыт, квалификация — `QUALIFIED`, пакет 9 — `ACCEPTED` и локально
+интегрируется без публикации. Пакет 10 остаётся `planned_not_started`.

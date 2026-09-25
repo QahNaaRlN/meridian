@@ -1,0 +1,13 @@
+{
+  "note": "Resolution map for resolveEvidence (coverage).",
+  "resolution": {
+    "evidence:coverage-sample-frozen-instance-plan": {
+      "record_type": "instance-migration-evidence",
+      "evidence_ref": "evidence:coverage-sample-frozen-instance-plan",
+      "kind": "coverage",
+      "plan_ref": "sample-frozen-instance-plan",
+      "plan_fingerprint": "8b199bdf463929fe4b932bd35993e6d972cf46c168b3e5d31af12f3507a8570d",
+      "confirms": true
+    }
+  }
+}

@@ -265,13 +265,15 @@ fn validate_reports_ok_on_this_kernel_with_zero_real_failures() {
         git_tracked_count,
         "validate's own tracked-file count must match a fresh, independent `git ls-files` on this exact checkout"
     );
-    // 13 since `meridian-cli-migration`: the synthetic frozen-Instance
-    // fixture's applicability register
-    // (`meridian-cli/tests/fixtures/frozen-instance/source/rule-resolution/applicability.yaml`)
-    // declares the Kernel applicability schema and is validated like every
-    // other registry document.
-    assert_eq!(value["result"]["stats"]["schema_validated"], 13);
-    assert_eq!(value["result"]["stats"]["schema_attempted"], 13);
+    // 14 since `rust-workspace-state-validation`: two synthetic fixture
+    // applicability registers declare the Kernel applicability schema and are
+    // validated like every other registry document — the frozen-Instance
+    // fixture's
+    // (`meridian-cli/tests/fixtures/frozen-instance/source/rule-resolution/applicability.yaml`,
+    // since `meridian-cli-migration`) and the payload-matrix source's
+    // (`meridian-cli/tests/fixtures/frozen-instance/payload-matrix/source/rule-resolution/applicability.yaml`).
+    assert_eq!(value["result"]["stats"]["schema_validated"], 14);
+    assert_eq!(value["result"]["stats"]["schema_attempted"], 14);
     assert_eq!(value["result"]["stats"]["rule_resolution_satisfied"], 20);
     assert_eq!(value["result"]["stats"]["rule_resolution_rejected"], 27);
     // The three `agent_instruction_identity_*` counts below are, like
@@ -1634,3 +1636,10 @@ fn init_doctor_validate_resolve_and_export_run_without_network() {
 
 #[path = "binary_runs/migration.rs"]
 mod migration;
+
+// ---------------------------------------------------------------------
+// Package rust-workspace-state-validation: validate --workspace-db [--log-metrics].
+// ---------------------------------------------------------------------
+
+#[path = "binary_runs/workspace_state.rs"]
+mod workspace_state;

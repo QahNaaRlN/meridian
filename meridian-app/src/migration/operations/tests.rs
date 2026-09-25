@@ -36,6 +36,31 @@ impl WorkspaceReader for SchemaReader {
             "registries/rule-resolution/applicability.schema.json" => {
                 include_str!("../../../../registries/rule-resolution/applicability.schema.json")
             }
+            // The payload registry's item schemas (M-05b).
+            "registries/inventory/repositories.schema.json" => {
+                include_str!("../../../../registries/inventory/repositories.schema.json")
+            }
+            "registries/inventory/repository-references.schema.json" => {
+                include_str!("../../../../registries/inventory/repository-references.schema.json")
+            }
+            "registries/inventory/relationships.schema.json" => {
+                include_str!("../../../../registries/inventory/relationships.schema.json")
+            }
+            "registries/instruction-intake/intake.schema.json" => {
+                include_str!("../../../../registries/instruction-intake/intake.schema.json")
+            }
+            "registries/commands/repositories.schema.json" => {
+                include_str!("../../../../registries/commands/repositories.schema.json")
+            }
+            "registries/environments/access.schema.json" => {
+                include_str!("../../../../registries/environments/access.schema.json")
+            }
+            "registries/environments/environments.schema.json" => {
+                include_str!("../../../../registries/environments/environments.schema.json")
+            }
+            "registries/environments/test-data.schema.json" => {
+                include_str!("../../../../registries/environments/test-data.schema.json")
+            }
             _ => return Err(ReadError::NotFound),
         }
         .to_string())
@@ -188,7 +213,7 @@ impl MigrationRepository for Shared {
 }
 
 const BUILT_IN: &str = r#"{"$schema":"registries/operating-model/scoped-record.schema.json","schema_version":1,"id":"norm-one","title":"Norm one","record_type":"norm","scope":{"type":"built-in-methodology","id":"built-in-methodology"},"origin":{"kind":"built-in"},"authority":{"kind":"methodology-owner","authority_ref":"kernel-owner"},"payload":{"text":"one"}}"#;
-const WORKSPACE: &str = r#"{"$schema":"registries/operating-model/scoped-record.schema.json","schema_version":1,"id":"note-one","title":"Note one","record_type":"note","scope":{"type":"project-workspace","id":"sample"},"origin":{"kind":"declared","source_ref":"owner-decision:note"},"authority":{"kind":"project-owner","authority_ref":"sample-owner"},"payload":{"text":"two"}}"#;
+const WORKSPACE: &str = r#"{"$schema":"registries/operating-model/scoped-record.schema.json","schema_version":1,"id":"note-one","title":"Note one","record_type":"report","scope":{"type":"project-workspace","id":"sample"},"origin":{"kind":"declared","source_ref":"owner-decision:note"},"authority":{"kind":"project-owner","authority_ref":"sample-owner"},"payload":{"media_type":"text/markdown","encoding":"utf-8","content":"two","digest":{"algorithm":"sha-256","value":"3fc4ccfe745870e2c0d99f71f30ff0656c8dedd41cc1d7d3d376b0dbe685e2f3"}}}"#;
 
 fn input(records: &[&str]) -> Vec<u8> {
     format!(
@@ -352,13 +377,49 @@ fn migration_canonical_import_opens_no_database_before_confirmation_and_acceptan
     let error = run.import(&duplicate, &digest(&duplicate)).unwrap_err();
     assert!(matches!(error, MigrationError::CanonicalInput(_)));
 
-    let invalid = input(&[&WORKSPACE.replace("\"note\"", "\"Not A Semantic Id\"")]);
+    let invalid = input(&[&WORKSPACE.replace("\"report\"", "\"Not A Semantic Id\"")]);
     let error = run.import(&invalid, &digest(&invalid)).unwrap_err();
     assert!(matches!(error, MigrationError::CanonicalInput(_)));
 
     let wrong = br#"{"status":"ok","command":"validate","result":[]}"#;
     let error = run.import(wrong, &digest(wrong)).unwrap_err();
     assert!(matches!(error, MigrationError::CanonicalInput(_)));
+    assert_eq!(*run.opened.lock().unwrap(), 0);
+}
+
+/// M-05b (`rust-workspace-state-validation`): a product record whose payload
+/// no contract accepts — an unknown record type, a container whose digest
+/// is not its content's, or a workspace file of the wrong media type — is
+/// refused before either database is opened.
+#[test]
+fn workspace_state_canonical_import_refuses_a_payload_no_contract_accepts() {
+    let run = Run::new(Fake::default(), Fake::default());
+    for (mutated, needle) in [
+        (
+            WORKSPACE.replace("\"report\"", "\"note\""),
+            "record_type \"note\" has no payload contract",
+        ),
+        (
+            WORKSPACE.replace("\"content\":\"two\"", "\"content\":\"three\""),
+            "payload.digest is not the sha-256 of payload.content",
+        ),
+        (
+            WORKSPACE.replace("text/markdown", "text/plain"),
+            "payload.media_type \"text/plain\" is not the one a report record carries",
+        ),
+    ] {
+        let bytes = input(&[BUILT_IN, &mutated]);
+        let error = run.import(&bytes, &digest(&bytes)).unwrap_err();
+        let MigrationError::CanonicalInput(problems) = error else {
+            panic!("expected a refused input, got {error:?}");
+        };
+        assert!(
+            problems
+                .iter()
+                .any(|p| p.starts_with("result[1]: payload-contract: ") && p.contains(needle)),
+            "{problems:?}"
+        );
+    }
     assert_eq!(*run.opened.lock().unwrap(), 0);
 }
 

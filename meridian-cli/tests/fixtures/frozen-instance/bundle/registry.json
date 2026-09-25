@@ -122,7 +122,7 @@
               "$schema": "registries/operating-model/scoped-record.schema.json",
               "id": "inventory-items-alpha",
               "title": "Item alpha",
-              "record_type": "inventory-item",
+              "record_type": "versioning-conformance-case",
               "scope": {
                 "type": "project-workspace",
                 "id": "sample"
@@ -171,7 +171,7 @@
               "$schema": "registries/operating-model/scoped-record.schema.json",
               "id": "inventory-items-beta-gamma",
               "title": "Item beta gamma",
-              "record_type": "inventory-item",
+              "record_type": "versioning-conformance-case",
               "scope": {
                 "type": "project-workspace",
                 "id": "sample"
@@ -336,7 +336,7 @@
           },
           "overall_status": "VERIFIED"
         },
-        "plan_fingerprint": "9a495da8cfd5a3d4fa0684605225d30309fbd98b9b3931290411bb8402171c0d",
+        "plan_fingerprint": "fe60a084825d595aeba1db296b0c7ccc7ecafed4fe3fbdd89b04970a01a76690",
         "idempotency_key": "de85ae24ad41260cbd19fabb5a71fdfc861bae73dee9dc79f79a690ae0bc2955"
       }
     }

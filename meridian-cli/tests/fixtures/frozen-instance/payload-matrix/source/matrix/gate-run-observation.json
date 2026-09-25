@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "ts": "2026-01-01T00:00:00Z",
+      "kernel_version": "0.6.0",
+      "exit_code": 0,
+      "failing": 0,
+      "warnings": 0,
+      "info_ok": 1,
+      "fail_messages": [],
+      "warn_messages": []
+    },
+    {
+      "ts": "2026-01-01T00:00:00Z",
+      "kernel_version": "0.6.0",
+      "failing": 0,
+      "warnings": 0,
+      "info_ok": 1,
+      "fail_messages": [],
+      "warn_messages": []
+    }
+  ]
+}

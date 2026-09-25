@@ -6,7 +6,7 @@
       "evidence_ref": "evidence:applicability-sample-frozen-instance-plan",
       "kind": "applicability_preservation",
       "plan_ref": "sample-frozen-instance-plan",
-      "plan_fingerprint": "9a495da8cfd5a3d4fa0684605225d30309fbd98b9b3931290411bb8402171c0d",
+      "plan_fingerprint": "fe60a084825d595aeba1db296b0c7ccc7ecafed4fe3fbdd89b04970a01a76690",
       "confirms": true
     }
   }

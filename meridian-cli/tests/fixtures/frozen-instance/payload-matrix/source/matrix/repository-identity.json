@@ -1,0 +1,49 @@
+{
+  "items": [
+    {
+      "id": "web",
+      "path": "/work/web",
+      "role": "web client",
+      "profile": "vue-spa",
+      "ownership": "own",
+      "sources": {
+        "rules": [
+          "/work/web/AGENTS.md"
+        ],
+        "manifests": [
+          "/work/web/package.json"
+        ]
+      },
+      "vcs": {
+        "type": "git",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "ref": "dev",
+        "working_tree": "clean",
+        "evidence_basis": "revision"
+      },
+      "last_verified": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "web",
+      "path": "/work/web",
+      "profile": "vue-spa",
+      "ownership": "own",
+      "sources": {
+        "rules": [
+          "/work/web/AGENTS.md"
+        ],
+        "manifests": [
+          "/work/web/package.json"
+        ]
+      },
+      "vcs": {
+        "type": "git",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "ref": "dev",
+        "working_tree": "clean",
+        "evidence_basis": "revision"
+      },
+      "last_verified": "2026-01-01T00:00:00Z"
+    }
+  ]
+}

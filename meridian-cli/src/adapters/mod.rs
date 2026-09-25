@@ -2,6 +2,7 @@
 //! world. `meridian-cli` is the only crate that knows these implementations
 //! exist (`meridian-cli-rfc.md`, `AGENTS.md` composition-root remit).
 
+pub mod clock;
 pub mod frozen_source;
 pub mod git_inspector;
 pub mod link_target;

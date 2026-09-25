@@ -1,0 +1,15 @@
+{
+  "note": "Resolution map for resolveRollbackSnapshot.",
+  "resolution": {
+    "snapshot:sample-frozen-instance@8b82b86238dc6b47dd578067c564e332e9c06fa8": {
+      "record_type": "instance-rollback-snapshot",
+      "source_snapshot_ref": "snapshot:sample-frozen-instance@8b82b86238dc6b47dd578067c564e332e9c06fa8",
+      "repository_ref": "sample-frozen-instance",
+      "revision": "8b82b86238dc6b47dd578067c564e332e9c06fa8",
+      "digest": {
+        "algorithm": "sha-256",
+        "value": "fb6627013317038e5d96d8a5cf39c7518ec4fb048a414c203e1be1c3d617821d"
+      }
+    }
+  }
+}

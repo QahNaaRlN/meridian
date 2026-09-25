@@ -22,6 +22,20 @@ fn key_digest(parts: &[&str]) -> Result<IdempotencyKey, String> {
         .map_err(|e| format!("idempotency key: {e}"))
 }
 
+/// The stored payload of one accepted plan target: its content container.
+pub(crate) fn target_payload(entry: &WriteSetEntry) -> Value {
+    let target = entry.target();
+    json!({
+        "media_type": target.payload.media_type.as_str(),
+        "encoding": target.payload.encoding.as_str(),
+        "content": target.payload.content.as_str(),
+        "digest": {
+            "algorithm": target.payload.digest.algorithm().as_str(),
+            "value": target.payload.digest.value(),
+        },
+    })
+}
+
 /// The strict write of one accepted plan target. Its idempotency key is a
 /// deterministic function of the plan's own idempotency key and the
 /// record's identity.
@@ -32,15 +46,7 @@ pub(crate) fn target_request(
     let target = entry.target();
     let at = |field: &str| format!("target \"{}\" {field}", target.id.as_str());
     let key = RecordKey::new(target.scope.clone(), target.id.clone());
-    let payload = json!({
-        "media_type": target.payload.media_type.as_str(),
-        "encoding": target.payload.encoding.as_str(),
-        "content": target.payload.content.as_str(),
-        "digest": {
-            "algorithm": target.payload.digest.algorithm().as_str(),
-            "value": target.payload.digest.value(),
-        },
-    });
+    let payload = target_payload(entry);
     let idempotency = key_digest(&["frozen-instance", plan_key.value(), &key.storage_key()])?;
     PutRecordRequest::new(
         key,

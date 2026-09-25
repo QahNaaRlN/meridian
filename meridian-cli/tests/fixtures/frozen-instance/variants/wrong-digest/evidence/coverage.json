@@ -6,7 +6,7 @@
       "evidence_ref": "evidence:coverage-sample-frozen-instance-plan",
       "kind": "coverage",
       "plan_ref": "sample-frozen-instance-plan",
-      "plan_fingerprint": "7bfc1a7ffb1611df23431770458edc43c9fa979d2672069dce4149faea95b628",
+      "plan_fingerprint": "8b863d0ab3f488550bbf5a89ac1e1c33b797006a8856e46554a477616a12d41a",
       "confirms": true
     }
   }

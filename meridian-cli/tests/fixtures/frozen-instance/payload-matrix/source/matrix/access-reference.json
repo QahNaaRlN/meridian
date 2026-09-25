@@ -1,0 +1,33 @@
+{
+  "items": [
+    {
+      "id": "web-operator",
+      "application_id": "web",
+      "credential_role": "operator",
+      "credential_kind": "token-reference",
+      "required_config_keys": [
+        "WEB_TOKEN"
+      ],
+      "retrieval": {
+        "state": "unresolved"
+      },
+      "sources": [
+        "environments/access.yaml"
+      ]
+    },
+    {
+      "id": "web-operator",
+      "application_id": "web",
+      "credential_role": "operator",
+      "required_config_keys": [
+        "WEB_TOKEN"
+      ],
+      "retrieval": {
+        "state": "unresolved"
+      },
+      "sources": [
+        "environments/access.yaml"
+      ]
+    }
+  ]
+}

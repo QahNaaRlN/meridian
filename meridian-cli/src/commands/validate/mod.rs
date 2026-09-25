@@ -83,14 +83,17 @@ mod task_pattern_registry;
 mod task_specification;
 mod upgrade_integration_qualification;
 mod workspace_compatibility_qualification;
+mod workspace_state;
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use meridian_app::events::EventSink;
+use meridian_app::storage::{DatabaseMetadata, DatabaseRole, RecordRepository};
 use meridian_app::validation::mechanical_integrity::OperationError;
 use meridian_app::workspace::{GitInspector, GitInspectorError};
 use meridian_core::types::{Diagnostic, DiagnosticLevel, NonEmptyString, WorkspaceRelativePath};
+use meridian_storage_sqlite::SqliteStorage;
 use serde_json::json;
 
 use crate::adapters::git_inspector::{CachedGitInspector, RealGitInspector};
@@ -112,6 +115,9 @@ pub enum CollectError {
     Walk(WalkError),
     Workspace(OperationError),
     CurrentDirectory(String),
+    /// The DB-backed product-state check could not run
+    /// (`rust-workspace-state-validation`).
+    WorkspaceState(String),
 }
 
 impl std::fmt::Display for CollectError {
@@ -123,6 +129,7 @@ impl std::fmt::Display for CollectError {
                 f,
                 "cannot resolve a schema path under the relative Kernel path: the current directory is unreadable: {message}"
             ),
+            CollectError::WorkspaceState(message) => write!(f, "{message}"),
         }
     }
 }
@@ -180,7 +187,8 @@ fn with_family_prefix(family: &str, messages: Vec<String>) -> Vec<String> {
 }
 
 const COMMAND: &str = "validate";
-pub const ALLOWED_FLAGS: &[&str] = &["kernel", "format"];
+pub const ALLOWED_FLAGS: &[&str] = &["kernel", "format", "workspace-db"];
+pub const ALLOWED_SWITCHES: &[&str] = &["log-metrics"];
 
 struct Collected {
     failures: Vec<String>,
@@ -197,6 +205,8 @@ struct Collected {
     agent_instruction_identity_declared_norms: usize,
     agent_instruction_identity_undeclared_prescriptive: usize,
     agent_instruction_identity_undeclared_other: usize,
+    /// Present exactly when `--workspace-db` named a database.
+    workspace: Option<workspace_state::Summary>,
 }
 
 fn is_markdown(path: &std::path::Path) -> bool {
@@ -216,9 +226,12 @@ fn is_markdown(path: &std::path::Path) -> bool {
 /// and normalizes it exactly once — every consumer (`kernel-purity`,
 /// `document-identity`, `task-pattern-registry`) reads that same normalized
 /// typed value.
-fn collect(kernel_root: &Path) -> Result<Collected, CollectError> {
+fn collect(
+    kernel_root: &Path,
+    workspace: Option<&dyn RecordRepository>,
+) -> Result<Collected, CollectError> {
     let git_snapshot = RealGitInspector::new(kernel_root).tracked_files();
-    collect_with_git_result(kernel_root, git_snapshot)
+    collect_with_git_result(kernel_root, git_snapshot, workspace)
 }
 
 /// `Ok` with an EMPTY tracked-file list is folded into `Unavailable` here —
@@ -252,6 +265,7 @@ fn normalize_git_snapshot(
 fn collect_with_git_result(
     kernel_root: &Path,
     raw_git_snapshot: Result<Vec<WorkspaceRelativePath>, GitInspectorError>,
+    workspace: Option<&dyn RecordRepository>,
 ) -> Result<Collected, CollectError> {
     let git_snapshot = normalize_git_snapshot(raw_git_snapshot);
 
@@ -287,7 +301,7 @@ fn collect_with_git_result(
         }
     };
 
-    let purity = kernel_purity::run(kernel_root, &files, used_git);
+    let purity = kernel_purity::run(kernel_root, &files, used_git, workspace.is_some());
     failures.extend(purity.failures);
     warnings.extend(purity.warnings);
 
@@ -316,7 +330,11 @@ fn collect_with_git_result(
     failures.extend(provenance.failures);
     warnings.extend(provenance.warnings);
 
-    warnings.extend(instance_context::run(kernel_root)?);
+    // With a workspace database the Instance-context requirement is checked
+    // for real below (M-06), not reported as unverified here.
+    if workspace.is_none() {
+        warnings.extend(instance_context::run(kernel_root)?);
+    }
 
     let sha_provenance = sha_provenance::run(kernel_root)?;
     failures.extend(sha_provenance.failures);
@@ -398,17 +416,40 @@ fn collect_with_git_result(
         "front-matter/path-placement: no Instance root, working-memory artifacts were NOT checked"
             .to_string(),
     );
-    warnings.push("ext-dependencies: no Instance root, not checked".to_string());
-    warnings.push("inventory-git: no Instance root, not checked".to_string());
-    // Mirrors the Node reference's `else if (STACK_PROFILES) warn(...)`
-    // branch: the per-repository "declarations were not checked" advisory
-    // is reached only when the pool itself parsed and agreed — a pool that
-    // failed to load already reported its own failure above and must not
-    // also claim declarations were merely "not checked".
-    if stack_profile_pool_loaded {
-        warnings.push("stack-profile: no Instance root, declarations were not checked".to_string());
-    }
-    warnings.push("instruction-intake: no Instance root, not checked".to_string());
+    let workspace_summary = match workspace {
+        // The Kernel-only advisories of M-07/M-08/M-09/M-12/M-15 give way to
+        // the real checks of the workspace database; each check runs and is
+        // reported once.
+        Some(records) => {
+            let outcome = workspace_state::run(
+                kernel_root,
+                &files,
+                stack_profile_pool_loaded,
+                topics.topic_pool.as_ref(),
+                records,
+            )?;
+            failures.extend(outcome.failures);
+            warnings.extend(outcome.warnings);
+            Some(outcome.summary)
+        }
+        None => {
+            warnings.push("ext-dependencies: no Instance root, not checked".to_string());
+            warnings.push("inventory-git: no Instance root, not checked".to_string());
+            // Mirrors the Node reference's `else if (STACK_PROFILES) warn(...)`
+            // branch: the per-repository "declarations were not checked"
+            // advisory is reached only when the pool itself parsed and agreed
+            // — a pool that failed to load already reported its own failure
+            // above and must not also claim declarations were merely "not
+            // checked".
+            if stack_profile_pool_loaded {
+                warnings.push(
+                    "stack-profile: no Instance root, declarations were not checked".to_string(),
+                );
+            }
+            warnings.push("instruction-intake: no Instance root, not checked".to_string());
+            None
+        }
+    };
 
     Ok(Collected {
         failures,
@@ -425,6 +466,7 @@ fn collect_with_git_result(
         agent_instruction_identity_declared_norms: identity_norms.declared_norms,
         agent_instruction_identity_undeclared_prescriptive: identity_norms.undeclared_prescriptive,
         agent_instruction_identity_undeclared_other: identity_norms.undeclared_other,
+        workspace: workspace_summary,
     })
 }
 
@@ -451,13 +493,43 @@ pub fn run(
         NonEmptyString::new(format!("validate: kernel={kernel_path}")).unwrap(),
     ));
 
-    let collected = match collect(kernel_root) {
+    // `--log-metrics` is the one opt-in effect of a DB-backed run; without a
+    // database there is nothing to record it in.
+    let workspace_db = args.get("workspace-db");
+    let log_metrics = args.switch("log-metrics");
+    if log_metrics && workspace_db.is_none() {
+        return crate::report_usage_error(
+            err,
+            &crate::cli::CliError::FlagNotAllowed {
+                command: COMMAND,
+                flag: "log-metrics",
+                reason: "without --workspace-db",
+            },
+        );
+    }
+    let opened = match workspace_db {
+        None => None,
+        Some(db_path) => match open_workspace_db(kernel_root, Path::new(db_path), log_metrics) {
+            Ok(opened) => Some((db_path, opened)),
+            Err(message) => {
+                return crate::report_environment_error(
+                    err,
+                    &format!("workspace database {db_path}: {message}"),
+                )
+            }
+        },
+    };
+
+    let records: Option<&dyn RecordRepository> = opened
+        .as_ref()
+        .map(|(_, (storage, _))| storage as &dyn RecordRepository);
+    let collected = match collect(kernel_root, records) {
         Ok(collected) => collected,
         Err(error) => return crate::report_environment_error(err, &error),
     };
 
     let ok = collected.failures.is_empty();
-    let result = json!({
+    let mut result = json!({
         "kernel": kernel_path,
         "checked_files": collected.checked_files,
         "failures": collected.failures,
@@ -477,6 +549,39 @@ pub fn run(
             "agent_instruction_identity_undeclared_other": collected.agent_instruction_identity_undeclared_other,
         },
     });
+
+    if let (Some((db_path, _)), Some(summary)) = (&opened, &collected.workspace) {
+        result["workspace_state"] = summary.to_json(db_path);
+    }
+    // The observation is written only after the whole result exists, and
+    // whatever happens to the write, the verdict above stays as it is.
+    if let (true, Some((_, (storage, edition))), Some(summary)) =
+        (log_metrics, &opened, &collected.workspace)
+    {
+        let exit = if ok {
+            exit_code::OK
+        } else {
+            exit_code::DOMAIN_NEGATIVE
+        };
+        result["metrics"] = match workspace_state::record_metrics(
+            kernel_root,
+            edition,
+            summary,
+            exit,
+            &collected.failures,
+            &collected.warnings,
+            storage,
+        ) {
+            Ok(metrics) => metrics,
+            Err(message) => {
+                let _ = writeln!(
+                    err,
+                    "validate: the gate-run observation was not recorded: {message}"
+                );
+                json!({"outcome": "not-recorded", "error": message})
+            }
+        };
+    }
 
     sink.record(&meridian_app::events::ObservedEvent::new(
         meridian_app::events::EventKind::Outcome,
@@ -504,6 +609,18 @@ pub fn run(
                 collected.failures.len(),
                 collected.warnings.len()
             );
+            if let Some(summary) = &collected.workspace {
+                let _ = writeln!(
+                    out,
+                    "Workspace database: {} record(s), {} repository(ies), {} intake record(s)",
+                    summary.counts.records,
+                    summary.counts.repositories,
+                    summary.counts.intake_records
+                );
+            }
+            if let Some(outcome) = result.get("metrics").and_then(|m| m["outcome"].as_str()) {
+                let _ = writeln!(out, "Metrics: {outcome}");
+            }
             let verdict = if ok { "OK" } else { "FAIL" };
             let _ = writeln!(out, "{verdict}");
         }
@@ -516,13 +633,35 @@ pub fn run(
     }
 }
 
+/// Opens the workspace database named by `--workspace-db` as the
+/// `workspace` role at the Kernel's own edition: strictly read-only for an
+/// ordinary run, writable only for `--log-metrics`. Never creates a file.
+fn open_workspace_db(
+    kernel_root: &Path,
+    path: &Path,
+    writable: bool,
+) -> Result<(SqliteStorage, String), String> {
+    let edition = kernel::read_kernel_edition(kernel_root).map_err(|e| e.to_string())?;
+    if !path.exists() {
+        return Err(super::DbOpenDiagnostic::Missing.to_string());
+    }
+    let metadata = DatabaseMetadata::new(DatabaseRole::Workspace, edition.clone());
+    let storage = if writable {
+        SqliteStorage::open_path(path, metadata)
+    } else {
+        SqliteStorage::open_read_only(path, metadata)
+    }
+    .map_err(|e| e.to_string())?;
+    Ok((storage, edition.as_str().to_string()))
+}
+
 /// Exposed for the real-producer conformance harness
 /// (`verification/conformance-harness/`) and for tests: builds the same
 /// failure/warning lists [`run`] does, without any CLI/JSON/human framing —
 /// a real caller of the same logic the shipped command uses, not a second
 /// implementation.
 pub fn collect_diagnostics(kernel_root: &Path) -> Result<(Vec<String>, Vec<String>), CollectError> {
-    let collected = collect(kernel_root)?;
+    let collected = collect(kernel_root, None)?;
     Ok((collected.failures, collected.warnings))
 }
 
@@ -693,7 +832,7 @@ mod rust_architecture_conformance_3_single_git_snapshot {
         );
         assert!(outcome.catalog.is_some(), "{:?}", outcome.failures);
 
-        let collected = collect_with_git_result(&root, real_snapshot).unwrap();
+        let collected = collect_with_git_result(&root, real_snapshot, None).unwrap();
         assert!(
             collected
                 .warnings
@@ -711,7 +850,7 @@ mod rust_architecture_conformance_3_single_git_snapshot {
     fn unavailable_snapshot_yields_exactly_one_git_enumeration_warning() {
         let root = kernel_root();
         let collected =
-            collect_with_git_result(&root, Err(GitInspectorError::Unavailable)).unwrap();
+            collect_with_git_result(&root, Err(GitInspectorError::Unavailable), None).unwrap();
         let git_warnings: Vec<&String> = collected
             .warnings
             .iter()
@@ -739,7 +878,7 @@ mod rust_architecture_conformance_3_single_git_snapshot {
     #[test]
     fn an_empty_ok_snapshot_is_normalized_to_the_same_contract_as_unavailable() {
         let root = kernel_root();
-        let collected = collect_with_git_result(&root, Ok(Vec::new())).unwrap();
+        let collected = collect_with_git_result(&root, Ok(Vec::new()), None).unwrap();
 
         let git_warnings: Vec<&String> = collected
             .warnings
@@ -794,7 +933,7 @@ mod rust_architecture_conformance_3_single_git_snapshot {
             raw: "../escape".to_string(),
             reason: "workspace path must be relative, not absolute or drive-prefixed".to_string(),
         };
-        let collected = collect_with_git_result(&root, Err(err)).unwrap();
+        let collected = collect_with_git_result(&root, Err(err), None).unwrap();
         assert!(
             collected
                 .failures

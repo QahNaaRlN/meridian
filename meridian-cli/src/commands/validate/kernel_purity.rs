@@ -28,7 +28,15 @@ pub struct Outcome {
 /// walk), already resolved by `crate::commands::validate`. `used_git`
 /// controls whether the untracked-files warning (only meaningful when Git
 /// enumeration succeeded) is attempted at all.
-pub fn run(kernel_root: &Path, files: &[PathBuf], used_git: bool) -> Outcome {
+/// `product_checked` is whether a workspace database supplies the product
+/// record, in which case the product-literal half runs for real
+/// (`workspace_state`) instead of being reported unverified.
+pub fn run(
+    kernel_root: &Path,
+    files: &[PathBuf],
+    used_git: bool,
+    product_checked: bool,
+) -> Outcome {
     let mut failures = Vec::new();
     let mut warnings = Vec::new();
 
@@ -56,11 +64,13 @@ pub fn run(kernel_root: &Path, files: &[PathBuf], used_git: bool) -> Outcome {
     // to package 8). Reported UNVERIFIED, never silently upgraded to a
     // clean `kernel-purity` result — matches the Node reference's own
     // `MERIDIAN_INSTANCE` unset branch verbatim.
-    warnings.push(
-        "kernel-purity: MERIDIAN_INSTANCE is not set; product literals were NOT checked (UNVERIFIED). \
+    if !product_checked {
+        warnings.push(
+            "kernel-purity: MERIDIAN_INSTANCE is not set; product literals were NOT checked (UNVERIFIED). \
 This run verifies personal-path leaks only and must not be reported as a clean kernel-purity result."
-            .to_string(),
-    );
+                .to_string(),
+        );
+    }
 
     let personal_path = personal_path_pattern();
     for file in files {

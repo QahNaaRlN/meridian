@@ -41,6 +41,14 @@ if ! node "$ROOT/test/kernel-validate.test.mjs"; then
   exit 1
 fi
 
+echo "pre-push: running the preflight check's regression suite"
+if ! node "$ROOT/test/preflight.test.mjs"; then
+  echo ""
+  echo "pre-push: BLOCKED — the preflight regression suite failed."
+  echo "pre-push: a Kernel-only/--require-instance contract of scripts/preflight.mjs no longer behaves as claimed."
+  exit 1
+fi
+
 echo "pre-push: running the rule resolver's regression suite"
 if ! node "$ROOT/test/rule-resolver.test.mjs"; then
   echo ""
@@ -126,8 +134,13 @@ if ! node "$ROOT/test/upgrade-integration-qualification.test.mjs"; then
   exit 1
 fi
 
-echo "pre-push: verifying the conformance harness"
-if ! node "$ROOT/test/conformance-harness.test.mjs"; then
+# --kernel-only: ordinary Kernel development must not depend on an external
+# Instance. The package 8 real-bundle proof (meridian-cli-migration) is
+# skipped here as UNVERIFIED and stays a separate, mandatory strict release
+# gate: `node test/conformance-harness.test.mjs` without the flag, with
+# MERIDIAN_INSTANCE naming the frozen source.
+echo "pre-push: verifying the conformance harness (kernel-only; real-bundle proof is a separate release gate)"
+if ! node "$ROOT/test/conformance-harness.test.mjs" --kernel-only; then
   echo ""
   echo "pre-push: BLOCKED — the conformance harness regression suite failed."
   echo "pre-push: the verdict-comparison mechanism no longer behaves as claimed on its controlled corpus."

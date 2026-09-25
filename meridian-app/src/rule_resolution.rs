@@ -147,6 +147,34 @@ struct RepositoryDto {
     semantic_areas: Vec<String>,
 }
 
+/// The typed records of one applicability register document, through the
+/// same schema gate, closed DTO and conversion `resolve` uses — the
+/// composition point of the migration applicability proof
+/// (`crate::migration`, package `meridian-cli-migration`).
+pub(crate) fn typed_applicability_register(
+    document: &Value,
+    applicability_schema: &Value,
+) -> Result<Vec<ApplicabilityRecord>, RuleResolutionError> {
+    let schema_errors = json_schema::validate(document, applicability_schema).map_err(|error| {
+        RuleResolutionError::UnsupportedSchema(format!("unsupported applicability schema: {error}"))
+    })?;
+    if let Some(error) = schema_errors.first() {
+        return Err(invalid(format!(
+            "applicability document does not satisfy its schema: {error}"
+        )));
+    }
+    let envelope: ApplicabilityEnvelopeDto = serde_json::from_value(document.clone())
+        .map_err(|error| invalid(format!("invalid applicability document: {error}")))?;
+    if envelope.schema_version != 1 {
+        return Err(invalid("applicability schema_version must be 1"));
+    }
+    envelope
+        .records
+        .into_iter()
+        .map(convert_applicability_record)
+        .collect()
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ApplicabilityEnvelopeDto {

@@ -27,11 +27,15 @@ struct Line {
 }
 
 /// Parse exactly the YAML subset implemented by the Node.js reference.
+///
+/// The strict line lint (tab indentation, a second document) and the
+/// reference-subset reader run before the input reaches the library, as
+/// `meridian-cli-rfc.md` decision D-A requires: otherwise the library's own
+/// wording for the same rejection ("tabs disallowed within this context",
+/// "unclosed bracket '['", …) would replace the reference's diagnostic. The
+/// library then still rejects text the subset reader would accept although
+/// it is not YAML at all.
 pub fn parse(text: &str) -> Result<Value, UnsupportedYaml> {
-    if !text.trim().is_empty() {
-        serde_saphyr::from_str::<Value>(text)
-            .map_err(|error| UnsupportedYaml(format!("malformed YAML: {error}")))?;
-    }
     let mut lines = Vec::new();
     for (index, raw_with_cr) in text.split('\n').enumerate() {
         let raw = raw_with_cr.strip_suffix('\r').unwrap_or(raw_with_cr);
@@ -57,11 +61,18 @@ pub fn parse(text: &str) -> Result<Value, UnsupportedYaml> {
             number: index + 1,
         });
     }
-    if lines.is_empty() {
-        return Ok(Value::Object(Map::new()));
+    let value = match lines.first() {
+        None => Value::Object(Map::new()),
+        Some(first) => {
+            let first_indent = first.indent;
+            Parser { lines, position: 0 }.parse_node(first_indent)?
+        }
+    };
+    if !text.trim().is_empty() {
+        serde_saphyr::from_str::<Value>(text)
+            .map_err(|error| UnsupportedYaml(format!("malformed YAML: {error}")))?;
     }
-    let first_indent = lines[0].indent;
-    Parser { lines, position: 0 }.parse_node(first_indent)
+    Ok(value)
 }
 
 fn strip_comment(line: &str) -> &str {
@@ -420,7 +431,7 @@ impl<'a> FlowParser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse;
+    use super::{parse, UnsupportedYaml};
     use serde_json::json;
 
     #[test]
@@ -444,6 +455,43 @@ mod tests {
                 parse(source).is_err(),
                 "source unexpectedly accepted: {source}"
             );
+        }
+    }
+
+    /// Regression (`rust-business-contract-qualification`): the strict
+    /// line lint ran after the library, so these two rejections carried the
+    /// library's wording instead of the reference's
+    /// (`scripts/lib/yaml.mjs`, `yamlParse`).
+    #[test]
+    fn the_strict_line_lint_names_the_rejection_before_the_library_does() {
+        assert_eq!(
+            parse("root:\n\tchild: value\n"),
+            Err(UnsupportedYaml("tab indentation at line 2".to_owned()))
+        );
+        assert_eq!(
+            parse("value: x\n---\nvalue: y\n"),
+            Err(UnsupportedYaml(
+                "multi-document stream at line 2".to_owned()
+            ))
+        );
+        assert_eq!(
+            parse("a: [1, 2\n"),
+            Err(UnsupportedYaml("malformed flow sequence".to_owned()))
+        );
+        assert_eq!(
+            parse("a: {b: 1\n"),
+            Err(UnsupportedYaml("malformed flow mapping".to_owned()))
+        );
+    }
+
+    /// Text the reference's subset reader accepts but that is not YAML is
+    /// still rejected by the library after the reader has run (the reference
+    /// would silently drop `c: d` / `b: 1`).
+    #[test]
+    fn text_that_is_not_yaml_is_still_rejected_by_the_library() {
+        for source in ["a: \"unterminated\n", "a:\n  - b\n c: d\n", "- a\nb: 1\n"] {
+            let error = parse(source).expect_err(source);
+            assert!(error.0.starts_with("malformed YAML: "), "{source}: {error}");
         }
     }
 

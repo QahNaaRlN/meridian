@@ -263,9 +263,17 @@ if (productRaw) {
     fail(`product record: ${e.message}`);
   }
 } else if (!INSTANCE_ROOT) {
-  fail('MERIDIAN_INSTANCE is not set; product literals were NOT checked. '
+  // Kernel-only runs are a legitimate mode (Instance is frozen for migration,
+  // see AGENTS.md §2/§10), not a defect: the absence of an Instance must not
+  // by itself turn the Kernel gate red. The product-dependent half of
+  // kernel-purity genuinely cannot run without a product record, so it is
+  // reported UNVERIFIED (warn), never silently upgraded to OK.
+  warn('kernel-purity: MERIDIAN_INSTANCE is not set; product literals were NOT checked (UNVERIFIED). '
      + 'This run verifies personal-path leaks only and must not be reported as a clean kernel-purity result.');
 } else {
+  // An explicitly supplied Instance is held to the strict contract: a root
+  // that does not resolve to a real product record is a wiring error, not an
+  // absent-Instance mode, and stays a FAIL.
   fail(`product record not found at ${productYamlPath}; kernel-purity cannot be verified`);
 }
 

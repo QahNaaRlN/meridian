@@ -1,136 +1,57 @@
-//! The pure claim/assertion/evidence structures
-//! (`evidence-and-handoff-contract.md` §5), scoped to what package
-//! `rust-domain-core` needs: the linkage and confirmation rules, not the
-//! full handoff record (`execution_run_ref`, `mandatory_checks`,
-//! `acceptance_criteria`, `worktree_disposition`, …), which belongs to a
-//! later package once `meridian-app` has the ports (`EvidenceRepository`,
-//! `SourceResolver`) this crate deliberately does not know about.
+//! The evidence vocabulary both evidence-bearing contracts share
+//! (`evidence-and-handoff-contract.md` §5, `field-evaluation.schema.json`'s
+//! `evidence_entry`): the closed evidence kinds, the closed observed-result
+//! pool, and one pinned piece of evidence.
+//!
+//! A piece of evidence is pinned by the closed exact-revision rule
+//! (`run_contracts::revision`) — an exact revision or a SHA-256 digest,
+//! never a floating branch — and is resolved OUTSIDE the record to an
+//! `evidence-result` transformer response (`super::resolve`). Whether it
+//! confirms anything is a property of that resolution, never of the
+//! record's own words.
 
 use core::fmt;
 
-use crate::types::{ContentDigest, EvidenceRef, NonEmptyString, Revision, SemanticId};
+use crate::run_contracts::{PinSha256, PinnedRecordKind, PinnedRef, PortableRef, RecordText};
+use crate::types::SemanticId;
 
-/// A claimed result's exact edition pin
-/// (`evidence-and-handoff-contract.md` §4/§5.3: "closed exact-revision
-/// rule" — an exact revision or a SHA-256 digest, never a floating branch).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Pin {
-    Revision(Revision),
-    Digest(ContentDigest),
+/// The closed pool of evidence kinds. `specialised-evidence-record` exists
+/// only in the handoff contract; the field-evaluation schema excludes it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EvidenceKind {
+    CheckRun,
+    Observation,
+    ArtifactInspection,
+    ExternalConfirmation,
+    SpecialisedEvidenceRecord,
 }
 
-/// One result a run claims to have produced
-/// (`evidence-and-handoff-contract.md` §5.1, `claimed_result`).
-///
-/// Deliberately carries no `status` field: whether a claimed result is
-/// established is never asserted, only computed — see
-/// [`super::aggregate::claimed_result_status`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ClaimedResult {
-    id: SemanticId,
-    statement: NonEmptyString,
-}
-
-impl ClaimedResult {
-    pub fn new(id: SemanticId, statement: NonEmptyString) -> Self {
-        Self { id, statement }
-    }
-
-    pub fn id(&self) -> &SemanticId {
-        &self.id
-    }
-    pub fn statement(&self) -> &str {
-        self.statement.as_str()
-    }
-}
-
-/// One checkable statement about what is actually established, tied to
-/// exactly one declared [`ClaimedResult`] by `claimed_result_id`
-/// (`evidence-and-handoff-contract.md` §5.2, `verifiable_assertion`).
-///
-/// Deliberately carries no `status` field, for the same reason
-/// [`ClaimedResult`] does not: verified/unverified is computed from
-/// evidence, never declared — see [`super::aggregate::verify_assertion`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct VerifiableAssertion {
-    id: SemanticId,
-    statement: NonEmptyString,
-    claimed_result_id: SemanticId,
-}
-
-impl VerifiableAssertion {
-    pub fn new(id: SemanticId, statement: NonEmptyString, claimed_result_id: SemanticId) -> Self {
-        Self {
-            id,
-            statement,
-            claimed_result_id,
+impl EvidenceKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            EvidenceKind::CheckRun => "check-run",
+            EvidenceKind::Observation => "observation",
+            EvidenceKind::ArtifactInspection => "artifact-inspection",
+            EvidenceKind::ExternalConfirmation => "external-confirmation",
+            EvidenceKind::SpecialisedEvidenceRecord => "specialised-evidence-record",
         }
     }
 
-    pub fn id(&self) -> &SemanticId {
-        &self.id
-    }
-    pub fn statement(&self) -> &str {
-        self.statement.as_str()
-    }
-    pub fn claimed_result_id(&self) -> &SemanticId {
-        &self.claimed_result_id
-    }
-}
-
-/// One piece of evidence (`evidence-and-handoff-contract.md` §5.3,
-/// `evidence_entry`). Pinned by an exact [`Pin`]; `covers` names the
-/// assertion ids this evidence CLAIMS to bear on — whether that claim is
-/// actually confirmed is a property of the resolved
-/// [`super::types::ResolvedEvidenceResult`], not of this struct alone (an
-/// evidence entry's own `covers` list is never itself proof — see
-/// [`super::aggregate::verify_assertion`]).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct EvidenceEntry {
-    id: SemanticId,
-    reference: EvidenceRef,
-    pin: Pin,
-    summary: NonEmptyString,
-    covers: Vec<SemanticId>,
-    limitations: Vec<NonEmptyString>,
-}
-
-impl EvidenceEntry {
-    pub fn new(
-        id: SemanticId,
-        reference: EvidenceRef,
-        pin: Pin,
-        summary: NonEmptyString,
-        covers: Vec<SemanticId>,
-        limitations: Vec<NonEmptyString>,
-    ) -> Self {
-        Self {
-            id,
-            reference,
-            pin,
-            summary,
-            covers,
-            limitations,
+    pub fn parse(value: &str) -> Option<EvidenceKind> {
+        match value {
+            "check-run" => Some(EvidenceKind::CheckRun),
+            "observation" => Some(EvidenceKind::Observation),
+            "artifact-inspection" => Some(EvidenceKind::ArtifactInspection),
+            "external-confirmation" => Some(EvidenceKind::ExternalConfirmation),
+            "specialised-evidence-record" => Some(EvidenceKind::SpecialisedEvidenceRecord),
+            _ => None,
         }
     }
+}
 
-    pub fn id(&self) -> &SemanticId {
-        &self.id
-    }
-    pub fn reference(&self) -> &EvidenceRef {
-        &self.reference
-    }
-    pub fn pin(&self) -> &Pin {
-        &self.pin
-    }
-    pub fn summary(&self) -> &str {
-        self.summary.as_str()
-    }
-    pub fn covers(&self) -> &[SemanticId] {
-        &self.covers
-    }
-    pub fn limitations(&self) -> &[NonEmptyString] {
-        &self.limitations
+impl fmt::Display for EvidenceKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -147,12 +68,23 @@ pub enum ObservedResult {
 }
 
 impl ObservedResult {
-    pub fn as_str(self) -> &'static str {
+    /// The pool, in the contract's order.
+    pub const ALL: [ObservedResult; 3] = [
+        ObservedResult::Confirmed,
+        ObservedResult::Contradicted,
+        ObservedResult::Inconclusive,
+    ];
+
+    pub const fn as_str(self) -> &'static str {
         match self {
             ObservedResult::Confirmed => "confirmed",
             ObservedResult::Contradicted => "contradicted",
             ObservedResult::Inconclusive => "inconclusive",
         }
+    }
+
+    pub fn parse(value: &str) -> Option<ObservedResult> {
+        Self::ALL.into_iter().find(|r| r.as_str() == value)
     }
 }
 
@@ -162,16 +94,29 @@ impl fmt::Display for ObservedResult {
     }
 }
 
-/// The result of resolving one [`EvidenceEntry`] through the external
-/// boundary `meridian-core` does not implement
-/// (`evidence-and-handoff-contract.md` §12: "the checking function...
-/// resolves ... `(pinned_ref) → resolved record | ∅`", supplied here by the
-/// caller rather than performed by this crate). `covers` is the
-/// TRANSFORMER-CONFIRMED subject of `observed_result` — the one set an
-/// assertion's verified status is actually checked against, never the
-/// evidence entry's own self-declared `covers`.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ResolvedEvidenceResult {
-    pub observed_result: ObservedResult,
-    pub covers: Vec<SemanticId>,
+/// One pinned piece of evidence as a record states it — the fields both
+/// contracts' `evidence_entry` share.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PinnedEvidence {
+    pub id: SemanticId,
+    pub kind: EvidenceKind,
+    pub reference: PortableRef,
+    pub revision: Option<RecordText>,
+    pub sha256: Option<PinSha256>,
+    pub summary: RecordText,
+}
+
+impl PinnedEvidence {
+    /// The `evidence-result` reference this evidence is resolved through
+    /// (`resolveEvidenceEntry`'s synthetic reference).
+    pub(crate) fn result_pin(&self) -> PinnedRef {
+        PinnedRef {
+            record_type: PinnedRecordKind::EvidenceResult,
+            id: self.id.clone(),
+            run_id: None,
+            reference: self.reference.clone(),
+            revision: self.revision.clone(),
+            sha256: self.sha256.clone(),
+        }
+    }
 }

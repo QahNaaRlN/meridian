@@ -1,0 +1,27 @@
+{
+  "items": [
+    {
+      "artifact": ".cursor/rules/a.mdc",
+      "delivery": "cursor-rule",
+      "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "genre": "standard",
+      "observed_activation": "always",
+      "recorded_at": "2026-08-21",
+      "scope": "repository",
+      "topic": "naming",
+      "verdict": "keep-local",
+      "verdict_basis": "recorded as observed"
+    },
+    {
+      "artifact": ".cursor/rules/a.mdc",
+      "delivery": "cursor-rule",
+      "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "genre": "standard",
+      "observed_activation": "always",
+      "recorded_at": "2026-08-21",
+      "scope": "repository",
+      "topic": "naming",
+      "verdict_basis": "recorded as observed"
+    }
+  ]
+}

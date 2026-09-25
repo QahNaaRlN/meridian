@@ -3,22 +3,25 @@
 //! This is deliberately **not** the general "transport JSON structures and
 //! parsers" the package instructions forbid in `meridian-core`: [`Json`] is
 //! never exported from this crate, never accepts or represents an arbitrary
-//! top-level transport document, and this module exists for exactly two
+//! top-level transport document, and this module exists for exactly three
 //! narrowly-scoped, internal purposes:
 //!
-//! 1. serializing a migration plan's own already-typed fields into the
+//! 1. serializing migration-owned records' already-typed fields into the
 //!    EXACT canonical byte sequence `computePlanFingerprint`/
-//!    `computeIdempotencyKey` (`scripts/lib/instance-data-migration.mjs`)
-//!    hash — so `plan_fingerprint`/`idempotency_key` are byte-compatible
+//!    `computeIdempotencyKey`/`computeExportDigest`
+//!    (`scripts/lib/instance-data-migration.mjs`) hash — byte-compatible
 //!    with the Node reference, not merely "some deterministic Rust format"
-//!    ([`super::canonical`]);
-//! 2. checking whether a [`super::ContentEnvelope`]'s declared JSON content
-//!    is already in that same canonical form
-//!    (`checkContentEnvelope`'s JSON branch, `instance-data-migration.md`
-//!    §4.1) — the parsed value is discarded immediately after the
-//!    byte-for-byte comparison, never handed back to a caller.
+//!    (`crate::migration::projection`);
+//! 2. checking whether a content envelope's declared JSON content is
+//!    already in that same canonical form (`checkContentEnvelope`'s JSON
+//!    branch, `instance-data-migration.md` §4.1, [`json_form`]) — the
+//!    parsed value is discarded immediately after the byte-for-byte
+//!    comparison, never handed back to a caller;
+//! 3. carrying open content a contract cannot type further as the opaque
+//!    [`crate::canonical::CanonicalJson`] — built by a caller, never parsed
+//!    here and never navigated.
 //!
-//! [`is_canonical`] targets behavioural equivalence with
+//! [`json_form`] targets behavioural equivalence with
 //! `content === JSON.stringify(canonicalize(JSON.parse(content)))`
 //! (`scripts/lib/instance-data-migration.mjs`), not merely "some
 //! deterministic Rust format that happens to look similar" — specifically:
@@ -751,10 +754,29 @@ fn parse(text: &str) -> Option<Json> {
 /// §4.1). A value this module cannot parse, or cannot represent with
 /// certainty (a number that overflows to infinity), is never treated as
 /// canonical.
+#[cfg(test)]
 pub(crate) fn is_canonical(content: &str) -> bool {
+    json_form(content) == JsonForm::Canonical
+}
+
+/// How a JSON-typed content string relates to its canonical form.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum JsonForm {
+    /// Not parseable (or not representable with certainty) as JSON.
+    Unparseable,
+    /// Parses, but is not its own canonical serialization.
+    NonCanonical,
+    /// Exactly `JSON.stringify(canonicalize(JSON.parse(content)))`.
+    Canonical,
+}
+
+/// Classifies `content` for `checkContentEnvelope`'s JSON branch, which
+/// reports a parse failure and a non-canonical spelling differently.
+pub(crate) fn json_form(content: &str) -> JsonForm {
     match parse(content) {
-        Some(value) => value.to_canonical_string() == content,
-        None => false,
+        Some(value) if value.to_canonical_string() == content => JsonForm::Canonical,
+        Some(_) => JsonForm::NonCanonical,
+        None => JsonForm::Unparseable,
     }
 }
 

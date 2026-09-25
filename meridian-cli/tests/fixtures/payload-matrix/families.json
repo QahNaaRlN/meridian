@@ -1,0 +1,511 @@
+{
+  "note": "rust-workspace-state-validation, acceptance criterion 3: one valid payload of every supported contract family and one mandatory mutation of every schema-backed family. Read by meridian-app (workspace_state tests), meridian-cli (binary_runs/workspace_state.rs) and generate.mjs (the payload-matrix frozen source). Synthetic; carries no product data.",
+  "families": [
+    {
+      "record_type": "repository-identity",
+      "contract": "registry-item",
+      "scope": "workspace",
+      "title": "Matrix repository-identity",
+      "media_type": "application/json",
+      "valid": {
+        "id": "web",
+        "path": "/work/web",
+        "role": "web client",
+        "profile": "vue-spa",
+        "ownership": "own",
+        "sources": {
+          "rules": [
+            "/work/web/AGENTS.md"
+          ],
+          "manifests": [
+            "/work/web/package.json"
+          ]
+        },
+        "vcs": {
+          "type": "git",
+          "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "ref": "dev",
+          "working_tree": "clean",
+          "evidence_basis": "revision"
+        },
+        "last_verified": "2026-01-01T00:00:00Z"
+      },
+      "mutation": {
+        "remove": "role"
+      }
+    },
+    {
+      "record_type": "repository-reference",
+      "contract": "registry-item",
+      "scope": "workspace",
+      "title": "Matrix repository-reference",
+      "media_type": "application/json",
+      "valid": {
+        "kind": "cursor-workspace-folder",
+        "alias": "Web",
+        "repository_id": "web",
+        "sources": [
+          {
+            "artifact": "adapters/web.code-workspace",
+            "pointer": "folders[name=Web].name"
+          }
+        ]
+      },
+      "mutation": {
+        "remove": "repository_id"
+      }
+    },
+    {
+      "record_type": "repository-relationship",
+      "contract": "registry-item",
+      "scope": "workspace",
+      "title": "Matrix repository-relationship",
+      "media_type": "application/json",
+      "valid": {
+        "id": "web-calls-api",
+        "from": "web",
+        "to": "api",
+        "type": "http",
+        "evidence": [
+          "web/src/api.ts"
+        ],
+        "last_verified": "2026-01-01T00:00:00Z"
+      },
+      "mutation": {
+        "remove": "evidence"
+      }
+    },
+    {
+      "record_type": "instruction-intake-record",
+      "contract": "registry-item",
+      "scope": "repository",
+      "title": "Matrix instruction-intake-record",
+      "media_type": "application/json",
+      "valid": {
+        "artifact": ".cursor/rules/a.mdc",
+        "delivery": "cursor-rule",
+        "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "genre": "standard",
+        "observed_activation": "always",
+        "recorded_at": "2026-08-21",
+        "scope": "repository",
+        "topic": "naming",
+        "verdict": "keep-local",
+        "verdict_basis": "recorded as observed"
+      },
+      "mutation": {
+        "remove": "verdict"
+      }
+    },
+    {
+      "record_type": "command",
+      "contract": "registry-item",
+      "scope": "workspace",
+      "title": "Matrix command",
+      "media_type": "application/json",
+      "valid": {
+        "id": "unit",
+        "command": "npm test",
+        "command_kind": "exact",
+        "category": "unit",
+        "purpose": "run the unit tests",
+        "applicability": [
+          "web"
+        ],
+        "side_effects": "none",
+        "execution_approval": "not-required",
+        "source": {
+          "path": "package.json",
+          "pointer": "scripts.test",
+          "last_verified": "2026-01-01T00:00:00Z"
+        }
+      },
+      "mutation": {
+        "remove": "command"
+      }
+    },
+    {
+      "record_type": "access-application",
+      "contract": "registry-item",
+      "scope": "workspace",
+      "title": "Matrix access-application",
+      "media_type": "application/json",
+      "valid": {
+        "application_id": "web",
+        "default_role": null,
+        "credentials_by_role": {},
+        "mechanism_state": "unresolved",
+        "sources": [
+          "environments/access.yaml"
+        ],
+        "blockers": []
+      },
+      "mutation": {
+        "remove": "mechanism_state"
+      }
+    },
+    {
+      "record_type": "access-reference",
+      "contract": "registry-item",
+      "scope": "workspace",
+      "title": "Matrix access-reference",
+      "media_type": "application/json",
+      "valid": {
+        "id": "web-operator",
+        "application_id": "web",
+        "credential_role": "operator",
+        "credential_kind": "token-reference",
+        "required_config_keys": [
+          "WEB_TOKEN"
+        ],
+        "retrieval": {
+          "state": "unresolved"
+        },
+        "sources": [
+          "environments/access.yaml"
+        ]
+      },
+      "mutation": {
+        "remove": "credential_kind"
+      }
+    },
+    {
+      "record_type": "action-profile",
+      "contract": "registry-item",
+      "scope": "workspace",
+      "title": "Matrix action-profile",
+      "media_type": "application/json",
+      "valid": {
+        "id": "local-read",
+        "environment_id": "local",
+        "state": "approved",
+        "allowed_actions": [
+          "read-only-observation"
+        ],
+        "unresolved_actions": [],
+        "source": "environments/access.yaml"
+      },
+      "mutation": {
+        "remove": "environment_id"
+      }
+    },
+    {
+      "record_type": "environment",
+      "contract": "registry-item",
+      "scope": "workspace",
+      "title": "Matrix environment",
+      "media_type": "application/json",
+      "valid": {
+        "id": "local",
+        "classification": "local",
+        "applications": [],
+        "provenance_resolver": {
+          "state": "defined",
+          "method": "local-runtime",
+          "requirement": "the local checkout",
+          "authoritative_source_refs": [
+            "README.md"
+          ],
+          "result_target": "execution-context"
+        },
+        "sources": [
+          "environments/environments.yaml"
+        ],
+        "blockers": [],
+        "last_verified": "2026-01-01T00:00:00Z"
+      },
+      "mutation": {
+        "remove": "classification"
+      }
+    },
+    {
+      "record_type": "environment-application",
+      "contract": "registry-item",
+      "scope": "workspace",
+      "title": "Matrix environment-application",
+      "media_type": "application/json",
+      "valid": {
+        "id": "web",
+        "repository_id": "web",
+        "sources": [
+          "environments/environments.yaml"
+        ]
+      },
+      "mutation": {
+        "remove": "repository_id"
+      }
+    },
+    {
+      "record_type": "test-data-reference",
+      "contract": "registry-item",
+      "scope": "workspace",
+      "title": "Matrix test-data-reference",
+      "media_type": "application/json",
+      "valid": {
+        "id": "sample-user",
+        "purpose": "a user to sign in with",
+        "environment_id": null,
+        "application_id": "web",
+        "state": "unresolved",
+        "sensitive_data_allowed": false,
+        "source": "environments/test-data.yaml",
+        "blocker": "no test account yet"
+      },
+      "mutation": {
+        "remove": "purpose"
+      }
+    },
+    {
+      "record_type": "rule-applicability-record",
+      "contract": "registry-item",
+      "scope": "repository",
+      "title": "Matrix rule-applicability-record",
+      "media_type": "application/json",
+      "valid": {
+        "norm": {
+          "repository": "sample-repo",
+          "path": "AGENTS.md",
+          "region": "operational-roles"
+        },
+        "digest": "013e7155d519b0a183ad8bd70395ff7fd910939f2b7f5cb797a332c855e9d57b",
+        "intake_record": {
+          "register": "instruction-intake/sample-repo.yaml",
+          "recorded_at": "2026-01-01",
+          "verdict": "keep-local"
+        },
+        "scope": "repository",
+        "repository": "sample-repo",
+        "activation": "always",
+        "source": "repository",
+        "status": "resolved",
+        "recorded_at": "2026-01-02"
+      },
+      "mutation": {
+        "remove": "status"
+      }
+    },
+    {
+      "record_type": "gate-run-observation",
+      "contract": "gate-run-observation",
+      "scope": "workspace",
+      "title": "Matrix gate-run-observation",
+      "media_type": "application/json",
+      "valid": {
+        "ts": "2026-01-01T00:00:00Z",
+        "kernel_version": "0.6.0",
+        "exit_code": 0,
+        "failing": 0,
+        "warnings": 0,
+        "info_ok": 1,
+        "fail_messages": [],
+        "warn_messages": []
+      },
+      "mutation": {
+        "remove": "exit_code"
+      }
+    },
+    {
+      "record_type": "versioning-conformance-case",
+      "contract": "json-object",
+      "scope": "workspace",
+      "title": "Matrix versioning-conformance-case",
+      "media_type": "application/json",
+      "valid": {
+        "id": "versioning-conformance-case"
+      },
+      "mutation": null
+    },
+    {
+      "record_type": "smoke-access",
+      "contract": "json-object",
+      "scope": "workspace",
+      "title": "Matrix smoke-access",
+      "media_type": "application/json",
+      "valid": {
+        "id": "smoke-access"
+      },
+      "mutation": null
+    },
+    {
+      "record_type": "smoke-capability",
+      "contract": "json-object",
+      "scope": "workspace",
+      "title": "Matrix smoke-capability",
+      "media_type": "application/json",
+      "valid": {
+        "id": "smoke-capability"
+      },
+      "mutation": null
+    },
+    {
+      "record_type": "smoke-environment",
+      "contract": "json-object",
+      "scope": "workspace",
+      "title": "Matrix smoke-environment",
+      "media_type": "application/json",
+      "valid": {
+        "id": "smoke-environment"
+      },
+      "mutation": null
+    },
+    {
+      "record_type": "smoke-test-data",
+      "contract": "json-object",
+      "scope": "workspace",
+      "title": "Matrix smoke-test-data",
+      "media_type": "application/json",
+      "valid": {
+        "id": "smoke-test-data"
+      },
+      "mutation": null
+    },
+    {
+      "record_type": "adr",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix adr",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix adr\ndocument_type: adr\nstatus: proposed\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix adr\n",
+      "mutation": null
+    },
+    {
+      "record_type": "analysis",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix analysis",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix analysis\ndocument_type: analysis\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix analysis\n",
+      "mutation": null
+    },
+    {
+      "record_type": "concept",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix concept",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix concept\ndocument_type: concept\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix concept\n",
+      "mutation": null
+    },
+    {
+      "record_type": "contract",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix contract",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix contract\ndocument_type: contract\nstatus: maintained\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix contract\n",
+      "mutation": null
+    },
+    {
+      "record_type": "how-to",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix how-to",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix how-to\ndocument_type: how-to\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix how-to\n",
+      "mutation": null
+    },
+    {
+      "record_type": "plan",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix plan",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix plan\ndocument_type: plan\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix plan\n",
+      "mutation": null
+    },
+    {
+      "record_type": "problem",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix problem",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix problem\ndocument_type: problem\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix problem\n",
+      "mutation": null
+    },
+    {
+      "record_type": "protocol",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix protocol",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix protocol\ndocument_type: protocol\nstatus: maintained\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix protocol\n",
+      "mutation": null
+    },
+    {
+      "record_type": "reference",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix reference",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix reference\ndocument_type: reference\nstatus: maintained\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix reference\n",
+      "mutation": null
+    },
+    {
+      "record_type": "report",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix report",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix report\ndocument_type: report\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix report\n",
+      "mutation": null
+    },
+    {
+      "record_type": "rfc",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix rfc",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix rfc\ndocument_type: rfc\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix rfc\n",
+      "mutation": null
+    },
+    {
+      "record_type": "standard",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix standard",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix standard\ndocument_type: standard\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix standard\n",
+      "mutation": null
+    },
+    {
+      "record_type": "technical-specification",
+      "contract": "markdown",
+      "scope": "workspace",
+      "title": "Matrix technical-specification",
+      "media_type": "text/markdown",
+      "valid": "---\ntitle: Matrix technical-specification\ndocument_type: technical-specification\nstatus: draft\nscope: workspace\nowner: workspace-owner\ncreated: 2026-09-25\nupdated: 2026-09-25\n---\n# Matrix technical-specification\n",
+      "mutation": null
+    },
+    {
+      "record_type": "workspace-file",
+      "contract": "typed-workspace-file",
+      "scope": "workspace",
+      "title": "product.yaml",
+      "media_type": "text/yaml",
+      "valid": "schema_version: 1\nforbidden_literals: []\nforbidden_patterns: []\n",
+      "mutation": {
+        "text": "schema_version: 1\nforbidden_literals: 5\nforbidden_patterns: []\n"
+      }
+    },
+    {
+      "record_type": "workspace-file",
+      "contract": "typed-workspace-file",
+      "scope": "workspace",
+      "title": "external-dependencies.yaml",
+      "media_type": "text/yaml",
+      "valid": "schema_version: 1\ndependencies:\n  - id: vendored-skill\n    state: vendored\n",
+      "mutation": {
+        "text": "schema_version: 1\ndependencies:\n  - id: vendored-skill\n"
+      }
+    },
+    {
+      "record_type": "workspace-file",
+      "contract": "workspace-text",
+      "scope": "workspace",
+      "title": "notes/readme.txt",
+      "media_type": "text/plain",
+      "valid": "Plain notes.\n",
+      "mutation": null
+    }
+  ]
+}

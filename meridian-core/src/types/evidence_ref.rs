@@ -80,18 +80,22 @@ impl EvidenceRef {
     }
 }
 
-/// The `checkOpaqueRef` rule, reusable by any other portable-ref field this
-/// crate validates (for example a migration plan's `merge_rule_ref` or
-/// rollback refs) without a second, diverging copy of the check.
-pub(crate) fn validate_opaque_ref(value: &str) -> Result<(), EvidenceRefError> {
+/// Exactly `checkOpaqueRef` (`scripts/lib/instance-data-migration.mjs`): an
+/// empty string, a `file://` URL, an absolute machine path (root POSIX
+/// path, Windows drive path or any backslash) or a `..` segment. A
+/// whitespace-only value is NOT a fault here — the Node rule accepts it;
+/// [`EvidenceRef`] adds its own `Blank` rule on top. This is the one owner
+/// of the portable-ref shape rule; the migration contracts render its
+/// faults as their own diagnostics (`crate::migration`).
+pub(crate) fn opaque_ref_fault(value: &str) -> Option<EvidenceRefError> {
     if value.is_empty() {
-        return Err(EvidenceRefError::Empty);
+        return Some(EvidenceRefError::Empty);
     }
-    if value.trim().is_empty() {
-        return Err(EvidenceRefError::Blank);
-    }
-    if value.len() >= 7 && value[..7].eq_ignore_ascii_case("file://") {
-        return Err(EvidenceRefError::FileUrl {
+    if value
+        .get(..7)
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("file://"))
+    {
+        return Some(EvidenceRefError::FileUrl {
             value: value.to_string(),
         });
     }
@@ -100,16 +104,26 @@ pub(crate) fn validate_opaque_ref(value: &str) -> Result<(), EvidenceRefError> {
         bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
     };
     if value.contains('\\') || looks_like_windows_drive || value.starts_with('/') {
-        return Err(EvidenceRefError::AbsoluteMachinePath {
+        return Some(EvidenceRefError::AbsoluteMachinePath {
             value: value.to_string(),
         });
     }
     if value.split('/').any(|segment| segment == "..") {
-        return Err(EvidenceRefError::ParentEscape {
+        return Some(EvidenceRefError::ParentEscape {
             value: value.to_string(),
         });
     }
-    Ok(())
+    None
+}
+
+/// The `checkOpaqueRef` rule plus the stricter `Blank` rule of an
+/// [`EvidenceRef`], reusable by any other portable-ref field this crate
+/// validates without a second, diverging copy of the check.
+pub(crate) fn validate_opaque_ref(value: &str) -> Result<(), EvidenceRefError> {
+    if !value.is_empty() && value.trim().is_empty() {
+        return Err(EvidenceRefError::Blank);
+    }
+    opaque_ref_fault(value).map_or(Ok(()), Err)
 }
 
 impl fmt::Display for EvidenceRef {
@@ -188,6 +202,22 @@ mod tests {
             EvidenceRef::new("a\\b").unwrap_err(),
             EvidenceRefError::AbsoluteMachinePath { .. }
         ));
+    }
+
+    /// A multi-byte character straddling the seventh byte is not a
+    /// `file://` prefix and never panics the prefix check.
+    #[test]
+    fn a_multibyte_prefix_is_checked_without_panicking() {
+        assert!(EvidenceRef::new("abcdefж/record").is_ok());
+        assert!(opaque_ref_fault("ффф:x").is_none());
+    }
+
+    /// The Node rule accepts a whitespace-only ref; only [`EvidenceRef`]
+    /// adds the `Blank` rule.
+    #[test]
+    fn the_node_rule_accepts_a_whitespace_only_ref() {
+        assert!(opaque_ref_fault("   ").is_none());
+        assert_eq!(opaque_ref_fault(""), Some(EvidenceRefError::Empty));
     }
 
     #[test]

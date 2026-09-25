@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "id": "local-read",
+      "environment_id": "local",
+      "state": "approved",
+      "allowed_actions": [
+        "read-only-observation"
+      ],
+      "unresolved_actions": [],
+      "source": "environments/access.yaml"
+    },
+    {
+      "id": "local-read",
+      "state": "approved",
+      "allowed_actions": [
+        "read-only-observation"
+      ],
+      "unresolved_actions": [],
+      "source": "environments/access.yaml"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "note": "Resolution map for resolveDeterministicPlan.",
+  "resolution": {
+    "deterministic-plan:sample-frozen-instance-plan": {
+      "record_type": "instance-deterministic-reconstruction-plan",
+      "deterministic_plan_ref": "deterministic-plan:sample-frozen-instance-plan",
+      "source_snapshot_ref": "snapshot:sample-frozen-instance@313806743f8370cfa3d00db70a0a13e4810a1df1",
+      "plan_ref": "sample-frozen-instance-plan",
+      "plan_fingerprint": "c2bc3858094a28d77da2a4175e045d745e326ed34e37ec1f8a6e29d511015951",
+      "applicable": true
+    }
+  }
+}

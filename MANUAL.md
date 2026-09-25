@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-08-19
+updated: 2026-09-20
 ---
 
 # Meridian — руководство по эксплуатации
@@ -23,19 +23,32 @@ updated: 2026-08-19
 
 ## 2. Первый запуск
 
-1. Склонируйте оба репозитория. Kernel и Instance — соседи, не вложение.
-2. Установите Node 22+.
-3. Включите защиту репозитория (в свежем клоне она выключена):
+1. Установите Node 22+.
+2. Включите защиту репозитория (в свежем клоне она выключена):
 
    ```bash
    git config core.hooksPath hooks
    ```
 
-4. Укажите сессии, где Instance, и убедитесь, что всё подключено:
+3. **Работаете над самим Meridian** (Kernel, Instance-методология или
+   адаптеры поставки, §7)? Instance не требуется:
+
+   ```bash
+   node scripts/preflight.mjs
+   ```
+
+   Обычный запуск проверяет только самодостаточность Kernel и не требует
+   `MERIDIAN_INSTANCE` — разработка самого Meridian канонически описана в
+   `governance/` этого репозитория, а не в отдельном Instance
+   ([`AGENTS.md`](AGENTS.md) §1–§2, §10).
+
+4. **Работаете НА продукте, использующем Meridian?** Склонируйте оба
+   репозитория (Kernel и Instance — соседи, не вложение), укажите сессии, где
+   Instance, и подтвердите строгую проводку явным переходным режимом:
 
    ```bash
    export MERIDIAN_INSTANCE=/path/to/instance
-   node scripts/preflight.mjs
+   node scripts/preflight.mjs --require-instance
    ```
 
    Preflight — это «проверка ремня безопасности»: он громко падает, если
@@ -121,7 +134,9 @@ regression-тест был RED; GREEN не доказывает поведени
 ## 6. Обслуживание: валидатор и тесты
 
 ```bash
-node scripts/kernel-validate.mjs                    # с MERIDIAN_INSTANCE: полная проверка
+node scripts/kernel-validate.mjs                    # Kernel-only: без Instance
+MERIDIAN_INSTANCE=/path/to/instance \
+  node scripts/kernel-validate.mjs                  # с MERIDIAN_INSTANCE: полная проверка, включая продуктовые литералы
 MERIDIAN_INSTANCE=$PWD/test/instance-fixture \
   node scripts/kernel-validate.mjs                  # как в CI, без приватных данных
 node test/kernel-validate.test.mjs                  # правила валидатора сами под тестом
@@ -142,8 +157,12 @@ git-репозиториев.
 | `INFO` | Ожидаемое состояние среды | Знать о нём |
 | `OK` | Проверено — именно проверено | Ничего |
 
-Прогон без `MERIDIAN_INSTANCE` намеренно красный: он честно объявляет, что
-продуктовые литералы не проверялись. Это не поломка.
+Прогон без `MERIDIAN_INSTANCE` — законный Kernel-only режим, не поломка: он не
+красит гейт сам по себе. Продуктово-зависимая часть kernel-purity в этом
+режиме честно сообщает `WARN` (`UNVERIFIED` — «product literals were NOT
+checked»), а не `OK`; проверка личных путей выполняется всегда. Строгая
+проверка литералов конкретного продукта требует явно переданного
+`MERIDIAN_INSTANCE`.
 
 ## 7. Изменение самой системы
 

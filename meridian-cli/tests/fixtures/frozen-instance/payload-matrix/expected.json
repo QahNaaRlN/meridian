@@ -1,0 +1,30 @@
+{
+  "revision": "313806743f8370cfa3d00db70a0a13e4810a1df1",
+  "tree_digest": "fad86f66700f3b1b609a9d1fc438fd5fec650a7ac8acc6b2325c00d924f62204",
+  "accepted": {
+    "plan_fingerprint": "c2bc3858094a28d77da2a4175e045d745e326ed34e37ec1f8a6e29d511015951",
+    "migrated": 35,
+    "retained": 15
+  },
+  "mutated": {
+    "plan_fingerprint": "967c1fe1e8a36b603cb51b2b08c69dd86c3d6f741ae208ce3309c662ddc72719",
+    "migrated": 17,
+    "refused_targets": [
+      "matrix-access-application-mutated",
+      "matrix-access-reference-mutated",
+      "matrix-action-profile-mutated",
+      "matrix-command-mutated",
+      "matrix-environment-application-mutated",
+      "matrix-environment-mutated",
+      "matrix-external-dependencies-mutated",
+      "matrix-gate-run-observation-mutated",
+      "matrix-instruction-intake-record-mutated",
+      "matrix-product-mutated",
+      "matrix-repository-identity-mutated",
+      "matrix-repository-reference-mutated",
+      "matrix-repository-relationship-mutated",
+      "matrix-rule-applicability-record-mutated",
+      "matrix-test-data-reference-mutated"
+    ]
+  }
+}

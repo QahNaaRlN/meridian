@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "id": "web",
+      "repository_id": "web",
+      "sources": [
+        "environments/environments.yaml"
+      ]
+    },
+    {
+      "id": "web",
+      "sources": [
+        "environments/environments.yaml"
+      ]
+    }
+  ]
+}

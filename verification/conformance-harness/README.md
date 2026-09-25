@@ -5,10 +5,16 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-09-17
-updated: 2026-09-19
+updated: 2026-09-21
 ---
 
 # Conformance harness
+
+> Этот харнесс проверяет выбранный наблюдаемый контракт, но не архитектуру и
+> не качество Rust-реализации. Он не требует совпадения ради совпадения:
+> сохранённые бизнес-контракты должны совпадать, а намеренные Rust-native
+> улучшения получают отдельный ожидаемый результат, обоснование и тест.
+> Необъяснённое расхождение остаётся ошибкой.
 
 Package `rust-conformance-harness` (package 2 of the `meridian-rust-migration`
 program). This is an **independent verdict-comparison mechanism**: it runs two
@@ -26,6 +32,9 @@ two normalized results to an explicit `conformant` / `divergent` /
 - Does not define `Verdict`, `Diagnostic`, a resolver, or any other Meridian
   domain concept (`meridian-rust-target-architecture.md` §2, §5). It only
   understands "a process ran, here is what it printed and how it exited".
+- Does not approve crate boundaries, typed-domain conversion, ports, or the
+  placement of business logic. A conformant result cannot satisfy the
+  architecture gate by itself.
 - Does not substitute synthetic self-checks for product comparison. Package 4
   adds a real Node.js/Rust comparison for the introduced YAML and JSON Schema
   surface while retaining the synthetic cases that prove the mechanism can
@@ -220,6 +229,27 @@ in-memory `.match`/`.status` field). `hooks/pre-push` and
 `.github/workflows/gate.yml` both run that same test file — there is no
 second, independently written comparison or aggregation algorithm living in
 any of the three.
+
+## Two run modes: strict and `--kernel-only`
+
+`test/conformance-harness.test.mjs` has exactly two modes:
+
+| Mode | Command | Real-bundle proof (package 8, `meridian-cli-migration`) | Without `MERIDIAN_INSTANCE` |
+|---|---|---|---|
+| strict (default) | `node test/conformance-harness.test.mjs` | runs over the frozen source named by `MERIDIAN_INSTANCE` | FAILs, non-zero exit |
+| Kernel-only | `node test/conformance-harness.test.mjs --kernel-only` | not run: printed as `SKIP … UNVERIFIED`, an ambient `MERIDIAN_INSTANCE` is ignored | exit 0 when every portable check is green |
+
+`.github/workflows/gate.yml` and `hooks/pre-push` run `--kernel-only`: GitHub
+CI never has the frozen private Instance, and ordinary Kernel development must
+not depend on one. A green Kernel-only run is **not** package 8 evidence. The
+strict run with `MERIDIAN_INSTANCE` naming the frozen source that holds the
+accepted `migration/instance-data` bundle stays a separate, mandatory release
+gate. `test/instance-fixture` is a synthetic Instance without that bundle and
+is never a substitute for it.
+
+Any other argument, a repeated `--kernel-only`, or `--kernel-only` together
+with `--test-name-pattern` (the selective route for the package 8/9 proofs,
+which is always strict) is refused with exit code 2.
 
 ## Real-producer reuse
 

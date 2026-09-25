@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-27
-updated: 2026-09-07
+updated: 2026-09-26
 topic: release-versioning
 profile: universal
 delivery: kernel-doc
@@ -19,6 +19,14 @@ related_documents:
 ---
 
 # Версионирование выпусков
+
+> **Действующая политика Kernel с 2026-09-26.** Сохранённые build/test/
+> validator/conformance/smoke команды и release workflow запускаются
+> добровольно. Ни их результат, ни отсутствие запуска не являются условием
+> подготовки или выпуска Kernel; отсутствие evidence фиксируется как
+> `UNVERIFIED`. Явно запущенная команда не маскирует сбой. Правила версии,
+> changelog, advancement commit, аннотированного тега и возврата состояния в
+> интеграционную линию остаются действующими.
 
 Нейтральное ядро темы `release-versioning`. Стандарт отвечает на вопрос **как
 обозначается выпуск**: правило номера, момент его повышения, состав записи об

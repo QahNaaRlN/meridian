@@ -1,11 +1,11 @@
 ---
 title: Миграция Meridian на Rust — программа и дорожная карта
 document_type: plan
-status: active
+status: completed
 scope: workspace
 owner: workspace-owner
 created: 2026-09-14
-updated: 2026-09-25
+updated: 2026-09-26
 related_documents:
   - $MERIDIAN_KERNEL/governance/meridian-owner-intent-contract.md
   - $MERIDIAN_KERNEL/governance/plans/meridian-improvement-research-plan.md
@@ -55,7 +55,9 @@ related_documents:
 > публичные контракты, а не устройство, ограничения или дефекты Node.js.
 > Полные правила: `standards/workspace/rust-migration-quality.md`.
 
-Статус программы: **`active`**. Активационный рубеж §1 выполнен: Kernel `0.6.0`
+Статус программы: **`completed`**. Kernel `0.7.0` выпущен, package 10 завершён,
+а следующей отдельной единицей открыт `concord-meridian-onboarding`; это не
+означает выполнения продуктового G0. Активационный рубеж §1 выполнен: Kernel `0.6.0`
 принят и интегрирован (`meridian-operating-upgrade-plan.md` §12). Пакет 1
 (`rust-workspace-foundation`) принят и интегрирован в интеграционную линию
 Kernel (§4, §5.1). Пакет 2 (`rust-conformance-harness`) принят и
@@ -80,10 +82,9 @@ Kernel (§4, §5.1). Пакет 2 (`rust-conformance-harness`) принят и
 `97108dfa00e8b7474ec32332ecacf8494df9460c` (§5.4). Обязательное
 архитектурное исправление пакета 7 (`meridian-cli-foundation`) по §5.13
 завершено: пакеты 1–7 `rust-architecture-conformance` и исправление 7a
-приняты и локально интегрированы, все семейства 7a–7d закрыты. Следующим
-остаётся пакет 8 (`meridian-cli-migration`); он специфицирован и открыт к
-исполнению в §5.22, но ещё не реализован. Ни эксперимент исследовательского
-реестра этой синхронизацией не начинается.
+приняты и интегрированы, все семейства 7a–7d закрыты. Пакеты 8–10 также
+завершены; точные release evidence приведены в §7 и итоговом обновлении §10.
+Ни эксперимент исследовательского реестра этой синхронизацией не начинается.
 
 ## 1. Активационный рубеж
 
@@ -99,11 +100,11 @@ Kernel (§4, §5.1). Пакет 2 (`rust-conformance-harness`) принят и
    возобновлением Concord и не требует его возобновления.
 
 Условие 1 выполнено: Kernel `0.6.0` принят и интегрирован
-(`meridian-operating-upgrade-plan.md` §12, §15–16). Условие 2 сохраняется:
-Concord остаётся на паузе. Активационный рубеж пройден, и пакет 1
-(`rust-workspace-foundation`) уже принят и интегрирован под этой активацией
-(§5.1) — активация программы этой ревизией не переоткрывается и не
-переисполняется задним числом.
+(`meridian-operating-upgrade-plan.md` §12, §15–16). Условие 2 действовало при
+активации и сохраняется как историческое основание: исполнение Concord не
+возобновлялось внутри Rust-программы. После выпуска 0.7.0 решением владельца от
+2026-09-26 открыт отдельный `concord-meridian-onboarding`; продуктовый G0 не
+выполнен автоматически. Активационный рубеж задним числом не переоткрывается.
 
 ## 2. Зачем нужна отдельная программа
 
@@ -161,7 +162,7 @@ Concord остаётся на паузе. Активационный рубеж 
 | — | Типизированная миграционная и upgrade-квалификация (`rust-architecture-conformance-7`) | Перевести весь связный 7d: `instance-data-migration`, `instance-canonical-export`, `workspace-compatibility-qualification`, `upgrade-integration-qualification`; расширить существующий migration owner и композиционно переиспользовать принятые операции 7b/7c | `rust-architecture-conformance-6`, §5.13 | accepted — принято и локально интегрировано (§5.21.9) |
 | 8 | Миграционный CLI (`meridian-cli-migration`) | `import`, `migration plan|apply|verify|rollback` — реализация контракта `instance-data-migration.md` поверх `meridian-storage-sqlite`; импорт направляет продуктовые записи только в базу рабочей среды и не делает базу инструмента вторым продуктовым каноном; `plan` не изменяет состояние; `apply` поддерживает `--dry-run` и явное подтверждение. **Обязан доказать** (§6.5a): полный импорт без потерь бизнес-данных; сохранение применимых бизнес-норм либо явно принятое Rust-native улучшение; идемпотентность; обратимость; отсутствие эксплуатационного чтения через `$MERIDIAN_INSTANCE` | 6–7, `knowledge-agent-foundation`, `rust-architecture-conformance` | accepted — принят и локально интегрирован (§5.22.11) |
 | 9 | Квалификация бизнес-контракта (`rust-business-contract-qualification`) | Полный прогон ворот §6.1–§6.6: сохранённые контракты совпадают, каждое намеренное Rust-native улучшение явно классифицировано, обосновано и протестировано; необъяснённых расхождений нет | 2, 4–8, `rust-architecture-conformance` | accepted — post-merge failure исправлен, tracked-рубеж пройден, `QUALIFIED`, принят и локально интегрирован (§5.23.11) |
-| 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | ready for architect review — not released; Windows/macOS artifacts blocked (§5.24.10) |
+| 10 | Выпуск Rust Meridian (`meridian-rust-release`) | Один устанавливаемый бинарник, выпускная ветка, версия, журнал изменений, возврат в интеграционную линию — выпускной рубеж §7 ниже | 9 | released — Kernel 0.7.0, advancement `4db060d`, tag `v0.7.0`, back-merge `1bcbd75`, four-target artifacts (§5.24, §7) |
 
 ### После выпуска (вне этой программы, но зависимые от неё)
 
@@ -6960,8 +6961,12 @@ GUI, network API, PostgreSQL и удаление Node-источников вн�
    commit в `main` и только после слияния.
 5. То же состояние отдельным owner-managed MR возвращается в `dev`; его
    merge-коммит — не advancement commit и тега не получает.
-6. Программа не получает статус `completed`, пока не проверены оба merge,
-   тег, release artifacts, post-merge gates и пункт archive/retirement §7.8.
+6. Release identity требует подтверждённых merge в `main` и `dev` и
+   аннотированного тега на advancement commit. Release artifacts и post-merge
+   checks остаются добровольными evidence (`UNVERIFIED` при отсутствии).
+   Физическое архивирование прежнего Instance и состояние локальной
+   `MERIDIAN_INSTANCE` не блокируют `completed` или Concord по решению
+   владельца от 2026-09-26 (§7, §10; owner intent §27).
 
 Локальное слияние release-ветки в `main`, push любой линии, создание тега на
 неподтверждённом состоянии и изменение настроек защиты не разрешены текущим
@@ -7125,6 +7130,13 @@ release-gate (§5.24.7, §7); `test/instance-fixture` его не заменяе
 
 ## 6. Ворота Rust
 
+С 2026-09-26 этот раздел сохраняет состав доступных проверок и исторические
+evidence программы, но не задаёт блокирующих условий: любой запуск доброволен,
+его отсутствие — `UNVERIFIED` и не блокирует приёмку, merge, выпуск или
+Concord. Явно запущенная команда сохраняет строгий результат. Слова
+«обязательно», «ворота» и «рубеж» ниже читаются как требования, действовавшие
+при исполнении пакетов 1–10, а не как текущая обязанность будущих изменений.
+
 Ворота вводятся постепенно, по мере появления соответствующей возможности —
 не единым списком, обязательным уже с пакета 1. Требовать проверку сбоя
 транзакции SQLite до того, как появится сама SQLite (пакет 6), или проверку
@@ -7275,8 +7287,13 @@ release-gate (§5.24.7, §7); `test/instance-fixture` его не заменяе
 
 ## 7. Выпускной рубеж перед Concord
 
-Пакет 10 (`meridian-rust-release`) и, следовательно, вся программа считаются
-выпущенными только когда одновременно подтверждены:
+Исторический выпускной рубеж пакета 10 был закрыт для выпуска 0.7.0
+предъявленными evidence ниже. С 2026-09-26 тестовые пункты этого списка остаются
+доступными добровольными проверками и не являются блокерами будущего выпуска,
+приёмки или Concord; отсутствие нового прогона обозначается `UNVERIFIED`.
+Release identity и Git-provenance по пункту 11 сохраняются нормативными.
+
+Для выпуска 0.7.0 были подтверждены:
 
 1. один устанавливаемый бинарник собирается для целевых платформ;
 2. Node.js не требуется для работы выпущенного бинарника;
@@ -7294,10 +7311,9 @@ release-gate (§5.24.7, §7); `test/instance-fixture` его не заменяе
    только на синтетических фикстурах;
 8. переходный `MERIDIAN_INSTANCE`-адаптер отключён — ни одна штатная
    операция выпущенного бинарника не выполняет эксплуатационное чтение через
-   `$MERIDIAN_INSTANCE` (§6.5a.5); окончательное отключение переменной и
-   архивирование старого репозитория Instance выполняется как часть этого
-   пункта, а не откладывается на факультативное будущее решение
-   (`meridian-owner-intent-contract.md` §25.5);
+   `$MERIDIAN_INSTANCE` (§6.5a.5); физическое архивирование прежнего Instance
+   и состояние локальной переменной не входят в release/Concord blockers
+   (`meridian-owner-intent-contract.md` §27);
 9. машинный вывод стабилен — коды завершения и структурированный
    (`--format json`) вывод не меняются между повторными запусками на одном и
    том же состоянии;
@@ -7391,18 +7407,18 @@ release-gate (§5.24.7, §7); `test/instance-fixture` его не заменяе
 
 ```yaml
 program_id: meridian-rust-migration
-program_status: active
+program_status: completed
 activation_gate: meridian-operating-upgrade-release
 activation_gate_status: passed
-last_completed_package: rust-business-contract-qualification
-current_package: meridian-rust-release
-current_package_status: ready_for_architect_review_not_released
-next_package: null
-next_package_status: none_program_final
-concord_status: paused_pending_meridian_rust_release
+last_completed_package: meridian-rust-release
+current_package: null
+current_package_status: none_program_completed
+next_package: concord-meridian-onboarding
+next_package_status: open_separate_work_not_started
+concord_status: onboarding_open_product_g0_not_started
 release_version: 0.7.0
-release_gate: open_pending_execution
-owner_decision_date: 2026-09-25
+release_gate: passed_release_0_7_0
+owner_decision_date: 2026-09-26
 ```
 
 Настоящая ревизия фиксирует решение владельца §5.13 и результат полного
@@ -7755,3 +7771,21 @@ Windows-расширения; добавлена самопроверка. §5.2
 `v*` и `workflow_dispatch`; описание повторяемых вызовов smoke уточнено до
 точного перечня. Статус — `ready_for_architect_review_not_released`; GitHub
 matrix и чистое release-дерево остаются непройденными воротами.
+
+**Обновление (2026-09-26, фактический выпуск и готовность пилота).** Пакет 10
+`meridian-rust-release` выпущен, программа `meridian-rust-migration` завершена.
+Release advancement в `main` — merge-коммит
+`4db060dca0ca08e921b90cc898ca5e5d1bcf8fca`; аннотированный тег `v0.7.0`
+указывает на этот advancement. Состояние возвращено в `dev` отдельным
+merge-коммитом `1bcbd75c3d49bac2367c8a07f7d618ca92f0eae2`. Tag release run
+`36173272772` успешно собрал и smoke-проверил четыре target из §5.24.4 и
+сформировал общий `SHA256SUMS`.
+
+По прямому решению владельца все проверки Kernel теперь добровольны: отсутствие
+прогона означает `UNVERIFIED` и не блокирует приёмку, merge, выпуск или Concord;
+явно запущенная проверка сохраняет настоящий результат. Старый Instance уже
+retired как active authority и может оставаться необязательным read-only
+источником истории/миграции; его физическое архивирование и
+`MERIDIAN_INSTANCE` не являются блокерами. Следующая отдельная единица —
+`concord-meridian-onboarding` со статусом `open_separate_work_not_started`;
+продуктовый G0 не объявляется выполненным.

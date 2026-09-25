@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Regression for hooks/pre-push, two properties it must hold before it runs a
-// single gate:
+// Regression for the voluntary hooks/pre-push verification mode. By default
+// the hook runs no gate and permits the push; MERIDIAN_RUN_OPTIONAL_CHECKS=1
+// opts into the preserved fail-closed verification suite.
 //
 //   1. ENVIRONMENT ISOLATION — Git runs the hook with GIT_DIR, GIT_WORK_TREE,
 //      GIT_INDEX_FILE, … (`git rev-parse --local-env-vars`) exported. A gate
@@ -17,12 +18,12 @@
 //      push. After the scrub the hook pins MERIDIAN_KERNEL to the worktree Git
 //      is pushing from ($ROOT), so every gate sees the pushed Kernel.
 //
-//   3. KERNEL-ONLY CONFORMANCE — the hook runs test/conformance-harness.test
+//   3. KERNEL-ONLY CONFORMANCE — opt-in mode runs test/conformance-harness.test
 //      .mjs with `--kernel-only`, so an ordinary push never depends on an
 //      external Instance. Without the flag the harness is strict and fails
 //      when MERIDIAN_INSTANCE is unset; its shim below reproduces exactly that,
 //      so dropping the flag from the hook blocks a push made without an
-//      Instance. The strict real-bundle proof stays a separate release gate.
+//      Instance. The strict real-bundle proof remains available separately.
 //
 // The push checks run the VERBATIM production hook + helper of this package,
 // copied into a synthetic Kernel repo, with every gate replaced by a shim that
@@ -72,6 +73,7 @@ function cleanEnv(extra) {
   for (const v of LOCAL_GIT_VARS) delete e[v];
   delete e.MERIDIAN_INSTANCE;
   delete e.MERIDIAN_KERNEL;
+  delete e.MERIDIAN_RUN_OPTIONAL_CHECKS;
   e.GIT_AUTHOR_NAME = 't';
   e.GIT_AUTHOR_EMAIL = 't@t.invalid';
   e.GIT_COMMITTER_NAME = 't';
@@ -194,7 +196,7 @@ function probeLines(probe) {
 // git init + one commit + a local bare remote, then a normal `git push` that
 // fires the synthetic repo's (production-copied) pre-push. No `--no-verify`.
 // `ambient` seeds the push environment — e.g. a stale MERIDIAN_KERNEL.
-function pushThrough(syn, ambient) {
+function pushThrough(syn, ambient, { optIn = true } = {}) {
   const caller = syn.dir;
   git(caller, ['init', '-q']);
   git(caller, ['add', '-A']);
@@ -206,9 +208,20 @@ function pushThrough(syn, ambient) {
   const branch = git(caller, ['rev-parse', '--abbrev-ref', 'HEAD']);
   const callerBefore = head(caller);
   const kernelBefore = git(KERNEL_ROOT, ['rev-parse', 'HEAD']);
-  const r = spawnSync('git', ['push', 'origin', branch], { cwd: caller, encoding: 'utf8', env: cleanEnv(ambient) });
+  const optInEnv = optIn ? { MERIDIAN_RUN_OPTIONAL_CHECKS: '1' } : {};
+  const r = spawnSync('git', ['push', 'origin', branch], { cwd: caller, encoding: 'utf8', env: cleanEnv({ ...optInEnv, ...(ambient || {}) }) });
   return { r, branch, remote, caller, callerBefore, kernelBefore };
 }
+
+// ---------------------------------------------------------------------------
+check('push — default mode runs no Kernel check and permits the push as UNVERIFIED', () => {
+  const syn = buildSyntheticKernel('default-skip');
+  const { r, branch, remote, callerBefore } = pushThrough(syn, {}, { optIn: false });
+  assert(r.status === 0, `default push was blocked (exit ${r.status}); stderr:\n${r.stderr}`);
+  assert(probeLines(syn.probe).length === 0, `a gate ran without explicit opt-in: ${JSON.stringify(probeLines(syn.probe))}`);
+  assert(/optional Kernel checks are UNVERIFIED/.test(r.stderr), `missing UNVERIFIED notice: ${r.stderr}`);
+  assert(git(remote, ['rev-parse', branch]) === callerBefore, 'the local bare remote did not receive the pushed commit');
+});
 
 // ===========================================================================
 check('env scrub — repo-local Git vars unset; MERIDIAN_* preserved unchanged (helper does not normalize)', () => {
@@ -388,7 +401,7 @@ check('rev-parse failure — helper and hook fail closed, no gate runs', () => {
   const callerBefore = head(syn.dir);
   const kernelBefore = git(KERNEL_ROOT, ['rev-parse', 'HEAD']);
   const b = spawnSync('sh', [path.join(syn.dir, 'hooks', 'pre-push')],
-    { cwd: syn.dir, encoding: 'utf8', env: cleanEnv({ PATH: poisonedPath }) });
+    { cwd: syn.dir, encoding: 'utf8', env: cleanEnv({ PATH: poisonedPath, MERIDIAN_RUN_OPTIONAL_CHECKS: '1' }) });
   assert(b.status !== 0, `the hook should fail closed on a rev-parse failure (exit ${b.status})`);
   assert(probeLines(syn.probe).length === 0,
     `a gate ran despite the fail-closed helper: ${JSON.stringify(probeLines(syn.probe))}`);

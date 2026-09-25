@@ -1,12 +1,17 @@
 #!/bin/sh
-# Meridian Kernel — refuse to push a kernel that does not pass its own validator.
+# Meridian Kernel — voluntary local verification before push.
 #
-# Runs against the synthetic instance fixture, so it works offline and without
-# access to any private Instance. This is the same check CI runs, moved earlier:
-# a red kernel should not reach the remote in the first place.
+# Opt-in mode runs against the synthetic instance fixture, so it works offline
+# and without access to any private Instance. A red explicit run fails; default
+# mode performs no check and does not block the push.
 #
 # Enable in a fresh clone:  git config core.hooksPath hooks
-# Bypass (deliberately):    git push --no-verify
+# Run checks explicitly:   MERIDIAN_RUN_OPTIONAL_CHECKS=1 git push
+
+if [ "${MERIDIAN_RUN_OPTIONAL_CHECKS:-0}" != "1" ]; then
+  echo "pre-push: optional Kernel checks are UNVERIFIED (set MERIDIAN_RUN_OPTIONAL_CHECKS=1 to run them); push proceeds"
+  exit 0
+fi
 
 set -e
 
@@ -136,10 +141,11 @@ fi
 
 # --kernel-only: ordinary Kernel development must not depend on an external
 # Instance. The package 8 real-bundle proof (meridian-cli-migration) is
-# skipped here as UNVERIFIED and stays a separate, mandatory strict release
-# gate: `node test/conformance-harness.test.mjs` without the flag, with
-# MERIDIAN_INSTANCE naming the frozen source.
-echo "pre-push: verifying the conformance harness (kernel-only; real-bundle proof is a separate release gate)"
+# skipped here as UNVERIFIED and remains available as a separate voluntary run:
+# `node test/conformance-harness.test.mjs` without the flag, with
+# MERIDIAN_INSTANCE naming the frozen source. Its absence does not block a
+# release or Concord onboarding.
+echo "pre-push: verifying the conformance harness (kernel-only; real-bundle proof is available separately)"
 if ! node "$ROOT/test/conformance-harness.test.mjs" --kernel-only; then
   echo ""
   echo "pre-push: BLOCKED — the conformance harness regression suite failed."

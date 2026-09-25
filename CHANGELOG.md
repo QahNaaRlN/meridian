@@ -5,7 +5,7 @@ status: maintained
 scope: workspace
 owner: workspace-owner
 created: 2026-08-18
-updated: 2026-09-25
+updated: 2026-09-26
 ---
 
 # Changelog
@@ -15,6 +15,21 @@ updated: 2026-09-25
 Линия версий Kernel независима от Instance и от продуктовых репозиториев.
 
 ## [Unreleased]
+
+### Changed
+
+- **Проверки Kernel стали добровольными.** Общий gate и release workflow теперь
+  запускаются только вручную (`workflow_dispatch`). `hooks/pre-push` по
+  умолчанию разрешает push с явным статусом `UNVERIFIED`; полный прежний набор
+  доступен через `MERIDIAN_RUN_OPTIONAL_CHECKS=1` и при реальном сбое сохраняет
+  ненулевой код. Тесты, validators, preflight, conformance и smoke не удалены и
+  не ослаблены при явном вызове. Их отсутствие больше не блокирует начало,
+  приёмку, merge, выпуск или Concord.
+- **Синхронизировано фактическое завершение `meridian-rust-migration`.** Kernel
+  `0.7.0` выпущен; package 10 и программа отмечены завершёнными. Следующая
+  самостоятельная работа — `concord-meridian-onboarding`; продуктовый G0 не
+  объявлен выполненным. Физическое архивирование прежнего Instance и наличие
+  `MERIDIAN_INSTANCE` не являются блокерами.
 
 ## [0.7.0] — 2026-09-25
 

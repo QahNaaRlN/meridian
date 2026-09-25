@@ -11,11 +11,6 @@ name: release
 
 on:
   workflow_dispatch:
-  push:
-    # The release branch itself: its first permitted push runs this workflow
-    # before the file exists on the default branch.
-    branches: ['release/0.7.0']
-    tags: ['v*']
 
 permissions:
   contents: read

@@ -605,6 +605,32 @@ fn migration_plan_accepts_the_bundle_through_the_accepted_operations() {
     assert!(stdout_of(&human).contains("Bundle ACCEPTED"));
 }
 
+/// M-05b (`rust-workspace-state-validation`): a bundle every Node check
+/// accepts, whose one target declares a record type no payload contract
+/// names, is refused by `migration plan` and by `import --kind
+/// frozen-instance` alike — before any database is written.
+#[test]
+fn workspace_state_frozen_import_refuses_a_target_no_payload_contract_accepts() {
+    let source = Source::new("plan-unknown-type", Some("unknown-record-type"), |_| {});
+    let output = plan(&source, "json");
+    assert_code(&output, 1);
+    let r = json_result(&output)["result"].clone();
+    assert_eq!(r["verdict"], "rejected");
+    assert_eq!(
+        r["diagnostics"],
+        serde_json::json!([
+            "payload-contract: target \"inventory-items-alpha\" (inventory-item): record_type \"inventory-item\" has no payload contract; a product record type is added to the registry by decision, never accepted unchecked"
+        ])
+    );
+
+    let dbs = Dbs::new("import-unknown-type");
+    let before = export(&dbs).stdout;
+    let output = import_frozen(&source, &dbs, &fingerprint());
+    assert_code(&output, 1);
+    assert!(stdout_of(&output).contains("has no payload contract"));
+    assert_eq!(export(&dbs).stdout, before, "nothing may be written");
+}
+
 #[test]
 fn migration_plan_fails_closed_on_every_foreign_source_state() {
     // Wrong source digest: internally consistent, but not the pinned tree.
@@ -1163,10 +1189,13 @@ fn migration_databases_fail_closed_on_missing_corrupt_wrong_role_or_edition() {
     // Wrong Kernel edition: a Kernel whose VERSION differs from the one the
     // databases record.
     let other_kernel = guard.path().join("kernel");
-    for dir in ["registries/operating-model", "registries/rule-resolution"] {
-        std::fs::create_dir_all(other_kernel.join(dir)).unwrap();
-        copy_tree(&kernel_root().join(dir), &other_kernel.join(dir));
-    }
+    // The whole registry tree: the migration schemas and the payload
+    // registry's item schemas (`rust-workspace-state-validation`).
+    std::fs::create_dir_all(other_kernel.join("registries")).unwrap();
+    copy_tree(
+        &kernel_root().join("registries"),
+        &other_kernel.join("registries"),
+    );
     std::fs::write(other_kernel.join("VERSION"), "9.9.9\n").unwrap();
     let before = std::fs::read(&dbs.workspace).unwrap();
     let output = run(&[

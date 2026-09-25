@@ -25,8 +25,7 @@ related_documents:
 
 ## 1. Итог
 
-**Заявленный результат квалификации: `NOT_QUALIFIED`.**
-**Статус передачи корректирующего раунда: `NOT_QUALIFIED`** (не `ACCEPTED`).
+**Итоговый вердикт архитектора: `QUALIFIED`; пакет `ACCEPTED`.**
 
 Первая передача нашла пятнадцать пробелов. Восемь закрыты в ней (§9.1).
 Корректирующий раунд по вердикту архитектора `CHANGES_REQUESTED` закрыл
@@ -48,22 +47,34 @@ SQLite: продуктовые литералы `kernel-purity`, форма payl
 §5.23.3 вердикт `NOT_QUALIFIED`; недостающий контракт и production-владелец
 названы в §9.3.
 
+Корректирующий пакет `rust-workspace-state-validation` (§9.5) реализует
+все category-3 проверки mapping §9.3 и три проверки решения D3 штатным
+маршрутом `meridian validate --workspace-db`; решения D1/D2 зафиксированы.
+Повторный полный рубеж §5.23.7 пройден на неизменённом fingerprint
+`0a54175ff8b02a094afcd2bf5e9c24c79eedb896a84862aa193f67e452646671`:
+1162 workspace Rust tests, 2/2 ignored real-bundle tests, 152/152 cases
+conformance harness и 293/293 `kernel-validate.test.mjs`; остальные ворота
+также зелёные. GAP-09 закрыт независимой приёмкой.
+
 Итог закрытой матрицы (§4–§8 и построчный аудит `COMPATIBILITY.md` §10),
-134 строки:
+136 строк:
 
 | Статус | Строк |
 |---|---:|
 | `CONFORMANT` | 53 |
-| `ACCEPTED_RUST_NATIVE` | 36 |
+| `ACCEPTED_RUST_NATIVE` | 41 |
 | `RUST_ONLY_CONTRACT` | 42 |
-| `GAP` | 3 |
-| **Итого** | **134** |
+| `GAP` | 0 |
+| **Итого** | **136** |
 
-Три строки `GAP` — один открытый пробел GAP-09 в трёх затронутых строках
-(VAL-30, NODE-02, NODE-03). По сравнению с первой передачей (131 строка):
+Три прежние строки `GAP` — VAL-30, NODE-02 и NODE-03 — переведены в
+`ACCEPTED_RUST_NATIVE`; GAP-09 закрыт. По сравнению с первой передачей
+(131 строка):
 четыре новые строки реестра COMPAT-29…32; строка NODE-07 удалена из матрицы
 — переходное Node-tooling зафиксировано отдельной границей §8.5 без
-статуса матрицы.
+статуса матрицы. Корректирующий пакет `rust-workspace-state-validation`
+(§9.5) добавил две строки реестра COMPAT-33/34 (решение D2 и fail-closed
+порты `instruction-intake`); его новые cases исполнены на финальном рубеже.
 
 ## 2. База и метод
 
@@ -162,7 +173,7 @@ SQLite: продуктовые литералы `kernel-purity`, форма payl
 | VAL-03 | `duplicate-fm` | тот же | `commands::validate::duplicate_fm` (cli) | как VAL-00 | `[H] VALIDATE_MUTATION_FAMILIES` `duplicate-fm`; `[BR] validate_detects_an_orphaned_trailing_front_matter_block` | равно | равно | `CONFORMANT` |
 | VAL-04 | `link` | тот же | `commands::validate::link_check` (cli) | как VAL-00 | `[H] VALIDATE_MUTATION_FAMILIES` `link-check`; `[BR] validate_detects_a_dangling_markdown_link` | равно | равно | `CONFORMANT` |
 | VAL-05 | `schema` — общий проход `$schema` | тот же | `commands::validate::registry_schema` (cli) + `json_schema` (app) | `cli: commands::validate::registry_schema::tests::a_relative_schema_reference_is_resolved_like_the_reference`, `…::normalizing_a_relative_path_keeps_its_leading_parent_segments`; `[BR] validate_reports_a_relative_kernel_schema_under_its_absolute_path` (`--kernel k` и `../k`) | `[H] VALIDATE_MUTATION_FAMILIES` `registry-schema`, `registry-schema-unsupported-keyword-and-format`, `registry-yaml-strict-lint-rejections` | равно | равно после GAP-02/GAP-03 | `CONFORMANT` |
-| VAL-05a | `schema`: текст «ссылка ни на что не указывает» | тот же (`…in the Instance or the Kernel`) | тот же (`…in the Kernel`) | `[BR] validate_reports_ok_on_this_kernel_with_zero_real_failures` (13/13 ссылок разрешены) | `[BR] validate_reports_a_missing_schema_as_absent_from_the_kernel_only`; `[H]` «accepted-rust-native: GAP-11 missing schema names the Kernel only» | вердикт равен (принято, COMPAT-30) | различается только место поиска в тексте | `ACCEPTED_RUST_NATIVE` |
+| VAL-05a | `schema`: текст «ссылка ни на что не указывает» | тот же (`…in the Instance or the Kernel`) | тот же (`…in the Kernel`) | `[BR] validate_reports_ok_on_this_kernel_with_zero_real_failures` (14/14 ссылок разрешены) | `[BR] validate_reports_a_missing_schema_as_absent_from_the_kernel_only`; `[H]` «accepted-rust-native: GAP-11 missing schema names the Kernel only» | вердикт равен (принято, COMPAT-30) | различается только место поиска в тексте | `ACCEPTED_RUST_NATIVE` |
 | VAL-06 | `rule-resolution` — PHASE B схемы против фикстур | тот же | `commands::validate::rule_resolution_fixtures` (cli) + `json_schema` (app) | `[BR] validate_reports_ok_on_this_kernel_with_zero_real_failures` (20/27) | `[H] VALIDATE_MUTATION_FAMILIES_7A` `rule-resolution-fixtures` (новый, GAP-04) | равно | равно | `CONFORMANT` |
 | VAL-07 | `functional-parity` | тот же + `scripts/lib` нет (inline) | `meridian_app::operating_model::functional_parity` → `meridian_core::functional_parity` | `app: operating_model::functional_parity::tests::the_real_kernel_schema_and_fixtures_agree` | `[H] VALIDATE_MUTATION_FAMILIES_7B` `functional-parity`; `app: operating_model::functional_parity::tests::evaluate_case_returns_domain_rejected_for_a_schema_clean_but_domain_invalid_document` | равно (кроме COMPAT-10/11) | равно | `CONFORMANT` |
 | VAL-08 | `git-provenance` (в режиме Kernel — совет) | тот же | `commands::validate::git_provenance` (cli) | как VAL-00 | `[H]` «копия без .git» (ветвь «Git недоступен»); `cli: commands::validate::rust_architecture_conformance_3_single_git_snapshot::unavailable_snapshot_yields_exactly_one_git_enumeration_warning` | равно | равно | `CONFORMANT` |
@@ -188,7 +199,7 @@ SQLite: продуктовые литералы `kernel-purity`, форма payl
 | VAL-27 | `workspace-compatibility-qualification` | `scripts/lib/workspace-compatibility-qualification.mjs` | `meridian_app::operating_model::workspace_compatibility_qualification` → `meridian_core::qualification::workspace` | `app: operating_model::workspace_compatibility_qualification::tests::workspace_compatibility_qualification_the_real_kernel_contract_is_clean` | `[H] VALIDATE_MUTATION_FAMILIES_7D` `workspace-compatibility-qualification`; `[H] ADVERSARIAL_7D` `stale-pin` | равно (кроме COMPAT-17/18/21/22) | равно | `CONFORMANT` |
 | VAL-28 | `upgrade-integration-qualification` | `scripts/lib/upgrade-integration-qualification.mjs` | `meridian_app::operating_model::upgrade_integration_qualification` → `meridian_core::qualification::upgrade` | `app: operating_model::upgrade_integration_qualification::tests::upgrade_integration_qualification_the_real_kernel_contract_is_clean` | `[H] VALIDATE_MUTATION_FAMILIES_7D` `upgrade-integration-qualification`; `[H] ADVERSARIAL_7D` `wrong-kind`, `incomplete-scenario-set` | равно (кроме COMPAT-17/18/21/23) | равно | `CONFORMANT` |
 | VAL-29 | Советы режима без Instance (`front-matter/path-placement`, `ext-dependencies`, `inventory-git`, `stack-profile`, `instruction-intake`, `kernel-purity` UNVERIFIED) | тот же без `MERIDIAN_INSTANCE` | `commands::validate::collect_with_git_result` (cli, фиксированные строки) | `[HF] real-node-rust-cli-validate-clean-kernel` (равные `WARN`) | нет отдельной ветви в режиме Kernel | равно | равно | `CONFORMANT` |
-| VAL-30 | Проверка Instance: продуктовые литералы, рабочая память, `instruction-intake`, `inventory-git`, `ext-dependencies`, объявления stack-profile, Git Instance | `kernel-validate.mjs` с `MERIDIAN_INSTANCE` | аналога нет | — | mapping §9.3 (M-01…M-18) | категория 3 непуста | Node: 10 `FAIL` на замороженном источнике; у Rust поверхности нет, девять проверок утрачены | `GAP` (GAP-09) |
+| VAL-30 | Проверка Instance: продуктовые литералы, рабочая память, `instruction-intake`, `inventory-git`, `ext-dependencies`, объявления stack-profile, Git Instance | `kernel-validate.mjs` с `MERIDIAN_INSTANCE` | `meridian validate --workspace-db` (§9.5) | см. §9.5 | mapping §9.3 (M-01…M-18); реализация §9.5 | категория 3 и D3 реализованы; D1/D2 решены архитектором; новые cases исполнены на финальном рубеже §5.23.7 | Node: 10 `FAIL` на замороженном источнике; Rust: `validate --workspace-db` (§9.5), real-bundle и COMPAT-33 cases совпадают по вердикту, различия классифицированы | `ACCEPTED_RUST_NATIVE` |
 | VAL-31 | Структурная граница семейств (порты, один `WorkspaceReader`, тонкие CLI-модули) | нет аналога | `commands::validate::mechanical_integrity_boundary`, `rust_architecture_conformance_{3,5,6,7}` (cli, структурные тесты) | `cli: commands::validate::mechanical_integrity_boundary::structural_tests::production_has_exactly_one_concrete_workspace_reader_implementation` | `cli: commands::validate::mechanical_integrity_boundary::structural_tests::only_an_explicit_test_only_module_file_is_exempt_from_the_production_scan` | нет аналога | исполнено | `RUST_ONLY_CONTRACT` |
 
 ## 6. `meridian resolve`
@@ -275,8 +286,8 @@ SQLite: продуктовые литералы `kernel-purity`, форма payl
 | ID | Node-поверхность | Rust | Строки | Статус |
 |---|---|---|---|---|
 | NODE-01 | `scripts/kernel-validate.mjs` без Instance | `meridian validate` | VAL-00…VAL-29 | `CONFORMANT` |
-| NODE-02 | `scripts/kernel-validate.mjs` с `MERIDIAN_INSTANCE` | нет; mapping §9.3 | VAL-30 | `GAP` (GAP-09, категория 3) |
-| NODE-03 | `scripts/validate-and-log.mjs` (запись метрик в Instance) | нет; RFC называет `meridian validate --log-metrics` | mapping §9.3, M-18 | `GAP` (GAP-09, категория 3) |
+| NODE-02 | `scripts/kernel-validate.mjs` с `MERIDIAN_INSTANCE` | `meridian validate --workspace-db`; mapping §9.3 | VAL-30, COMPAT-33/34 | `ACCEPTED_RUST_NATIVE` |
+| NODE-03 | `scripts/validate-and-log.mjs` (запись метрик в Instance) | `meridian validate --workspace-db … --log-metrics` | mapping §9.3, M-18 | `ACCEPTED_RUST_NATIVE` |
 | NODE-04 | `scripts/rule-resolver.mjs`: ядро `resolveRules` | `meridian_core::resolver` | RES-01…RES-03 | `CONFORMANT` |
 | NODE-05 | `scripts/rule-resolver.mjs`: CLI (читает Instance) | `meridian resolve` (§7.1) | RES-04, RES-05 | `RUST_ONLY_CONTRACT` |
 | NODE-06 | `scripts/preflight.mjs` (`--require-instance` — разрешённый переходный путь §6.5a.5; `validator present` — артефакт Node) | `meridian doctor` | DOC-01, DOC-02 | `CONFORMANT` |
@@ -384,13 +395,134 @@ M-18) без `MERIDIAN_INSTANCE`: вход — рабочая база, влад
   fail-closed разбор YAML с потерей данных у Node (GAP-12),
   `instruction-topics` неверного типа (GAP-13) — все приняты архитектором.
 
+### 9.5. Корректирующий пакет `rust-workspace-state-validation` — реализация (первая передача и корректирующий раунд, 2026-09-25)
+
+План §5.23.11. Штатный маршрут `meridian validate --kernel <path>
+--workspace-db <path> [--log-metrics]`: `meridian-cli`
+(`commands::validate::workspace_state`, адаптеры `FsWorkspaceReader`,
+`RealRepositoryAccess`, `SystemClock`) → одна операция
+`meridian_app::workspace_state::validate` над портами `RecordRepository`,
+`WorkspaceReader`, `RepositoryAccess`, `Clock` → закрытые DTO и схемы
+(`meridian_app::workspace_state::{dto, payload}`) → строгие типы и чистые
+проверки `meridian_core::workspace_state`. `MERIDIAN_INSTANCE` не читается;
+без `--workspace-db` Kernel-only контракт не изменён. Новые cases
+корректирующего раунда исполнены на финальном рубеже §5.23.7; строки
+VAL-30, NODE-02 и NODE-03 приняты как `ACCEPTED_RUST_NATIVE`.
+
+| M | Production-маршрут | Positive | Negative |
+|---|---|---|---|
+| M-02/M-03 | `core: workspace_state::product` (литералы с ASCII-границей `\b`, как у эталона; паттерны), `app: workspace_state::validate` (запись `workspace-file` `product.yaml` → `ProductDto` → `ProductPurity`), представление пути — `cli: commands::validate::workspace_state` | `app: workspace_state::tests::workspace_state_a_consistent_workspace_is_clean`; `[BR] workspace_state::workspace_state_a_consistent_database_is_clean_and_left_untouched` | `app: …::workspace_state_m02_product_literal_and_pattern_are_found_in_the_kernel`, `…::workspace_state_m03_missing_or_uncompilable_product_record_fails`; `core: workspace_state::product::tests::*` (5); `[BR] workspace_state::workspace_state_every_category_3_row_fails_through_the_binary` |
+| M-05b | `core: workspace_state::record_types` (закрытый реестр 32 типов → контракт), `app: workspace_state::PayloadRegistry::check` — один валидатор для `migration::bundle` (frozen), `migration::operations::import_canonical` и `validate` | тот же positive; `[BRM] migration::migration_real_bundle_imports_336_records_verifies_61_norms_and_rolls_back` (все 336 реальных записей приняты) | `app: …::workspace_state_m05b_a_stored_payload_no_contract_accepts_fails`; `app: migration::operations::tests::workspace_state_canonical_import_refuses_a_payload_no_contract_accepts`; `[BRM] migration::workspace_state_frozen_import_refuses_a_target_no_payload_contract_accepts` (вариант fixture `unknown-record-type`, принятый Node); `[BR] workspace_state::workspace_state_payload_contracts_guard_import_and_stored_state` (обе стороны: отказ импорта без записи и обнаружение вброшенной в SQLite записи) |
+| M-06 | `app: workspace_state::validate` (PIN скиллов Kernel через `WorkspaceReader`, путь против записей `workspace-file`) | те же positive | `app: …::workspace_state_m06_missing_instance_context_fails`; `[BR] …every_category_3_row_fails_through_the_binary` |
+| M-07 | `app: dto::ExternalDependenciesDto` → `core: workspace_state::dependencies` | те же positive | `app: …::workspace_state_m07_malformed_or_unpinned_dependencies`; `core: workspace_state::dependencies::tests::*`; `[BR] …every_category_3_row_fails_through_the_binary` (WARN) |
+| M-08 | `cli: adapters::git_inspector::RealRepositoryAccess` → `core: workspace_state::inventory::check_entry` (TTL через `Clock`) | `core: …inventory::tests::workspace_state_inventory_confirms_a_matching_fresh_entry`; те же positive | `app: …::workspace_state_m08_drift_fails_and_an_unreachable_repository_is_unverified`; `[BR] …every_category_3_row_fails_through_the_binary`, `…workspace_state_undeclared_profile_and_unreachable_repository` |
+| M-09 | `core: workspace_state::profile` против пула `stack-profiles.yaml`; манифест через `RepositoryAccess::reader` | `core: …profile::tests::workspace_state_profile_confirms_a_supporting_manifest_and_names_every_mismatch` | `app: …::workspace_state_m09_undeclared_pool_profile_or_unreadable_manifest`; `[BR] …workspace_state_undeclared_profile_and_unreachable_repository` |
+| M-12 | `core: workspace_state::intake::check_references` (репозиторий записи — её собственная `repository-scope`) | те же positive | `app: …::workspace_state_m12_intake_of_an_unknown_repository_fails`; `core: …intake::tests::workspace_state_intake_reference_to_an_unknown_repository_fails`; `[BR] …every_category_3_row_fails_through_the_binary` |
+| M-15 | `core: workspace_state::intake::check_completeness`; регионы — существующий `app: source_format::regions::instruction_regions`; tracked/untracked/ignored — `RepositoryAccess` | `core: …intake::tests::workspace_state_intake_complete_tree_is_confirmed` | `core: …::workspace_state_intake_names_every_gap_of_an_incomplete_tree`, `…unreachable_or_unreadable_is_unverified`; `app: …::workspace_state_m15_an_uncovered_norm_fails_completeness`; `[BR] …every_category_3_row_fails_through_the_binary` |
+| M-18 | `core: workspace_state::observation`, `app: workspace_state::observation_request` (ключ идемпотентности — digest канонического содержимого; запрос проверяется тем же `PayloadRegistry`), запись — `cli: …::workspace_state::record_metrics` после готового результата | `app: …::workspace_state_m18_observation_request_is_checked_and_idempotent` | `[BR] workspace_state::workspace_state_log_metrics_records_one_observation_without_changing_the_verdict` (ровно одна запись после положительного и отрицательного результата; `--log-metrics` без базы — код 2; невозможная запись → `metrics.outcome = not-recorded`, вердикт и код неизменны) |
+
+Сквозные критерии: открытие базы — `[BR] workspace_state::workspace_state_database_that_cannot_be_opened_is_an_environment_error`
+(missing/corrupt/wrong-role/wrong-edition → код 3, пустой stdout, файл не
+создаётся); Kernel-only форма — `[BR] workspace_state::workspace_state_kernel_only_validate_keeps_its_advisories_and_shape`;
+только чтение — байтовое равенство файла базы и экспорта в
+`…a_consistent_database_is_clean_and_left_untouched`; NoOp/Recording —
+`[CLI] tests::workspace_state_event_sink_has_no_effect_on_db_backed_validate`;
+без сети — `[BR] workspace_state::workspace_state_db_backed_validate_runs_without_network`;
+критерий 2 на реальных данных — `[H]` «workspace-state: DB-backed validate на
+импортированном реальном bundle совпадает с Node-эталоном на каждом
+category-3 вердикте» (Node на Instance в закреплённой ревизии источника
+bundle; исключение D1 объявлено поимённо).
+
+Решения архитектора (корректирующая инструкция §5.23.11, 2026-09-25):
+
+- **D1 — `ACCEPTED_MIGRATION_BOUNDARY`.** 10 единиц bundle остаются
+  `retained-transitional` по принятому решению пакета 8 и не изменены
+  (`[BRM] migration::migration_real_bundle_imports_336_records_verifies_61_norms_and_rolls_back`:
+  `retained = 10`). Одна из них — запись `inventory/repositories.yaml`;
+  её репозитория нет в рабочей базе. Граница точная: из сравнения
+  исключаются только строки эталона с префиксом `inventory-git: <id> ` или
+  `stack-profile: <id> ` удержанного репозитория (на реальных данных — один
+  `FAIL` расхождения ревизии и один `WARN` TTL); харнесс требует, чтобы
+  такие строки у эталона были, и чтобы Rust не назвал удержанный репозиторий
+  ни в одной category-3 строке. Идентификатор репозитория в Kernel не
+  записывается.
+- **D2 — принято.** Тексты, где эталон называет Instance или файл реестра,
+  и семейство `payload-contract:` зафиксированы в `COMPATIBILITY.md`
+  (строка «`meridian validate --workspace-db` … решение D2», COMPAT-33) с
+  бизнес-эффектом и matched evidence; архитектор включил в D2 и два текста
+  проверок D3 того же класса (темы — одна строка на репозиторий,
+  «workspace inventory» у родителя издания). Отрицательные ветви доказаны
+  matched case `[H]` «accepted-rust-native: COMPAT-33 отрицательные ветви D2 — равные вердикты, отличие только в локусе текста»: код, уровень и
+  множество дефектов равны, различаются только локус текста и порядок
+  тем.
+- **D3 — реализовано, больше не открытое решение.** Три проверки
+  `instruction-intake` эталона — категория 3 — перенесены тем же
+  production-маршрутом (таблица ниже).
+
+Корректирующий раунд (2026-09-25):
+
+1. **Fail-open `repository_tree` удалён.** Сбой `untracked_files` или
+   `ignored_among` больше не становится пустым набором: `meridian-app`
+   (`workspace_state::intake::repository_tree`) передаёт
+   `meridian_core::workspace_state::intake::TreeFact::Unavailable` в
+   `check_completeness`, которая даёт явный `WARN … UNVERIFIED …` и никогда
+   не засчитывает дерево в `intake_repositories_complete`; нечитаемый
+   контейнер тоже больше не засчитывается. Отличие от эталона — строка
+   `COMPATIBILITY.md` «… сбой порта репозитория не становится пустым
+   ответом».
+2. **Три контракта D3** — чистые решения и типы в `meridian-core`,
+   оркестрация и чтение пулов/репозиториев в `meridian-app`
+   (`workspace_state::intake`), конкретные Git-операции только в адаптере
+   `meridian-cli` (`RealRepositoryAccess::{has_revision, file_at}`); порт
+   `RepositoryAccess` расширен `has_revision` и `file_at(RevisionSelector)`,
+   `KernelSide` — пулом тем и корнем Kernel как репозитория `"kernel"`.
+
+| D3 | Production-маршрут | Positive | Negative |
+|---|---|---|---|
+| Тема записи — из пула тем Kernel | `core: workspace_state::intake::{IntakeTopic, check_topics}` над `TopicPool` принятого `instruction-topics`; `app: workspace_state::intake::check` (пул передаётся `KernelSide::topic_pool`; не загрузился — проверка не выполняется, как у эталона) | `app: workspace_state::tests::workspace_state_a_consistent_workspace_is_clean`; `core: …intake::tests::workspace_state_intake_topics_outside_the_pool_fail_per_repository` (часть без строк); `[BR] workspace_state::workspace_state_d3_topic_packaging_and_parentage_are_confirmed_through_the_binary` | `app: …::workspace_state_d3_a_topic_outside_the_kernel_pool_fails`; `core: …::workspace_state_intake_topics_outside_the_pool_fail_per_repository`; `[BR] workspace_state::workspace_state_d3_every_broken_intake_contract_fails_through_the_binary` |
+| Упаковка `skill-package`: имя `SKILL.md` = имя каталога; нет словаря правил (`alwaysApply`, `globs`) во Front Matter | `core: workspace_state::packaging::{is_packaged_skill, check_packaging}` над `SkillPackageText`; `app: workspace_state::intake::skill_package_text` (чтение текста через `RepositoryAccess::reader`) | те же positive; `core: …packaging::tests::workspace_state_packaging_a_package_named_by_its_directory_is_clean`; `app: workspace_state::intake::tests::workspace_state_skill_package_text_reads_name_and_rule_vocabulary` | `app: …::workspace_state_d3_a_misnamed_or_doubly_activated_skill_package_fails` (и нечитаемый пакет → `INFO … UNVERIFIED`); `core: …packaging::tests::{workspace_state_packaging_a_misnamed_or_doubly_activated_package_fails, workspace_state_packaging_an_unreadable_package_is_unverified}`; `[BR] …workspace_state_d3_every_broken_intake_contract_fails_through_the_binary`, `…workspace_state_d3_an_unreachable_parent_or_package_is_unverified` |
+| `adopt-edition`: квалифицированный `derived_from`, известный репозиторий, доступность revision/path, совпадение `derived_from_digest` | `core: workspace_state::parentage::{ParentReference, CommitRevision, ParentRepository, judge}` (издание без квалифицированного родителя непредставимо: `IntakeVerdict::AdoptEdition(ParentReference)`; неквалифицированный отвергается схемой — `payload-contract`); `app: workspace_state::intake::observe_parent` над `RepositoryAccess::{vcs_state, has_revision, file_at}`; `cli: adapters::git_inspector::RealRepositoryAccess` (`rev-parse --verify --quiet <rev>^{commit}`: код 0 — есть, 1 — штатно нет, иной код или сигнал — `RepositoryUnavailable`; `ls-tree`, `cat-file blob`); real-adapter тесты `cli: adapters::git_inspector::tests::{workspace_state_has_revision_finds_a_present_commit, workspace_state_has_revision_answers_false_only_for_an_absent_commit, workspace_state_has_revision_reports_a_git_failure_as_unavailable}` | те же positive (родитель в репозитории инвентаря и в Kernel); `core: …parentage::tests::workspace_state_parentage_a_matching_current_parent_is_confirmed` | `app: …::workspace_state_d3_an_unresolvable_or_different_parent_fails` (другой digest, нет файла на ревизии, неизвестный репозиторий, голый путь), `…::workspace_state_d3_an_unavailable_parent_is_unverified_and_a_moved_one_warns`; `core: …parentage::tests::*` (4); `[BR] …workspace_state_d3_every_broken_intake_contract_fails_through_the_binary` (нет ревизии → `INFO … UNVERIFIED`), `…workspace_state_d3_an_unreachable_parent_or_package_is_unverified` |
+
+3. **Payload matrix** (критерий приёмки 3). Одна таблица
+   `meridian-cli/tests/fixtures/payload-matrix/families.json`: валидный
+   payload каждого из 32 поддержанных `record_type` (все пять форм
+   контракта: 12 элементов реестров, `gate-run-observation`, JSON-объект,
+   Markdown, файл рабочего пространства, включая два типизированных) и
+   обязательная мутация каждого из 15 schema-backed семейств (удалённое
+   обязательное поле; у `product.yaml`, где обязательных полей нет, —
+   неверный тип поля). Из неё `generate.mjs` строит отдельный синтетический
+   замороженный источник `frozen-instance/payload-matrix` с двумя bundle,
+   которые принимает каждая проверка эталона.
+
+| Маршрут | Positive | Negative |
+|---|---|---|
+| Реестр контрактов (полнота таблицы) | `app: workspace_state::tests::workspace_state_payload_matrix_covers_every_family` (каждый `ProductRecordType` есть в таблице; мутация — ровно у schema-backed) | — |
+| Один валидатор `PayloadRegistry::check` | `app: …::workspace_state_payload_matrix_every_family_accepts_and_refuses` (все валидные приняты) | тот же тест (все 15 мутаций отвергнуты) |
+| `import --kind frozen-instance` | `[BR] workspace_state::workspace_state_payload_matrix_through_the_frozen_import` (bundle `accepted`: 35 записей записаны, `validate` — `rejected_payloads = 0`) | тот же тест (bundle `mutated`: код 1, по строке `payload-contract: target "<id>"` на каждое из 15 семейств, экспорт не изменён — отказ до записи) |
+| `import --kind canonical-records` | `[BR] workspace_state::workspace_state_payload_matrix_through_the_canonical_import_and_the_stored_state` (все валидные записи импортированы, `rejected_payloads = 0`) | тот же тест (каждая из 15 мутаций: код 3, `payload-contract:` в stderr, экспорт не изменён) |
+| Уже сохранённая база | `app: …::workspace_state_payload_matrix_is_judged_in_the_stored_state` (`rejected_payloads = 0`) | тот же app-тест; `[BR] …through_the_canonical_import_and_the_stored_state` (15 мутаций вставлены в SQLite в обход импорта: `rejected_payloads = 15`, каждая названа) |
+
+Сфокусированные Node/Rust cases: `[H]` «accepted-rust-native: COMPAT-33 отрицательные ветви D2 — равные вердикты, отличие только в локусе текста» (отрицательные ветви COMPAT-33) и `[H]` «workspace-state: DB-backed validate
+на импортированном реальном bundle совпадает с Node-эталоном на каждом
+category-3 вердикте» — после реализации D3 и уточнения границы D1 (см.
+передачу исполнителя, план §5.23.11).
+
+Наблюдения без решения: DB-backed прогон на реальном bundle даёт код 1 —
+пять совпадений объявленного продуктового паттерна в текстах Kernel
+(`COMPATIBILITY.md`, план, три файла `meridian-app`/`meridian-cli`), те же,
+что у эталона; исправление Kernel вне объёма пакета. Синтетический
+fixture пакета 8 переведён с неконтрактного типа `inventory-item` на тип
+`versioning-conformance-case` (контракт «JSON-объект») и перегенерирован
+штатным `generate.mjs`; ревизия источника fixture не изменилась.
+
 ## 10. Аудит `COMPATIBILITY.md` — построчно
 
 Каждая строка реестра «Намеренные Rust-native усиления» проверена: указанные
 тесты существуют под этими именами; Node-блоки харнесса существуют. Номер —
 строка файла до изменений пакета; COMPAT-28 — новая строка первой передачи,
-COMPAT-29…32 — новые строки корректирующего раунда (последние четыре строки
-таблицы).
+COMPAT-29…32 — новые строки корректирующего раунда, COMPAT-33/34 — новые
+строки корректирующего пакета `rust-workspace-state-validation` (§9.5;
+последние две строки таблицы).
 
 | ID | Строка | Норма | Классификация | Rust-доказательство (positive / negative) | Node-доказательство | Статус |
 |---|---:|---|---|---|---|---|
@@ -426,6 +558,8 @@ COMPAT-29…32 — новые строки корректирующего рау
 | COMPAT-30 | новая | `schema`: отсутствующая схема называет только Kernel (GAP-11) | наблюдаемое (текст) | `[BR] validate_reports_ok_on_this_kernel_with_zero_real_failures` / `[BR] validate_reports_a_missing_schema_as_absent_from_the_kernel_only` | `[H]` «accepted-rust-native: GAP-11 missing schema names the Kernel only» | `ACCEPTED_RUST_NATIVE` |
 | COMPAT-31 | новая | YAML с молчаливой потерей данных у Node отклоняется fail-closed (GAP-12) | наблюдаемое (вердикт) | `app: source_format::yaml::tests::parses_block_and_flow_subset` / `…::text_that_is_not_yaml_is_still_rejected_by_the_library` | `[H]` «accepted-rust-native: GAP-12 lossy YAML is rejected fail-closed» | `ACCEPTED_RUST_NATIVE` |
 | COMPAT-32 | новая | `instruction-topics` неверного типа: авторский `FAIL` (GAP-13) | наблюдаемое (текст) | `app: validation::mechanical_integrity::instruction_topics::tests::the_real_kernel_pool_agrees_with_itself` / `…::a_wrong_type_topics_key_is_a_failure` | `[H]` «accepted-rust-native: GAP-13 instruction-topics of the wrong type» | `ACCEPTED_RUST_NATIVE` |
+| COMPAT-33 | новая | `validate --workspace-db`: тексты, где эталон называет Instance или файл реестра; семейство `payload-contract:` (решение D2) | наблюдаемое (текст/группировка) | `app: workspace_state::tests::workspace_state_a_consistent_workspace_is_clean` / `…::{workspace_state_m03_missing_or_uncompilable_product_record_fails, workspace_state_m06_missing_instance_context_fails, workspace_state_m12_intake_of_an_unknown_repository_fails, workspace_state_m05b_a_stored_payload_no_contract_accepts_fails, workspace_state_d3_a_topic_outside_the_kernel_pool_fails, workspace_state_d3_an_unresolvable_or_different_parent_fails}`; `[BR] workspace_state::{workspace_state_every_category_3_row_fails_through_the_binary, workspace_state_payload_contracts_guard_import_and_stored_state, workspace_state_d3_every_broken_intake_contract_fails_through_the_binary}` | `[H]` «accepted-rust-native: COMPAT-33 отрицательные ветви D2 — равные вердикты, отличие только в локусе текста» (отрицательные ветви: код 1, шесть равных `FAIL`-дефектов, отличие только в локусе и порядке тем); `[H]` «workspace-state: DB-backed validate … совпадает с Node-эталоном на каждом category-3 вердикте» (реальные данные) | `ACCEPTED_RUST_NATIVE` (решение архитектора D2) |
+| COMPAT-34 | новая | `validate --workspace-db`, `instruction-intake`: сбой порта репозитория — явный `UNVERIFIED`, дерево не засчитывается (п. 1 инструкции архитектора) | наблюдаемое (только при сбое порта) | `core: workspace_state::intake::tests::workspace_state_intake_complete_tree_is_confirmed`, `app: workspace_state::tests::workspace_state_m15_a_failing_ignored_port_is_unverified_never_complete` (контроль) / `core: …::{workspace_state_intake_an_unavailable_tree_fact_is_unverified_never_complete, workspace_state_intake_an_unreadable_container_is_never_counted_complete}`, `app: …::{workspace_state_m15_a_failing_untracked_port_is_unverified_never_complete, workspace_state_m15_a_failing_ignored_port_is_unverified_never_complete, workspace_state_m15_an_unreadable_container_is_never_counted_complete, workspace_state_d3_an_unavailable_parent_is_unverified_and_a_moved_one_warns}` | исходный текст эталона: `catch { return []; }` в `untrackedNorms`/`ignoredNorms`, `gitShowAt` → `null` (`scripts/kernel-validate.mjs`); исполняемого Node-case сбоя порта нет | `ACCEPTED_RUST_NATIVE` (по указанию архитектора; подтверждение формы строк — архитектору) |
 
 Дублей и устаревших строк нет: строки 112–113, 114, 116, 119 — один класс
 (`ReadError::Io` против `NotFound`) на разных семействах, каждая со своими
@@ -527,11 +661,15 @@ I/O, Git, SQLite, JSON, checkpoint или подтверждение:
 
 ## 14. Ворота
 
-Первая передача выполнила полный набор §5.23.7; коды и счётчики — в её
-передаче. Корректирующий раунд по `AGENTS.md` §9 выполнил только целевой
-рубеж (`cargo fmt --check`, целевые cargo tests изменённых модулей и
-real-binary cases, `node --check`, сфокусированные case харнесса
-«accepted-rust-native», `git diff --check`, проверки индекса); его коды —
-в передаче исполнителя. Полные `conformance-harness` и `kernel-validate`,
-а также остальной набор §5.23.7 выполняются один раз на финальном
-кандидате после архитектурного одобрения и сейчас **не выполнены**.
+После архитектурного одобрения первый полный прогон §5.23.7 обнаружил один
+устаревший закреплённый счётчик `schema_validated`/`schema_attempted` 13
+вместо 14. После его единственного исправления полный рубеж повторён на
+fingerprint
+`0a54175ff8b02a094afcd2bf5e9c24c79eedb896a84862aa193f67e452646671`,
+одинаковом до и после прогона. Все 14 команд завершились кодом 0:
+`cargo test --workspace` — 1162 passed, 0 failed, 2 ignored; отдельный
+ignored real-bundle запуск — 2 passed; conformance harness — 152 passed;
+`kernel-validate.test.mjs` — 293 passed; Kernel-only validation — 0 failures,
+9 warnings, `schema: 14/14`. Форматирование, сборка, clippy без предупреждений,
+rustdoc, оба preflight и проверки diff/индекса также зелёные. Индекс при
+передаче был пуст.

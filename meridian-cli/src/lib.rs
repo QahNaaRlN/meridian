@@ -31,7 +31,7 @@ pub mod kernel;
 
 use std::io::{Read, Write};
 
-use cli::{parse_flags, CliError};
+use cli::{parse_flags, parse_flags_with_switches, CliError};
 use events::EventSink;
 use serde_json::{json, Value};
 
@@ -71,7 +71,12 @@ pub fn run(
             commands::doctor::run(&parsed, stdout, stderr, sink)
         }
         "validate" => {
-            let parsed = match parse_flags("validate", rest, commands::validate::ALLOWED_FLAGS) {
+            let parsed = match parse_flags_with_switches(
+                "validate",
+                rest,
+                commands::validate::ALLOWED_FLAGS,
+                commands::validate::ALLOWED_SWITCHES,
+            ) {
                 Ok(parsed) => parsed,
                 Err(error) => return report_usage_error(stderr, &error),
             };
@@ -459,6 +464,160 @@ mod tests {
             "this scenario must actually be healthy for the comparison to be meaningful"
         );
         assert!(!recording.recorded().is_empty());
+    }
+
+    /// `rust-workspace-state-validation` criterion 7: a DB-backed `validate`
+    /// gives the same stdout, stderr, exit code and database state with the
+    /// NoOp and the Recording sink, read-only and with `--log-metrics`.
+    #[test]
+    fn workspace_state_event_sink_has_no_effect_on_db_backed_validate() {
+        use meridian_core::types::ContentDigest;
+        let temp = TempDir::new("validate-db-sink");
+        let kernel = kernel_root();
+        let k = kernel.to_str().unwrap().to_string();
+        let tool_db = temp.path().join("tool.sqlite3");
+        let workspace_db = temp.path().join("workspace.sqlite3");
+        let quiet = |args: &[&str]| {
+            let owned: Vec<String> = args.iter().map(|s| s.to_string()).collect();
+            run(
+                &owned,
+                &mut std::io::empty(),
+                &mut Vec::new(),
+                &mut Vec::new(),
+                &NoOpEventSink,
+            )
+        };
+        let workspace = temp.path().join("workspace");
+        assert_eq!(
+            quiet(&[
+                "init",
+                "--kernel",
+                &k,
+                "--workspace",
+                workspace.to_str().unwrap(),
+                "--tool-db",
+                tool_db.to_str().unwrap(),
+                "--workspace-db",
+                workspace_db.to_str().unwrap(),
+            ]),
+            exit_code::OK
+        );
+        let file = |id: &str, path: &str, media: &str, content: &str| {
+            serde_json::json!({
+                "$schema": "registries/operating-model/scoped-record.schema.json",
+                "schema_version": 1, "id": id, "title": path, "record_type": "workspace-file",
+                "scope": {"type": "project-workspace", "id": "sample"},
+                "origin": {"kind": "declared", "source_ref": "owner-decision:sink-fixture"},
+                "authority": {"kind": "project-owner", "authority_ref": "sample-owner"},
+                "payload": {"media_type": media, "encoding": "utf-8", "content": content,
+                    "digest": {"algorithm": "sha-256", "value": ContentDigest::of_str(content).value()}},
+            })
+        };
+        let envelope = serde_json::json!({"status": "ok", "command": "export", "result": [
+            // Built from fragments: this source file is itself Kernel text
+            // the product scan reads.
+            file("product", "product.yaml", "text/yaml", &format!("product:\n  name: {}\n", ["Zorb", "laxian"].concat())),
+            file("skills-bugfix-protocol-context", "skills/bugfix-protocol/context.md", "text/markdown", "# c\n"),
+        ]});
+        let bytes = serde_json::to_vec(&envelope).unwrap();
+        let input = temp.path().join("export.json");
+        std::fs::write(&input, &bytes).unwrap();
+        assert_eq!(
+            quiet(&[
+                "import",
+                "--kernel",
+                &k,
+                "--kind",
+                "canonical-records",
+                "--input",
+                input.to_str().unwrap(),
+                "--tool-db",
+                tool_db.to_str().unwrap(),
+                "--workspace-db",
+                workspace_db.to_str().unwrap(),
+                "--confirm",
+                ContentDigest::of_bytes(&bytes).value(),
+            ]),
+            exit_code::OK
+        );
+
+        let validate = |db: &std::path::Path, log: bool| -> Vec<String> {
+            let mut args = vec![
+                "validate".to_string(),
+                "--kernel".to_string(),
+                k.clone(),
+                "--workspace-db".to_string(),
+                db.to_str().unwrap().to_string(),
+                "--format".to_string(),
+                "json".to_string(),
+            ];
+            if log {
+                args.push("--log-metrics".to_string());
+            }
+            args
+        };
+
+        // Read-only: byte-identical output, recorded events, unchanged file.
+        let before = std::fs::read(&workspace_db).unwrap();
+        let (code, recording) =
+            run_twice_and_compare_process_output(&validate(&workspace_db, false));
+        assert_eq!(
+            code,
+            exit_code::OK,
+            "the product is clean and the context present"
+        );
+        assert!(!recording.recorded().is_empty());
+        assert_eq!(std::fs::read(&workspace_db).unwrap(), before);
+
+        // With `--log-metrics`: two copies of the same database, one per sink.
+        let a = temp.path().join("a.sqlite3");
+        let b = temp.path().join("b.sqlite3");
+        std::fs::copy(&workspace_db, &a).unwrap();
+        std::fs::copy(&workspace_db, &b).unwrap();
+        let once = |db: &std::path::Path, sink: &dyn EventSink| {
+            let (mut out, mut err) = (Vec::new(), Vec::new());
+            let code = run(
+                &validate(db, true),
+                &mut std::io::empty(),
+                &mut out,
+                &mut err,
+                sink,
+            );
+            let mut value: serde_json::Value = serde_json::from_slice(&out).unwrap();
+            // The observation id is derived from the run's instant, the
+            // only run-dependent member of the result.
+            value["result"]["metrics"]["record_id"] = serde_json::Value::Null;
+            // Each sink runs on its own copy of the database.
+            value["result"]["workspace_state"]["database"] = serde_json::Value::Null;
+            (code, value, err)
+        };
+        let recording = RecordingEventSink::new();
+        let noop = once(&a, &NoOpEventSink);
+        let recorded = once(&b, &recording);
+        assert_eq!(noop, recorded);
+        assert_eq!(noop.1["result"]["metrics"]["outcome"], "recorded");
+        assert!(!recording.recorded().is_empty());
+        let observations = |db: &std::path::Path| {
+            let storage = meridian_storage_sqlite::SqliteStorage::open_read_only(
+                db,
+                meridian_app::storage::DatabaseMetadata::new(
+                    meridian_app::storage::DatabaseRole::Workspace,
+                    kernel::read_kernel_edition(&kernel).unwrap(),
+                ),
+            )
+            .unwrap();
+            use meridian_app::storage::RecordRepository;
+            let records = storage.export_all().unwrap();
+            (
+                records.len(),
+                records
+                    .iter()
+                    .filter(|r| r.record_type().as_str() == "gate-run-observation")
+                    .count(),
+            )
+        };
+        assert_eq!(observations(&a), observations(&b));
+        assert_eq!(observations(&a), (3, 1));
     }
 
     #[test]

@@ -1,0 +1,15 @@
+{
+  "note": "Resolution map for resolveSourceSnapshot.",
+  "resolution": {
+    "sample-frozen-instance@9d8780b50bda490927146cdb7dc7a3cd7ce9b4db": {
+      "record_type": "instance-source-snapshot",
+      "repository_ref": "sample-frozen-instance",
+      "revision": "9d8780b50bda490927146cdb7dc7a3cd7ce9b4db",
+      "digest": {
+        "algorithm": "sha-256",
+        "value": "2d1ee74cbfc1d549ad1074562de61f1136faf404a9d6394050f998433abb47d7"
+      },
+      "working_tree_clean": true
+    }
+  }
+}

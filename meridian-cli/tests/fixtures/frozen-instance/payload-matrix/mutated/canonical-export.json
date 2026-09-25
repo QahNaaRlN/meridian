@@ -1,0 +1,674 @@
+{
+  "$schema": "../../registries/operating-model/instance-canonical-export.schema.json",
+  "schema_version": 1,
+  "registry_id": "instance-canonical-export",
+  "title": "Sample frozen-Instance canonical export",
+  "exports": [
+    {
+      "$schema": "registries/operating-model/scoped-record.schema.json",
+      "schema_version": 1,
+      "id": "sample-frozen-instance-export",
+      "title": "Sample canonical export",
+      "record_type": "instance-canonical-export",
+      "scope": {
+        "type": "project-workspace",
+        "id": "sample"
+      },
+      "origin": {
+        "kind": "derived",
+        "source_ref": "migration-plan:sample-frozen-instance-plan"
+      },
+      "authority": {
+        "kind": "delegated-run",
+        "authority_ref": "instance-canonical-export-run:sample-frozen-instance-export"
+      },
+      "payload": {
+        "plan_ref": "sample-frozen-instance-plan",
+        "plan_fingerprint": "2e6975df01a0cf08d32ff9725fdfc64b25ea566b544d9f2f5334ba5c61b54e53",
+        "source": {
+          "repository_ref": "sample-frozen-instance",
+          "revision": "9d8780b50bda490927146cdb7dc7a3cd7ce9b4db",
+          "digest": {
+            "algorithm": "sha-256",
+            "value": "2d1ee74cbfc1d549ad1074562de61f1136faf404a9d6394050f998433abb47d7"
+          }
+        },
+        "records": [
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "rule-applicability-0",
+            "title": "Applicability of AGENTS.md#operational-roles",
+            "record_type": "rule-applicability-record",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repo",
+              "workspace_id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:rule-applicability-0"
+            },
+            "authority": {
+              "kind": "repository-maintainer",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"activation\":\"always\",\"digest\":\"013e7155d519b0a183ad8bd70395ff7fd910939f2b7f5cb797a332c855e9d57b\",\"intake_record\":{\"recorded_at\":\"2026-01-01\",\"register\":\"instruction-intake/sample-repo.yaml\",\"verdict\":\"keep-local\"},\"norm\":{\"path\":\"AGENTS.md\",\"region\":\"operational-roles\",\"repository\":\"sample-repo\"},\"recorded_at\":\"2026-01-02\",\"repository\":\"sample-repo\",\"scope\":\"repository\",\"source\":\"repository\",\"status\":\"resolved\"}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "7c5ea2ec49e157ed752bddb8b7996da15c06a2cd10836197a57cfd56c4c9eb5d"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "rule-applicability-1",
+            "title": "Applicability of AGENTS.md#repository-context",
+            "record_type": "rule-applicability-record",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repo",
+              "workspace_id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:rule-applicability-1"
+            },
+            "authority": {
+              "kind": "repository-maintainer",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"activation\":\"path-glob\",\"digest\":\"cc5463dc3a765c3cedc18af3544063dd119ce25ae1b849537bfb360b4a0aebb1\",\"globs\":[\"src/**\",\"docs/**\"],\"intake_record\":{\"recorded_at\":\"2026-01-01\",\"register\":\"instruction-intake/sample-repo.yaml\",\"verdict\":\"keep-local\"},\"norm\":{\"path\":\"AGENTS.md\",\"region\":\"repository-context\",\"repository\":\"sample-repo\"},\"recorded_at\":\"2026-01-02\",\"repository\":\"sample-repo\",\"scope\":\"repository\",\"source\":\"repository\",\"status\":\"resolved\"}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "866e56c180db396a7e1fe5b361142ca62d6d7f945d1bb12b09d39336bba035a4"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-repository-identity-mutated",
+            "title": "Matrix repository-identity",
+            "record_type": "repository-identity",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-repository-identity-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"id\":\"web\",\"last_verified\":\"2026-01-01T00:00:00Z\",\"ownership\":\"own\",\"path\":\"/work/web\",\"profile\":\"vue-spa\",\"sources\":{\"manifests\":[\"/work/web/package.json\"],\"rules\":[\"/work/web/AGENTS.md\"]},\"vcs\":{\"evidence_basis\":\"revision\",\"ref\":\"dev\",\"revision\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"git\",\"working_tree\":\"clean\"}}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "8bea82715d55b38a42548a2e8aa73b6e3d71c12259d354fd2093960ecb6900de"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-repository-reference-mutated",
+            "title": "Matrix repository-reference",
+            "record_type": "repository-reference",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-repository-reference-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"alias\":\"Web\",\"kind\":\"cursor-workspace-folder\",\"sources\":[{\"artifact\":\"adapters/web.code-workspace\",\"pointer\":\"folders[name=Web].name\"}]}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "b324fddd91f4318bce041d67a3b4892a057d726b3e0efaf73ad79bc6a6be4e7a"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-repository-relationship-mutated",
+            "title": "Matrix repository-relationship",
+            "record_type": "repository-relationship",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-repository-relationship-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"from\":\"web\",\"id\":\"web-calls-api\",\"last_verified\":\"2026-01-01T00:00:00Z\",\"to\":\"api\",\"type\":\"http\"}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "a388cfe9e209a7f3e70c5d9955450e3263ecc29ba97406528a6643c15afc4bca"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-instruction-intake-record-mutated",
+            "title": "Matrix instruction-intake-record",
+            "record_type": "instruction-intake-record",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repo",
+              "workspace_id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-instruction-intake-record-mutated"
+            },
+            "authority": {
+              "kind": "repository-maintainer",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"artifact\":\".cursor/rules/a.mdc\",\"delivery\":\"cursor-rule\",\"digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"genre\":\"standard\",\"observed_activation\":\"always\",\"recorded_at\":\"2026-08-21\",\"scope\":\"repository\",\"topic\":\"naming\",\"verdict_basis\":\"recorded as observed\"}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "22e345ffc355d8fb44b767416e2be640df5f95cee2da885e1556a3df4e174315"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-command-mutated",
+            "title": "Matrix command",
+            "record_type": "command",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-command-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"applicability\":[\"web\"],\"category\":\"unit\",\"command_kind\":\"exact\",\"execution_approval\":\"not-required\",\"id\":\"unit\",\"purpose\":\"run the unit tests\",\"side_effects\":\"none\",\"source\":{\"last_verified\":\"2026-01-01T00:00:00Z\",\"path\":\"package.json\",\"pointer\":\"scripts.test\"}}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "e90da4e6767b114ec3f626190ba39d3511c1a9bf0885374f005855c4e7829c58"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-access-application-mutated",
+            "title": "Matrix access-application",
+            "record_type": "access-application",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-access-application-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"application_id\":\"web\",\"blockers\":[],\"credentials_by_role\":{},\"default_role\":null,\"sources\":[\"environments/access.yaml\"]}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "57ece4d95e2b431a7fad17453a89da6f4650f8331b6328a35df9da97508e44ab"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-access-reference-mutated",
+            "title": "Matrix access-reference",
+            "record_type": "access-reference",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-access-reference-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"application_id\":\"web\",\"credential_role\":\"operator\",\"id\":\"web-operator\",\"required_config_keys\":[\"WEB_TOKEN\"],\"retrieval\":{\"state\":\"unresolved\"},\"sources\":[\"environments/access.yaml\"]}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "9b1e5ec3ccd103ccc5026f293ed285c77c08e4ed14bafca07671928fcc842776"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-action-profile-mutated",
+            "title": "Matrix action-profile",
+            "record_type": "action-profile",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-action-profile-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"allowed_actions\":[\"read-only-observation\"],\"id\":\"local-read\",\"source\":\"environments/access.yaml\",\"state\":\"approved\",\"unresolved_actions\":[]}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "253be136b008c0cd5366fdb49678c342125b4f503a76519daf30a9651fb61734"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-environment-mutated",
+            "title": "Matrix environment",
+            "record_type": "environment",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-environment-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"applications\":[],\"blockers\":[],\"id\":\"local\",\"last_verified\":\"2026-01-01T00:00:00Z\",\"provenance_resolver\":{\"authoritative_source_refs\":[\"README.md\"],\"method\":\"local-runtime\",\"requirement\":\"the local checkout\",\"result_target\":\"execution-context\",\"state\":\"defined\"},\"sources\":[\"environments/environments.yaml\"]}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "274f7b7fe34c1e1e2db6f96fdec33b3c22658aee7c4a5c0b9af5ce81c55bfb9a"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-environment-application-mutated",
+            "title": "Matrix environment-application",
+            "record_type": "environment-application",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-environment-application-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"id\":\"web\",\"sources\":[\"environments/environments.yaml\"]}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "9d3bc96ab40f45eceabdbcdc779f9c7bed9efe25061eeb5f814ed011f03b6f9b"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-test-data-reference-mutated",
+            "title": "Matrix test-data-reference",
+            "record_type": "test-data-reference",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-test-data-reference-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"application_id\":\"web\",\"blocker\":\"no test account yet\",\"environment_id\":null,\"id\":\"sample-user\",\"sensitive_data_allowed\":false,\"source\":\"environments/test-data.yaml\",\"state\":\"unresolved\"}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "8e91316d2d4632304cbcada2965adf36fd161512176039848cc34a5da6f2aaf5"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-rule-applicability-record-mutated",
+            "title": "Matrix rule-applicability-record",
+            "record_type": "rule-applicability-record",
+            "scope": {
+              "type": "repository-scope",
+              "id": "sample-repo",
+              "workspace_id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-rule-applicability-record-mutated"
+            },
+            "authority": {
+              "kind": "repository-maintainer",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"activation\":\"always\",\"digest\":\"013e7155d519b0a183ad8bd70395ff7fd910939f2b7f5cb797a332c855e9d57b\",\"intake_record\":{\"recorded_at\":\"2026-01-01\",\"register\":\"instruction-intake/sample-repo.yaml\",\"verdict\":\"keep-local\"},\"norm\":{\"path\":\"AGENTS.md\",\"region\":\"operational-roles\",\"repository\":\"sample-repo\"},\"recorded_at\":\"2026-01-02\",\"repository\":\"sample-repo\",\"scope\":\"repository\",\"source\":\"repository\"}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "ed317f37f266bd68d73ccc23d48b3ddf5359496f774a58bec03a4509821f11e1"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-gate-run-observation-mutated",
+            "title": "Matrix gate-run-observation",
+            "record_type": "gate-run-observation",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-gate-run-observation-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "application/json",
+              "encoding": "utf-8",
+              "content": "{\"fail_messages\":[],\"failing\":0,\"info_ok\":1,\"kernel_version\":\"0.6.0\",\"ts\":\"2026-01-01T00:00:00Z\",\"warn_messages\":[],\"warnings\":0}",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "d3bed2f8e69c5375a07ae671b09ad7e5327a42e586808a45f9809e765d1c47a6"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-product-mutated",
+            "title": "product.yaml",
+            "record_type": "workspace-file",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-product-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "text/yaml",
+              "encoding": "utf-8",
+              "content": "schema_version: 1\nforbidden_literals: 5\nforbidden_patterns: []\n",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "d422b7254422c5b2f37dd9baf206dfe63fa63baa9cad3914d38a46b82b3df354"
+              }
+            }
+          },
+          {
+            "$schema": "registries/operating-model/scoped-record.schema.json",
+            "id": "matrix-external-dependencies-mutated",
+            "title": "external-dependencies.yaml",
+            "record_type": "workspace-file",
+            "scope": {
+              "type": "project-workspace",
+              "id": "sample"
+            },
+            "schema_version": 1,
+            "origin": {
+              "kind": "migrated",
+              "source_ref": "record-unit:matrix-external-dependencies-mutated"
+            },
+            "authority": {
+              "kind": "project-owner",
+              "authority_ref": "sample-owner",
+              "decision_ref": "owner-decision:sample-frozen-instance-migration"
+            },
+            "payload": {
+              "media_type": "text/yaml",
+              "encoding": "utf-8",
+              "content": "schema_version: 1\ndependencies:\n  - id: vendored-skill\n",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "d54d26366e7122ac70a2ac8fc422782cebff4d8c18e05566f09b4e06800f6621"
+              }
+            }
+          }
+        ],
+        "retained": [
+          {
+            "unit_id": "matrix-repository-identity",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-repository-reference",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-repository-relationship",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-instruction-intake-record",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-command",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-access-application",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-access-reference",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-action-profile",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-environment",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-environment-application",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-test-data-reference",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-gate-run-observation",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-versioning-conformance-case",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-smoke-access",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-smoke-capability",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-smoke-environment",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-smoke-test-data",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-adr",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-analysis",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-concept",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-contract",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-how-to",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-plan",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-problem",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-protocol",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-reference",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-report",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-rfc",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-standard",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-technical-specification",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-product",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-external-dependencies",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          },
+          {
+            "unit_id": "matrix-notes-readme",
+            "reason": "the valid twin of a payload-matrix family stays out of this bundle"
+          }
+        ],
+        "idempotency_key": "0df425f8980e7e467ee9fa705afaed05479a9fa8ac83c047a64497c80a9a2598",
+        "digest": "06ca4ddaacdbc901bb63ed42bb798712233191d526795a6ffc27a5c93d1f18ce"
+      }
+    }
+  ]
+}

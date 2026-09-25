@@ -32,6 +32,7 @@ use crate::storage::{
     Checkpoint, DatabaseRole, MigrationApplyRequest, MigrationPortError, MigrationRepository,
     PutRecordOutcome, PutRecordRequest, RecordRepository, RolledBackMigration,
 };
+use crate::workspace_state::PayloadSubject;
 
 fn emit(sink: &dyn EventSink, kind: EventKind, summary: String) {
     if let Ok(summary) = NonEmptyString::new(summary) {
@@ -700,6 +701,21 @@ fn accept_canonical(
                     origin: dto.origin,
                     authority: dto.authority,
                 })?;
+                // A product record's payload passes the one payload
+                // validator (M-05b) before anything is written; the tool
+                // database's built-in methodology is not a product record.
+                if parsed.scope.scope_type() != ScopeType::BuiltInMethodology {
+                    let subject = PayloadSubject {
+                        id: &parsed.id,
+                        scope: &parsed.scope,
+                        title: parsed.title.as_str(),
+                        record_type: parsed.record_type.as_str(),
+                    };
+                    schemas
+                        .payloads()
+                        .check(subject, &dto.payload)
+                        .map_err(|r| format!("payload-contract: {}", r.problems.join("; ")))?;
+                }
                 canonical_request(&parsed, &dto.payload, record)
             });
         match converted {

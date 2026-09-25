@@ -327,6 +327,81 @@ function runMigrationChecks({ mcheck, meridian, json, canon, source, registry, e
     const again = meridian(['migration', 'rollback', '--kernel', ROOT, '--source', source, '--workspace-db', third.ws, '--run', run, '--confirm', run, '--format', 'json']);
     assert(again.status === 1 && json(again).result.refusal === 'already-rolled-back', again.stdout);
   });
+
+  // rust-workspace-state-validation (plan §5.23.11, acceptance criterion
+  // 2): the imported real bundle, checked by `meridian validate
+  // --workspace-db` WITHOUT MERIDIAN_INSTANCE, reaches every category-3
+  // verdict of the GAP-09 mapping that the frozen Node reference reaches on
+  // the Instance at the bundle's pinned source revision. Compared: the FAIL
+  // and WARN lines of the category-3 families; the age in a TTL warning
+  // depends on the instant of each run and is normalized. The one declared
+  // exclusion: repositories whose inventory entry the accepted plan keeps
+  // `retained-transitional` are not in the workspace database, so their
+  // lines exist on the Node side only.
+  mcheck('workspace-state: DB-backed validate на импортированном реальном bundle совпадает с Node-эталоном на каждом category-3 вердикте', () => {
+    const db = init('workspace-state');
+    const imported = meridian(['import', '--kernel', ROOT, '--kind', 'frozen-instance', '--source', source, '--tool-db', db.tool, '--workspace-db', db.ws, '--confirm', nodeFingerprint, '--format', 'json']);
+    assert(imported.status === 0, `import: ${imported.stderr} ${imported.stdout.slice(0, 500)}`);
+    const rust = meridian(['validate', '--kernel', ROOT, '--workspace-db', db.ws, '--format', 'json']);
+    assert(rust.status === 0 || rust.status === 1, `validate: ${rust.status} ${rust.stderr}`);
+    const rustResult = json(rust).result;
+
+    const pinned = path.join(dir, 'pinned-instance');
+    fs.mkdirSync(pinned, { recursive: true });
+    const archive = spawnSync('git', ['-C', source, 'archive', '--format=tar', payload.source.revision], { maxBuffer: 1 << 28 });
+    assert(archive.status === 0, `git archive: ${archive.stderr}`);
+    const untar = spawnSync('tar', ['-x', '-C', pinned], { input: archive.stdout });
+    assert(untar.status === 0, `tar: ${untar.stderr}`);
+    const g = (args) => spawnSync('git', ['-C', pinned, '-c', 'user.email=fixture@meridian.invalid', '-c', 'user.name=Meridian Fixture', '-c', 'commit.gpgsign=false', ...args], { encoding: 'utf8' });
+    for (const args of [['init', '-q'], ['add', '-A'], ['commit', '-q', '-m', 'pinned source revision']]) {
+      const r = g(args);
+      assert(r.status === 0, `git ${args.join(' ')}: ${r.stderr}`);
+    }
+    const node = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+      cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28,
+      env: { ...process.env, MERIDIAN_KERNEL: ROOT, MERIDIAN_INSTANCE: pinned },
+    });
+    const family = /^(kernel-purity: (product literal|forbidden pattern)|product record|instance-context|ext-depend|inventory-git|stack-profile:|instruction-intake)/;
+    const ttl = (m) => m.replace(/ is [0-9.]+d old /, ' is Nd old ');
+    const retainedRepositories = payload.mappings
+      .filter((m) => m.disposition === 'retained-transitional')
+      .map((m) => payload.record_units.find((u) => u.id === m.unit_id).unit_ref)
+      .filter((ref) => ref.startsWith('inventory/repositories.yaml#repositories/'))
+      .map((ref) => decodeURIComponent(ref.split('/').pop()));
+    assert(retainedRepositories.length > 0, 'ожидался хотя бы один retained-transitional репозиторий инвентаря');
+    // D1 (ACCEPTED_MIGRATION_BOUNDARY): exactly the inventory-git and
+    // stack-profile lines of a retained repository are excluded, and the
+    // Rust side names no retained repository at all.
+    const namesRetained = (m) => retainedRepositories.some((id) => m.startsWith(`inventory-git: ${id} `) || m.startsWith(`stack-profile: ${id} `));
+    const mentionsRetained = (m) => retainedRepositories.some((id) => m.includes(`${id} `) || m.includes(`"${id}"`));
+    const nodeAll = node.stdout.split(/\r?\n/)
+      .map((l) => /^(FAIL|WARN)\s+(.*)$/.exec(l))
+      .filter(Boolean)
+      .map(([, level, m]) => [level, m])
+      .filter(([, m]) => family.test(m));
+    const excluded = nodeAll.filter(([, m]) => namesRetained(m));
+    assert(excluded.length > 0, 'граница D1 объявлена, но эталон не дал ни одной исключаемой строки');
+    const nodeLines = nodeAll
+      .filter(([, m]) => !namesRetained(m))
+      .map(([level, m]) => `${level} ${ttl(m)}`)
+      .sort();
+    const rustLines = [
+      ...rustResult.failures.map((m) => ['FAIL', m]),
+      ...rustResult.warnings.map((m) => ['WARN', m]),
+    ]
+      .filter(([, m]) => family.test(m))
+      .map(([level, m]) => `${level} ${ttl(m)}`)
+      .sort();
+    assert(nodeLines.length > 0, 'Node-эталон не дал ни одной category-3 строки — сравнение было бы пустым');
+    const rustRetained = rustLines.filter((l) => mentionsRetained(l));
+    assert(rustRetained.length === 0, `Rust называет удержанный репозиторий: ${JSON.stringify(rustRetained)}`);
+    assert(
+      JSON.stringify(nodeLines) === JSON.stringify(rustLines),
+      `category-3 вердикты расходятся:\nтолько Node: ${JSON.stringify(nodeLines.filter((l) => !rustLines.includes(l)))}\nтолько Rust: ${JSON.stringify(rustLines.filter((l) => !nodeLines.includes(l)))}`,
+    );
+    assert(rustResult.workspace_state.records === 336, `записей в рабочей базе: ${rustResult.workspace_state.records}`);
+    assert(rustResult.workspace_state.rejected_payloads === 0, 'реальные payload должны проходить реестр контрактов');
+  });
 }
 
 if (NAME_PATTERN) {
@@ -2399,6 +2474,154 @@ function runAcceptedRustNativeDivergences() {
       nodeOnly: [/^instruction-topics: \S.* is not a function$/],
       rustOnly: ['instruction-topics: "topics" must be a list, found a boolean'],
     });
+  });
+
+  // COMPAT-33 (decision D2): the negative branches whose Node text names
+  // the Instance or a register file, reached through the real production
+  // routes of both models — `kernel-validate.mjs` over a synthetic Instance
+  // and `meridian validate --workspace-db` over a workspace database holding
+  // the same logical content (imported by `import --kind canonical-records`;
+  // the one payload defect no import accepts is planted in SQLite, as a
+  // stored defect is). Compared: exit code, level, the multiset of logical
+  // defects, and that every line of the compared families is exactly one of
+  // the declared Node/Rust forms — the only permitted differences are the
+  // locus (Instance/register file → workspace database/repository) and the
+  // order of stray topics.
+  acheck('accepted-rust-native: COMPAT-33 отрицательные ветви D2 — равные вердикты, отличие только в локусе текста', () => {
+    assert(build.status === 0, `cargo build: ${build.stderr}`);
+    const bin = path.join(ROOT, 'target', 'debug', process.platform === 'win32' ? 'meridian.exe' : 'meridian');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conformance-harness-compat-33-'));
+    createdTempDirs.push(dir);
+    try {
+      const PARENT_DIGEST = 'c'.repeat(64);
+      const record = (fields) => ({
+        digest: 'b'.repeat(64), genre: 'standard', observed_activation: 'always', recorded_at: '2026-08-21',
+        scope: 'repository', verdict_basis: 'recorded as observed', ...fields,
+      });
+      const intake = [
+        record({ artifact: '.cursor/rules/a.mdc', delivery: 'cursor-rule', topic: 'zeta-invented', verdict: 'keep-local' }),
+        record({ artifact: '.cursor/rules/b.mdc', delivery: 'cursor-rule', topic: 'alpha-invented', verdict: 'keep-local' }),
+        record({
+          artifact: '.cursor/rules/c.mdc', delivery: 'cursor-rule', topic: 'naming', verdict: 'adopt-edition',
+          derived_from: { repository: 'phantom', path: 'a.md', revision: 'abcdef1' },
+          derived_from_digest: PARENT_DIGEST, narrowing: ['only one layer'],
+        }),
+      ];
+      const brokenCommand = {
+        id: 'unit', command_kind: 'exact', category: 'unit', purpose: 'run the unit tests', applicability: ['web'],
+        side_effects: 'none', execution_approval: 'not-required', source: { path: 'package.json', pointer: 'scripts.test', last_verified: '2026-01-01T00:00:00Z' },
+      };
+
+      // Node: the synthetic Instance. No product.yaml and no skill context
+      // file; a register of a repository the (absent) inventory does not
+      // name; a commands registry whose one command lacks `command`.
+      const instance = path.join(dir, 'instance');
+      // Block YAML of plain objects, lists and strings — the subset the
+      // reference's YAML adapter reads.
+      const scalar = (v) => `'${String(v).replace(/'/g, "''")}'`;
+      const yaml = (v, pad = '') => {
+        if (Array.isArray(v)) {
+          return v.map((item) => (typeof item === 'object'
+            ? `${pad}-\n${yaml(item, `${pad}  `)}`
+            : `${pad}- ${scalar(item)}`)).join('\n');
+        }
+        return Object.entries(v).map(([k, item]) => (typeof item === 'object'
+          ? `${pad}${k}:\n${yaml(item, `${pad}  `)}`
+          : `${pad}${k}: ${typeof item === 'number' ? item : scalar(item)}`)).join('\n');
+      };
+      const put = (rel, text) => {
+        fs.mkdirSync(path.dirname(path.join(instance, rel)), { recursive: true });
+        fs.writeFileSync(path.join(instance, rel), text);
+      };
+      put('instruction-intake/ghost.yaml', `${yaml({ $schema: './intake.schema.json', schema_version: 1, repository: 'ghost', records: intake })}\n`);
+      put('commands/repositories.yaml', `${yaml({ $schema: './repositories.schema.json', schema_version: 1, repositories: [{ repository_id: 'web', commands: [brokenCommand] }] })}\n`);
+      const g = (args) => spawnSync('git', ['-C', instance, '-c', 'user.email=fixture@meridian.invalid', '-c', 'user.name=Meridian Fixture', '-c', 'commit.gpgsign=false', ...args], { encoding: 'utf8' });
+      for (const args of [['init', '-q'], ['add', '-A'], ['commit', '-q', '-m', 'synthetic instance']]) {
+        const r = g(args);
+        assert(r.status === 0, `git ${args.join(' ')}: ${r.stderr}`);
+      }
+      const node = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'kernel-validate.mjs')], {
+        cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28, env: { ...process.env, MERIDIAN_KERNEL: ROOT, MERIDIAN_INSTANCE: instance },
+      });
+
+      // Rust: the same content as workspace records.
+      const container = (media, content) => ({ media_type: media, encoding: 'utf-8', content, digest: { algorithm: 'sha-256', value: crypto.createHash('sha256').update(content).digest('hex') } });
+      const scoped = (type, id, scope, title, payload) => ({
+        $schema: 'registries/operating-model/scoped-record.schema.json', schema_version: 1, id, title, record_type: type, scope,
+        origin: { kind: 'declared', source_ref: 'owner-decision:compat-33' }, authority: { kind: 'project-owner', authority_ref: 'sample-owner' }, payload,
+      });
+      const ghost = { type: 'repository-scope', id: 'ghost', workspace_id: 'sample' };
+      const records = intake.map((r, i) => scoped('instruction-intake-record', `intake-ghost-${i}`, ghost, `Intake ghost ${i}`, container('application/json', JSON.stringify(r))));
+      const tool = path.join(dir, 'tool.sqlite3');
+      const ws = path.join(dir, 'workspace.sqlite3');
+      const run = (args) => spawnSync(bin, args, { cwd: ROOT, encoding: 'utf8', env: kernelOnlyEnv(), maxBuffer: 1 << 28 });
+      const init = run(['init', '--kernel', ROOT, '--workspace', path.join(dir, 'workspace'), '--tool-db', tool, '--workspace-db', ws]);
+      assert(init.status === 0, `init: ${init.stderr}`);
+      const input = path.join(dir, 'export.json');
+      const bytes = JSON.stringify({ status: 'ok', command: 'export', result: records });
+      fs.writeFileSync(input, bytes);
+      const imported = run(['import', '--kernel', ROOT, '--kind', 'canonical-records', '--input', input, '--tool-db', tool, '--workspace-db', ws,
+        '--confirm', crypto.createHash('sha256').update(bytes).digest('hex'), '--format', 'json']);
+      assert(imported.status === 0, `import: ${imported.stderr}`);
+      // The payload defect as a stored one: a copy of an imported row with
+      // the broken command as its payload, bypassing import.
+      const { DatabaseSync } = process.getBuiltinModule('node:sqlite');
+      const db = new DatabaseSync(ws);
+      const payload = JSON.stringify(container('application/json', JSON.stringify(brokenCommand)));
+      db.prepare(`INSERT INTO records SELECT 'command-planted', 'project-workspace', 'sample', NULL, NULL, 'command-web-unit', schema_ref, schema_version, 'Command unit', 'command', origin_kind, origin_source_ref, authority_kind, authority_ref, authority_decision_ref, ?, content_digest, current_revision FROM records WHERE record_id = 'intake-ghost-0'`).run(payload);
+      db.prepare(`INSERT INTO record_revisions SELECT 'command-planted', revision_number, schema_ref, schema_version, 'Command unit', 'command', origin_kind, origin_source_ref, authority_kind, authority_ref, authority_decision_ref, ?, content_digest, idempotency_key || '-planted', recorded_at FROM record_revisions WHERE record_key = (SELECT record_key FROM records WHERE record_id = 'intake-ghost-0')`).run(payload);
+      db.close();
+      const rust = spawnSync(bin, ['validate', '--kernel', ROOT, '--workspace-db', ws, '--format', 'json'], { cwd: ROOT, encoding: 'utf8', env: kernelOnlyEnv(), maxBuffer: 1 << 28 });
+      assert(rust.stderr === '', `Rust stderr: ${rust.stderr}`);
+      const rustResult = JSON.parse(rust.stdout).result;
+
+      // The declared forms. Each maps a line to its logical defect.
+      const sortedList = (list) => list.split(', ').sort().join(', ');
+      const NODE = [
+        [/^instance-context: (\S+) requires "([^"]+)", which is missing from the Instance; the skill declares this a blocker, not a licence to guess$/, (m) => `instance-context|${m[1]}|${m[2]}`],
+        [/^product record not found at .+[\\/]product\.yaml; kernel-purity cannot be verified$/, () => 'product-record-missing'],
+        [/^instruction-intake: instruction-intake\/ghost\.yaml names repository "([^"]+)", which the Instance inventory does not name; this is an unresolvable reference, not an unreachable repository$/, (m) => `unknown-repository|${m[1]}`],
+        [/^instruction-intake: instruction-intake\/ghost\.yaml names (\d+) topic\(s\) outside the pool \(([^)]*)\); a new topic is a change to the registry, not to one record$/, (m) => `topics|ghost|${m[1]}|${sortedList(m[2])}`],
+        [/^instruction-intake: (\S+) derives from repository "([^"]+)", which the Instance inventory does not name; the reference cannot be resolved by anyone, here or elsewhere$/, (m) => `unknown-parent|${m[1]}|${m[2]}`],
+        [/^schema: .+[\\/]commands[\\/]repositories\.yaml \/repositories\/0\/commands\/0\/?([^:]*): (.+)$/, (m) => `payload|command|${m[1]}|${m[2]}`],
+      ];
+      const RUST = [
+        [/^instance-context: (\S+) requires "([^"]+)", which is missing from the workspace database; the skill declares this a blocker, not a licence to guess$/, (m) => `instance-context|${m[1]}|${m[2]}`],
+        [/^product record not found in the workspace database \(workspace file "product\.yaml"\); kernel-purity cannot be verified$/, () => 'product-record-missing'],
+        [/^instruction-intake: (\d+) record\(s\) of repository "([^"]+)" name a repository the workspace inventory does not name; this is an unresolvable reference, not an unreachable repository$/, (m) => `unknown-repository|${m[2]}`],
+        [/^instruction-intake: the register of repository "([^"]+)" names (\d+) topic\(s\) outside the pool \(([^)]*)\); a new topic is a change to the registry, not to one record$/, (m) => {
+          assert(m[3] === sortedList(m[3]), `Rust: темы не по возрастанию: ${m[3]}`);
+          return `topics|${m[1]}|${m[2]}|${m[3]}`;
+        }],
+        [/^instruction-intake: (\S+) derives from repository "([^"]+)", which the workspace inventory does not name; the reference cannot be resolved by anyone, here or elsewhere$/, (m) => `unknown-parent|${m[1]}|${m[2]}`],
+        [/^payload-contract: command record "command-web-unit" in project-workspace "sample": content \/?([^:]*): (.+)$/, (m) => `payload|command|${m[1]}|${m[2]}`],
+      ];
+      const compared = /^(instance-context|product record|instruction-intake|schema: |payload-contract)/;
+      const classify = (side, forms, lines) => lines.filter(([, m]) => compared.test(m)).map(([level, m]) => {
+        const hits = forms.map(([re, key]) => { const x = re.exec(m); return x ? key(x) : null; }).filter(Boolean);
+        assert(hits.length === 1, `${side}: строка вне объявленной границы COMPAT-33 (${level}): ${m}`);
+        return `${level} ${hits[0]}`;
+      }).sort();
+      const nodeLines = node.stdout.split(/\r?\n/).map((l) => /^(FAIL|WARN)\s+(.*)$/.exec(l)).filter(Boolean).map(([, level, m]) => [level, m]);
+      const rustLines = [...rustResult.failures.map((m) => ['FAIL', m]), ...rustResult.warnings.map((m) => ['WARN', m])];
+      const nodeDefects = classify('Node', NODE, nodeLines);
+      const rustDefects = classify('Rust', RUST, rustLines);
+      const expected = [
+        'FAIL instance-context|bugfix-protocol|skills/bugfix-protocol/context.md',
+        'FAIL payload|command|command|required property missing',
+        'FAIL product-record-missing',
+        'FAIL topics|ghost|2|alpha-invented, zeta-invented',
+        'FAIL unknown-parent|.cursor/rules/c.mdc|phantom',
+        'FAIL unknown-repository|ghost',
+      ];
+      assert(JSON.stringify(nodeDefects) === JSON.stringify(expected), `Node-дефекты: ${JSON.stringify(nodeDefects)}`);
+      assert(JSON.stringify(rustDefects) === JSON.stringify(expected), `Rust-дефекты: ${JSON.stringify(rustDefects)}`);
+      assert(node.status === 1 && rust.status === 1, `коды завершения: Node ${node.status}, Rust ${rust.status}`);
+      assert(rustResult.workspace_state.rejected_payloads === 1, `rejected_payloads: ${rustResult.workspace_state.rejected_payloads}`);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      createdTempDirs.splice(createdTempDirs.indexOf(dir), 1);
+    }
   });
 }
 

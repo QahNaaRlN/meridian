@@ -22,6 +22,7 @@ pub mod source_format;
 pub mod storage;
 pub mod validation;
 pub mod workspace;
+pub mod workspace_state;
 
 /// Identifies this crate in composition-root diagnostics until real ports
 /// exist.

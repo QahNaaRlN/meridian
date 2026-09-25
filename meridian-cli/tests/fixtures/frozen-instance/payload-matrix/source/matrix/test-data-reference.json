@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "id": "sample-user",
+      "purpose": "a user to sign in with",
+      "environment_id": null,
+      "application_id": "web",
+      "state": "unresolved",
+      "sensitive_data_allowed": false,
+      "source": "environments/test-data.yaml",
+      "blocker": "no test account yet"
+    },
+    {
+      "id": "sample-user",
+      "environment_id": null,
+      "application_id": "web",
+      "state": "unresolved",
+      "sensitive_data_allowed": false,
+      "source": "environments/test-data.yaml",
+      "blocker": "no test account yet"
+    }
+  ]
+}

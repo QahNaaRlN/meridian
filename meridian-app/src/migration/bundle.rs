@@ -35,6 +35,7 @@ use meridian_core::types::{ContentDigest, Diagnostic, SemanticId, WorkspaceRelat
 use serde_json::{Map, Value};
 
 use super::fragment::{resolve_units, Register, ResolvedUnits};
+use super::records::target_payload;
 use super::source::{BundleFile, FrozenSource, SourceError};
 use crate::operating_model::migration_boundary::outcome_diagnostics;
 use crate::operating_model::migration_boundary::resolution::plan_resolution;
@@ -43,6 +44,7 @@ use crate::operating_model::{instance_canonical_export, instance_data_migration}
 use crate::rule_resolution::typed_applicability_register;
 use crate::source_format::json_schema;
 use crate::workspace::WorkspaceReader;
+use crate::workspace_state::{PayloadRegistry, PayloadSubject};
 
 /// The Kernel schemas every migration operation checks against, loaded
 /// from the named Kernel through the workspace port.
@@ -51,6 +53,7 @@ pub struct KernelSchemas {
     export: Value,
     envelope: Value,
     applicability: Value,
+    payloads: PayloadRegistry,
 }
 
 const SCHEMA_PATHS: [&str; 4] = [
@@ -75,6 +78,8 @@ impl KernelSchemas {
                 .map_err(|e| BundleError::Kernel(format!("{path}: {e}")))?;
             loaded.push(value);
         }
+        let payloads =
+            PayloadRegistry::load(reader).map_err(|e| BundleError::Kernel(e.to_string()))?;
         let mut loaded = loaded.into_iter();
         let mut next = || loaded.next().unwrap_or(Value::Null);
         Ok(KernelSchemas {
@@ -82,7 +87,15 @@ impl KernelSchemas {
             export: next(),
             envelope: next(),
             applicability: next(),
+            payloads,
         })
+    }
+
+    /// The one payload validator of product records
+    /// (`crate::workspace_state::PayloadRegistry`), shared by both import
+    /// kinds.
+    pub(crate) fn payloads(&self) -> &PayloadRegistry {
+        &self.payloads
     }
 
     pub(crate) fn envelope(&self) -> &Value {
@@ -571,6 +584,10 @@ fn accept(
 
     let write_set = FrozenWriteSet::from_plan(&plan)
         .map_err(|e| BundleVerdictStep::Rejected(vec![fail(e.to_string())]))?;
+    let payload_problems = payload_contract_problems(&write_set, schemas.payloads());
+    if !payload_problems.is_empty() {
+        return Err(BundleVerdictStep::Rejected(payload_problems));
+    }
     let applicability =
         applicability_basis(&plan, &units, schemas).map_err(BundleVerdictStep::Rejected)?;
     Ok(Box::new(AcceptedBundle {
@@ -586,6 +603,38 @@ fn accept(
         write_set,
         applicability,
     }))
+}
+
+/// Every migrated target's payload through the one payload validator
+/// (`rust-workspace-state-validation`, M-05b): a target no contract accepts
+/// is refused here, before any database is opened for writing.
+fn payload_contract_problems(
+    write_set: &FrozenWriteSet,
+    payloads: &PayloadRegistry,
+) -> Vec<Diagnostic> {
+    let mut problems = Vec::new();
+    for entry in write_set.entries() {
+        let target = entry.target();
+        let Value::Object(payload) = target_payload(entry) else {
+            continue;
+        };
+        let subject = PayloadSubject {
+            id: &target.id,
+            scope: &target.scope,
+            title: target.title.as_str(),
+            record_type: target.record_type.as_str(),
+        };
+        if let Err(rejection) = payloads.check(subject, &payload) {
+            for problem in rejection.problems {
+                problems.push(fail(format!(
+                    "payload-contract: target \"{}\" ({}): {problem}",
+                    target.id.as_str(),
+                    target.record_type.as_str()
+                )));
+            }
+        }
+    }
+    problems
 }
 
 /// Reads the bundle once from `source` and runs it through every accepted

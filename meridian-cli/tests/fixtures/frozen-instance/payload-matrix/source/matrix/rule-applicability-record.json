@@ -1,0 +1,22 @@
+{
+  "items": [
+    {
+      "norm": {
+        "repository": "sample-repo",
+        "path": "AGENTS.md",
+        "region": "operational-roles"
+      },
+      "digest": "013e7155d519b0a183ad8bd70395ff7fd910939f2b7f5cb797a332c855e9d57b",
+      "intake_record": {
+        "register": "instruction-intake/sample-repo.yaml",
+        "recorded_at": "2026-01-01",
+        "verdict": "keep-local"
+      },
+      "scope": "repository",
+      "repository": "sample-repo",
+      "activation": "always",
+      "source": "repository",
+      "recorded_at": "2026-01-02"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "id": "unit",
+      "command": "npm test",
+      "command_kind": "exact",
+      "category": "unit",
+      "purpose": "run the unit tests",
+      "applicability": [
+        "web"
+      ],
+      "side_effects": "none",
+      "execution_approval": "not-required",
+      "source": {
+        "path": "package.json",
+        "pointer": "scripts.test",
+        "last_verified": "2026-01-01T00:00:00Z"
+      }
+    },
+    {
+      "id": "unit",
+      "command_kind": "exact",
+      "category": "unit",
+      "purpose": "run the unit tests",
+      "applicability": [
+        "web"
+      ],
+      "side_effects": "none",
+      "execution_approval": "not-required",
+      "source": {
+        "path": "package.json",
+        "pointer": "scripts.test",
+        "last_verified": "2026-01-01T00:00:00Z"
+      }
+    }
+  ]
+}

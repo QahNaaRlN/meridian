@@ -24,7 +24,7 @@
       },
       "payload": {
         "plan_ref": "sample-frozen-instance-plan",
-        "plan_fingerprint": "7bfc1a7ffb1611df23431770458edc43c9fa979d2672069dce4149faea95b628",
+        "plan_fingerprint": "8b863d0ab3f488550bbf5a89ac1e1c33b797006a8856e46554a477616a12d41a",
         "source": {
           "repository_ref": "sample-frozen-instance",
           "revision": "8b82b86238dc6b47dd578067c564e332e9c06fa8",
@@ -67,7 +67,7 @@
             "$schema": "registries/operating-model/scoped-record.schema.json",
             "id": "inventory-items-alpha",
             "title": "Item alpha",
-            "record_type": "inventory-item",
+            "record_type": "versioning-conformance-case",
             "scope": {
               "type": "project-workspace",
               "id": "sample"
@@ -96,7 +96,7 @@
             "$schema": "registries/operating-model/scoped-record.schema.json",
             "id": "inventory-items-beta-gamma",
             "title": "Item beta gamma",
-            "record_type": "inventory-item",
+            "record_type": "versioning-conformance-case",
             "scope": {
               "type": "project-workspace",
               "id": "sample"
@@ -188,8 +188,8 @@
             "reason": "foreign content stays transitional until its owner decides"
           }
         ],
-        "idempotency_key": "39c3c9c916d7bcaa0aea2dec95cf25797cc217c025241e40e034ffebf4809af3",
-        "digest": "438729191fc849416494f0f4eb7ac050fba9f7db4fdf27f87b4d14f5a7e42888"
+        "idempotency_key": "563a545119cc2ac03a7d8772f81650dbb2512e562863e893c4ac07c598251a90",
+        "digest": "192896a9d99d10029ea5b7a2e2587ff21ad23f0a038157d7f1c86d32a324e34c"
       }
     }
   ]
